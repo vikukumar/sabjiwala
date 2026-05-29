@@ -19,7 +19,6 @@ RUN cd apps/sabjiwala-web && \
     cp -r ../../shared/src node_modules/@sabjiwala/shared/ && \
     cp ../../shared/package.json node_modules/@sabjiwala/shared/ && \
     cp ../../shared/tsconfig.json node_modules/@sabjiwala/shared/ && \
-    npm install axios && \
     cp ../customer-app/src/app/page.tsx src/app/page.tsx && \
     cp ../vendor-app/src/app/page.tsx src/app/vendor/page.tsx && \
     cp ../delivery-app/src/app/page.tsx src/app/delivery/page.tsx && \
