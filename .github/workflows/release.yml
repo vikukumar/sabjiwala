@@ -433,9 +433,9 @@ jobs:
           npm run build
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           npx cap add ios || true
-          sed -i '' "s/platform :ios, .*/platform :ios, '14.0'/" ios/App/Podfile
+          sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile
           find ios/App/App.xcodeproj -name "project.pbxproj" -exec \
-            sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9][0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g' {} \;
+            sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9][0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' {} \;
           npx cap sync ios
 
       - name: Compile Customer iOS App
@@ -481,9 +481,9 @@ jobs:
           npm run build
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           npx cap add ios || true
-          sed -i '' "s/platform :ios, .*/platform :ios, '14.0'/" ios/App/Podfile
+          sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile
           find ios/App/App.xcodeproj -name "project.pbxproj" -exec \
-            sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9][0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g' {} \;
+            sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9][0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' {} \;
           npx cap sync ios
 
       - name: Compile Vendor iOS App
@@ -529,9 +529,9 @@ jobs:
           npm run build
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           npx cap add ios || true
-          sed -i '' "s/platform :ios, .*/platform :ios, '14.0'/" ios/App/Podfile
+          sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile
           find ios/App/App.xcodeproj -name "project.pbxproj" -exec \
-            sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9][0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g' {} \;
+            sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9][0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' {} \;
           npx cap sync ios
 
       - name: Compile Delivery iOS App

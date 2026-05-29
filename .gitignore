@@ -145,3 +145,6 @@ coverage.xml
 .nox/
 .mypy_cache/
 .ruff_cache/
+
+# Temporary scripts
+tmp/
