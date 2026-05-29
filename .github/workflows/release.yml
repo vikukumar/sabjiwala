@@ -1,0 +1,499 @@
+name: Build & Release SabjiWala Platform
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  read-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Version and Generate Tag
+        id: get-version
+        run: |
+          BASE_VERSION=$(jq -r '.version' version.json)
+          
+          # If triggered by a tag push, extract it
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            FULL_VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            # Triggered by push to main or workflow_dispatch
+            # Format: v{base_version}.{run_number}
+            FULL_VERSION="${BASE_VERSION}.${{ github.run_number }}"
+            
+            # Configure Git
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            
+            TAG_NAME="v${FULL_VERSION}"
+            echo "Creating and pushing tag $TAG_NAME"
+            git tag "$TAG_NAME"
+            git push origin "$TAG_NAME"
+          fi
+          
+          echo "version=$FULL_VERSION" >> $GITHUB_OUTPUT
+          echo "Release version: $FULL_VERSION"
+
+  build-push-docker:
+    needs: read-version
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+        image_type: [backend, web, complete]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: ${{ matrix.platform }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Build Arguments & Metadata
+        id: meta
+        run: |
+          PLATFORM_CLEAN=$(echo "${{ matrix.platform }}" | sed 's/\//-/g')
+          echo "PLATFORM_CLEAN=$PLATFORM_CLEAN" >> $GITHUB_ENV
+          
+          # Setup Context and Dockerfile
+          if [ "${{ matrix.image_type }}" = "backend" ]; then
+            echo "CONTEXT=apps/backend" >> $GITHUB_ENV
+            echo "DOCKERFILE=infrastructure/docker/Dockerfile.backend" >> $GITHUB_ENV
+          elif [ "${{ matrix.image_type }}" = "complete" ]; then
+            echo "CONTEXT=." >> $GITHUB_ENV
+            echo "DOCKERFILE=infrastructure/docker/Dockerfile.complete" >> $GITHUB_ENV
+          else
+            echo "CONTEXT=." >> $GITHUB_ENV
+            echo "DOCKERFILE=infrastructure/docker/Dockerfile.web" >> $GITHUB_ENV
+          fi
+
+          # Generate tags (GHCR only)
+          TAGS="ghcr.io/${{ github.repository }}/${{ matrix.image_type }}:${{ needs.read-version.outputs.version }}-${PLATFORM_CLEAN}"
+          echo "TAGS=$TAGS" >> $GITHUB_ENV
+
+      - name: Build and Push Platform-Specific Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.CONTEXT }}
+          file: ${{ env.DOCKERFILE }}
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: ${{ env.TAGS }}
+          cache-from: type=gha,scope=${{ matrix.image_type }}-${{ env.PLATFORM_CLEAN }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image_type }}-${{ env.PLATFORM_CLEAN }}
+
+  release-docker-manifests:
+    needs: [read-version, build-push-docker]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image_type: [backend, web, complete]
+    steps:
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and Push GHCR Manifest
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository }}/${{ matrix.image_type }}:${{ needs.read-version.outputs.version }} \
+            -t ghcr.io/${{ github.repository }}/${{ matrix.image_type }}:latest \
+            ghcr.io/${{ github.repository }}/${{ matrix.image_type }}:${{ needs.read-version.outputs.version }}-linux-amd64 \
+            ghcr.io/${{ github.repository }}/${{ matrix.image_type }}:${{ needs.read-version.outputs.version }}-linux-arm64
+
+  build-web-zip:
+    needs: read-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            apps/sabjiwala-web/package-lock.json
+            shared/package-lock.json
+
+      - name: Build Shared Package
+        run: |
+          cd shared
+          npm install
+          npm run build
+
+      - name: Setup Web App
+        run: |
+          cd apps/sabjiwala-web
+          npm install
+          
+          # Replace symlink with physical copy of shared package to satisfy Turbopack
+          rm -rf node_modules/@sabjiwala/shared
+          mkdir -p node_modules/@sabjiwala/shared
+          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
+          cp -r ../../shared/src node_modules/@sabjiwala/shared/
+          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          cp ../../shared/tsconfig.json node_modules/@sabjiwala/shared/
+
+      - name: Copy Dashboard Views to Web App
+        run: |
+          mkdir -p apps/sabjiwala-web/src/app/vendor apps/sabjiwala-web/src/app/delivery apps/sabjiwala-web/src/app/admin
+          cp apps/customer-app/src/app/page.tsx apps/sabjiwala-web/src/app/page.tsx
+          cp apps/vendor-app/src/app/page.tsx apps/sabjiwala-web/src/app/vendor/page.tsx
+          cp apps/delivery-app/src/app/page.tsx apps/sabjiwala-web/src/app/delivery/page.tsx
+          cp apps/admin-app/src/app/page.tsx apps/sabjiwala-web/src/app/admin/page.tsx
+
+      - name: Build Web App Static Export
+        run: |
+          cd apps/sabjiwala-web
+          npm run build
+
+      - name: Zip Web App Static Export
+        run: |
+          cd apps/sabjiwala-web/out
+          zip -r ../../../sabjiwala-web-static.zip .
+
+      - name: Upload Web App Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-static
+          path: sabjiwala-web-static.zip
+
+  build-android:
+    needs: read-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build Shared Package
+        run: |
+          cd shared
+          npm install
+          npm run build
+
+      - name: Generate Self-Signed keystore for fallback signing
+        run: |
+          keytool -genkey -v -keystore release.keystore -alias sabjiwala -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=sabjiwala.in, OU=Dev, O=SabjiWala, L=Mumbai, S=MH, C=IN" -storepass password -keypass password
+
+      # --- Build Customer App Android ---
+      - name: Build & Sync Customer App
+        run: |
+          cd apps/customer-app
+          npm install
+          
+          # Inject physical shared dependency
+          rm -rf node_modules/@sabjiwala/shared
+          mkdir -p node_modules/@sabjiwala/shared
+          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
+          cp -r ../../shared/src node_modules/@sabjiwala/shared/
+          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          
+          # Build Next.js Static Export
+          npm run build
+          
+          # Initialize Android platform
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap add android
+          npx cap sync android
+
+      - name: Compile & Sign Customer Android App
+        run: |
+          cd apps/customer-app/android
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/release.keystore \
+            -Pandroid.injected.signing.store.password=password \
+            -Pandroid.injected.signing.key.alias=sabjiwala \
+            -Pandroid.injected.signing.key.password=password
+          cp app/build/outputs/apk/release/app-release.apk $GITHUB_WORKSPACE/sabjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
+
+      # --- Build Vendor App Android ---
+      - name: Build & Sync Vendor App
+        run: |
+          cd apps/vendor-app
+          npm install
+          
+          # Inject physical shared dependency
+          rm -rf node_modules/@sabjiwala/shared
+          mkdir -p node_modules/@sabjiwala/shared
+          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
+          cp -r ../../shared/src node_modules/@sabjiwala/shared/
+          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          
+          # Build Next.js Static Export
+          npm run build
+          
+          # Initialize Android platform
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap add android
+          npx cap sync android
+
+      - name: Compile & Sign Vendor Android App
+        run: |
+          cd apps/vendor-app/android
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/release.keystore \
+            -Pandroid.injected.signing.store.password=password \
+            -Pandroid.injected.signing.key.alias=sabjiwala \
+            -Pandroid.injected.signing.key.password=password
+          cp app/build/outputs/apk/release/app-release.apk $GITHUB_WORKSPACE/sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
+
+      # --- Build Delivery App Android ---
+      - name: Build & Sync Delivery App
+        run: |
+          cd apps/delivery-app
+          npm install
+          
+          # Inject physical shared dependency
+          rm -rf node_modules/@sabjiwala/shared
+          mkdir -p node_modules/@sabjiwala/shared
+          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
+          cp -r ../../shared/src node_modules/@sabjiwala/shared/
+          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          
+          # Build Next.js Static Export
+          npm run build
+          
+          # Initialize Android platform
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap add android
+          npx cap sync android
+
+      - name: Compile & Sign Delivery Android App
+        run: |
+          cd apps/delivery-app/android
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/release.keystore \
+            -Pandroid.injected.signing.store.password=password \
+            -Pandroid.injected.signing.key.alias=sabjiwala \
+            -Pandroid.injected.signing.key.password=password
+          cp app/build/outputs/apk/release/app-release.apk $GITHUB_WORKSPACE/sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
+
+      - name: Upload Android Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks
+          path: |
+            sabjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
+            sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
+            sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
+
+  build-ios:
+    needs: read-version
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build Shared Package
+        run: |
+          cd shared
+          npm install
+          npm run build
+
+      # --- Build Customer App iOS ---
+      - name: Build & Sync Customer App
+        run: |
+          cd apps/customer-app
+          npm install
+          
+          # Inject physical shared dependency
+          rm -rf node_modules/@sabjiwala/shared
+          mkdir -p node_modules/@sabjiwala/shared
+          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
+          cp -r ../../shared/src node_modules/@sabjiwala/shared/
+          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          
+          # Build Next.js Static Export
+          npm run build
+          
+          # Initialize iOS platform
+          npm install @capacitor/core @capacitor/cli @capacitor/ios
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Compile Customer iOS payload
+        run: |
+          cd apps/customer-app/ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO build
+          cd build/Release-iphoneos
+          zip -r $GITHUB_WORKSPACE/sabjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.zip App.app
+
+      # --- Build Vendor App iOS ---
+      - name: Build & Sync Vendor App
+        run: |
+          cd apps/vendor-app
+          npm install
+          
+          # Inject physical shared dependency
+          rm -rf node_modules/@sabjiwala/shared
+          mkdir -p node_modules/@sabjiwala/shared
+          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
+          cp -r ../../shared/src node_modules/@sabjiwala/shared/
+          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          
+          # Build Next.js Static Export
+          npm run build
+          
+          # Initialize iOS platform
+          npm install @capacitor/core @capacitor/cli @capacitor/ios
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Compile Vendor iOS payload
+        run: |
+          cd apps/vendor-app/ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO build
+          cd build/Release-iphoneos
+          zip -r $GITHUB_WORKSPACE/sabjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.zip App.app
+
+      # --- Build Delivery App iOS ---
+      - name: Build & Sync Delivery App
+        run: |
+          cd apps/delivery-app
+          npm install
+          
+          # Inject physical shared dependency
+          rm -rf node_modules/@sabjiwala/shared
+          mkdir -p node_modules/@sabjiwala/shared
+          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
+          cp -r ../../shared/src node_modules/@sabjiwala/shared/
+          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          
+          # Build Next.js Static Export
+          npm run build
+          
+          # Initialize iOS platform
+          npm install @capacitor/core @capacitor/cli @capacitor/ios
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Compile Delivery iOS payload
+        run: |
+          cd apps/delivery-app/ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO build
+          cd build/Release-iphoneos
+          zip -r $GITHUB_WORKSPACE/sabjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.zip App.app
+
+      - name: Upload iOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-builds
+          path: |
+            sabjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.zip
+            sabjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.zip
+            sabjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.zip
+
+  create-release:
+    needs: [read-version, release-docker-manifests, build-web-zip, build-android, build-ios]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Web App Static Export
+        uses: actions/download-artifact@v4
+        with:
+          name: web-static
+
+      - name: Download Android APKS
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apks
+
+      - name: Download iOS Builds
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-builds
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.read-version.outputs.version }}
+          name: SabjiWala Release v${{ needs.read-version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            sabjiwala-web-static.zip
+            sabjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
+            sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
+            sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
+            sabjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.zip
+            sabjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.zip
+            sabjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.zip
+          body: |
+            # SabjiWala Platform Release v${{ needs.read-version.outputs.version }}
+
+            We are pleased to announce the production release of the SabjiWala eCommerce Platform, version `${{ needs.read-version.outputs.version }}`. All sub-platforms have been compiled, synced, and packaged.
+
+            ## Release Contents
+            - **Docker Containers**:
+              - **FastAPI Backend (Multi-Arch AMD64/ARM64)**:
+                - GitHub Packages: `ghcr.io/${{ github.repository }}/backend:v${{ needs.read-version.outputs.version }}`
+              - **Unified Nginx Web Portal (Multi-Arch AMD64/ARM64)**:
+                - GitHub Packages: `ghcr.io/${{ github.repository }}/web:v${{ needs.read-version.outputs.version }}`
+              - **Complete Stack (Backend & Frontend Proxied, Multi-Arch AMD64/ARM64)**:
+                - GitHub Packages: `ghcr.io/${{ github.repository }}/complete:v${{ needs.read-version.outputs.version }}`
+            - **Static Web files**: `sabjiwala-web-static.zip`
+            - **Signed Android Apps (Capacitor/Gradle)**:
+              - [Customer App] `sabjiwala-customer-v${{ needs.read-version.outputs.version }}.apk`
+              - [Vendor App] `sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk`
+              - [Delivery App] `sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk`
+            - **Unsigned iOS Payload Bundles**:
+              - [Customer App] `sabjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.zip`
+              - [Vendor App] `sabjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.zip`
+              - [Delivery App] `sabjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.zip`
+
+            ## Deployment instructions
+            1. **Docker Deployment**: Update your orchestrator/k8s manifests to pull the multi-arch images.
+            2. **Android**: Install the signed APKs directly on target Android test devices.
+            3. **iOS**: Code-sign the `.app` bundle from the zip files before deployment to testing devices.

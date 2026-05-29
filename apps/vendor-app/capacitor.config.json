@@ -1,0 +1,8 @@
+{
+  "appId": "com.sabjiwala.vendor",
+  "appName": "SabjiWala Vendor",
+  "webDir": "out",
+  "server": {
+    "androidScheme": "https"
+  }
+}

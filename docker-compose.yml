@@ -1,0 +1,81 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: sabjiwala_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: sabjiwala
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sabjiwala"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: sabjiwala_redis
+    restart: always
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: ./infrastructure/docker/Dockerfile.complete
+    container_name: sabjiwala_complete_app
+    restart: always
+    environment:
+      - APP_NAME=SabjiWala
+      - APP_ENV=production
+      - APP_DEBUG=True
+      - APP_SECRET_KEY=sabjiwala-super-secret-key-change-this-in-production
+      - JWT_SECRET_KEY=sabjiwala-jwt-secret-key-change-this-in-production
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/sabjiwala
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+      - RATE_LIMIT_ENABLED=False
+      - CORS_ORIGINS=http://localhost,http://127.0.0.1
+      # SMTP Settings (for OTP and transactional emails)
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=your-email@gmail.com
+      - SMTP_PASSWORD=your-app-password
+      - SMTP_FROM_NAME=SabjiWala
+      - SMTP_FROM_EMAIL=noreply@sabjiwala.in
+      # Social OAuth2 Settings (Google & Facebook)
+      - GOOGLE_CLIENT_ID=your-google-client-id
+      - GOOGLE_CLIENT_SECRET=your-google-client-secret
+      - GOOGLE_REDIRECT_URI=http://localhost/auth/callback/google
+      - FACEBOOK_CLIENT_ID=your-facebook-client-id
+      - FACEBOOK_CLIENT_SECRET=your-facebook-client-secret
+      - FACEBOOK_REDIRECT_URI=http://localhost/auth/callback/facebook
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8000:8000"
+    volumes:
+      - storage_data:/app/storage
+
+volumes:
+  pg_data:
+  redis_data:
+  storage_data:

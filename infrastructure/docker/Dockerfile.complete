@@ -1,0 +1,61 @@
+# Stage 1: Build Next.js Static Portals
+FROM node:20-alpine AS builder
+WORKDIR /app
+RUN apk add --no-cache rsync
+COPY version.json ./
+COPY shared ./shared
+COPY apps/customer-app ./apps/customer-app
+COPY apps/vendor-app ./apps/vendor-app
+COPY apps/delivery-app ./apps/delivery-app
+COPY apps/admin-app ./apps/admin-app
+COPY apps/sabjiwala-web ./apps/sabjiwala-web
+
+RUN cd shared && npm install && npm run build
+RUN cd apps/sabjiwala-web && \
+    npm install && \
+    rm -rf node_modules/@sabjiwala/shared && \
+    mkdir -p node_modules/@sabjiwala/shared && \
+    cp -r ../../shared/dist node_modules/@sabjiwala/shared/ && \
+    cp -r ../../shared/src node_modules/@sabjiwala/shared/ && \
+    cp ../../shared/package.json node_modules/@sabjiwala/shared/ && \
+    cp ../../shared/tsconfig.json node_modules/@sabjiwala/shared/ && \
+    npm install axios && \
+    cp ../customer-app/src/app/page.tsx src/app/page.tsx && \
+    cp ../vendor-app/src/app/page.tsx src/app/vendor/page.tsx && \
+    cp ../delivery-app/src/app/page.tsx src/app/delivery/page.tsx && \
+    cp ../admin-app/src/app/page.tsx src/app/admin/page.tsx && \
+    npm run build
+
+# Stage 2: Combined Python Backend & Nginx Frontend
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Install Nginx and build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nginx \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install python dependencies from backend project folder
+COPY apps/backend/pyproject.toml ./
+RUN pip install --no-cache-dir .
+
+# Copy backend codebase
+COPY apps/backend /app
+
+# Copy static frontend assets from Next.js builder
+COPY --from=builder /app/apps/sabjiwala-web/out /usr/share/nginx/html
+
+# Copy Nginx complete-routing config
+COPY ./infrastructure/nginx/nginx-complete.conf /etc/nginx/nginx.conf
+
+# Copy startup script and make executable
+COPY ./infrastructure/docker/start.sh /start.sh
+RUN chmod +x /start.sh
+
+EXPOSE 80 443 8000
+
+ENTRYPOINT ["/start.sh"]

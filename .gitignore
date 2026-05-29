@@ -1,0 +1,147 @@
+# ============================================================
+# SabjiWala.in - Git Ignore Configuration
+# Tracks only source code, build configs, and static resources
+# ============================================================
+
+# Packages & Dependencies
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+.npm/
+
+# Shared Build Outputs (Compiled JS)
+shared/dist/
+shared/node_modules/
+
+# Python Build & Runtime Cache
+__pycache__/
+*.py[cod]
+*$$py.class
+*.pyo
+*.pyd
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Next.js Build Outputs & Local Caches
+.next/
+out/
+.docusaurus/
+.turbo/
+.cache/
+
+# Android & iOS Native Mobile Build Wrappers (Generated dynamically)
+apps/customer-app/android/
+apps/customer-app/ios/
+apps/vendor-app/android/
+apps/vendor-app/ios/
+apps/delivery-app/android/
+apps/delivery-app/ios/
+
+# Security, Certificates & Private Keystores
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+*.crt
+*.der
+*.pfx
+secrets/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+!.env.example
+
+# IDEs, Editors & Workspaces
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~
+.project
+.classpath
+.settings/
+.project
+.cproject
+.metadata/
+
+# Operating System Metadata
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# Database Engines & Logs
+*.db
+*.sqlite
+*.sqlite3
+pg_data/
+redis_data/
+*.log
+logs/
+temp/
+tmp/
+
+# Nginx SSL & Cache configurations
+infrastructure/nginx/ssl/*.pem
+infrastructure/nginx/ssl/*.key
+infrastructure/nginx/ssl/*.crt
+
+# Application Storage & Dynamic Uploads
+apps/backend/storage/
+storage/uploads/
+storage/temp/
+
+# Testing Coverages
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
