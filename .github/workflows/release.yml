@@ -195,11 +195,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -358,6 +358,9 @@ jobs:
           # Initialize iOS platform
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           npx cap add ios
+          # Update deployment target to iOS 14.0 for compatibility with @capacitor/ios v6/v7
+          sed -i '' "s/platform :ios, .*/platform :ios, '14.0'/g" ios/App/Podfile
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g" ios/App/App.xcodeproj/project.pbxproj
           npx cap sync ios
 
       - name: Compile Customer iOS payload
@@ -386,6 +389,9 @@ jobs:
           # Initialize iOS platform
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           npx cap add ios
+          # Update deployment target to iOS 14.0 for compatibility with @capacitor/ios v6/v7
+          sed -i '' "s/platform :ios, .*/platform :ios, '14.0'/g" ios/App/Podfile
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g" ios/App/App.xcodeproj/project.pbxproj
           npx cap sync ios
 
       - name: Compile Vendor iOS payload
@@ -414,6 +420,9 @@ jobs:
           # Initialize iOS platform
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           npx cap add ios
+          # Update deployment target to iOS 14.0 for compatibility with @capacitor/ios v6/v7
+          sed -i '' "s/platform :ios, .*/platform :ios, '14.0'/g" ios/App/Podfile
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g" ios/App/App.xcodeproj/project.pbxproj
           npx cap sync ios
 
       - name: Compile Delivery iOS payload
