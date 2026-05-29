@@ -608,9 +608,12 @@ jobs:
             sabjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
             sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
             sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
-            sabjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.zip
-            sabjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.zip
-            sabjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.zip
+            sabjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
+            sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
+            sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab
+            sabjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.*
+            sabjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.*
+            sabjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.*
           body: |
             # SabjiWala Platform Release v${{ needs.read-version.outputs.version }}
 
@@ -625,14 +628,14 @@ jobs:
               - **Complete Stack (Backend & Frontend Proxied, Multi-Arch AMD64/ARM64)**:
                 - GitHub Packages: `ghcr.io/${{ github.repository }}/complete:v${{ needs.read-version.outputs.version }}`
             - **Static Web files**: `sabjiwala-web-static.zip`
-            - **Signed Android Apps (Capacitor/Gradle)**:
-              - [Customer App] `sabjiwala-customer-v${{ needs.read-version.outputs.version }}.apk`
-              - [Vendor App] `sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk`
-              - [Delivery App] `sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk`
-            - **Unsigned iOS Payload Bundles**:
-              - [Customer App] `sabjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.zip`
-              - [Vendor App] `sabjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.zip`
-              - [Delivery App] `sabjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.zip`
+            - **Android Apps (Capacitor/Gradle)**:
+              - [Customer App] `.apk` and `.aab` bundles
+              - [Vendor App] `.apk` and `.aab` bundles
+              - [Delivery App] `.apk` and `.aab` bundles
+            - **iOS Payload Bundles**:
+              - [Customer App] `.ipa` (signed) or `.zip` (simulator)
+              - [Vendor App] `.ipa` (signed) or `.zip` (simulator)
+              - [Delivery App] `.ipa` (signed) or `.zip` (simulator)
 
             ## Deployment instructions
             1. **Docker Deployment**: Update your orchestrator/k8s manifests to pull the multi-arch images.
