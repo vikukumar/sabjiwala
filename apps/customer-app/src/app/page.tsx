@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, MapPin, ShoppingBag, User, Plus, Minus, ArrowRight, Star, Loader2 } from "lucide-react";
+import { Search, MapPin, ShoppingBag, User, Plus, Minus, ArrowRight, Star, Loader2, X, ClipboardList, XCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sabjiwala/shared";
 import versionInfo from "./version.json";
@@ -11,6 +11,31 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [isOrdersOpen, setIsOrdersOpen] = useState(false);
+
+  // Fetch customer past orders
+  const { data: myOrders = [], isLoading: myOrdersLoading } = useQuery<any[]>({
+    queryKey: ["myOrders"],
+    queryFn: async () => {
+      const res = await api.get("/orders");
+      return res.data || [];
+    },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token")
+  });
+
+  // Cancel order mutation
+  const cancelOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      return api.post(`/orders/${orderId}/cancel`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myOrders"] });
+      alert("Order cancelled successfully!");
+    },
+    onError: (err: any) => {
+      alert("Failed to cancel order: " + (err.response?.data?.detail || err.message));
+    }
+  });
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
@@ -155,8 +180,8 @@ export default function Home() {
       <header className="sticky top-0 z-50 bg-white dark:bg-slate-900 shadow-sm border-b border-slate-100 dark:border-slate-800 transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">SabjiWala</span>
-            <span className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-xs font-bold px-2 py-0.5 rounded-full">Express</span>
+            <img src="/logo_horizontal.png" alt="SabjiWala Logo" className="h-8 w-auto object-contain" />
+            <span className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">Express</span>
           </div>
 
           <div className="flex-1 max-w-md hidden md:flex items-center bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2 border border-slate-200 dark:border-slate-700">
@@ -198,7 +223,11 @@ export default function Home() {
               )}
             </button>
 
-            <button className="p-2 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+            <button 
+              onClick={() => setIsOrdersOpen(true)}
+              className="p-2 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+              title="My Orders"
+            >
               <User className="w-6 h-6" />
             </button>
           </div>
@@ -362,15 +391,102 @@ export default function Home() {
         </div>
       )}
 
-      {/* Footer / Version Display */}
-      <footer className="py-8 text-center border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 mt-12 transition-colors duration-200">
-        <p className="text-xs text-slate-400 dark:text-slate-500">
-          © {new Date().getFullYear()} SabjiWala.in. All rights reserved.
-        </p>
-        <p className="text-[10px] text-slate-350 dark:text-slate-600 mt-1 font-mono">
-          App Version: v{versionInfo.version}
-        </p>
-      </footer>
+      {/* Sliding Drawer for My Orders */}
+      {isOrdersOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden font-sans">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsOrdersOpen(false)}
+          ></div>
+
+          <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-md bg-white dark:bg-slate-900 shadow-2xl flex flex-col transition-all transform duration-300">
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/20">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">My Orders</h3>
+                </div>
+                <button 
+                  onClick={() => setIsOrdersOpen(false)}
+                  className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto px-6 py-4 divide-y divide-slate-100 dark:divide-slate-800">
+                {myOrdersLoading ? (
+                  <div className="h-40 flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Fetching your orders...</span>
+                  </div>
+                ) : myOrders && myOrders.length > 0 ? (
+                  myOrders.map((order: any) => (
+                    <div key={order.id} className="py-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-extrabold text-slate-900 dark:text-white text-sm">
+                            #Order {order.order_number}
+                          </p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                            {new Date(order.created_at).toLocaleString(undefined, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                          </p>
+                        </div>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          order.status === "pending"
+                            ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
+                            : order.status === "confirmed" || order.status === "accepted" || order.status === "packed"
+                            ? "bg-blue-100 dark:bg-blue-955/40 text-blue-800 dark:text-blue-400"
+                            : order.status === "delivered"
+                            ? "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
+                            : "bg-rose-100 dark:bg-rose-955/40 text-rose-800 dark:text-rose-455"
+                        }`}>
+                          {order.status}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs font-semibold text-slate-600 dark:text-slate-350">
+                        <span>Payment: {order.payment_method?.toUpperCase()}</span>
+                        <span className="text-slate-400 dark:text-slate-500">•</span>
+                        <span>Status: {order.payment_status?.toUpperCase()}</span>
+                      </div>
+
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="text-base font-black text-slate-900 dark:text-white">₹{order.total_amount}</span>
+                        {(order.status === "pending" || order.status === "confirmed") && (
+                          <button
+                            onClick={() => {
+                              if (confirm("Are you sure you want to cancel this order?")) {
+                                cancelOrderMutation.mutate(order.id);
+                              }
+                            }}
+                            disabled={cancelOrderMutation.isPending}
+                            className="text-xs bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white dark:bg-rose-955/20 dark:hover:bg-rose-650 dark:text-rose-450 dark:hover:text-white font-bold px-3.5 py-1.5 rounded-xl border border-rose-100 dark:border-rose-900/30 transition-all flex items-center gap-1 disabled:opacity-50"
+                          >
+                            <XCircle className="w-3.5 h-3.5" /> Cancel Order
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-12 text-center text-slate-400 dark:text-slate-500 space-y-2">
+                    <span className="text-3xl block">📦</span>
+                    <p className="text-sm font-bold">No orders placed yet</p>
+                    <p className="text-xs text-slate-455 dark:text-slate-550">Your order history will appear here once you place an order.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

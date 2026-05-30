@@ -113,7 +113,7 @@ export default function DeliveryAgentDashboard() {
       <header className="sticky top-0 z-50 bg-emerald-600 dark:bg-slate-900 text-white shadow-md transition-colors duration-200">
         <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-black tracking-tight">SabjiWala</span>
+            <img src="/logo_horizontal.png" alt="SabjiWala Logo" className="h-8 w-auto object-contain brightness-0 invert" />
             <span className="text-[10px] uppercase bg-emerald-700 dark:bg-emerald-950/80 text-white dark:text-emerald-300 font-extrabold px-2 py-0.5 rounded-full">
               Delivery
             </span>

@@ -286,7 +286,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 flex flex-col justify-between transition-colors duration-200 antialiased font-sans">
+    <div className="min-h-screen bg-slate-55 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 flex flex-col justify-between transition-colors duration-200 antialiased font-sans">
       {/* Header */}
       <header className="max-w-6xl w-full mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -316,8 +316,8 @@ export default function LoginPage() {
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {authMode === "signin" 
-                ? "Log in to manage orders, catalog, and deliveries" 
-                : "Register to get fresh vegetables delivered in 10 minutes"}
+                ? "Log in to manage platform operations and verify vendors" 
+                : "Register to get access to platform configuration"}
             </p>
           </div>
 
@@ -347,12 +347,12 @@ export default function LoginPage() {
 
           {/* Messages */}
           {errorMsg && (
-            <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-600 dark:text-rose-450 rounded-2xl text-xs font-semibold leading-relaxed">
+            <div className="p-4 bg-rose-50 dark:bg-rose-955/20 border border-rose-100 dark:border-rose-900/30 text-rose-600 dark:text-rose-455 rounded-2xl text-xs font-semibold leading-relaxed">
               {errorMsg}
             </div>
           )}
           {successMsg && (
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-2xl text-xs font-semibold leading-relaxed">
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-955/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-2xl text-xs font-semibold leading-relaxed">
               {successMsg}
             </div>
           )}
@@ -366,7 +366,7 @@ export default function LoginPage() {
                   onClick={() => setLoginTab("otp")}
                   className={`pb-1 transition-all ${
                     loginTab === "otp"
-                      ? "text-emerald-600 dark:text-emerald-450 border-b-2 border-emerald-600 dark:border-emerald-450"
+                      ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
                       : "text-slate-400 hover:text-slate-650"
                   }`}
                 >
@@ -376,7 +376,7 @@ export default function LoginPage() {
                   onClick={() => setLoginTab("password")}
                   className={`pb-1 transition-all ${
                     loginTab === "password"
-                      ? "text-emerald-600 dark:text-emerald-450 border-b-2 border-emerald-600 dark:border-emerald-450"
+                      ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
                       : "text-slate-400 hover:text-slate-650"
                   }`}
                 >
@@ -390,12 +390,12 @@ export default function LoginPage() {
                   <form onSubmit={handleSendOtp} className="space-y-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Email Address</label>
-                      <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
+                      <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
                         <Mail className="w-5 h-5 text-slate-400 mr-3" />
                         <input
                           type="email"
                           required
-                          placeholder="you@example.com"
+                          placeholder="admin@sabjiwala.in"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="bg-transparent border-none outline-none w-full text-sm text-slate-800 dark:text-white placeholder-slate-400"
@@ -425,7 +425,7 @@ export default function LoginPage() {
                         <label className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Verification Code</label>
                         <span className="text-xs text-slate-400 font-semibold">{email}</span>
                       </div>
-                      <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
+                      <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
                         <ShieldCheck className="w-5 h-5 text-slate-400 mr-3" />
                         <input
                           type="text"
@@ -445,7 +445,7 @@ export default function LoginPage() {
                       {countdown > 0 ? (
                         <span className="text-slate-400">Resend in {countdown}s</span>
                       ) : (
-                        <button type="button" onClick={handleSendOtp} className="text-emerald-600 dark:text-emerald-450 hover:underline">
+                        <button type="button" onClick={handleSendOtp} className="text-emerald-600 dark:text-emerald-455 hover:underline">
                           Resend Code
                         </button>
                       )}
@@ -472,12 +472,12 @@ export default function LoginPage() {
                 <form onSubmit={handlePasswordLogin} className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Email Address</label>
-                    <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
+                    <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
                       <Mail className="w-5 h-5 text-slate-400 mr-3" />
                       <input
                         type="email"
                         required
-                        placeholder="you@example.com"
+                        placeholder="admin@sabjiwala.in"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="bg-transparent border-none outline-none w-full text-sm text-slate-800 dark:text-white placeholder-slate-400"
@@ -487,7 +487,7 @@ export default function LoginPage() {
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Password</label>
-                    <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
+                    <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
                       <Lock className="w-5 h-5 text-slate-400 mr-3" />
                       <input
                         type="password"
@@ -526,12 +526,12 @@ export default function LoginPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">First Name</label>
-                  <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
+                  <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
                     <User className="w-4 h-4 text-slate-455 mr-2" />
                     <input
                       type="text"
                       required
-                      placeholder="Rahul"
+                      placeholder="Admin"
                       value={regFirstName}
                       onChange={(e) => setRegFirstName(e.target.value)}
                       className="bg-transparent border-none outline-none w-full text-xs text-slate-850 dark:text-white"
@@ -540,11 +540,11 @@ export default function LoginPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Last Name</label>
-                  <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
+                  <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
                     <User className="w-4 h-4 text-slate-455 mr-2" />
                     <input
                       type="text"
-                      placeholder="Sharma"
+                      placeholder="User"
                       value={regLastName}
                       onChange={(e) => setRegLastName(e.target.value)}
                       className="bg-transparent border-none outline-none w-full text-xs text-slate-850 dark:text-white"
@@ -555,12 +555,12 @@ export default function LoginPage() {
 
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Email Address</label>
-                <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
+                <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
                   <Mail className="w-4 h-4 text-slate-455 mr-2.5" />
                   <input
                     type="email"
                     required
-                    placeholder="name@example.com"
+                    placeholder="admin@sabjiwala.in"
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
                     className="bg-transparent border-none outline-none w-full text-xs text-slate-850 dark:text-white"
@@ -570,7 +570,7 @@ export default function LoginPage() {
 
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Mobile Number (Optional)</label>
-                <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
+                <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
                   <Phone className="w-4 h-4 text-slate-455 mr-2.5" />
                   <input
                     type="tel"
@@ -584,7 +584,7 @@ export default function LoginPage() {
 
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Password (Optional)</label>
-                <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
+                <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
                   <Lock className="w-4 h-4 text-slate-455 mr-2.5" />
                   <input
                     type="password"
@@ -598,7 +598,7 @@ export default function LoginPage() {
 
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Referral Code (Optional)</label>
-                <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
+                <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
                   <Gift className="w-4 h-4 text-slate-455 mr-2.5" />
                   <input
                     type="text"
@@ -640,7 +640,7 @@ export default function LoginPage() {
               <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => handleSocialLogin("google")}
-                  className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl py-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 bg-slate-55/50 dark:bg-slate-955/40 rounded-2xl py-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path
@@ -652,7 +652,7 @@ export default function LoginPage() {
                 </button>
                 <button
                   onClick={() => handleSocialLogin("facebook")}
-                  className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl py-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 bg-slate-55/50 dark:bg-slate-955/40 rounded-2xl py-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <svg className="w-4 h-4 fill-[#1877F2]" viewBox="0 0 24 24">
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />

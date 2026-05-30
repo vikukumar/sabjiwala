@@ -366,7 +366,7 @@ export default function LoginPage() {
                   onClick={() => setLoginTab("otp")}
                   className={`pb-1 transition-all ${
                     loginTab === "otp"
-                      ? "text-emerald-600 dark:text-emerald-450 border-b-2 border-emerald-600 dark:border-emerald-450"
+                      ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
                       : "text-slate-400 hover:text-slate-650"
                   }`}
                 >
@@ -376,7 +376,7 @@ export default function LoginPage() {
                   onClick={() => setLoginTab("password")}
                   className={`pb-1 transition-all ${
                     loginTab === "password"
-                      ? "text-emerald-600 dark:text-emerald-450 border-b-2 border-emerald-600 dark:border-emerald-450"
+                      ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
                       : "text-slate-400 hover:text-slate-650"
                   }`}
                 >
@@ -445,7 +445,7 @@ export default function LoginPage() {
                       {countdown > 0 ? (
                         <span className="text-slate-400">Resend in {countdown}s</span>
                       ) : (
-                        <button type="button" onClick={handleSendOtp} className="text-emerald-600 dark:text-emerald-450 hover:underline">
+                        <button type="button" onClick={handleSendOtp} className="text-emerald-600 dark:text-emerald-455 hover:underline">
                           Resend Code
                         </button>
                       )}

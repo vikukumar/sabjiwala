@@ -347,12 +347,12 @@ export default function LoginPage() {
 
           {/* Messages */}
           {errorMsg && (
-            <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-600 dark:text-rose-450 rounded-2xl text-xs font-semibold leading-relaxed">
+            <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-600 dark:text-rose-455 rounded-2xl text-xs font-semibold leading-relaxed">
               {errorMsg}
             </div>
           )}
           {successMsg && (
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-2xl text-xs font-semibold leading-relaxed">
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-450 rounded-2xl text-xs font-semibold leading-relaxed">
               {successMsg}
             </div>
           )}
@@ -366,7 +366,7 @@ export default function LoginPage() {
                   onClick={() => setLoginTab("otp")}
                   className={`pb-1 transition-all ${
                     loginTab === "otp"
-                      ? "text-emerald-600 dark:text-emerald-450 border-b-2 border-emerald-600 dark:border-emerald-450"
+                      ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
                       : "text-slate-400 hover:text-slate-650"
                   }`}
                 >
@@ -376,7 +376,7 @@ export default function LoginPage() {
                   onClick={() => setLoginTab("password")}
                   className={`pb-1 transition-all ${
                     loginTab === "password"
-                      ? "text-emerald-600 dark:text-emerald-450 border-b-2 border-emerald-600 dark:border-emerald-450"
+                      ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
                       : "text-slate-400 hover:text-slate-650"
                   }`}
                 >
@@ -398,7 +398,7 @@ export default function LoginPage() {
                           placeholder="you@example.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="bg-transparent border-none outline-none w-full text-sm text-slate-800 dark:text-white placeholder-slate-400"
+                          className="bg-transparent border-none outline-none w-full text-sm text-slate-850 dark:text-white placeholder-slate-400"
                         />
                       </div>
                     </div>
@@ -445,7 +445,7 @@ export default function LoginPage() {
                       {countdown > 0 ? (
                         <span className="text-slate-400">Resend in {countdown}s</span>
                       ) : (
-                        <button type="button" onClick={handleSendOtp} className="text-emerald-600 dark:text-emerald-450 hover:underline">
+                        <button type="button" onClick={handleSendOtp} className="text-emerald-600 dark:text-emerald-455 hover:underline">
                           Resend Code
                         </button>
                       )}
@@ -480,7 +480,7 @@ export default function LoginPage() {
                         placeholder="you@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="bg-transparent border-none outline-none w-full text-sm text-slate-800 dark:text-white placeholder-slate-400"
+                        className="bg-transparent border-none outline-none w-full text-sm text-slate-850 dark:text-white placeholder-slate-400"
                       />
                     </div>
                   </div>
@@ -495,7 +495,7 @@ export default function LoginPage() {
                         placeholder="Enter password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="bg-transparent border-none outline-none w-full text-sm text-slate-800 dark:text-white placeholder-slate-400"
+                        className="bg-transparent border-none outline-none w-full text-sm text-slate-850 dark:text-white placeholder-slate-400"
                       />
                     </div>
                   </div>
