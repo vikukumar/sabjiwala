@@ -20,6 +20,11 @@ RUN cd apps/sbjiwala-web && \
     cp ../../shared/package.json node_modules/@sbjiwala/shared/ && \
     cp ../../shared/tsconfig.json node_modules/@sbjiwala/shared/ && \
     cp -r ../customer-app/src/components src/ && \
+    cp -r ../customer-app/src/app/about src/app/ && \
+    cp -r ../customer-app/src/app/how-it-works src/app/ && \
+    cp -r ../customer-app/src/app/privacy src/app/ && \
+    cp -r ../customer-app/src/app/terms src/app/ && \
+    cp -r ../customer-app/src/app/refund-policy src/app/ && \
     cp ../customer-app/src/app/page.tsx src/app/page.tsx && \
     cp ../vendor-app/src/app/page.tsx src/app/vendor/page.tsx && \
     cp ../delivery-app/src/app/page.tsx src/app/delivery/page.tsx && \
