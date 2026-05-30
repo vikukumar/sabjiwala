@@ -169,3 +169,63 @@ async def get_pending_vendors(
             "time": v.created_at.isoformat()
         })
     return APIResponse(success=True, data=data)
+
+
+@router.get("/vendors/{vendor_id}", response_model=APIResponse)
+async def get_vendor_details(
+    vendor_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve complete vendor details including FSSAI/PAN/GST and documents for admin review."""
+    await _verify_admin(current_user)
+    
+    from sqlalchemy.orm import selectinload
+    from app.models.vendor import VendorDocument
+    
+    result = await db.execute(
+        select(Vendor)
+        .options(selectinload(Vendor.store))
+        .where(Vendor.id == vendor_id)
+    )
+    vendor = result.scalars().first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+        
+    user_res = await db.execute(select(User).where(User.id == vendor.user_id))
+    user = user_res.scalars().first()
+    
+    # Fetch documents
+    doc_res = await db.execute(select(VendorDocument).where(VendorDocument.vendor_id == vendor.id))
+    documents = doc_res.scalars().all()
+    
+    data = {
+        "id": str(vendor.id),
+        "business_name": vendor.business_name,
+        "business_type": vendor.business_type,
+        "description": vendor.description,
+        "status": vendor.status.value,
+        "rejection_reason": vendor.rejection_reason,
+        "gst_number": vendor.gst_number,
+        "pan_number": vendor.pan_number,
+        "fssai_number": vendor.fssai_number,
+        "contact_email": user.email if user else vendor.contact_email,
+        "contact_phone": user.phone if user else vendor.contact_phone,
+        "created_at": vendor.created_at.isoformat(),
+        "store": {
+            "store_name": vendor.store.store_name if vendor.store else "",
+            "city": vendor.store.city if vendor.store else "",
+            "state": vendor.store.state if vendor.store else "",
+        } if vendor.store else None,
+        "documents": [
+            {
+                "id": str(d.id),
+                "document_type": d.document_type.value,
+                "document_number": d.document_number,
+                "file_url": d.file_url,
+                "verification_status": d.verification_status.value
+            }
+            for d in documents
+        ]
+    }
+    return APIResponse(success=True, data=data)

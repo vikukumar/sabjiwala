@@ -209,26 +209,135 @@ function OffersBanner() {
   );
 }
 
+// ==================== HAVERSINE DISTANCE CALCULATOR ====================
+function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// ==================== LOCAL GUEST CART GETTER/SETTER ====================
+const getLocalGuestCart = () => {
+  if (typeof window === "undefined") return { items: [], subtotal: 0 };
+  try {
+    const raw = localStorage.getItem("sw_guest_cart");
+    return raw ? JSON.parse(raw) : { items: [], subtotal: 0 };
+  } catch {
+    return { items: [], subtotal: 0 };
+  }
+};
+
+const saveLocalGuestCart = (cart: any) => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("sw_guest_cart", JSON.stringify(cart));
+  window.dispatchEvent(new Event("sw_cart_updated"));
+};
+
 // ==================== PRODUCT CARD ====================
 function ProductCard({ product }: { product: any }) {
   const queryClient = useQueryClient();
   const { error: showError } = useToast();
 
-  const cartItem = useQuery<any>({
-    queryKey: ["cart"],
-    enabled: false, // Already fetched in parent
-  }).data?.items?.find((i: any) => i.product_id === product.id);
+  const isGuest = typeof window !== "undefined" && !localStorage.getItem("sw_access_token");
 
+  // Read backend cart
+  const { data: serverCart } = useQuery<any>({
+    queryKey: ["cart"],
+    enabled: typeof window !== "undefined" && !isGuest,
+  });
+
+  // Track guest cart local state
+  const [localCart, setLocalCart] = useState<any>(getLocalGuestCart());
+
+  useEffect(() => {
+    const handleUpdate = () => setLocalCart(getLocalGuestCart());
+    window.addEventListener("sw_cart_updated", handleUpdate);
+    return () => window.removeEventListener("sw_cart_updated", handleUpdate);
+  }, []);
+
+  const cartItem = isGuest
+    ? localCart?.items?.find((i: any) => i.product_id === product.id)
+    : serverCart?.items?.find((i: any) => i.product_id === product.id);
+
+  // Dynamic 4.5% product price customer markup
+  const price = Math.round((product.attributes?.price ?? product.price ?? 30) * 1.045 * 100) / 100;
+  const rawMrp = product.attributes?.mrp ?? product.mrp;
+  const mrp = rawMrp ? Math.round(rawMrp * 1.045 * 100) / 100 : undefined;
+  const emoji = product.attributes?.image_emoji || "🥬";
+  const hasDiscount = mrp && mrp > price;
+  const discountPct = hasDiscount ? Math.round(((mrp - price) / mrp) * 100) : 0;
+  const rating = product.attributes?.rating ?? (4 + Math.random() * 0.9).toFixed(1);
+
+  // Guest Add to Cart
+  const handleGuestAdd = () => {
+    const current = getLocalGuestCart();
+    const existing = current.items.find((i: any) => i.product_id === product.id);
+    const vendorId = product.attributes?.vendor_id || product.vendor_id;
+
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      current.items.push({
+        id: `guest-${product.id}`,
+        product_id: product.id,
+        product_name: product.name,
+        quantity: 1,
+        unit: product.unit || "1 kg",
+        price: price,
+        vendor_id: vendorId,
+        attributes: { image_emoji: emoji }
+      });
+    }
+    
+    // Recalculate guest subtotal
+    current.subtotal = current.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+    saveLocalGuestCart(current);
+
+    // Trigger contextual notification alert benefit on first guest item added
+    if (current.items.length === 1) {
+      window.dispatchEvent(new Event("trigger-notification-benefit"));
+    }
+  };
+
+  const handleGuestUpdateQty = (newQty: number) => {
+    const current = getLocalGuestCart();
+    const idx = current.items.findIndex((i: any) => i.product_id === product.id);
+    if (idx === -1) return;
+
+    if (newQty <= 0) {
+      current.items.splice(idx, 1);
+    } else {
+      current.items[idx].quantity = newQty;
+    }
+
+    current.subtotal = current.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+    saveLocalGuestCart(current);
+  };
+
+  // Backend mutations
   const addToCart = useMutation({
     mutationFn: async () => {
-      const vendorId = product.attributes?.vendor_id;
+      const vendorId = product.attributes?.vendor_id || product.vendor_id;
       return api.post("/cart/items", {
         product_id: product.id,
         vendor_id: vendorId,
         quantity: 1,
       });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      // Trigger contextual notification alert benefit on first backend item added
+      const currentItems = queryClient.getQueryData<any>(["cart"])?.items || [];
+      if (currentItems.length === 0) {
+        window.dispatchEvent(new Event("trigger-notification-benefit"));
+      }
+    },
     onError: (err: any) => showError("Failed to add", err.response?.data?.detail || err.message),
   });
 
@@ -239,13 +348,6 @@ function ProductCard({ product }: { product: any }) {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
   });
-
-  const price = product.attributes?.price ?? product.price ?? 30;
-  const mrp = product.attributes?.mrp ?? product.mrp;
-  const emoji = product.attributes?.image_emoji || "🥬";
-  const hasDiscount = mrp && mrp > price;
-  const discountPct = hasDiscount ? Math.round(((mrp - price) / mrp) * 100) : 0;
-  const rating = product.attributes?.rating ?? (4 + Math.random() * 0.9).toFixed(1);
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700/50 hover:shadow-lg transition-all group overflow-hidden product-card flex flex-col">
@@ -287,14 +389,14 @@ function ProductCard({ product }: { product: any }) {
           {cartItem ? (
             <div className="flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-1.5 py-0.5 shadow-sm">
               <button
-                onClick={() => updateQty.mutate({ itemId: cartItem.id, qty: cartItem.quantity - 1 })}
+                onClick={() => isGuest ? handleGuestUpdateQty(cartItem.quantity - 1) : updateQty.mutate({ itemId: cartItem.id, qty: cartItem.quantity - 1 })}
                 className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-emerald-700 transition-colors"
               >
                 <Minus className="w-3 h-3" />
               </button>
               <span className="px-2 text-sm font-black min-w-[20px] text-center">{cartItem.quantity}</span>
               <button
-                onClick={() => updateQty.mutate({ itemId: cartItem.id, qty: cartItem.quantity + 1 })}
+                onClick={() => isGuest ? handleGuestUpdateQty(cartItem.quantity + 1) : updateQty.mutate({ itemId: cartItem.id, qty: cartItem.quantity + 1 })}
                 className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-emerald-700 transition-colors"
               >
                 <Plus className="w-3 h-3" />
@@ -302,9 +404,9 @@ function ProductCard({ product }: { product: any }) {
             </div>
           ) : (
             <button
-              onClick={() => addToCart.mutate()}
-              disabled={addToCart.isPending}
-              className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white dark:bg-emerald-950/30 dark:hover:bg-emerald-600 dark:text-emerald-400 dark:hover:text-white text-xs font-black px-3.5 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-900/40 transition-all disabled:opacity-50 active:scale-95"
+              onClick={() => isGuest ? handleGuestAdd() : addToCart.mutate()}
+              disabled={!isGuest && addToCart.isPending}
+              className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white dark:bg-emerald-950/30 dark:hover:bg-emerald-600 dark:text-emerald-400 dark:hover:text-white text-xs font-black px-3.5 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-900/40 transition-all disabled:opacity-50 active:scale-95 cursor-pointer"
             >
               {addToCart.isPending ? "..." : "ADD"}
             </button>
@@ -320,16 +422,41 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
   const { data: categories = [] } = useQuery<any[]>({ queryKey: ["categories"], enabled: false });
   const catObj = categories.find((c: any) => c.name === categoryFilter);
 
-  const { data: products = [], isLoading } = useQuery<any[]>({
+  // Fetch all products
+  const { data: rawProducts = [], isLoading } = useQuery<any[]>({
     queryKey: ["products", categoryFilter],
     queryFn: async () => {
       const res = await api.get("/catalog/products", {
-        params: { category_id: catObj?.id || undefined, limit: 20 },
+        params: { category_id: catObj?.id || undefined, limit: 100 },
       });
       return res.data || [];
     },
     staleTime: 60_000,
   });
+
+  // Calculate distances and filter within 10 km radius, nearest first
+  const products = React.useMemo(() => {
+    if (typeof window === "undefined" || !rawProducts.length) return rawProducts;
+
+    const latRaw = localStorage.getItem("sw_latitude");
+    const lonRaw = localStorage.getItem("sw_longitude");
+    if (!latRaw || !lonRaw) return rawProducts.slice(0, 20);
+
+    const uLat = parseFloat(latRaw);
+    const uLon = parseFloat(lonRaw);
+
+    return rawProducts
+      .map((p: any) => {
+        // Find vendor coords
+        const vLat = p.attributes?.vendor_latitude || p.vendor?.store?.latitude || 19.0760;
+        const vLon = p.attributes?.vendor_longitude || p.vendor?.store?.longitude || 72.8777;
+        const distance = getHaversineDistance(uLat, uLon, vLat, vLon);
+        return { ...p, distance };
+      })
+      .filter((p: any) => p.distance <= 10.0) // 10 km radius filter!
+      .sort((a: any, b: any) => a.distance - b.distance) // Nearest first!
+      .slice(0, 30);
+  }, [rawProducts]);
 
   if (isLoading) {
     return (
@@ -345,8 +472,8 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
     return (
       <EmptyState
         emoji="🧺"
-        title="No products found"
-        description="Try a different category or check back later."
+        title="No fresh products nearby"
+        description="We couldn't find active vendors within a 10 km radius of your location."
       />
     );
   }
@@ -361,18 +488,29 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
 // ==================== CART FOOTER ====================
 function CartFooter() {
   const router = useRouter();
-  const { data: cartData } = useQuery<any>({
+  const isGuest = typeof window !== "undefined" && !localStorage.getItem("sw_access_token");
+
+  // Server cart state
+  const { data: serverCart } = useQuery<any>({
     queryKey: ["cart"],
-    queryFn: async () => {
-      const res = await api.get("/cart");
-      return res.data || { items: [], subtotal: 0 };
-    },
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
+    enabled: typeof window !== "undefined" && !isGuest,
     staleTime: 30_000,
   });
 
-  const count = cartData?.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0;
-  const total = cartData?.subtotal || 0;
+  // Guest cart state
+  const [localCart, setLocalCart] = useState<any>(getLocalGuestCart());
+
+  useEffect(() => {
+    const handleUpdate = () => setLocalCart(getLocalGuestCart());
+    window.addEventListener("sw_cart_updated", handleUpdate);
+    return () => window.removeEventListener("sw_cart_updated", handleUpdate);
+  }, []);
+
+  const count = isGuest
+    ? localCart?.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0
+    : serverCart?.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0;
+
+  const total = isGuest ? localCart?.subtotal || 0 : serverCart?.subtotal || 0;
 
   if (count === 0) return null;
 
@@ -385,7 +523,7 @@ function CartFooter() {
         </div>
         <button
           onClick={() => router.push("/cart")}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3 rounded-xl transition-all text-sm flex items-center gap-2 shadow-lg shadow-emerald-900/30"
+          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3 rounded-xl transition-all text-sm flex items-center gap-2 shadow-lg shadow-emerald-900/30 cursor-pointer"
         >
           View Cart <ArrowRight className="w-4 h-4" />
         </button>
@@ -400,7 +538,7 @@ function TrendingSection() {
     <div className="px-4">
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-        <h2 className="text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight">Trending Now</h2>
+        <h2 className="text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight">Trending Nearby</h2>
       </div>
       <ProductsGrid />
     </div>
@@ -409,12 +547,7 @@ function TrendingSection() {
 
 // ==================== ROUTE GUARD ====================
 function useAuthGuard() {
-  const router = useRouter();
-  useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem("sw_access_token")) {
-      router.replace("/login");
-    }
-  }, [router]);
+  // Guard disabled for home page to support Swiggy guest browsing onboarding patterns
 }
 
 // ==================== PAGE ====================

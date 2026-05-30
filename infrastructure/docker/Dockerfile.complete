@@ -27,8 +27,10 @@ RUN cd apps/sbjiwala-web && \
     cp -r ../customer-app/src/app/refund-policy src/app/ && \
     cp ../customer-app/src/app/page.tsx src/app/page.tsx && \
     cp ../vendor-app/src/app/page.tsx src/app/vendor/page.tsx && \
+    cp -r ../vendor-app/src/app/kyc src/app/ && \
     cp ../delivery-app/src/app/page.tsx src/app/delivery/page.tsx && \
     cp ../admin-app/src/app/page.tsx src/app/admin/page.tsx && \
+    cp -r ../admin-app/src/app/users src/app/ && \
     npm run build
 
 # Stage 2: Combined Python Backend & Nginx Frontend

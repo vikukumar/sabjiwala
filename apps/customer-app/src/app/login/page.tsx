@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, ArrowRight, Phone, Lock, Mail, User, CheckCircle2, Loader2, ChevronLeft, Leaf } from "lucide-react";
 import { api } from "@sbjiwala/shared";
@@ -9,6 +9,31 @@ import { useToast } from "@/components/ui/Toast";
 import { Button, Input, Divider } from "@/components/ui/index";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+
+// ==================== GUEST CART SYNC UTILITY ====================
+const syncGuestCart = async () => {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem("sw_guest_cart");
+    if (!raw) return;
+    const cart = JSON.parse(raw);
+    if (!cart.items || cart.items.length === 0) return;
+
+    // Send items sequentially to the backend
+    for (const item of cart.items) {
+      await api.post("/cart/items", {
+        product_id: item.product_id,
+        vendor_id: item.vendor_id,
+        quantity: item.quantity
+      });
+    }
+    // Clear guest cart
+    localStorage.removeItem("sw_guest_cart");
+    window.dispatchEvent(new Event("sw_cart_updated"));
+  } catch (err) {
+    console.error("Failed to sync guest cart", err);
+  }
+};
 
 // ==================== SCHEMAS ====================
 const otpLoginSchema = z.object({
@@ -73,7 +98,9 @@ function OTPLoginTab() {
       localStorage.setItem("sw_access_token", access_token);
       if (refresh_token) localStorage.setItem("sw_refresh_token", refresh_token);
       success("Welcome back!", "Login successful");
-      router.replace("/");
+      await syncGuestCart();
+      const redirect = new URLSearchParams(window.location.search).get("redirect") || "/";
+      router.replace(redirect);
     } catch (err: any) {
       showError("Invalid OTP", err.response?.data?.detail || "Please check the code and try again");
     } finally { setLoading(false); }
@@ -195,7 +222,9 @@ function PasswordLoginTab() {
       localStorage.setItem("sw_access_token", access_token);
       if (refresh_token) localStorage.setItem("sw_refresh_token", refresh_token);
       success("Welcome back!", "Login successful");
-      router.replace("/");
+      await syncGuestCart();
+      const redirect = new URLSearchParams(window.location.search).get("redirect") || "/";
+      router.replace(redirect);
     } catch (err: any) {
       showError("Login failed", err.response?.data?.detail || "Invalid email or password");
     } finally { setLoading(false); }
@@ -262,7 +291,9 @@ function RegisterTab() {
       localStorage.setItem("sw_access_token", access_token);
       if (refresh_token) localStorage.setItem("sw_refresh_token", refresh_token);
       success("Account created! 🎉", "Welcome to Sbjiwala!");
-      router.replace("/");
+      await syncGuestCart();
+      const redirect = new URLSearchParams(window.location.search).get("redirect") || "/";
+      router.replace(redirect);
     } catch (err: any) {
       showError("Registration failed", err.response?.data?.detail || err.message);
     } finally { setLoading(false); }
@@ -303,7 +334,7 @@ function RegisterTab() {
 }
 
 // ==================== PAGE ====================
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const [tab, setTab] = useState<ActiveTab>("otp");
 
@@ -320,7 +351,7 @@ export default function LoginPage() {
   ];
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex animate-fade-in">
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex flex-col justify-between w-[45%] gradient-brand p-12 text-white">
         <div>
@@ -389,5 +420,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 dark:bg-[#090d10] flex items-center justify-center"><Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" /></div>}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

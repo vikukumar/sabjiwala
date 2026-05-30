@@ -43,17 +43,38 @@ class DeliveryAssignmentService:
             logger.warning("Vendor or vendor store location not found for assignment", vendor_id=str(order.vendor_id))
             return None
 
+        # Check if this vendor has any registered private delivery boys in the system
+        has_private_res = await self.db.execute(
+            select(DeliveryBoy).where(DeliveryBoy.vendor_id == order.vendor_id, DeliveryBoy.is_deleted == False)
+        )
+        has_private = has_private_res.scalars().first() is not None
+
         # Fetch active, available delivery boys
         # Delivery boy must not exceed max concurrent orders
-        boys_res = await self.db.execute(
-            select(DeliveryBoy)
-            .where(
-                DeliveryBoy.status == DeliveryBoyStatus.ACTIVE,
-                DeliveryBoy.availability.in_([AvailabilityStatus.AVAILABLE, AvailabilityStatus.ON_DELIVERY]),
-                DeliveryBoy.current_order_count < DeliveryBoy.max_concurrent_orders,
-                DeliveryBoy.is_deleted == False
+        if has_private:
+            # Strictly confine to this vendor's private couriers
+            boys_res = await self.db.execute(
+                select(DeliveryBoy)
+                .where(
+                    DeliveryBoy.vendor_id == order.vendor_id,
+                    DeliveryBoy.status == DeliveryBoyStatus.ACTIVE,
+                    DeliveryBoy.availability.in_([AvailabilityStatus.AVAILABLE, AvailabilityStatus.ON_DELIVERY]),
+                    DeliveryBoy.current_order_count < DeliveryBoy.max_concurrent_orders,
+                    DeliveryBoy.is_deleted == False
+                )
             )
-        )
+        else:
+            # Search public platform couriers (vendor_id is None)
+            boys_res = await self.db.execute(
+                select(DeliveryBoy)
+                .where(
+                    DeliveryBoy.vendor_id == None,
+                    DeliveryBoy.status == DeliveryBoyStatus.ACTIVE,
+                    DeliveryBoy.availability.in_([AvailabilityStatus.AVAILABLE, AvailabilityStatus.ON_DELIVERY]),
+                    DeliveryBoy.current_order_count < DeliveryBoy.max_concurrent_orders,
+                    DeliveryBoy.is_deleted == False
+                )
+            )
         candidates = boys_res.scalars().all()
 
         if not candidates:

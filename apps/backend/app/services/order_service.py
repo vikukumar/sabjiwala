@@ -137,7 +137,23 @@ class OrderService:
             if not inventory or (not inventory.is_unlimited and inventory.quantity < item.quantity):
                 raise ValueError(f"Product '{product.name}' has insufficient stock")
 
-            item_subtotal = float(item.unit_price) * item.quantity
+            # Calculate secure 4.5% markup over base vendor catalog price
+            from app.models.product import ProductPrice
+            price_res = await self.db.execute(
+                select(ProductPrice).where(
+                    ProductPrice.product_id == item.product_id,
+                    ProductPrice.vendor_id == vendor_id,
+                    ProductPrice.is_active == True
+                )
+            )
+            prod_price = price_res.scalars().first()
+            base_catalog_price = float(prod_price.price) if prod_price else float(item.unit_price)
+            
+            # Application-wide dynamic 4.5% markup
+            marked_up_price = round(base_catalog_price * 1.045, 2)
+            item.unit_price = marked_up_price
+
+            item_subtotal = marked_up_price * item.quantity
             subtotal += item_subtotal
             cart_items_to_process.append((item, product, inventory))
 
@@ -436,14 +452,57 @@ class OrderService:
             order.actual_delivery_time = datetime.now(timezone.utc)
             order.payment_status = "paid"  # Delivered COD becomes paid
 
-            # Credit vendor wallet
-            commission = float(order.subtotal) * (float(order.total_amount) / 100.0) # commission rate placeholder
-            # Let's get actual vendor commission rate
+            # 1. Calculate base catalog subtotal (before the 4.5% markup)
+            base_catalog_subtotal = round(float(order.subtotal) / 1.045, 2)
+
+            # 2. Check if a private or public courier was assigned
+            is_public_courier = True
+            delivery_boy = None
+            
+            if order.delivery_boy_id:
+                from app.models.delivery import DeliveryBoy, DeliveryWallet
+                boy_res = await self.db.execute(
+                    select(DeliveryBoy).where(DeliveryBoy.user_id == order.delivery_boy_id)
+                )
+                delivery_boy = boy_res.scalars().first()
+                if delivery_boy and delivery_boy.vendor_id is not None:
+                    is_public_courier = False
+
+            # 3. Credit delivery boy wallet strictly if they are a public platform agent
+            if delivery_boy and is_public_courier:
+                # Dynamic delivery payout: distance * rate_per_km
+                from app.models.system import SystemSetting
+                setting_res = await self.db.execute(
+                    select(SystemSetting).where(SystemSetting.key == "delivery_boy_rate_per_km")
+                )
+                setting = setting_res.scalars().first()
+                rate_per_km = float(setting.value) if setting else 10.0
+                
+                distance_km = float(order.delivery_distance_km or 0.0)
+                delivery_payout = round(distance_km * rate_per_km, 2)
+                
+                dw_res = await self.db.execute(
+                    select(DeliveryWallet).where(DeliveryWallet.delivery_boy_id == delivery_boy.id)
+                )
+                dw = dw_res.scalars().first()
+                if not dw:
+                    dw = DeliveryWallet(delivery_boy_id=delivery_boy.id, balance=0.0, pending_balance=0.0)
+                    self.db.add(dw)
+                    await self.db.flush()
+                dw.balance = float(dw.balance) + delivery_payout
+                dw.total_earned = float(dw.total_earned) + delivery_payout
+
+            # 4. Settle vendor wallet with base catalog rates
             vendor_res = await self.db.execute(select(Vendor).where(Vendor.id == order.vendor_id))
             vendor = vendor_res.scalars().first()
             commission_rate = vendor.commission_rate if vendor else 0.05
-            commission = float(order.subtotal) * commission_rate
-            net_earnings = float(order.subtotal) - commission
+            commission = base_catalog_subtotal * commission_rate
+            
+            net_earnings = base_catalog_subtotal - commission
+            
+            # Deduct delivery boy charges strictly if a public courier was used
+            if is_public_courier:
+                net_earnings = net_earnings - float(order.delivery_charge or 0.0)
 
             # Credit Vendor wallet
             vw_result = await self.db.execute(

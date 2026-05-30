@@ -177,6 +177,8 @@ class VendorRegisterRequest(BaseModel):
     contact_phone: Optional[str] = None
     gst_number: Optional[str] = None
     pan_number: Optional[str] = None
+    fssai_number: Optional[str] = None
+    status: Optional[str] = None
 
 class VendorResponse(BaseModel):
     id: UUID

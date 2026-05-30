@@ -175,8 +175,10 @@ jobs:
           mkdir -p apps/sbjiwala-web/src/app/vendor apps/sbjiwala-web/src/app/delivery apps/sbjiwala-web/src/app/admin
           cp apps/customer-app/src/app/page.tsx apps/sbjiwala-web/src/app/page.tsx
           cp apps/vendor-app/src/app/page.tsx apps/sbjiwala-web/src/app/vendor/page.tsx
+          cp -r apps/vendor-app/src/app/kyc apps/sbjiwala-web/src/app/
           cp apps/delivery-app/src/app/page.tsx apps/sbjiwala-web/src/app/delivery/page.tsx
           cp apps/admin-app/src/app/page.tsx apps/sbjiwala-web/src/app/admin/page.tsx
+          cp -r apps/admin-app/src/app/users apps/sbjiwala-web/src/app/
 
       - name: Build Web App Static Export
         run: |

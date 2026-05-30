@@ -48,6 +48,16 @@ export default function VendorDashboard() {
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token")
   });
 
+  // 2b. Fetch vendor profile
+  const { data: vendorProfileData } = useQuery<any>({
+    queryKey: ["vendorProfile"],
+    queryFn: async () => {
+      const res = await api.get("/vendors/me");
+      return res.data;
+    },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token")
+  });
+
   // 3. Fetch incoming/recent orders
   const { data: ordersData, isLoading: ordersLoading } = useQuery<any>({
     queryKey: ["vendorOrders", activeTab],
@@ -79,6 +89,10 @@ export default function VendorDashboard() {
       alert("Failed to update order: " + (err.response?.data?.detail || err.message));
     }
   });
+
+  const vendorProfile = vendorProfileData || null;
+  const businessName = vendorProfile?.business_name || "Green Grocers Ltd";
+  const vendorStatus = vendorProfile?.status || "pending";
 
   const metrics = metricsData || {
     total_sales: 0,
@@ -140,9 +154,20 @@ export default function VendorDashboard() {
             <div className="space-y-3">
               <div className="bg-slate-850 rounded-xl p-4 space-y-1 border border-slate-800">
                 <p className="text-xs text-slate-550">Log in as</p>
-                <h4 className="text-sm font-bold text-white">Green Grocers Ltd</h4>
-                <span className="inline-block bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold px-2 py-0.5 rounded">
-                  APPROVED
+                <h4 className="text-sm font-bold text-white">{businessName}</h4>
+                <span 
+                  className={`inline-block text-[10px] font-extrabold px-2 py-0.5 rounded cursor-pointer ${
+                    vendorStatus === "approved"
+                      ? "bg-emerald-500/10 text-emerald-400"
+                      : vendorStatus === "documents_submitted" || vendorStatus === "under_review"
+                      ? "bg-blue-500/10 text-blue-400"
+                      : "bg-rose-500/10 text-rose-400 hover:underline"
+                  }`}
+                  onClick={() => {
+                    if (vendorStatus !== "approved") window.location.href = "/kyc";
+                  }}
+                >
+                  {vendorStatus.toUpperCase()}
                 </span>
               </div>
               <div className="text-center">
@@ -188,9 +213,20 @@ export default function VendorDashboard() {
         <div className="space-y-3">
           <div className="bg-slate-850 rounded-xl p-4 space-y-1 border border-slate-800">
             <p className="text-xs text-slate-550">Log in as</p>
-            <h4 className="text-sm font-bold text-white">Green Grocers Ltd</h4>
-            <span className="inline-block bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold px-2 py-0.5 rounded">
-              APPROVED
+            <h4 className="text-sm font-bold text-white">{businessName}</h4>
+            <span 
+              className={`inline-block text-[10px] font-extrabold px-2 py-0.5 rounded cursor-pointer ${
+                vendorStatus === "approved"
+                  ? "bg-emerald-500/10 text-emerald-400"
+                  : vendorStatus === "documents_submitted" || vendorStatus === "under_review"
+                  ? "bg-blue-500/10 text-blue-400"
+                  : "bg-rose-500/10 text-rose-400 hover:underline"
+              }`}
+              onClick={() => {
+                if (vendorStatus !== "approved") window.location.href = "/kyc";
+              }}
+            >
+              {vendorStatus.toUpperCase()}
             </span>
           </div>
           <div className="text-center">
@@ -248,6 +284,30 @@ export default function VendorDashboard() {
 
         {/* Content */}
         <main className="flex-1 p-8 space-y-8 max-w-6xl w-full mx-auto">
+          {vendorStatus !== "approved" && (
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-600/10 to-amber-500/10 dark:from-amber-955/20 dark:to-amber-955/20 border border-amber-300 dark:border-amber-900/60 rounded-3xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm backdrop-blur-sm">
+              <div className="space-y-1">
+                <h4 className="text-sm font-black text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                  ⚠️ Action Required: Complete Store KYC
+                </h4>
+                <p className="text-xs text-slate-600 dark:text-amber-400/80 mt-0.5">
+                  {vendorStatus === "rejected"
+                    ? `Verification rejected: "${vendorProfile?.rejection_reason || 'Please upload valid documents'}"`
+                    : vendorStatus === "documents_submitted" || vendorStatus === "under_review"
+                    ? "Your verification documents are currently being reviewed by admin officers."
+                    : "Your store profile is pending document verification. Verify PAN, FSSAI, and business credentials."}
+                </p>
+              </div>
+              {vendorStatus !== "documents_submitted" && vendorStatus !== "under_review" && (
+                <a
+                  href="/kyc"
+                  className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-black px-5 py-3 rounded-xl transition-all shadow-sm flex-shrink-0"
+                >
+                  Verify Documents Now
+                </a>
+              )}
+            </div>
+          )}
           {/* Metrics Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 flex items-center justify-between shadow-sm transition-colors duration-200">

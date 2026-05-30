@@ -242,3 +242,30 @@ async def deliver_order(
         return APIResponse(success=True, message="Order delivered successfully")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/me", response_model=APIResponse)
+async def get_my_delivery_profile(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve current delivery agent's profile including vendor_id to identify private couriers."""
+    boy = await _get_delivery_boy(current_user["user_id"], db)
+    
+    # Fetch wallet details
+    from app.models.delivery import DeliveryWallet
+    vw_res = await db.execute(select(DeliveryWallet).where(DeliveryWallet.delivery_boy_id == boy.id))
+    wallet = vw_res.scalars().first()
+    
+    data = {
+        "id": str(boy.id),
+        "user_id": str(boy.user_id),
+        "vendor_id": str(boy.vendor_id) if boy.vendor_id else None,
+        "status": boy.status.value,
+        "availability": boy.availability.value,
+        "vehicle_type": boy.vehicle_type,
+        "vehicle_number": boy.vehicle_number,
+        "wallet_balance": float(wallet.balance) if wallet else 0.0,
+        "cash_in_hand": float(wallet.cash_in_hand) if wallet else 0.0,
+    }
+    return APIResponse(success=True, data=data)

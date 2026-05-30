@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { useRouter } from "next/navigation";
@@ -8,10 +8,32 @@ import Link from "next/link";
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Tag, AlertCircle, ChevronRight, Truck } from "lucide-react";
 import { Button, EmptyState, Spinner, Badge, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
-import { useForm } from "react-hook-form";
+
+// ==================== LOCAL GUEST CART UTILS ====================
+const getLocalGuestCart = () => {
+  if (typeof window === "undefined") return { items: [], subtotal: 0 };
+  try {
+    const raw = localStorage.getItem("sw_guest_cart");
+    return raw ? JSON.parse(raw) : { items: [], subtotal: 0 };
+  } catch {
+    return { items: [], subtotal: 0 };
+  }
+};
+
+const saveLocalGuestCart = (cart: any) => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("sw_guest_cart", JSON.stringify(cart));
+  window.dispatchEvent(new Event("sw_cart_updated"));
+};
 
 // ==================== CART ITEM ROW ====================
-function CartItemRow({ item }: { item: any }) {
+interface CartItemRowProps {
+  item: any;
+  isGuest: boolean;
+  onUpdateGuestQty?: (productId: string, newQty: number) => void;
+}
+
+function CartItemRow({ item, isGuest, onUpdateGuestQty }: CartItemRowProps) {
   const queryClient = useQueryClient();
   const { error: showError } = useToast();
 
@@ -23,7 +45,17 @@ function CartItemRow({ item }: { item: any }) {
   });
 
   const emoji = item.attributes?.image_emoji || item.product?.attributes?.image_emoji || "🥬";
-  const price = item.price || item.product?.attributes?.price || 30;
+  // Apply the dynamic 4.5% product price customer markup on item prices if they aren't pre-marked
+  const rawPrice = item.price || item.product?.attributes?.price || 30;
+  const price = isGuest ? rawPrice : Math.round(rawPrice * 1.045 * 100) / 100;
+
+  const handleQtyChange = (newQty: number) => {
+    if (isGuest && onUpdateGuestQty) {
+      onUpdateGuestQty(item.product_id, newQty);
+    } else {
+      updateQty.mutate(newQty);
+    }
+  };
 
   return (
     <div className="flex items-center gap-4 py-4 border-b border-slate-100 dark:border-slate-800 last:border-none">
@@ -31,24 +63,24 @@ function CartItemRow({ item }: { item: any }) {
         {emoji}
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="font-black text-sm text-slate-900 dark:text-white line-clamp-1">{item.product_name || item.name}</h3>
+        <h3 className="font-black text-sm text-slate-900 dark:text-white truncate">{item.product_name || item.name}</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{item.unit || "1 kg"}</p>
         <p className="text-sm font-black text-emerald-700 dark:text-emerald-400 mt-1">₹{(price * item.quantity).toFixed(2)}</p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <div className="flex items-center gap-1.5 bg-emerald-600 text-white rounded-xl px-2 py-1.5 shadow-sm">
           <button
-            onClick={() => updateQty.mutate(item.quantity - 1)}
-            disabled={updateQty.isPending}
-            className="w-6 h-6 flex items-center justify-center hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50"
+            onClick={() => handleQtyChange(item.quantity - 1)}
+            disabled={!isGuest && updateQty.isPending}
+            className="w-6 h-6 flex items-center justify-center hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
           >
             {item.quantity === 1 ? <Trash2 className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
           </button>
           <span className="px-1 text-sm font-black min-w-[20px] text-center">{item.quantity}</span>
           <button
-            onClick={() => updateQty.mutate(item.quantity + 1)}
-            disabled={updateQty.isPending}
-            className="w-6 h-6 flex items-center justify-center hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50"
+            onClick={() => handleQtyChange(item.quantity + 1)}
+            disabled={!isGuest && updateQty.isPending}
+            className="w-6 h-6 flex items-center justify-center hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
           >
             <Plus className="w-3 h-3" />
           </button>
@@ -59,16 +91,21 @@ function CartItemRow({ item }: { item: any }) {
 }
 
 // ==================== COUPON SECTION ====================
-function CouponSection({ onApply, appliedCoupon, onRemove }: {
+function CouponSection({ onApply, appliedCoupon, onRemove, disabled }: {
   onApply: (code: string, discount: number) => void;
   appliedCoupon: { code: string; discount: number } | null;
   onRemove: () => void;
+  disabled?: boolean;
 }) {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const { success, error: showError } = useToast();
 
   const apply = async () => {
+    if (disabled) {
+      showError("Guest Mode", "Please login to apply coupon discounts");
+      return;
+    }
     if (!code.trim()) return;
     setLoading(true);
     try {
@@ -103,37 +140,74 @@ function CouponSection({ onApply, appliedCoupon, onRemove }: {
         type="text"
         value={code}
         onChange={e => setCode(e.target.value.toUpperCase())}
-        placeholder="Enter coupon code"
-        className="input-base px-3 py-2.5 text-sm flex-1"
+        placeholder={disabled ? "Login to apply coupon" : "Enter coupon code"}
+        disabled={disabled}
+        className="input-base px-3 py-2.5 text-sm flex-1 disabled:opacity-50"
         onKeyDown={e => e.key === "Enter" && apply()}
       />
-      <Button onClick={apply} loading={loading} variant="secondary" size="md">Apply</Button>
+      <Button onClick={apply} loading={loading} disabled={disabled} variant="secondary" size="md">Apply</Button>
     </div>
   );
 }
 
-// ==================== PAGE ====================
+// ==================== CART PAGE ====================
 export default function CartPage() {
   const router = useRouter();
   const { error: showError } = useToast();
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
 
-  const { data: cartData, isLoading } = useQuery<any>({
+  const isGuest = typeof window !== "undefined" && !localStorage.getItem("sw_access_token");
+
+  // Server cart state
+  const { data: serverCart, isLoading } = useQuery<any>({
     queryKey: ["cart"],
     queryFn: async () => {
       const res = await api.get("/cart");
       return res.data || { items: [], subtotal: 0, item_count: 0 };
     },
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
+    enabled: typeof window !== "undefined" && !isGuest,
   });
 
-  const items = cartData?.items || [];
-  const subtotal = cartData?.subtotal || 0;
+  // Guest cart state
+  const [localCart, setLocalCart] = useState<any>(getLocalGuestCart());
+
+  useEffect(() => {
+    const handleUpdate = () => setLocalCart(getLocalGuestCart());
+    window.addEventListener("sw_cart_updated", handleUpdate);
+    return () => window.removeEventListener("sw_cart_updated", handleUpdate);
+  }, []);
+
+  const items = isGuest ? localCart?.items || [] : serverCart?.items || [];
+  const subtotal = isGuest ? localCart?.subtotal || 0 : (serverCart?.subtotal || 0) * 1.045; // Apply the markup subtotal
+
   const deliveryFee = subtotal >= 199 ? 0 : 20;
   const discount = appliedCoupon?.discount || 0;
   const total = Math.max(0, subtotal + deliveryFee - discount);
 
-  if (isLoading) {
+  const handleUpdateGuestQty = (productId: string, newQty: number) => {
+    const current = getLocalGuestCart();
+    const idx = current.items.findIndex((i: any) => i.product_id === productId);
+    if (idx === -1) return;
+
+    if (newQty <= 0) {
+      current.items.splice(idx, 1);
+    } else {
+      current.items[idx].quantity = newQty;
+    }
+
+    current.subtotal = current.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+    saveLocalGuestCart(current);
+  };
+
+  const handleProceedCheckout = () => {
+    if (isGuest) {
+      router.push("/login?redirect=/checkout");
+    } else {
+      router.push("/checkout");
+    }
+  };
+
+  if (!isGuest && isLoading) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-4">
         {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
@@ -165,7 +239,14 @@ export default function CartPage() {
               <Badge variant="success">{items.reduce((s: number, i: any) => s + i.quantity, 0)} units</Badge>
             </div>
             <div>
-              {items.map((item: any) => <CartItemRow key={item.id} item={item} />)}
+              {items.map((item: any) => (
+                <CartItemRow
+                  key={item.id}
+                  item={item}
+                  isGuest={isGuest}
+                  onUpdateGuestQty={handleUpdateGuestQty}
+                />
+              ))}
             </div>
           </div>
 
@@ -175,7 +256,7 @@ export default function CartPage() {
               <Truck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <div>
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                  {deliveryFee === 0 ? "🎉 Free Delivery!" : `Add ₹${199 - subtotal} more for free delivery`}
+                  {deliveryFee === 0 ? "🎉 Free Delivery!" : `Add ₹${(199 - subtotal).toFixed(0)} more for free delivery`}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Estimated delivery in 10–15 minutes</p>
               </div>
@@ -197,10 +278,13 @@ export default function CartPage() {
               appliedCoupon={appliedCoupon}
               onApply={(code, disc) => setAppliedCoupon({ code, discount: disc })}
               onRemove={() => setAppliedCoupon(null)}
+              disabled={isGuest}
             />
-            <Link href="/coupons" className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
-              View all coupons <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
+            {!isGuest && (
+              <Link href="/coupons" className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
+                View all coupons <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            )}
           </div>
         </div>
 
@@ -239,8 +323,9 @@ export default function CartPage() {
             <Button
               fullWidth
               size="lg"
-              onClick={() => router.push("/checkout")}
+              onClick={handleProceedCheckout}
               rightIcon={<ArrowRight className="w-4 h-4" />}
+              className="cursor-pointer"
             >
               Proceed to Checkout
             </Button>

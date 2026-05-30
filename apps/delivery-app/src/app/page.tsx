@@ -47,6 +47,16 @@ export default function DeliveryAgentDashboard() {
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token")
   });
 
+  // 2b. Fetch delivery boy profile
+  const { data: profileData } = useQuery<any>({
+    queryKey: ["deliveryProfile"],
+    queryFn: async () => {
+      const res = await api.get("/delivery/me");
+      return res.data;
+    },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token")
+  });
+
   // 3. Toggle Online/Offline Mutation
   const toggleOnlineMutation = useMutation({
     mutationFn: async (online: boolean) => {
@@ -107,6 +117,11 @@ export default function DeliveryAgentDashboard() {
     }
   };
 
+  const profile = profileData || null;
+  const isPrivateCourier = !!profile?.vendor_id;
+  const walletBalance = profile?.wallet_balance ?? 0.0;
+  const cashInHand = profile?.cash_in_hand ?? 0.0;
+
   return (
     <div className="min-h-screen bg-slate-55 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 antialiased font-sans flex flex-col pb-8 transition-colors duration-200">
       {/* Top Banner */}
@@ -157,24 +172,36 @@ export default function DeliveryAgentDashboard() {
 
       {/* Main Container */}
       <main className="max-w-md w-full mx-auto px-4 py-6 space-y-6 flex-1">
-        {/* Earnings Card */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-800 transition-colors duration-200">
-          <div className="pr-4 space-y-1">
-            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Earnings Today</span>
-            <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-black text-xl">
-              <DollarSign className="w-5 h-5" />
-              <span>₹350.00</span>
+        {/* Earnings Card - Hidden for private couriers */}
+        {!isPrivateCourier ? (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-800 transition-colors duration-200">
+            <div className="pr-4 space-y-1">
+              <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Earnings Balance</span>
+              <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-black text-xl">
+                <span className="text-sm font-bold">₹</span>
+                <span>{walletBalance.toFixed(2)}</span>
+              </div>
             </div>
-          </div>
 
-          <div className="pl-4 space-y-1">
-            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Cash In Hand</span>
-            <div className="flex items-center gap-1 text-slate-900 dark:text-slate-50 font-black text-xl">
-              <Wallet className="w-5 h-5" />
-              <span>₹220.00</span>
+            <div className="pl-4 space-y-1">
+              <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Cash In Hand</span>
+              <div className="flex items-center gap-1 text-slate-900 dark:text-slate-50 font-black text-xl">
+                <span className="text-sm font-bold">₹</span>
+                <span>{cashInHand.toFixed(2)}</span>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 dark:from-emerald-950/20 dark:to-teal-950/20 border border-emerald-300 dark:border-emerald-900/40 rounded-2xl p-4 shadow-sm flex items-center justify-between transition-colors duration-200">
+            <div className="space-y-0.5">
+              <h4 className="text-xs font-black text-emerald-700 dark:text-emerald-300">Linked Store Courier</h4>
+              <p className="text-[10px] text-slate-550 dark:text-slate-455">Offline direct settlements with vendor</p>
+            </div>
+            <span className="text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded">
+              Store Courier
+            </span>
+          </div>
+        )}
 
         {/* Assignments Header */}
         <div className="flex justify-between items-center px-1">

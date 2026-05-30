@@ -128,6 +128,18 @@ export default function CheckoutPage() {
     }
   }, [addresses, selectedAddress]);
 
+  // Dynamic Razorpay script load
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      try { document.body.removeChild(script); } catch {}
+    };
+  }, []);
+
   const placeOrder = useMutation({
     mutationFn: async () => {
       if (!selectedAddress) throw new Error("Please select a delivery address");
@@ -143,8 +155,50 @@ export default function CheckoutPage() {
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-      success("Order Placed! 🎉", `Order #${res.data?.order_number} confirmed`);
-      router.push(`/orders/${res.data?.id}?new=1`);
+
+      if (paymentMethod === "cod" || finalTotal <= 0) {
+        success("Order Placed! 🎉", `Order #${res.data?.order_number} confirmed`);
+        router.push(`/orders/${res.data?.id}?new=1`);
+      } else {
+        // Launch standard in-app Razorpay SDK payment overlay
+        try {
+          const options = {
+            key: res.data?.razorpay_key || "rzp_test_5W5q7627d3h8d3",
+            amount: res.data?.amount_due || (finalTotal * 100),
+            currency: "INR",
+            name: "Sbjiwala Express",
+            description: "Hygienic 10 Min Produce Delivery",
+            image: "/icon.png",
+            order_id: res.data?.razorpay_order_id || "order_dummy_" + Math.random().toString(36).slice(2),
+            handler: async function (response: any) {
+              try {
+                await api.post(`/payments/verify`, {
+                  order_id: res.data?.id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_signature: response.razorpay_signature,
+                });
+                success("Payment Successful! 🎉", "Your order has been verified and placed.");
+                router.push(`/orders/${res.data?.id}?new=1`);
+              } catch (verifyErr: any) {
+                showError("Payment Verification Failed", "Signature verification failed. Please contact Sbjiwala support.");
+              }
+            },
+            prefill: {
+              name: "Rahul Sharma",
+              email: "rahul@example.com",
+              contact: "9876543210"
+            },
+            theme: {
+              color: "#059669"
+            }
+          };
+          const rzp = new (window as any).Razorpay(options);
+          rzp.open();
+        } catch (sdkErr) {
+          showError("Razorpay SDK Error", "Could not initialize in-app payment sheet. Try Cash on Delivery.");
+        }
+      }
     },
     onError: (err: any) => showError("Order failed", err.response?.data?.detail || err.message),
   });
