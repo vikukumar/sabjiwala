@@ -1,5 +1,6 @@
 """Application configuration loaded from environment variables."""
-from typing import List
+from typing import List, Optional
+from pydantic import Field, AliasChoices
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,50 +23,56 @@ class Settings(BaseSettings):
     APP_ALLOWED_HOSTS: str = "localhost,127.0.0.1"
 
     # ---- PostgreSQL ----
-    POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "sbjiwala"
-    POSTGRES_USER: str = "sbjiwala"
-    POSTGRES_PASSWORD: str = "password"
-    DATABASE_URL: str = ""
+    POSTGRES_HOST: str = Field(default="localhost", validation_alias=AliasChoices("DATABASE_HOST", "POSTGRES_HOST"))
+    POSTGRES_PORT: int = Field(default=5432, validation_alias=AliasChoices("DATABASE_PORT", "POSTGRES_PORT"))
+    POSTGRES_DB: str = Field(default="sbjiwala", validation_alias=AliasChoices("DATABASE_DB", "POSTGRES_DB"))
+    POSTGRES_USER: str = Field(default="sbjiwala", validation_alias=AliasChoices("DATABASE_USER", "POSTGRES_USER"))
+    POSTGRES_PASSWORD: str = Field(default="password", validation_alias=AliasChoices("DATABASE_PASSWORD", "POSTGRES_PASSWORD"))
+    DATABASE_SSL: str = Field(default="disable", validation_alias=AliasChoices("DATABASE_SSL", "POSTGRES_SSL"))
+    DATABASE_URL: str = Field(default="", validation_alias=AliasChoices("DATABASE_URL"))
 
     @property
     def database_url(self) -> str:
         if self.DATABASE_URL:
             return self.DATABASE_URL
+        ssl_arg = f"?ssl={self.DATABASE_SSL}" if self.DATABASE_SSL != "disable" else ""
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}{ssl_arg}"
         )
 
     # ---- Redis ----
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
-    REDIS_PASSWORD: str = ""
-    REDIS_URL: str = ""
-    CELERY_BROKER_URL: str = ""
-    CELERY_RESULT_BACKEND: str = ""
+    REDIS_HOST: str = Field(default="localhost", validation_alias=AliasChoices("REDIS_HOST"))
+    REDIS_PORT: int = Field(default=6379, validation_alias=AliasChoices("REDIS_PORT"))
+    REDIS_PASSWORD: str = Field(default="", validation_alias=AliasChoices("REDIS_PASSWORD"))
+    REDIS_SSL: bool = Field(default=False, validation_alias=AliasChoices("REDIS_SSL"))
+    REDIS_URL: str = Field(default="", validation_alias=AliasChoices("REDIS_URL"))
+    CELERY_BROKER_URL: str = Field(default="", validation_alias=AliasChoices("CELERY_BROKER_URL"))
+    CELERY_RESULT_BACKEND: str = Field(default="", validation_alias=AliasChoices("CELERY_RESULT_BACKEND"))
+
+    def _assemble_redis_uri(self, db_index: int = 0) -> str:
+        protocol = "rediss" if self.REDIS_SSL else "redis"
+        auth = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
+        ssl_params = "?ssl_cert_reqs=none" if self.REDIS_SSL else ""
+        return f"{protocol}://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{db_index}{ssl_params}"
 
     @property
     def redis_url(self) -> str:
         if self.REDIS_URL:
             return self.REDIS_URL
-        auth = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
-        return f"redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+        return self._assemble_redis_uri(db_index=0)
 
     @property
     def celery_broker(self) -> str:
         if self.CELERY_BROKER_URL:
             return self.CELERY_BROKER_URL
-        auth = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
-        return f"redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/1"
+        return self._assemble_redis_uri(db_index=1)
 
     @property
     def celery_backend(self) -> str:
         if self.CELERY_RESULT_BACKEND:
             return self.CELERY_RESULT_BACKEND
-        auth = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
-        return f"redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/2"
+        return self._assemble_redis_uri(db_index=2)
 
     # ---- JWT ----
     JWT_SECRET_KEY: str = "change-this-jwt-secret"
