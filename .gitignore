@@ -148,3 +148,5 @@ coverage.xml
 
 # Temporary scripts
 tmp/
+apps/backend/Storage
+apps/backend/storage
