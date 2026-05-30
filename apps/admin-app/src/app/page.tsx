@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { 
-  Building2, Users, Receipt, Settings, 
+import {
+  Building2, Users, Receipt, Settings,
   CheckCircle2, XCircle, Database, ShieldAlert, Sparkles, ChevronRight, Loader2, Menu, X
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 
 export default function AdminDashboard() {
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden font-sans">
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
             onClick={() => setIsMobileMenuOpen(false)}
           ></div>
@@ -137,12 +137,12 @@ export default function AdminDashboard() {
             <div className="space-y-8">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <img src="/logo_horizontal.png" alt="SabjiWala Logo" className="h-6 w-auto object-contain brightness-0 invert" />
+                  <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-6 w-auto object-contain brightness-0 invert" />
                   <span className="text-[9px] uppercase tracking-wider bg-slate-800 text-slate-400 font-bold px-1.5 py-0.5 rounded">
                     Admin
                   </span>
                 </div>
-                <button 
+                <button
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
                 >
@@ -176,7 +176,7 @@ export default function AdminDashboard() {
               </div>
               <div className="text-center">
                 <span className="text-[10px] text-slate-500 font-mono tracking-wider">
-                  SabjiWala v{versionInfo.version}
+                  Sbjiwala v{versionInfo.version}
                 </span>
               </div>
             </div>
@@ -188,7 +188,7 @@ export default function AdminDashboard() {
       <aside className="w-64 bg-slate-900 text-slate-300 hidden md:flex flex-col justify-between p-6 border-r border-slate-800 flex-shrink-0">
         <div className="space-y-8">
           <div className="flex items-center gap-2">
-            <img src="/logo_horizontal.png" alt="SabjiWala Logo" className="h-6 w-auto object-contain brightness-0 invert" />
+            <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-6 w-auto object-contain brightness-0 invert" />
             <span className="text-[10px] uppercase tracking-wider bg-slate-800 text-slate-450 font-bold px-2.5 py-0.5 rounded">
               Super Admin
             </span>
@@ -220,7 +220,7 @@ export default function AdminDashboard() {
           </div>
           <div className="text-center">
             <span className="text-[10px] text-slate-500 font-mono tracking-wider">
-              SabjiWala v{versionInfo.version}
+              Sbjiwala v{versionInfo.version}
             </span>
           </div>
         </div>
@@ -238,9 +238,9 @@ export default function AdminDashboard() {
             >
               <Menu className="w-6 h-6" />
             </button>
-            
+
             <div className="flex items-center gap-2 md:hidden">
-              <img src="/logo_horizontal.png" alt="SabjiWala Logo" className="h-7 w-auto object-contain" />
+              <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-7 w-auto object-contain" />
               <span className="text-[9px] uppercase bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded-full">
                 Admin
               </span>
@@ -396,7 +396,7 @@ export default function AdminDashboard() {
           {/* System settings form */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4 transition-colors duration-200">
             <h3 className="text-base font-black text-slate-800 dark:text-slate-100">Quick Platform Configuration</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Vendor Commission Rate (%)</label>
@@ -412,7 +412,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="flex justify-end pt-4">
-                <button 
+                <button
                   onClick={() => saveSettingsMutation.mutate()}
                   disabled={saveSettingsMutation.isPending}
                   className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white border border-slate-800 dark:border-slate-700 font-bold text-xs px-6 py-3 rounded-xl transition-all shadow-md disabled:opacity-50"

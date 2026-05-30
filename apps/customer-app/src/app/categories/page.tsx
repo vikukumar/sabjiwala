@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/index";

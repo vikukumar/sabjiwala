@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Star, Plus, Minus, Heart, Share2, ChevronLeft, ShoppingCart, Truck, Leaf, ShieldCheck, ArrowRight, Tag } from "lucide-react";

@@ -1,4 +1,4 @@
-const CACHE_NAME = "sabjiwala-cache-v1";
+const CACHE_NAME = "sbjiwala-cache-v1";
 const OFFLINE_URL = "/offline.html";
 
 const ASSETS_TO_CACHE = [
@@ -71,12 +71,12 @@ self.addEventListener("fetch", (event) => {
 
 // Push notification event listener
 self.addEventListener("push", (event) => {
-  let data = { title: "SabjiWala Update", body: "You have a new update!" };
+  let data = { title: "Sbjiwala Update", body: "You have a new update!" };
   if (event.data) {
     try {
       data = event.data.json().notification;
     } catch (e) {
-      data = { title: "SabjiWala", body: event.data.text() };
+      data = { title: "Sbjiwala", body: event.data.text() };
     }
   }
 

@@ -1,8 +1,8 @@
-# Code of Conduct for SabjiWala.in
+# Code of Conduct for Sbjiwala
 
 ## Our Pledge
 
-We, as developers and contributors to the SabjiWala platform, pledge to make participation in our project a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, caste, color, religion, or sexual identity and orientation.
+We, as developers and contributors to the Sbjiwala platform, pledge to make participation in our project a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, caste, color, religion, or sexual identity and orientation.
 
 We commit to acting and interacting in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community.
 

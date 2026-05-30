@@ -1,6 +1,6 @@
 {
-  "appId": "com.sabjiwala.customer",
-  "appName": "SabjiWala Customer",
+  "appId": "com.sbjiwala.customer",
+  "appName": "Sbjiwala Customer",
   "webDir": "out",
   "server": {
     "androidScheme": "https"

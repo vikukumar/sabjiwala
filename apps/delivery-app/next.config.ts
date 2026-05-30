@@ -9,11 +9,11 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  transpilePackages: ["@sabjiwala/shared"],
+  transpilePackages: ["@sbjiwala/shared"],
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      "@sabjiwala/shared": path.resolve(__dirname, "node_modules/@sabjiwala/shared"),
+      "@sbjiwala/shared": path.resolve(__dirname, "node_modules/@sbjiwala/shared"),
     };
     return config;
   },

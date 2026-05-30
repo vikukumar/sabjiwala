@@ -135,8 +135,8 @@ export default function SettingsPage() {
 
       {/* App Info */}
       <div className="text-center space-y-1">
-        <p className="text-xs text-slate-400 dark:text-slate-500">SabjiWala v1.0.0</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500">© 2025 SabjiWala.in · All rights reserved</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500">Sbjiwala v1.0.0</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500">© 2025 Sbjiwala · All rights reserved</p>
       </div>
     </div>
   );

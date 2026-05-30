@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import { MapPin, Plus, Edit2, Trash2, CheckCircle2, Home, Briefcase, MoreVertical, Star } from "lucide-react";
 import { Button, Badge, EmptyState, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";

@@ -1,4 +1,4 @@
-"""SabjiWala Backend Application - Main Entry Point."""
+"""Sbjiwala Backend Application - Main Entry Point."""
 import asyncio
 import logging
 from contextlib import asynccontextmanager
@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             logging.getLevelName(settings.LOG_LEVEL)
         ),
     )
-    await logger.ainfo("Starting SabjiWala Backend", version="1.0.0", env=settings.APP_ENV)
+    await logger.ainfo("Starting Sbjiwala Backend", version="1.0.0", env=settings.APP_ENV)
 
     # Run auto schema evolution
     await schema_evolution_engine.evolve(db_engine)
@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # --- Shutdown ---
     await ws_manager.disconnect_redis()
     await db_engine.dispose()
-    await logger.ainfo("SabjiWala Backend shut down gracefully")
+    await logger.ainfo("Sbjiwala Backend shut down gracefully")
 
 
 def create_app() -> FastAPI:

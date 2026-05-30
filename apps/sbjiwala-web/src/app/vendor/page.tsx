@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { 
-  TrendingUp, Users, ShoppingBag, DollarSign, 
+import {
+  TrendingUp, Users, ShoppingBag, DollarSign,
   Settings, Award, RefreshCw, Clock, MapPin, Loader2
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 
 export default function VendorDashboard() {
@@ -94,7 +94,7 @@ export default function VendorDashboard() {
       <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between p-6 border-r border-slate-800">
         <div className="space-y-8">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-black text-emerald-500 tracking-tight">SabjiWala</span>
+            <span className="text-xl font-black text-emerald-500 tracking-tight">Sbjiwala</span>
             <span className="text-[10px] uppercase tracking-wider bg-slate-800 text-slate-450 font-bold px-2 py-0.5 rounded">
               Vendor
             </span>
@@ -130,7 +130,7 @@ export default function VendorDashboard() {
           </div>
           <div className="text-center">
             <span className="text-[10px] text-slate-500 font-mono tracking-wider">
-              SabjiWala v{versionInfo.version}
+              Sbjiwala v{versionInfo.version}
             </span>
           </div>
         </div>
@@ -223,11 +223,10 @@ export default function VendorDashboard() {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-1.5 rounded-full capitalize transition-all ${
-                      activeTab === tab 
-                        ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm" 
-                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-205"
-                    }`}
+                    className={`px-4 py-1.5 rounded-full capitalize transition-all ${activeTab === tab
+                      ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-205"
+                      }`}
                   >
                     {tab}
                   </button>
@@ -258,13 +257,12 @@ export default function VendorDashboard() {
                     <div className="flex items-center gap-6 self-stretch md:self-auto justify-between">
                       <div className="space-y-1 text-right">
                         <span className="block font-black text-slate-950 dark:text-slate-50">₹{order.total_amount}</span>
-                        <span className={`inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                          order.status === "pending"
-                            ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400"
-                            : order.status === "packed"
+                        <span className={`inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${order.status === "pending"
+                          ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400"
+                          : order.status === "packed"
                             ? "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-400"
                             : "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400"
-                        }`}>
+                          }`}>
                           {order.status}
                         </span>
                       </div>

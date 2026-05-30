@@ -1,6 +1,6 @@
-# Contributing to SabjiWala.in
+# Contributing to Sbjiwala
 
-Thank you for your interest in contributing to SabjiWala.in! 
+Thank you for your interest in contributing to Sbjiwala! 
 
 ## Copyright & IP Assignment Notice
 
@@ -34,5 +34,5 @@ As this is a private, proprietary codebase, contributions are restricted to auth
 
 ### 3. Submitting Pull Requests
 1. Increment the version code in `version.json` if releasing new builds.
-2. Verify that local builds (`npm run build` inside `apps/sabjiwala-web`) compile successfully.
+2. Verify that local builds (`npm run build` inside `apps/sbjiwala-web`) compile successfully.
 3. Open a detailed Pull Request detailing the changes, testing checklist, and validation logs.

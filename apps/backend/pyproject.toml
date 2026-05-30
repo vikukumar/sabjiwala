@@ -1,7 +1,7 @@
 [project]
-name = "sabjiwala-backend"
+name = "sbjiwala-backend"
 version = "1.0.0"
-description = "SabjiWala.in - Production Grade Multi-Tenant Vegetable Commerce Platform"
+description = "Sbjiwala - Production Grade Multi-Tenant Vegetable Commerce Platform"
 requires-python = ">=3.12"
 dependencies = [
     # Web Framework

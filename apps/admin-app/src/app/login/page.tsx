@@ -2,19 +2,19 @@
 
 import React, { useState, useEffect } from "react";
 import { Mail, Phone, ArrowRight, ShieldCheck, Loader2, Sparkles, User, Lock, Gift } from "lucide-react";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 
 export default function LoginPage() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [loginTab, setLoginTab] = useState<"otp" | "password">("otp");
-  
+
   // Login Form States
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [isOtpSent, setIsOtpSent] = useState(false);
-  
+
   // Register Form States
   const [regFirstName, setRegFirstName] = useState("");
   const [regLastName, setRegLastName] = useState("");
@@ -26,7 +26,7 @@ export default function LoginPage() {
   // Loading States
   const [otpLoading, setOtpLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
-  
+
   // Status Messages
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -78,7 +78,7 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
-    
+
     if (!email) {
       setErrorMsg("Please enter a valid email address.");
       return;
@@ -96,7 +96,7 @@ export default function LoginPage() {
         setIsOtpSent(true);
         setCountdown(60);
         setSuccessMsg(res.message || "OTP sent successfully to your email.");
-        
+
         // Auto-fill OTP in debug mode
         if (res.meta?.otp) {
           setOtp(res.meta.otp);
@@ -197,7 +197,7 @@ export default function LoginPage() {
 
       if (res.success) {
         setSuccessMsg("Registration successful!");
-        
+
         // If they provided a password, try logging in immediately
         if (regPassword) {
           try {
@@ -212,7 +212,7 @@ export default function LoginPage() {
             // Ignore auto-login failures, just fallback to signin tab
           }
         }
-        
+
         // Fallback: switch to signin tab and ask for OTP
         setTimeout(() => {
           setEmail(regEmail);
@@ -263,12 +263,12 @@ export default function LoginPage() {
     setErrorMsg("");
     setSuccessMsg("");
     setOtpLoading(true);
-    
+
     let credentials = { email: "", password: "" };
-    if (role === "customer") credentials = { email: "customer@sabjiwala.in", password: "customer123" };
-    if (role === "vendor") credentials = { email: "vendor@sabjiwala.in", password: "vendor123" };
-    if (role === "delivery") credentials = { email: "delivery@sabjiwala.in", password: "delivery123" };
-    if (role === "admin") credentials = { email: "admin@sabjiwala.in", password: "admin123" };
+    if (role === "customer") credentials = { email: "customer@sbjiwala.in", password: "customer123" };
+    if (role === "vendor") credentials = { email: "vendor@sbjiwala.in", password: "vendor123" };
+    if (role === "delivery") credentials = { email: "delivery@sbjiwala.in", password: "delivery123" };
+    if (role === "admin") credentials = { email: "admin@sbjiwala.in", password: "admin123" };
 
     try {
       configureBaseUrl();
@@ -290,7 +290,7 @@ export default function LoginPage() {
       {/* Header */}
       <header className="max-w-6xl w-full mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src="/logo_horizontal.png" alt="SabjiWala Logo" className="h-8 w-auto object-contain" />
+          <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-8 w-auto object-contain" />
           <span className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">Secure Auth</span>
         </div>
         <button
@@ -310,13 +310,13 @@ export default function LoginPage() {
 
           {/* Banner Logo */}
           <div className="text-center space-y-2 relative">
-            <img src="/logo_horizontal.png" alt="SabjiWala Logo" className="h-12 w-auto mx-auto mb-2" />
+            <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-12 w-auto mx-auto mb-2" />
             <h2 className="text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
               {authMode === "signin" ? "Welcome Back!" : "Create Account"}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {authMode === "signin" 
-                ? "Log in to manage platform operations and verify vendors" 
+              {authMode === "signin"
+                ? "Log in to manage platform operations and verify vendors"
                 : "Register to get access to platform configuration"}
             </p>
           </div>
@@ -325,21 +325,19 @@ export default function LoginPage() {
           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200/50 dark:border-slate-700/60 text-xs font-bold">
             <button
               onClick={() => { setAuthMode("signin"); setErrorMsg(""); setSuccessMsg(""); }}
-              className={`flex-1 py-2.5 rounded-xl transition-all ${
-                authMode === "signin"
-                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800"
-              }`}
+              className={`flex-1 py-2.5 rounded-xl transition-all ${authMode === "signin"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800"
+                }`}
             >
               Sign In
             </button>
             <button
               onClick={() => { setAuthMode("signup"); setErrorMsg(""); setSuccessMsg(""); }}
-              className={`flex-1 py-2.5 rounded-xl transition-all ${
-                authMode === "signup"
-                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800"
-              }`}
+              className={`flex-1 py-2.5 rounded-xl transition-all ${authMode === "signup"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800"
+                }`}
             >
               Sign Up / Register
             </button>
@@ -364,21 +362,19 @@ export default function LoginPage() {
               <div className="flex justify-center gap-4 text-xs font-bold border-b border-slate-100 dark:border-slate-800 pb-2">
                 <button
                   onClick={() => setLoginTab("otp")}
-                  className={`pb-1 transition-all ${
-                    loginTab === "otp"
-                      ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
-                      : "text-slate-400 hover:text-slate-650"
-                  }`}
+                  className={`pb-1 transition-all ${loginTab === "otp"
+                    ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
+                    : "text-slate-400 hover:text-slate-650"
+                    }`}
                 >
                   Email OTP Login
                 </button>
                 <button
                   onClick={() => setLoginTab("password")}
-                  className={`pb-1 transition-all ${
-                    loginTab === "password"
-                      ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
-                      : "text-slate-400 hover:text-slate-650"
-                  }`}
+                  className={`pb-1 transition-all ${loginTab === "password"
+                    ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
+                    : "text-slate-400 hover:text-slate-650"
+                    }`}
                 >
                   Password Login
                 </button>
@@ -395,7 +391,7 @@ export default function LoginPage() {
                         <input
                           type="email"
                           required
-                          placeholder="admin@sabjiwala.in"
+                          placeholder="admin@sbjiwala.in"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="bg-transparent border-none outline-none w-full text-sm text-slate-800 dark:text-white placeholder-slate-400"
@@ -477,7 +473,7 @@ export default function LoginPage() {
                       <input
                         type="email"
                         required
-                        placeholder="admin@sabjiwala.in"
+                        placeholder="admin@sbjiwala.in"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="bg-transparent border-none outline-none w-full text-sm text-slate-800 dark:text-white placeholder-slate-400"
@@ -560,7 +556,7 @@ export default function LoginPage() {
                   <input
                     type="email"
                     required
-                    placeholder="admin@sabjiwala.in"
+                    placeholder="admin@sbjiwala.in"
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
                     className="bg-transparent border-none outline-none w-full text-xs text-slate-850 dark:text-white"
@@ -700,7 +696,7 @@ export default function LoginPage() {
 
       {/* Footer */}
       <footer className="h-12 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-center text-[10px] text-slate-400 dark:text-slate-500 tracking-wide font-medium">
-        <span>&copy; 2026 SabjiWala.in • Secure Authentication System</span>
+        <span>&copy; 2026 Sbjiwala • Secure Authentication System</span>
       </footer>
     </div>
   );

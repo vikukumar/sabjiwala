@@ -55,7 +55,7 @@ async def seed_database(db: AsyncSession) -> None:
         category_map[cat_def["slug"]] = cat.id
 
     # 2. Seed default admin user if not exists
-    admin_email = "admin@sabjiwala.in"
+    admin_email = "admin@sbjiwala.in"
     res = await db.execute(select(User).where(User.email == admin_email))
     admin_user = res.scalars().first()
     if not admin_user:
@@ -84,7 +84,7 @@ async def seed_database(db: AsyncSession) -> None:
         await logger.ainfo("Seeded default admin user")
 
     # 3. Seed default vendor user & profile if not exists
-    vendor_email = "vendor@sabjiwala.in"
+    vendor_email = "vendor@sbjiwala.in"
     res = await db.execute(select(User).where(User.email == vendor_email))
     vendor_user = res.scalars().first()
     if not vendor_user:
@@ -207,7 +207,7 @@ async def seed_database(db: AsyncSession) -> None:
             await logger.ainfo(f"Seeded inventory for {product.name} with price ₹{prod_def['price']}")
 
     # 5. Seed a default Customer User
-    customer_email = "customer@sabjiwala.in"
+    customer_email = "customer@sbjiwala.in"
     res = await db.execute(select(User).where(User.email == customer_email))
     customer_user = res.scalars().first()
     if not customer_user:
@@ -265,7 +265,7 @@ async def seed_database(db: AsyncSession) -> None:
         await logger.ainfo("Seeded default customer user")
 
     # 6. Seed a default Delivery Boy
-    delivery_email = "delivery@sabjiwala.in"
+    delivery_email = "delivery@sbjiwala.in"
     res = await db.execute(select(User).where(User.email == delivery_email))
     delivery_user = res.scalars().first()
     if not delivery_user:

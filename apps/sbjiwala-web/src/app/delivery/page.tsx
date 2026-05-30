@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { 
-  Navigation, CheckCircle2, AlertCircle, ShoppingBag, 
+import {
+  Navigation, CheckCircle2, AlertCircle, ShoppingBag,
   MapPin, ToggleLeft, ToggleRight, DollarSign, Wallet, Loader2
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 
 export default function DeliveryAgentDashboard() {
@@ -113,7 +113,7 @@ export default function DeliveryAgentDashboard() {
       <header className="sticky top-0 z-50 bg-emerald-600 dark:bg-slate-900 text-white shadow-md transition-colors duration-200">
         <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-black tracking-tight">SabjiWala</span>
+            <span className="text-xl font-black tracking-tight">Sbjiwala</span>
             <span className="text-[10px] uppercase bg-emerald-700 dark:bg-emerald-950/80 text-white dark:text-emerald-300 font-extrabold px-2 py-0.5 rounded-full">
               Delivery
             </span>
@@ -134,7 +134,7 @@ export default function DeliveryAgentDashboard() {
             </button>
 
             {/* Toggle Online */}
-            <button 
+            <button
               onClick={handleToggleOnline}
               disabled={toggleOnlineMutation.isPending}
               className="flex items-center gap-1.5 bg-emerald-700/80 dark:bg-slate-800 hover:bg-emerald-800 dark:hover:bg-slate-700 transition-colors px-3.5 py-1.5 rounded-full text-xs font-bold disabled:opacity-50 border border-emerald-800/50 dark:border-slate-700"
@@ -166,7 +166,7 @@ export default function DeliveryAgentDashboard() {
               <span>₹350.00</span>
             </div>
           </div>
-          
+
           <div className="pl-4 space-y-1">
             <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Cash In Hand</span>
             <div className="flex items-center gap-1 text-slate-900 dark:text-slate-50 font-black text-xl">
@@ -196,9 +196,9 @@ export default function DeliveryAgentDashboard() {
           ) : isOnline && assignments.length > 0 ? (
             assignments.map((task) => {
               const destAddr = task.delivery_address || {};
-              const formattedAddr = destAddr.formatted_address || 
+              const formattedAddr = destAddr.formatted_address ||
                 `${destAddr.address_line_1 || ""}, ${destAddr.city || ""}`;
-              
+
               return (
                 <div key={task.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4 transition-colors duration-200">
                   {/* Header */}
@@ -207,11 +207,10 @@ export default function DeliveryAgentDashboard() {
                       <span className="text-xs font-bold text-slate-400 dark:text-slate-500">Order ID: #{task.order_number}</span>
                       <h4 className="font-extrabold text-slate-900 dark:text-slate-50">{destAddr.full_name || "Customer"}</h4>
                     </div>
-                    <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
-                      task.status === "assigned" || task.status === "packed"
-                        ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400"
-                        : "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-400"
-                    }`}>
+                    <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${task.status === "assigned" || task.status === "packed"
+                      ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400"
+                      : "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-400"
+                      }`}>
                       {task.status}
                     </span>
                   </div>
@@ -251,7 +250,7 @@ export default function DeliveryAgentDashboard() {
                       className="bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm disabled:opacity-50"
                     >
                       {task.status === "assigned" || task.status === "packed" || task.status === "accepted"
-                        ? "Confirm Pickup" 
+                        ? "Confirm Pickup"
                         : "Verify OTP & Deliver"}
                     </button>
                   </div>
@@ -269,7 +268,7 @@ export default function DeliveryAgentDashboard() {
 
       <footer className="text-center py-4 mt-8 border-t border-slate-200/50 dark:border-slate-850 transition-colors duration-200">
         <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-          SabjiWala Delivery v{versionInfo.version}
+          Sbjiwala Delivery v{versionInfo.version}
         </span>
       </footer>
     </div>

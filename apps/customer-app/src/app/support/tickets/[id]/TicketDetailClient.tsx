@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import { ChevronLeft, Send, User, Bot } from "lucide-react";
 import { Badge, Button, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";

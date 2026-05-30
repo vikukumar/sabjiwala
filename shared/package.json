@@ -1,7 +1,7 @@
 {
-  "name": "@sabjiwala/shared",
+  "name": "@sbjiwala/shared",
   "version": "1.0.0",
-  "description": "Shared TypeScript types and API client for SabjiWala apps",
+  "description": "Shared TypeScript types and API client for Sbjiwala apps",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SabjiWala Delivery Partner - Deliver Fresh Produce",
+  title: "Sbjiwala Delivery Partner - Deliver Fresh Produce",
   description: "Fulfill customer vegetable orders and manage cash collection and route navigation.",
 };
 
@@ -34,7 +34,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="SabjiWala Delivery" />
+        <meta name="apple-mobile-web-app-title" content="Sbjiwala Delivery" />
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
         <script
           dangerouslySetInnerHTML={{

@@ -13,21 +13,21 @@ COPY apps/customer-app ./apps/customer-app
 COPY apps/vendor-app ./apps/vendor-app
 COPY apps/delivery-app ./apps/delivery-app
 COPY apps/admin-app ./apps/admin-app
-COPY apps/sabjiwala-web ./apps/sabjiwala-web
+COPY apps/sbjiwala-web ./apps/sbjiwala-web
 
 # Build the shared library first
 RUN cd shared && npm install && npm run build
 
 # Setup and build the unified web application
-RUN cd apps/sabjiwala-web && \
+RUN cd apps/sbjiwala-web && \
     npm install && \
     # Replace symlink with physical copy of shared package to satisfy Turbopack
-    rm -rf node_modules/@sabjiwala/shared && \
-    mkdir -p node_modules/@sabjiwala/shared && \
-    cp -r ../../shared/dist node_modules/@sabjiwala/shared/ && \
-    cp -r ../../shared/src node_modules/@sabjiwala/shared/ && \
-    cp ../../shared/package.json node_modules/@sabjiwala/shared/ && \
-    cp ../../shared/tsconfig.json node_modules/@sabjiwala/shared/ && \
+    rm -rf node_modules/@sbjiwala/shared && \
+    mkdir -p node_modules/@sbjiwala/shared && \
+    cp -r ../../shared/dist node_modules/@sbjiwala/shared/ && \
+    cp -r ../../shared/src node_modules/@sbjiwala/shared/ && \
+    cp ../../shared/package.json node_modules/@sbjiwala/shared/ && \
+    cp ../../shared/tsconfig.json node_modules/@sbjiwala/shared/ && \
     cp -r ../customer-app/src/components src/ && \
     cp ../customer-app/src/app/page.tsx src/app/page.tsx && \
     cp ../vendor-app/src/app/page.tsx src/app/vendor/page.tsx && \
@@ -39,7 +39,7 @@ RUN cd apps/sabjiwala-web && \
 # Stage 2: Serve using Nginx
 FROM nginx:stable-alpine
 
-COPY --from=builder /app/apps/sabjiwala-web/out /usr/share/nginx/html
+COPY --from=builder /app/apps/sbjiwala-web/out /usr/share/nginx/html
 COPY ./infrastructure/nginx/nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 80 443

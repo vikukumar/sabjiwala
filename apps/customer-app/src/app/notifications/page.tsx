@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import { Bell, BellOff, Check, Package, Truck, Tag, MessageSquare, Wallet, Star } from "lucide-react";
 import { Button, Badge, EmptyState, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
@@ -86,11 +86,10 @@ export default function NotificationsPage() {
               <div
                 key={notif.id}
                 onClick={() => !notif.is_read && markRead.mutate(notif.id)}
-                className={`flex items-start gap-3 p-4 rounded-2xl border transition-all cursor-pointer hover:shadow-sm ${
-                  notif.is_read
+                className={`flex items-start gap-3 p-4 rounded-2xl border transition-all cursor-pointer hover:shadow-sm ${notif.is_read
                     ? "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800"
                     : "bg-emerald-50/50 dark:bg-emerald-950/10 border-emerald-100 dark:border-emerald-900/30"
-                }`}
+                  }`}
               >
                 <div className={`p-2.5 rounded-xl flex-shrink-0 ${colorCls}`}>
                   <Icon className="w-4 h-4" />

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SabjiWala Super Admin - Platform Oversight",
+  title: "Sbjiwala Super Admin - Platform Oversight",
   description: "Manage system settings, vendor verifications, and monitor database schema evolutions.",
 };
 
@@ -34,7 +34,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="SabjiWala Admin" />
+        <meta name="apple-mobile-web-app-title" content="Sbjiwala Admin" />
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
         <script
           dangerouslySetInnerHTML={{

@@ -18,7 +18,7 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "service": "sabjiwala-backend",
+        "service": "sbjiwala-backend",
         "version": "1.0.0",
     }
 

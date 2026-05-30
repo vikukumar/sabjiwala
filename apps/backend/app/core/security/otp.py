@@ -100,7 +100,7 @@ async def send_otp_via_email(email: str, otp: str) -> None:
 
     # Construct email message
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"{otp} is your SabjiWala login OTP"
+    msg["Subject"] = f"{otp} is your Sbjiwala login OTP"
     msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
     msg["To"] = email
 
@@ -110,19 +110,19 @@ async def send_otp_via_email(email: str, otp: str) -> None:
       <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px; color: #0f172a;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
           <div style="background-color: #10b981; padding: 24px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800;">SabjiWala.in</h1>
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800;">Sbjiwala</h1>
             <p style="color: #d1fae5; margin: 4px 0 0 0; font-size: 14px;">Farm Fresh Vegetables in 10 Minutes</p>
           </div>
           <div style="padding: 32px; text-align: center;">
             <h2 style="font-size: 20px; font-weight: 700; margin-top: 0; color: #1e293b;">Your One-Time Password (OTP)</h2>
-            <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin-bottom: 24px;">Use the following OTP to log in to your SabjiWala account. This OTP is valid for 5 minutes.</p>
+            <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin-bottom: 24px;">Use the following OTP to log in to your Sbjiwala account. This OTP is valid for 5 minutes.</p>
             <div style="background-color: #f1f5f9; padding: 16px 24px; border-radius: 12px; font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #059669; display: inline-block; margin-bottom: 24px;">
               {otp}
             </div>
             <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">If you did not request this OTP, please ignore this email or contact support.</p>
           </div>
           <div style="background-color: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
-            &copy; 2026 SabjiWala.in. All rights reserved.
+            &copy; 2026 Sbjiwala. All rights reserved.
           </div>
         </div>
       </body>
@@ -130,7 +130,7 @@ async def send_otp_via_email(email: str, otp: str) -> None:
     """
     
     # Attach plain text and HTML
-    plain_text = f"Your SabjiWala login OTP is: {otp}. Valid for 5 minutes."
+    plain_text = f"Your Sbjiwala login OTP is: {otp}. Valid for 5 minutes."
     msg.attach(MIMEText(plain_text, "plain"))
     msg.attach(MIMEText(html_body, "html"))
 

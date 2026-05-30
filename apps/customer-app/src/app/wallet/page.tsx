@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import { Wallet, Plus, ArrowUpRight, ArrowDownLeft, Clock, CreditCard, Gift, TrendingUp } from "lucide-react";
 import { Button, Card, Badge, Skeleton, EmptyState, StatCard } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import { Gift, Copy, Share2, CheckCircle2, Users, TrendingUp, Wallet } from "lucide-react";
 import { Button, Card, Badge, Skeleton, StatCard } from "@/components/ui/index";
@@ -23,7 +23,7 @@ export default function ReferralsPage() {
   });
 
   const referralCode = profile?.referral_code || "SABJI" + (profile?.id || "").slice(-6).toUpperCase();
-  const referralLink = `https://sabjiwala.in/register?ref=${referralCode}`;
+  const referralLink = `https://sbjiwala.in/register?ref=${referralCode}`;
 
   const copyCode = () => {
     navigator.clipboard.writeText(referralCode);
@@ -35,7 +35,7 @@ export default function ReferralsPage() {
   const share = async () => {
     if (navigator.share) {
       await navigator.share({
-        title: "Join SabjiWala — Fresh Veggies in 10 Min!",
+        title: "Join Sbjiwala — Fresh Veggies in 10 Min!",
         text: `Use my code ${referralCode} and get ₹50 off your first order! 🥦🍅`,
         url: referralLink,
       });
@@ -57,7 +57,7 @@ export default function ReferralsPage() {
         <div className="relative z-10 space-y-3">
           <div className="text-4xl">🎁</div>
           <h2 className="text-2xl font-black">Earn ₹50 per referral!</h2>
-          <p className="text-emerald-200">Invite friends to SabjiWala. You both get ₹50 wallet credit when they place their first order.</p>
+          <p className="text-emerald-200">Invite friends to Sbjiwala. You both get ₹50 wallet credit when they place their first order.</p>
         </div>
       </div>
 

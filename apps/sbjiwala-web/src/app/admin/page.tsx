@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { 
-  Building2, Users, Receipt, Settings, 
+import {
+  Building2, Users, Receipt, Settings,
   CheckCircle2, XCircle, Database, ShieldAlert, Sparkles, ChevronRight, Loader2
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 
 export default function AdminDashboard() {
@@ -127,7 +127,7 @@ export default function AdminDashboard() {
       <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between p-6 border-r border-slate-800">
         <div className="space-y-8">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-black text-emerald-500 tracking-tight">SabjiWala</span>
+            <span className="text-xl font-black text-emerald-500 tracking-tight">Sbjiwala</span>
             <span className="text-[10px] uppercase tracking-wider bg-slate-800 text-slate-450 font-bold px-2.5 py-0.5 rounded">
               Super Admin
             </span>
@@ -159,7 +159,7 @@ export default function AdminDashboard() {
           </div>
           <div className="text-center">
             <span className="text-[10px] text-slate-500 font-mono tracking-wider">
-              SabjiWala v{versionInfo.version}
+              Sbjiwala v{versionInfo.version}
             </span>
           </div>
         </div>
@@ -316,7 +316,7 @@ export default function AdminDashboard() {
           {/* System settings form */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4 transition-colors duration-200">
             <h3 className="text-base font-black text-slate-800 dark:text-slate-100">Quick Platform Configuration</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Vendor Commission Rate (%)</label>
@@ -332,7 +332,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="flex justify-end pt-4">
-                <button 
+                <button
                   onClick={() => saveSettingsMutation.mutate()}
                   disabled={saveSettingsMutation.isPending}
                   className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white border border-slate-800 dark:border-slate-700 font-bold text-xs px-6 py-3 rounded-xl transition-all shadow-md disabled:opacity-50"

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import { User, Mail, Phone, Edit2, Save, Camera, LogOut, Shield, Bell, Palette, ChevronRight, Award, Package, Star, Heart } from "lucide-react";
 import { Button, Input, Card, Badge, StatCard, Spinner } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
@@ -140,7 +140,7 @@ export default function ProfilePage() {
         Sign Out
       </Button>
 
-      <p className="text-center text-xs text-slate-400 dark:text-slate-500">SabjiWala v1.0 · Member since {new Date(profile?.created_at || Date.now()).getFullYear()}</p>
+      <p className="text-center text-xs text-slate-400 dark:text-slate-500">Sbjiwala v1.0 · Member since {new Date(profile?.created_at || Date.now()).getFullYear()}</p>
     </div>
   );
 }

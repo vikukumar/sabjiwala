@@ -20,7 +20,7 @@ class WebSocketManager:
         self.active_connections: Dict[UUID, List[WebSocket]] = {}
         self.redis_client: Optional[Redis] = None
         self.pubsub_task: Optional[asyncio.Task] = None
-        self.channel_name = "sabjiwala:ws:events"
+        self.channel_name = "sbjiwala:ws:events"
 
     async def connect_redis(self) -> None:
         """Connect to Redis and start listening to PubSub backplane."""

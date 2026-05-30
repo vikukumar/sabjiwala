@@ -23,9 +23,9 @@ const FAQ_DATA = [
   {
     category: "Payments",
     items: [
-      { q: "What payment methods are accepted?", a: "We accept Cash on Delivery (COD), UPI, Credit/Debit Cards, Net Banking, and SabjiWala Wallet." },
-      { q: "How do I get a refund?", a: "Refunds are processed within 5–7 business days to the original payment method. For COD, refunds go to your SabjiWala Wallet." },
-      { q: "What is SabjiWala Wallet?", a: "SabjiWala Wallet is a digital wallet where you can add money and use it to pay for orders. It's also where referral rewards and refunds are credited." },
+      { q: "What payment methods are accepted?", a: "We accept Cash on Delivery (COD), UPI, Credit/Debit Cards, Net Banking, and Sbjiwala Wallet." },
+      { q: "How do I get a refund?", a: "Refunds are processed within 5–7 business days to the original payment method. For COD, refunds go to your Sbjiwala Wallet." },
+      { q: "What is Sbjiwala Wallet?", a: "Sbjiwala Wallet is a digital wallet where you can add money and use it to pay for orders. It's also where referral rewards and refunds are credited." },
     ],
   },
   {

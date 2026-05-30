@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /vendor
+Allow: /delivery
+Disallow: /admin
+Disallow: /auth/callback/google
+Disallow: /auth/callback/facebook
+
+Sitemap: https://sbjiwala.in/sitemap.xml

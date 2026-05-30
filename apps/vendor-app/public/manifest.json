@@ -1,6 +1,6 @@
 {
-  "name": "SabjiWala Vendor — Store Dashboard",
-  "short_name": "SabjiWala Vendor",
+  "name": "Sbjiwala Vendor — Store Dashboard",
+  "short_name": "Sbjiwala Vendor",
   "description": "Manage catalog, inventory, accept and pack customer vegetable orders.",
   "start_url": "/",
   "display": "standalone",

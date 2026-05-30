@@ -1,6 +1,6 @@
-# Security Policy for SabjiWala.in
+# Security Policy for Sbjiwala
 
-This document outlines the security policies, vulnerability reporting processes, and security compliance guidelines for the SabjiWala eCommerce Platform.
+This document outlines the security policies, vulnerability reporting processes, and security compliance guidelines for the Sbjiwala eCommerce Platform.
 
 ## Copyright Notice
 
@@ -39,6 +39,6 @@ We aim to acknowledge and address all critical vulnerability reports within **48
 
 ## Disclosure Policy
 
-To protect users and stores operating on the SabjiWala network, we follow a responsible disclosure policy. We request that you:
+To protect users and stores operating on the Sbjiwala network, we follow a responsible disclosure policy. We request that you:
 - Do not share details of the vulnerability publicly until a fix has been compiled and deployed.
 - Give us reasonable time to mitigate the exploit before public disclosure.

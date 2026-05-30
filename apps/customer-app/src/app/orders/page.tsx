@@ -2,20 +2,20 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import { Package, ChevronRight, MapPin, Clock, CheckCircle2, Truck, XCircle, Star, RefreshCcw, Loader2 } from "lucide-react";
 import { Badge, Button, EmptyState, Skeleton, Tabs } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  pending:          { label: "Pending",           color: "warning",  icon: Clock },
-  confirmed:        { label: "Confirmed",          color: "info",     icon: CheckCircle2 },
-  accepted:         { label: "Accepted",           color: "info",     icon: CheckCircle2 },
-  packed:           { label: "Packed",             color: "info",     icon: Package },
-  out_for_delivery: { label: "Out for Delivery",   color: "warning",  icon: Truck },
-  delivered:        { label: "Delivered",          color: "success",  icon: CheckCircle2 },
-  cancelled:        { label: "Cancelled",          color: "danger",   icon: XCircle },
+  pending: { label: "Pending", color: "warning", icon: Clock },
+  confirmed: { label: "Confirmed", color: "info", icon: CheckCircle2 },
+  accepted: { label: "Accepted", color: "info", icon: CheckCircle2 },
+  packed: { label: "Packed", color: "info", icon: Package },
+  out_for_delivery: { label: "Out for Delivery", color: "warning", icon: Truck },
+  delivered: { label: "Delivered", color: "success", icon: CheckCircle2 },
+  cancelled: { label: "Cancelled", color: "danger", icon: XCircle },
 };
 
 function OrderCard({ order, onCancel }: { order: any; onCancel: (id: string) => void }) {

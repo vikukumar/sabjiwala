@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import { Tag, Copy, CheckCircle2, Clock, Percent, ArrowRight } from "lucide-react";
 import { Badge, Button, EmptyState, Skeleton } from "@/components/ui/index";
@@ -62,11 +62,10 @@ function CouponCard({ coupon }: { coupon: any }) {
             {!isExpired && (
               <button
                 onClick={copy}
-                className={`flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-xl transition-all ${
-                  copied
+                className={`flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-xl transition-all ${copied
                     ? "bg-emerald-600 text-white"
                     : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700"
-                }`}
+                  }`}
               >
                 {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? "Copied!" : "Copy Code"}

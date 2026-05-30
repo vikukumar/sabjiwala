@@ -2,16 +2,16 @@
 
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import { MessageSquare, ChevronRight, Clock, CheckCircle2, XCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { Badge, EmptyState, Skeleton, Button } from "@/components/ui/index";
 
 const STATUS_CONFIG: Record<string, { color: "success" | "warning" | "danger" | "info"; icon: any; label: string }> = {
-  open:        { color: "info",    icon: AlertCircle,   label: "Open" },
-  in_progress: { color: "warning", icon: Clock,         label: "In Progress" },
-  resolved:    { color: "success", icon: CheckCircle2,  label: "Resolved" },
-  closed:      { color: "danger",  icon: XCircle,       label: "Closed" },
+  open: { color: "info", icon: AlertCircle, label: "Open" },
+  in_progress: { color: "warning", icon: Clock, label: "In Progress" },
+  resolved: { color: "success", icon: CheckCircle2, label: "Resolved" },
+  closed: { color: "danger", icon: XCircle, label: "Closed" },
 };
 
 export default function TicketsPage() {

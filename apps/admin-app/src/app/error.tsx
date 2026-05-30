@@ -9,7 +9,7 @@ interface ErrorProps {
 
 export default function ErrorPage({ error, reset }: ErrorProps) {
   useEffect(() => {
-    console.error("SabjiWala Runtime Error:", error);
+    console.error("Sbjiwala Runtime Error:", error);
   }, [error]);
 
   return (
@@ -73,7 +73,7 @@ export default function ErrorPage({ error, reset }: ErrorProps) {
                 d="M85 60 C90 35, 110 35, 115 60 C120 90, 105 145, 100 160 C95 145, 80 90, 85 60 Z"
                 fill="url(#carrot-grad)"
               />
-              
+
               {/* Green Leaves at top */}
               <path
                 d="M100 45 C100 20, 80 15, 75 10 C85 20, 95 30, 100 45 Z"
@@ -87,7 +87,7 @@ export default function ErrorPage({ error, reset }: ErrorProps) {
                 d="M100 45 C100 15, 100 10, 100 5 C103 15, 101 30, 100 45 Z"
                 fill="#15803d"
               />
-              
+
               {/* Textured Lines on Carrot */}
               <path d="M88 80 Q98 83 103 81" stroke="#ea580c" strokeWidth="2.5" strokeLinecap="round" fill="none" />
               <path d="M97 105 Q107 108 112 106" stroke="#ea580c" strokeWidth="2.5" strokeLinecap="round" fill="none" />
@@ -105,7 +105,7 @@ export default function ErrorPage({ error, reset }: ErrorProps) {
                 strokeLinecap="round"
                 fill="none"
               />
-              
+
               {/* Cold blue blush cheeks */}
               <circle cx="82" cy="92" r="5" fill="#38bdf8" opacity="0.6" />
               <circle cx="118" cy="92" r="5" fill="#38bdf8" opacity="0.6" />

@@ -1,4 +1,4 @@
-name: Build & Release SabjiWala Platform
+name: Build & Release Sbjiwala Platform
 
 on:
   push:
@@ -148,7 +148,7 @@ jobs:
           node-version: 24
           cache: 'npm'
           cache-dependency-path: |
-            apps/sabjiwala-web/package.json
+            apps/sbjiwala-web/package.json
             shared/package.json
 
       - name: Build Shared Package
@@ -159,40 +159,40 @@ jobs:
 
       - name: Setup Web App
         run: |
-          cd apps/sabjiwala-web
+          cd apps/sbjiwala-web
           npm install
           
           # Replace symlink with physical copy of shared package to satisfy Turbopack
-          rm -rf node_modules/@sabjiwala/shared
-          mkdir -p node_modules/@sabjiwala/shared
-          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
-          cp -r ../../shared/src node_modules/@sabjiwala/shared/
-          cp ../../shared/package.json node_modules/@sabjiwala/shared/
-          cp ../../shared/tsconfig.json node_modules/@sabjiwala/shared/
+          rm -rf node_modules/@sbjiwala/shared
+          mkdir -p node_modules/@sbjiwala/shared
+          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
+          cp -r ../../shared/src node_modules/@sbjiwala/shared/
+          cp ../../shared/package.json node_modules/@sbjiwala/shared/
+          cp ../../shared/tsconfig.json node_modules/@sbjiwala/shared/
 
       - name: Copy Dashboard Views to Web App
         run: |
-          mkdir -p apps/sabjiwala-web/src/app/vendor apps/sabjiwala-web/src/app/delivery apps/sabjiwala-web/src/app/admin
-          cp apps/customer-app/src/app/page.tsx apps/sabjiwala-web/src/app/page.tsx
-          cp apps/vendor-app/src/app/page.tsx apps/sabjiwala-web/src/app/vendor/page.tsx
-          cp apps/delivery-app/src/app/page.tsx apps/sabjiwala-web/src/app/delivery/page.tsx
-          cp apps/admin-app/src/app/page.tsx apps/sabjiwala-web/src/app/admin/page.tsx
+          mkdir -p apps/sbjiwala-web/src/app/vendor apps/sbjiwala-web/src/app/delivery apps/sbjiwala-web/src/app/admin
+          cp apps/customer-app/src/app/page.tsx apps/sbjiwala-web/src/app/page.tsx
+          cp apps/vendor-app/src/app/page.tsx apps/sbjiwala-web/src/app/vendor/page.tsx
+          cp apps/delivery-app/src/app/page.tsx apps/sbjiwala-web/src/app/delivery/page.tsx
+          cp apps/admin-app/src/app/page.tsx apps/sbjiwala-web/src/app/admin/page.tsx
 
       - name: Build Web App Static Export
         run: |
-          cd apps/sabjiwala-web
+          cd apps/sbjiwala-web
           npm run build
 
       - name: Zip Web App Static Export
         run: |
-          cd apps/sabjiwala-web/out
-          zip -r ../../../sabjiwala-web-static.zip .
+          cd apps/sbjiwala-web/out
+          zip -r ../../../sbjiwala-web-static.zip .
 
       - name: Upload Web App Artifact
         uses: actions/upload-artifact@v4
         with:
           name: web-static
-          path: sabjiwala-web-static.zip
+          path: sbjiwala-web-static.zip
 
   build-android:
     needs: read-version
@@ -231,13 +231,13 @@ jobs:
             echo "KEY_PASS=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
           else
             echo "Using self-signed fallback keystore."
-            keytool -genkey -v -keystore $GITHUB_WORKSPACE/release.keystore -alias sabjiwala -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=sabjiwala.in, OU=Dev, O=SabjiWala, L=Mumbai, S=MH, C=IN" \
+            keytool -genkey -v -keystore $GITHUB_WORKSPACE/release.keystore -alias sbjiwala -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=sbjiwala.in, OU=Dev, O=Sbjiwala, L=Mumbai, S=MH, C=IN" \
               -storepass password -keypass password
             echo "HAS_PROD_KEYSTORE=false" >> $GITHUB_ENV
             echo "KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore" >> $GITHUB_ENV
             echo "STORE_PASS=password" >> $GITHUB_ENV
-            echo "KEY_ALIAS=sabjiwala" >> $GITHUB_ENV
+            echo "KEY_ALIAS=sbjiwala" >> $GITHUB_ENV
             echo "KEY_PASS=password" >> $GITHUB_ENV
           fi
           
@@ -252,11 +252,11 @@ jobs:
         run: |
           cd apps/customer-app
           npm install
-          rm -rf node_modules/@sabjiwala/shared
-          mkdir -p node_modules/@sabjiwala/shared
-          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
-          cp -r ../../shared/src  node_modules/@sabjiwala/shared/
-          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          rm -rf node_modules/@sbjiwala/shared
+          mkdir -p node_modules/@sbjiwala/shared
+          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
+          cp -r ../../shared/src  node_modules/@sbjiwala/shared/
+          cp ../../shared/package.json node_modules/@sbjiwala/shared/
           npm run build
           npm install @capacitor/core @capacitor/cli @capacitor/android
           npx cap add android
@@ -273,17 +273,17 @@ jobs:
             -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
             -Pandroid.injected.signing.key.password=$KEY_PASS
           cp app/build/outputs/apk/release/app-release.apk \
-            $GITHUB_WORKSPACE/sabjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
+            $GITHUB_WORKSPACE/sbjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
           cp app/build/outputs/bundle/release/app-release.aab \
-            $GITHUB_WORKSPACE/sabjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
+            $GITHUB_WORKSPACE/sbjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
 
       - name: Upload Customer App to Play Store
         if: env.HAS_PROD_KEYSTORE == 'true' && env.HAS_PLAY_STORE_CONFIG == 'true'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
-          packageName: com.sabjiwala.customer
-          releaseFiles: sabjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
+          packageName: com.sbjiwala.customer
+          releaseFiles: sbjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
           track: internal
           status: completed
 
@@ -292,11 +292,11 @@ jobs:
         run: |
           cd apps/vendor-app
           npm install
-          rm -rf node_modules/@sabjiwala/shared
-          mkdir -p node_modules/@sabjiwala/shared
-          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
-          cp -r ../../shared/src  node_modules/@sabjiwala/shared/
-          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          rm -rf node_modules/@sbjiwala/shared
+          mkdir -p node_modules/@sbjiwala/shared
+          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
+          cp -r ../../shared/src  node_modules/@sbjiwala/shared/
+          cp ../../shared/package.json node_modules/@sbjiwala/shared/
           npm run build
           npm install @capacitor/core @capacitor/cli @capacitor/android
           npx cap add android
@@ -313,17 +313,17 @@ jobs:
             -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
             -Pandroid.injected.signing.key.password=$KEY_PASS
           cp app/build/outputs/apk/release/app-release.apk \
-            $GITHUB_WORKSPACE/sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
+            $GITHUB_WORKSPACE/sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
           cp app/build/outputs/bundle/release/app-release.aab \
-            $GITHUB_WORKSPACE/sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
+            $GITHUB_WORKSPACE/sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
 
       - name: Upload Vendor App to Play Store
         if: env.HAS_PROD_KEYSTORE == 'true' && env.HAS_PLAY_STORE_CONFIG == 'true'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
-          packageName: com.sabjiwala.vendor
-          releaseFiles: sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
+          packageName: com.sbjiwala.vendor
+          releaseFiles: sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
           track: internal
           status: completed
 
@@ -332,11 +332,11 @@ jobs:
         run: |
           cd apps/delivery-app
           npm install
-          rm -rf node_modules/@sabjiwala/shared
-          mkdir -p node_modules/@sabjiwala/shared
-          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
-          cp -r ../../shared/src  node_modules/@sabjiwala/shared/
-          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          rm -rf node_modules/@sbjiwala/shared
+          mkdir -p node_modules/@sbjiwala/shared
+          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
+          cp -r ../../shared/src  node_modules/@sbjiwala/shared/
+          cp ../../shared/package.json node_modules/@sbjiwala/shared/
           npm run build
           npm install @capacitor/core @capacitor/cli @capacitor/android
           npx cap add android
@@ -353,17 +353,17 @@ jobs:
             -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
             -Pandroid.injected.signing.key.password=$KEY_PASS
           cp app/build/outputs/apk/release/app-release.apk \
-            $GITHUB_WORKSPACE/sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
+            $GITHUB_WORKSPACE/sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
           cp app/build/outputs/bundle/release/app-release.aab \
-            $GITHUB_WORKSPACE/sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab
+            $GITHUB_WORKSPACE/sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab
 
       - name: Upload Delivery App to Play Store
         if: env.HAS_PROD_KEYSTORE == 'true' && env.HAS_PLAY_STORE_CONFIG == 'true'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
-          packageName: com.sabjiwala.delivery
-          releaseFiles: sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab
+          packageName: com.sbjiwala.delivery
+          releaseFiles: sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab
           track: internal
           status: completed
 
@@ -372,12 +372,12 @@ jobs:
         with:
           name: android-apks
           path: |
-            sabjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
-            sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
-            sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
-            sabjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
-            sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
-            sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab
+            sbjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
+            sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
+            sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
+            sbjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
+            sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
+            sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab
 
   build-ios:
     needs: read-version
@@ -444,11 +444,11 @@ jobs:
         run: |
           cd apps/customer-app
           npm install
-          rm -rf node_modules/@sabjiwala/shared
-          mkdir -p node_modules/@sabjiwala/shared
-          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
-          cp -r ../../shared/src  node_modules/@sabjiwala/shared/
-          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          rm -rf node_modules/@sbjiwala/shared
+          mkdir -p node_modules/@sbjiwala/shared
+          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
+          cp -r ../../shared/src  node_modules/@sbjiwala/shared/
+          cp ../../shared/package.json node_modules/@sbjiwala/shared/
           npm run build
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           npx cap add ios || true
@@ -473,17 +473,17 @@ jobs:
           EOF
             xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release archive -archivePath $GITHUB_WORKSPACE/CustomerApp.xcarchive
             xcodebuild -exportArchive -archivePath $GITHUB_WORKSPACE/CustomerApp.xcarchive -exportPath $GITHUB_WORKSPACE/CustomerApp -exportOptionsPlist ExportOptions.plist
-            mv $GITHUB_WORKSPACE/CustomerApp/*.ipa $GITHUB_WORKSPACE/sabjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.ipa
+            mv $GITHUB_WORKSPACE/CustomerApp/*.ipa $GITHUB_WORKSPACE/sbjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.ipa
           else
             xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO build
             BUILD_DIR=$(xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -showBuildSettings 2>/dev/null | grep " BUILT_PRODUCTS_DIR " | awk '{print $3}')
-            zip -r $GITHUB_WORKSPACE/sabjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.zip "$BUILD_DIR/App.app"
+            zip -r $GITHUB_WORKSPACE/sbjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.zip "$BUILD_DIR/App.app"
           fi
 
       - name: Upload Customer App to App Store Connect
         if: env.HAS_APPLE_CERTS == 'true' && env.HAS_APPSTORE_KEY == 'true'
         run: |
-          xcrun altool --upload-app -f $GITHUB_WORKSPACE/sabjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.ipa \
+          xcrun altool --upload-app -f $GITHUB_WORKSPACE/sbjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.ipa \
             -t ios --apiKey "${{ secrets.APPSTORE_KEY_ID }}" \
             --apiIssuer "${{ secrets.APPSTORE_ISSUER_ID }}"
 
@@ -492,11 +492,11 @@ jobs:
         run: |
           cd apps/vendor-app
           npm install
-          rm -rf node_modules/@sabjiwala/shared
-          mkdir -p node_modules/@sabjiwala/shared
-          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
-          cp -r ../../shared/src  node_modules/@sabjiwala/shared/
-          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          rm -rf node_modules/@sbjiwala/shared
+          mkdir -p node_modules/@sbjiwala/shared
+          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
+          cp -r ../../shared/src  node_modules/@sbjiwala/shared/
+          cp ../../shared/package.json node_modules/@sbjiwala/shared/
           npm run build
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           npx cap add ios || true
@@ -521,17 +521,17 @@ jobs:
           EOF
             xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release archive -archivePath $GITHUB_WORKSPACE/VendorApp.xcarchive
             xcodebuild -exportArchive -archivePath $GITHUB_WORKSPACE/VendorApp.xcarchive -exportPath $GITHUB_WORKSPACE/VendorApp -exportOptionsPlist ExportOptions.plist
-            mv $GITHUB_WORKSPACE/VendorApp/*.ipa $GITHUB_WORKSPACE/sabjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.ipa
+            mv $GITHUB_WORKSPACE/VendorApp/*.ipa $GITHUB_WORKSPACE/sbjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.ipa
           else
             xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO build
             BUILD_DIR=$(xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -showBuildSettings 2>/dev/null | grep " BUILT_PRODUCTS_DIR " | awk '{print $3}')
-            zip -r $GITHUB_WORKSPACE/sabjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.zip "$BUILD_DIR/App.app"
+            zip -r $GITHUB_WORKSPACE/sbjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.zip "$BUILD_DIR/App.app"
           fi
 
       - name: Upload Vendor App to App Store Connect
         if: env.HAS_APPLE_CERTS == 'true' && env.HAS_APPSTORE_KEY == 'true'
         run: |
-          xcrun altool --upload-app -f $GITHUB_WORKSPACE/sabjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.ipa \
+          xcrun altool --upload-app -f $GITHUB_WORKSPACE/sbjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.ipa \
             -t ios --apiKey "${{ secrets.APPSTORE_KEY_ID }}" \
             --apiIssuer "${{ secrets.APPSTORE_ISSUER_ID }}"
 
@@ -540,11 +540,11 @@ jobs:
         run: |
           cd apps/delivery-app
           npm install
-          rm -rf node_modules/@sabjiwala/shared
-          mkdir -p node_modules/@sabjiwala/shared
-          cp -r ../../shared/dist node_modules/@sabjiwala/shared/
-          cp -r ../../shared/src  node_modules/@sabjiwala/shared/
-          cp ../../shared/package.json node_modules/@sabjiwala/shared/
+          rm -rf node_modules/@sbjiwala/shared
+          mkdir -p node_modules/@sbjiwala/shared
+          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
+          cp -r ../../shared/src  node_modules/@sbjiwala/shared/
+          cp ../../shared/package.json node_modules/@sbjiwala/shared/
           npm run build
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           npx cap add ios || true
@@ -569,17 +569,17 @@ jobs:
           EOF
             xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release archive -archivePath $GITHUB_WORKSPACE/DeliveryApp.xcarchive
             xcodebuild -exportArchive -archivePath $GITHUB_WORKSPACE/DeliveryApp.xcarchive -exportPath $GITHUB_WORKSPACE/DeliveryApp -exportOptionsPlist ExportOptions.plist
-            mv $GITHUB_WORKSPACE/DeliveryApp/*.ipa $GITHUB_WORKSPACE/sabjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.ipa
+            mv $GITHUB_WORKSPACE/DeliveryApp/*.ipa $GITHUB_WORKSPACE/sbjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.ipa
           else
             xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO build
             BUILD_DIR=$(xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -showBuildSettings 2>/dev/null | grep " BUILT_PRODUCTS_DIR " | awk '{print $3}')
-            zip -r $GITHUB_WORKSPACE/sabjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.zip "$BUILD_DIR/App.app"
+            zip -r $GITHUB_WORKSPACE/sbjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.zip "$BUILD_DIR/App.app"
           fi
 
       - name: Upload Delivery App to App Store Connect
         if: env.HAS_APPLE_CERTS == 'true' && env.HAS_APPSTORE_KEY == 'true'
         run: |
-          xcrun altool --upload-app -f $GITHUB_WORKSPACE/sabjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.ipa \
+          xcrun altool --upload-app -f $GITHUB_WORKSPACE/sbjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.ipa \
             -t ios --apiKey "${{ secrets.APPSTORE_KEY_ID }}" \
             --apiIssuer "${{ secrets.APPSTORE_ISSUER_ID }}"
 
@@ -588,9 +588,9 @@ jobs:
         with:
           name: ios-builds
           path: |
-            sabjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.*
-            sabjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.*
-            sabjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.*
+            sbjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.*
+            sbjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.*
+            sbjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.*
 
   create-release:
     needs: [read-version, release-docker-manifests, build-web-zip, build-android, build-ios]
@@ -625,19 +625,19 @@ jobs:
       - name: Prepare Release Files
         id: release_files
         run: |
-          FILES="sabjiwala-web-static.zip
-          sabjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
-          sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
-          sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
-          sabjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
-          sabjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
-          sabjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab"
+          FILES="sbjiwala-web-static.zip
+          sbjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
+          sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
+          sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
+          sbjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
+          sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
+          sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab"
           
           if [ "${{ github.event_name == 'push' && (github.event.inputs.build_ios != 'false' && github.event.inputs.build_ios != false) }}" = "true" ]; then
             FILES="$FILES
-            sabjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.*
-            sabjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.*
-            sabjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.*"
+            sbjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.*
+            sbjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.*
+            sbjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.*"
           fi
           
           # Write multi-line output to GITHUB_OUTPUT
@@ -650,14 +650,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.read-version.outputs.version }}
-          name: SabjiWala Release v${{ needs.read-version.outputs.version }}
+          name: Sbjiwala Release v${{ needs.read-version.outputs.version }}
           draft: false
           prerelease: false
           files: ${{ steps.release_files.outputs.files }}
           body: |
-            # SabjiWala Platform Release v${{ needs.read-version.outputs.version }}
+            # Sbjiwala Platform Release v${{ needs.read-version.outputs.version }}
 
-            We are pleased to announce the production release of the SabjiWala eCommerce Platform, version `${{ needs.read-version.outputs.version }}`. All sub-platforms have been compiled, synced, and packaged.
+            We are pleased to announce the production release of the Sbjiwala eCommerce Platform, version `${{ needs.read-version.outputs.version }}`. All sub-platforms have been compiled, synced, and packaged.
 
             ## Release Contents
             - **Docker Containers**:
@@ -667,7 +667,7 @@ jobs:
                 - GitHub Packages: `ghcr.io/${{ github.repository }}/web:v${{ needs.read-version.outputs.version }}`
               - **Complete Stack (Backend & Frontend Proxied, Multi-Arch AMD64/ARM64)**:
                 - GitHub Packages: `ghcr.io/${{ github.repository }}/complete:v${{ needs.read-version.outputs.version }}`
-            - **Static Web files**: `sabjiwala-web-static.zip`
+            - **Static Web files**: `sbjiwala-web-static.zip`
             - **Android Apps (Capacitor/Gradle)**:
               - [Customer App] `.apk` and `.aab` bundles
               - [Vendor App] `.apk` and `.aab` bundles

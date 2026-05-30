@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MessageSquare, Send, Phone, Mail, ArrowRight, ChevronRight, HelpCircle, Package, RefreshCcw, Truck, CreditCard, Loader2 } from "lucide-react";
@@ -93,7 +93,7 @@ function SupportContent() {
             <p className="text-xs text-slate-500 dark:text-slate-400">9AM – 9PM</p>
           </div>
         </a>
-        <a href="mailto:support@sabjiwala.in" className="card p-4 flex items-center gap-3 hover:border-emerald-400 transition-colors">
+        <a href="mailto:support@sbjiwala.in" className="card p-4 flex items-center gap-3 hover:border-emerald-400 transition-colors">
           <div className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded-xl">
             <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
@@ -115,9 +115,8 @@ function SupportContent() {
               <button
                 key={t.label}
                 onClick={() => { setActiveTopic(t.label); setShowForm(true); }}
-                className={`flex items-center gap-2 p-3 rounded-xl border text-sm font-bold text-left transition-all ${
-                  isActive ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
-                }`}
+                className={`flex items-center gap-2 p-3 rounded-xl border text-sm font-bold text-left transition-all ${isActive ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                  }`}
               >
                 <Icon className="w-4 h-4 flex-shrink-0" />
                 {t.label}

@@ -1,6 +1,6 @@
 {
-  "appId": "com.sabjiwala.delivery",
-  "appName": "SabjiWala Delivery",
+  "appId": "com.sbjiwala.delivery",
+  "appName": "Sbjiwala Delivery",
   "webDir": "out",
   "server": {
     "androidScheme": "https"

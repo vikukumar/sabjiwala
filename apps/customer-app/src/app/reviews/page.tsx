@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Star, Send, Package } from "lucide-react";

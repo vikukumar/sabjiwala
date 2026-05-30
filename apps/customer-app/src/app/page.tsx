@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, ArrowRight, Star, Plus, Minus, ChevronRight, Zap, Truck, Leaf, ShieldCheck, Clock, TrendingUp, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Badge, Skeleton, EmptyState, SectionHeader } from "@/components/ui/index";
@@ -155,16 +155,14 @@ function CategoriesStrip() {
               onClick={() => setActive(cat.name)}
               className={`flex flex-col items-center gap-1.5 flex-shrink-0 w-[72px] transition-all ${isActive ? "scale-105" : "hover:scale-102"}`}
             >
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl border-2 transition-all ${
-                isActive
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl border-2 transition-all ${isActive
                   ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 shadow-md"
                   : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-emerald-300"
-              }`}>
+                }`}>
                 {emoji}
               </div>
-              <span className={`text-[11px] font-bold text-center leading-tight ${
-                isActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-600 dark:text-slate-400"
-              }`}>
+              <span className={`text-[11px] font-bold text-center leading-tight ${isActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-600 dark:text-slate-400"
+                }`}>
                 {cat.name}
               </span>
             </button>

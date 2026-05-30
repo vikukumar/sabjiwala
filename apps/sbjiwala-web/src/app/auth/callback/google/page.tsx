@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, AlertCircle } from "lucide-react";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 
 function GoogleCallbackHandler() {
   const searchParams = useSearchParams();
@@ -20,7 +20,7 @@ function GoogleCallbackHandler() {
       }
 
       try {
-        setStatus("Verifying authorization with SabjiWala backend...");
+        setStatus("Verifying authorization with Sbjiwala backend...");
         // Set API base URL to FastAPI if in dev
         const isNextDev = window.location.port === "3000" || window.location.port === "3001" || window.location.port === "3002";
         if (isNextDev) {

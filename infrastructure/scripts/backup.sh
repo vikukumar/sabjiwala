@@ -8,5 +8,5 @@ FILENAME="sabjiwala_backup_${TIMESTAMP}.sql"
 
 echo "Creating database backup..."
 mkdir -p "${BACKUP_DIR}"
-docker compose exec postgres pg_dump -U postgres sabjiwala > "${BACKUP_DIR}/${FILENAME}"
+docker compose exec postgres pg_dump -U postgres sbjiwala > "${BACKUP_DIR}/${FILENAME}"
 echo "Backup created at ${BACKUP_DIR}/${FILENAME}"

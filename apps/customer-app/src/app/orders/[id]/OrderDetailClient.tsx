@@ -3,7 +3,7 @@
 import React from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import {
   Package, MapPin, Clock, CheckCircle2, Truck, XCircle,
@@ -13,11 +13,11 @@ import { Button, Badge, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 
 const TIMELINE_STEPS = [
-  { status: "pending",          label: "Order Placed",         icon: Package },
-  { status: "confirmed",        label: "Confirmed",            icon: CheckCircle2 },
-  { status: "packed",           label: "Packed & Ready",       icon: Package },
-  { status: "out_for_delivery", label: "Out for Delivery",     icon: Truck },
-  { status: "delivered",        label: "Delivered",            icon: CheckCircle2 },
+  { status: "pending", label: "Order Placed", icon: Package },
+  { status: "confirmed", label: "Confirmed", icon: CheckCircle2 },
+  { status: "packed", label: "Packed & Ready", icon: Package },
+  { status: "out_for_delivery", label: "Out for Delivery", icon: Truck },
+  { status: "delivered", label: "Delivered", icon: CheckCircle2 },
 ];
 
 const STATUS_ORDER = ["pending", "confirmed", "accepted", "packed", "out_for_delivery", "delivered"];
@@ -48,11 +48,10 @@ function OrderTimeline({ status }: { status: string }) {
           return (
             <div key={step.status} className="flex gap-4">
               <div className="flex flex-col items-center">
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                  isDone
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${isDone
                     ? "bg-emerald-600 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/30"
                     : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500"
-                }`}>
+                  }`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 {!isLast && (

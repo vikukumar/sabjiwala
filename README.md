@@ -1,6 +1,6 @@
-# SabjiWala.in — Complete Multi-Tenant Vegetable Commerce Platform
+# Sbjiwala — Complete Multi-Tenant Vegetable Commerce Platform
 
-SabjiWala.in is a complete, production-ready, multi-tenant vegetable commerce platform. It integrates a live catalog, cart and checkouts, vendor order processing, delivery agent tracking with OTP validation, and admin oversight. 
+Sbjiwala is a complete, production-ready, multi-tenant vegetable commerce platform. It integrates a live catalog, cart and checkouts, vendor order processing, delivery agent tracking with OTP validation, and admin oversight. 
 
 ## Copyright & Ownership
 
@@ -34,7 +34,7 @@ SabjiWala.in is a complete, production-ready, multi-tenant vegetable commerce pl
 ## 📂 Project Directory Structure
 
 ```
-sabjiwala.in/
+sbjiwala.in/
 ├── .github/
 │   └── workflows/
 │       └── release.yml         # Unified CI/CD build & release pipeline
@@ -44,7 +44,7 @@ sabjiwala.in/
 │   ├── vendor-app/             # Next.js vendor dashboard
 │   ├── delivery-app/           # Next.js delivery agent dashboard
 │   ├── admin-app/              # Next.js platform admin dashboard
-│   └── sabjiwala-web/          # Unified portal serving all apps based on path
+│   └── sbjiwala-web/          # Unified portal serving all apps based on path
 ├── shared/                     # Shared TypeScript API clients and types
 ├── infrastructure/
 │   ├── docker/                 # Production-grade Dockerfiles
@@ -79,7 +79,7 @@ uvicorn app.main:app --reload --port 8000
 ### 3. Startup Web Portal
 Navigate to the unified portal directory, install dependencies, and start:
 ```bash
-cd apps/sabjiwala-web
+cd apps/sbjiwala-web
 npm install
 npm run dev
 ```

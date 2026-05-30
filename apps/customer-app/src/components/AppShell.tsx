@@ -10,7 +10,7 @@ import {
   MessageSquare, FileText, Shield, RotateCcw, ShieldCheck, Check
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 
 // ==================== NAV ITEMS ====================
 const mainNavItems = [
@@ -137,7 +137,7 @@ function Header({ onMenuOpen }: { onMenuOpen: () => void }) {
             <Menu className="w-5 h-5" />
           </button>
           <Link href="/" className="flex items-center gap-2">
-            <img src="/logo_horizontal.png" alt="SabjiWala" className="h-8 w-auto object-contain" />
+            <img src="/logo_horizontal.png" alt="Sbjiwala" className="h-8 w-auto object-contain" />
             <span className="hidden sm:inline-flex bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
               Express
             </span>
@@ -194,7 +194,7 @@ function Sidebar({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean })
       {/* Logo */}
       <div className="flex items-center justify-between p-6 border-b border-white/10">
         <div className="flex items-center gap-2">
-          <img src="/logo_horizontal.png" alt="SabjiWala" className="h-7 w-auto object-contain brightness-0 invert" />
+          <img src="/logo_horizontal.png" alt="Sbjiwala" className="h-7 w-auto object-contain brightness-0 invert" />
         </div>
         {onClose && (
           <button
@@ -232,11 +232,10 @@ function Sidebar({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean })
                     <Link
                       href={item.href}
                       onClick={onClose}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                        active
-                          ? "bg-emerald-600 text-white shadow-sm shadow-emerald-900/30"
-                          : "text-slate-400 hover:text-white hover:bg-white/8"
-                      }`}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${active
+                        ? "bg-emerald-600 text-white shadow-sm shadow-emerald-900/30"
+                        : "text-slate-400 hover:text-white hover:bg-white/8"
+                        }`}
                     >
                       <Icon className="w-4.5 h-4.5 flex-shrink-0" />
                       <span>{item.label}</span>
@@ -308,11 +307,10 @@ function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all ${
-                isActive
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-slate-400 dark:text-slate-500"
-              }`}
+              className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all ${isActive
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-slate-400 dark:text-slate-500"
+                }`}
               aria-label={item.label}
             >
               <div className={`relative p-1.5 rounded-xl transition-all ${isActive ? "bg-emerald-50 dark:bg-emerald-950/40" : ""}`}>
@@ -348,7 +346,7 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
       navigator.permissions.query({ name: "geolocation" }).then((result) => {
         setLocPermission(result.state as any);
         result.onchange = () => setLocPermission(result.state as any);
-      }).catch(() => {});
+      }).catch(() => { });
     }
     if (typeof window !== "undefined" && "Notification" in window) {
       setNotifPermission(Notification.permission as any);
@@ -387,7 +385,7 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
           localStorage.setItem("sw_latitude", String(pos.coords.latitude));
           localStorage.setItem("sw_longitude", String(pos.coords.longitude));
         },
-        () => {}
+        () => { }
       );
     }
     if ("Notification" in window) {
@@ -402,12 +400,12 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
       <div className="fixed inset-0 z-50 bg-[#090d10] flex flex-col items-center justify-center space-y-6">
         <div className="relative">
           <div className="w-24 h-24 rounded-3xl bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center p-3 animate-pulse shadow-[0_0_50px_rgba(16,185,129,0.3)]">
-            <img src="/icon.png" alt="SabjiWala" className="w-full h-full object-contain" />
+            <img src="/icon.png" alt="Sbjiwala" className="w-full h-full object-contain" />
           </div>
           <div className="absolute inset-0 w-24 h-24 rounded-3xl border-4 border-emerald-500 border-t-transparent animate-spin" style={{ animationDuration: '1.5s' }} />
         </div>
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-black tracking-wider text-white">SabjiWala</h2>
+          <h2 className="text-2xl font-black tracking-wider text-white">Sbjiwala</h2>
           <p className="text-xs font-semibold text-emerald-400 uppercase tracking-widest animate-pulse">Freshness loading</p>
         </div>
       </div>
@@ -418,10 +416,10 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
     <div className="fixed inset-0 z-50 bg-[#090d10] flex flex-col justify-between px-6 py-12 text-white font-sans overflow-y-auto">
       <div className="flex flex-col items-center text-center mt-6 space-y-4">
         <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/30 rounded-3xl p-3 shadow-lg flex items-center justify-center">
-          <img src="/icon.png" alt="SabjiWala" className="w-full h-full object-contain" />
+          <img src="/icon.png" alt="Sbjiwala" className="w-full h-full object-contain" />
         </div>
         <div className="space-y-1">
-          <h1 className="text-3xl font-black tracking-tight text-white">SabjiWala.in</h1>
+          <h1 className="text-3xl font-black tracking-tight text-white">Sbjiwala</h1>
           <p className="text-xs text-slate-400 font-semibold tracking-wide max-w-sm px-4">
             Farm-fresh greens at your door in 10 minutes. To deliver on time, we require location and alert permissions.
           </p>
@@ -431,7 +429,7 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
       <div className="max-w-md w-full mx-auto space-y-4 my-8">
         <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-5">
           <h3 className="text-sm font-black uppercase tracking-wider text-slate-400">Essential Permissions</h3>
-          
+
           <div className="flex items-start gap-4">
             <div className="p-3 bg-emerald-950/40 border border-emerald-900/50 rounded-2xl text-emerald-400 flex-shrink-0 mt-0.5">
               <MapPin className="w-5 h-5" />

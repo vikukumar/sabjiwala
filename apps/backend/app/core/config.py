@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     )
 
     # ---- Application ----
-    APP_NAME: str = "SabjiWala"
+    APP_NAME: str = "Sbjiwala"
     APP_ENV: str = "development"
     APP_DEBUG: bool = True
     APP_URL: str = "http://localhost"
@@ -24,8 +24,8 @@ class Settings(BaseSettings):
     # ---- PostgreSQL ----
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "sabjiwala"
-    POSTGRES_USER: str = "sabjiwala"
+    POSTGRES_DB: str = "sbjiwala"
+    POSTGRES_USER: str = "sbjiwala"
     POSTGRES_PASSWORD: str = "password"
     DATABASE_URL: str = ""
 
@@ -83,8 +83,8 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
-    SMTP_FROM_NAME: str = "SabjiWala"
-    SMTP_FROM_EMAIL: str = "noreply@sabjiwala.in"
+    SMTP_FROM_NAME: str = "Sbjiwala"
+    SMTP_FROM_EMAIL: str = "noreply@sbjiwala.in"
     SMTP_USE_TLS: bool = True
     SMTP_START_TLS: bool = True
 
@@ -97,7 +97,7 @@ class Settings(BaseSettings):
     # ---- Push Notifications ----
     VAPID_PUBLIC_KEY: str = ""
     VAPID_PRIVATE_KEY: str = ""
-    VAPID_SUBJECT: str = "mailto:admin@sabjiwala.in"
+    VAPID_SUBJECT: str = "mailto:admin@sbjiwala.in"
 
     # ---- Google OAuth2 ----
     GOOGLE_CLIENT_ID: str = ""
@@ -127,7 +127,7 @@ class Settings(BaseSettings):
     # ---- OpenStreetMap / OSRM ----
     NOMINATIM_URL: str = "https://nominatim.openstreetmap.org"
     OSRM_URL: str = "http://router.project-osrm.org"
-    NOMINATIM_USER_AGENT: str = "SabjiWala/1.0"
+    NOMINATIM_USER_AGENT: str = "Sbjiwala/1.0"
 
     # ---- Rate Limiting ----
     RATE_LIMIT_ENABLED: bool = True
@@ -150,7 +150,7 @@ class Settings(BaseSettings):
     BACKEND_PORT: int = 8000
 
     # ---- Initial Admin ----
-    INITIAL_ADMIN_EMAIL: str = "admin@sabjiwala.in"
+    INITIAL_ADMIN_EMAIL: str = "admin@sbjiwala.in"
     INITIAL_ADMIN_PASSWORD: str = "change-this-immediately"
 
     # ---- Geo Blocking ----

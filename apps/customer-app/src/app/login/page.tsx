@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, ArrowRight, Phone, Lock, Mail, User, CheckCircle2, Loader2, ChevronLeft, Leaf } from "lucide-react";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import { Button, Input, Divider } from "@/components/ui/index";
 import { useForm } from "react-hook-form";
@@ -261,7 +261,7 @@ function RegisterTab() {
       const { access_token, refresh_token } = res.data;
       localStorage.setItem("sw_access_token", access_token);
       if (refresh_token) localStorage.setItem("sw_refresh_token", refresh_token);
-      success("Account created! 🎉", "Welcome to SabjiWala!");
+      success("Account created! 🎉", "Welcome to Sbjiwala!");
       router.replace("/");
     } catch (err: any) {
       showError("Registration failed", err.response?.data?.detail || err.message);
@@ -324,7 +324,7 @@ export default function LoginPage() {
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex flex-col justify-between w-[45%] gradient-brand p-12 text-white">
         <div>
-          <img src="/logo_horizontal.png" alt="SabjiWala" className="h-10 w-auto object-contain brightness-0 invert" />
+          <img src="/logo_horizontal.png" alt="Sbjiwala" className="h-10 w-auto object-contain brightness-0 invert" />
         </div>
         <div className="space-y-6">
           <div className="text-5xl">🥦🍅🥕</div>
@@ -344,7 +344,7 @@ export default function LoginPage() {
             ))}
           </div>
         </div>
-        <p className="text-emerald-300/60 text-xs">© 2025 SabjiWala.in — All rights reserved</p>
+        <p className="text-emerald-300/60 text-xs">© 2025 Sbjiwala — All rights reserved</p>
       </div>
 
       {/* Right Panel — Auth Forms */}
@@ -352,7 +352,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex justify-center mb-8">
-            <img src="/logo_vertical.png" alt="SabjiWala" className="h-20 w-auto object-contain" />
+            <img src="/logo_vertical.png" alt="Sbjiwala" className="h-20 w-auto object-contain" />
           </div>
 
           <div className="card p-8">
@@ -371,11 +371,10 @@ export default function LoginPage() {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    tab === t.id
-                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
-                      : "text-slate-500 dark:text-slate-400"
-                  }`}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${tab === t.id
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                    : "text-slate-500 dark:text-slate-400"
+                    }`}
                 >
                   {t.label}
                 </button>

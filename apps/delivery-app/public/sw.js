@@ -1,4 +1,4 @@
-const CACHE_NAME = "sabjiwala-delivery-cache-v1";
+const CACHE_NAME = "sbjiwala-delivery-cache-v1";
 const OFFLINE_URL = "/offline.html";
 
 const ASSETS_TO_CACHE = [

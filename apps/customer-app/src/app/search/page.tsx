@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, X, Filter, SlidersHorizontal, Star, Plus, Minus, ChevronDown } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import { Button, Badge, EmptyState, Spinner, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";

@@ -4,7 +4,7 @@ services:
     container_name: sabjiwala_postgres
     restart: always
     environment:
-      POSTGRES_DB: sabjiwala
+      POSTGRES_DB: sbjiwala
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:
@@ -12,7 +12,7 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d sabjiwala"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sbjiwala"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -39,12 +39,12 @@ services:
     container_name: sabjiwala_complete_app
     restart: always
     environment:
-      - APP_NAME=SabjiWala
+      - APP_NAME=Sbjiwala
       - APP_ENV=production
       - APP_DEBUG=True
-      - APP_SECRET_KEY=sabjiwala-super-secret-key-change-this-in-production
-      - JWT_SECRET_KEY=sabjiwala-jwt-secret-key-change-this-in-production
-      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/sabjiwala
+      - APP_SECRET_KEY=sbjiwala-super-secret-key-change-this-in-production
+      - JWT_SECRET_KEY=sbjiwala-jwt-secret-key-change-this-in-production
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/sbjiwala
       - REDIS_URL=redis://redis:6379/0
       - LOG_LEVEL=INFO
       - RATE_LIMIT_ENABLED=False
@@ -54,8 +54,8 @@ services:
       - SMTP_PORT=587
       - SMTP_USER=your-email@gmail.com
       - SMTP_PASSWORD=your-app-password
-      - SMTP_FROM_NAME=SabjiWala
-      - SMTP_FROM_EMAIL=noreply@sabjiwala.in
+      - SMTP_FROM_NAME=Sbjiwala
+      - SMTP_FROM_EMAIL=noreply@sbjiwala.in
       # Social OAuth2 Settings (Google & Facebook)
       - GOOGLE_CLIENT_ID=your-google-client-id
       - GOOGLE_CLIENT_SECRET=your-google-client-secret
@@ -64,11 +64,11 @@ services:
       - FACEBOOK_CLIENT_SECRET=your-facebook-client-secret
       - FACEBOOK_REDIRECT_URI=http://localhost/auth/callback/facebook
       # Multi-Domain Routing Settings
-      - CUSTOMER_DOMAIN=${CUSTOMER_DOMAIN:-customer.sabjiwala.local}
-      - VENDOR_DOMAIN=${VENDOR_DOMAIN:-vendor.sabjiwala.local}
-      - DELIVERY_DOMAIN=${DELIVERY_DOMAIN:-delivery.sabjiwala.local}
-      - ADMIN_DOMAIN=${ADMIN_DOMAIN:-admin.sabjiwala.local}
-      - API_DOMAIN=${API_DOMAIN:-api.sabjiwala.local}
+      - CUSTOMER_DOMAIN=${CUSTOMER_DOMAIN:-customer.sbjiwala.local}
+      - VENDOR_DOMAIN=${VENDOR_DOMAIN:-vendor.sbjiwala.local}
+      - DELIVERY_DOMAIN=${DELIVERY_DOMAIN:-delivery.sbjiwala.local}
+      - ADMIN_DOMAIN=${ADMIN_DOMAIN:-admin.sbjiwala.local}
+      - API_DOMAIN=${API_DOMAIN:-api.sbjiwala.local}
       - BACKEND_URL=${BACKEND_URL:-http://127.0.0.1:8000}
     depends_on:
       postgres:

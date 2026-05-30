@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sabjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import { useRouter } from "next/navigation";
 import { MapPin, Plus, Edit2, Trash2, CheckCircle2, CreditCard, Wallet, Banknote, ArrowRight, Loader2, ChevronRight, Home, Briefcase } from "lucide-react";
 import { Button, Badge, Spinner, EmptyState } from "@/components/ui/index";

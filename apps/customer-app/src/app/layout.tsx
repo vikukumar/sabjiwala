@@ -11,26 +11,26 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "SabjiWala.in — Fresh Vegetables & Fruits in 10 Minutes",
-    template: "%s | SabjiWala.in",
+    default: "Sbjiwala.in — Fresh Vegetables & Fruits in 10 Minutes",
+    template: "%s | Sbjiwala.in",
   },
   description:
     "Order fresh farm vegetables & fruits online. Get hygienic, cleaned produce delivered at your doorstep in 10 minutes. Direct from local farms.",
-  keywords: ["vegetables", "fruits", "grocery", "fresh produce", "online vegetables", "home delivery", "SabjiWala"],
-  authors: [{ name: "SabjiWala", url: "https://sabjiwala.in" }],
-  metadataBase: new URL("https://sabjiwala.in"),
+  keywords: ["vegetables", "fruits", "grocery", "fresh produce", "online vegetables", "home delivery", "Sbjiwala"],
+  authors: [{ name: "Sbjiwala", url: "https://sbjiwala.in" }],
+  metadataBase: new URL("https://sbjiwala.in"),
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://sabjiwala.in",
-    siteName: "SabjiWala.in",
-    title: "SabjiWala.in — Fresh Vegetables & Fruits in 10 Minutes",
+    url: "https://sbjiwala.in",
+    siteName: "Sbjiwala.in",
+    title: "Sbjiwala.in — Fresh Vegetables & Fruits in 10 Minutes",
     description: "Get fresh farm produce delivered at your doorstep in 10 minutes.",
-    images: [{ url: "/logo_horizontal.png", width: 1200, height: 630, alt: "SabjiWala.in" }],
+    images: [{ url: "/logo_horizontal.png", width: 1200, height: 630, alt: "Sbjiwala.in" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "SabjiWala.in — Fresh Vegetables & Fruits in 10 Minutes",
+    title: "Sbjiwala.in — Fresh Vegetables & Fruits in 10 Minutes",
     description: "Get fresh farm produce delivered at your doorstep in 10 minutes.",
     images: ["/logo_horizontal.png"],
   },
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "SabjiWala",
+    title: "Sbjiwala",
   },
   icons: {
     icon: [

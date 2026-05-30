@@ -5,9 +5,9 @@ import os
 import shutil
 from PIL import Image
 
-SRC_DIR = r"D:\Projects\sabjiwala\logo&icons"
-ROOT_DIR = r"D:\Projects\sabjiwala"
-APPS = ["customer-app", "vendor-app", "delivery-app", "admin-app", "sabjiwala-web"]
+SRC_DIR = r"D:\Projects\sbjiwala\logo&icons"
+ROOT_DIR = r"D:\Projects\sbjiwala"
+APPS = ["customer-app", "vendor-app", "delivery-app", "admin-app", "sbjiwala-web"]
 
 def main():
     icon_src = os.path.join(SRC_DIR, "icon.png")
