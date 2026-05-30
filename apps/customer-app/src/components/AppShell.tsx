@@ -7,7 +7,7 @@ import {
   Home, Search, ShoppingCart, Heart, User, Bell, Wallet,
   MapPin, Tag, Gift, HelpCircle, LogOut, ChevronRight,
   Moon, Sun, Zap, Menu, X, Package, Settings, Star,
-  MessageSquare, FileText, Shield, RotateCcw
+  MessageSquare, FileText, Shield, RotateCcw, ShieldCheck, Check
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sabjiwala/shared";
@@ -337,10 +337,191 @@ function BottomNav() {
   );
 }
 
+// ==================== SPLASH & PERMISSIONS SCREEN ====================
+function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [locPermission, setLocPermission] = useState<"default" | "granted" | "denied">("default");
+  const [notifPermission, setNotifPermission] = useState<"default" | "granted" | "denied">("default");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.permissions) {
+      navigator.permissions.query({ name: "geolocation" }).then((result) => {
+        setLocPermission(result.state as any);
+        result.onchange = () => setLocPermission(result.state as any);
+      }).catch(() => {});
+    }
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setNotifPermission(Notification.permission as any);
+    }
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const requestLocation = () => {
+    if (typeof window === "undefined" || !("geolocation" in navigator)) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocPermission("granted");
+        localStorage.setItem("sw_latitude", String(pos.coords.latitude));
+        localStorage.setItem("sw_longitude", String(pos.coords.longitude));
+      },
+      () => {
+        setLocPermission("denied");
+      }
+    );
+  };
+
+  const requestNotifications = () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    Notification.requestPermission().then((permission) => {
+      setNotifPermission(permission as any);
+    });
+  };
+
+  const handleAllAndProceed = async () => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          localStorage.setItem("sw_latitude", String(pos.coords.latitude));
+          localStorage.setItem("sw_longitude", String(pos.coords.longitude));
+        },
+        () => {}
+      );
+    }
+    if ("Notification" in window) {
+      await Notification.requestPermission();
+    }
+    localStorage.setItem("sw_splash_onboarding", "completed");
+    onComplete();
+  };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#090d10] flex flex-col items-center justify-center space-y-6">
+        <div className="relative">
+          <div className="w-24 h-24 rounded-3xl bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center p-3 animate-pulse shadow-[0_0_50px_rgba(16,185,129,0.3)]">
+            <img src="/icon.png" alt="SabjiWala" className="w-full h-full object-contain" />
+          </div>
+          <div className="absolute inset-0 w-24 h-24 rounded-3xl border-4 border-emerald-500 border-t-transparent animate-spin" style={{ animationDuration: '1.5s' }} />
+        </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-black tracking-wider text-white">SabjiWala</h2>
+          <p className="text-xs font-semibold text-emerald-400 uppercase tracking-widest animate-pulse">Freshness loading</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-[#090d10] flex flex-col justify-between px-6 py-12 text-white font-sans overflow-y-auto">
+      <div className="flex flex-col items-center text-center mt-6 space-y-4">
+        <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/30 rounded-3xl p-3 shadow-lg flex items-center justify-center">
+          <img src="/icon.png" alt="SabjiWala" className="w-full h-full object-contain" />
+        </div>
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black tracking-tight text-white">SabjiWala.in</h1>
+          <p className="text-xs text-slate-400 font-semibold tracking-wide max-w-sm px-4">
+            Farm-fresh greens at your door in 10 minutes. To deliver on time, we require location and alert permissions.
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-md w-full mx-auto space-y-4 my-8">
+        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-5">
+          <h3 className="text-sm font-black uppercase tracking-wider text-slate-400">Essential Permissions</h3>
+          
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-emerald-950/40 border border-emerald-900/50 rounded-2xl text-emerald-400 flex-shrink-0 mt-0.5">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-center">
+                <p className="font-extrabold text-sm text-slate-200">Precise Geolocation</p>
+                {locPermission === "granted" ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-950/20 px-2.5 py-0.5 rounded-full border border-emerald-900/50">
+                    <Check className="w-3 h-3" /> Granted
+                  </span>
+                ) : locPermission === "denied" ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-400 bg-rose-950/20 px-2.5 py-0.5 rounded-full border border-rose-900/50">
+                    Denied
+                  </span>
+                ) : (
+                  <button onClick={requestLocation} className="text-xs font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-xl">
+                    Enable
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Needed to calculate delivery fees, pin your home address, and connect with nearby stores.
+              </p>
+            </div>
+          </div>
+
+          <hr className="border-slate-800" />
+
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-blue-950/40 border border-blue-900/50 rounded-2xl text-blue-400 flex-shrink-0 mt-0.5">
+              <Bell className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-center">
+                <p className="font-extrabold text-sm text-slate-200">Order Alerts & Offers</p>
+                {notifPermission === "granted" ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-950/20 px-2.5 py-0.5 rounded-full border border-emerald-900/50">
+                    <Check className="w-3 h-3" /> Enabled
+                  </span>
+                ) : notifPermission === "denied" ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-400 bg-rose-950/20 px-2.5 py-0.5 rounded-full border border-rose-900/50">
+                    Blocked
+                  </span>
+                ) : (
+                  <button onClick={requestNotifications} className="text-xs font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-xl">
+                    Allow
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Sends live updates on packaging, courier assignment, ETA times, and special discounts.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-md w-full mx-auto space-y-4">
+        <button
+          onClick={handleAllAndProceed}
+          className="w-full bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-extrabold py-3.5 rounded-2xl text-sm transition-all shadow-md shadow-emerald-900/30 flex items-center justify-center gap-2"
+        >
+          <ShieldCheck className="w-5 h-5" /> Allow all and proceed
+        </button>
+        <button
+          onClick={() => {
+            localStorage.setItem("sw_splash_onboarding", "completed");
+            onComplete();
+          }}
+          className="w-full text-center text-xs font-black text-slate-500 hover:text-slate-400 tracking-wider uppercase"
+        >
+          Skip for now
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ==================== APP SHELL ====================
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && localStorage.getItem("sw_splash_onboarding") === "completed") {
+      setShowSplash(false);
+    }
+  }, []);
 
   // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
@@ -348,6 +529,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Public routes that don't need app shell (full screen)
   const isAuthRoute = ["/login", "/register"].some(r => pathname?.startsWith(r));
   if (isAuthRoute) return <>{children}</>;
+
+  if (showSplash) {
+    return <SplashPermissionsScreen onComplete={() => setShowSplash(false)} />;
+  }
 
   return (
     <div className="min-h-screen flex">

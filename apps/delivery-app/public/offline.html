@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline | SabjiWala Delivery</title>
+  <style>
+    body {
+      background-color: #090d10;
+      color: #f8fafc;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 400px;
+    }
+    img {
+      height: 60px;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #f8fafc;
+    }
+    p {
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    button {
+      background-color: #10b981;
+      color: #ffffff;
+      border: none;
+      padding: 12px 24px;
+      font-weight: 700;
+      font-size: 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #059669;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="/logo_horizontal.png" alt="SabjiWala" style="filter: brightness(0) invert(1);">
+    <h1>No Connection</h1>
+    <p>Your delivery console is currently offline. Please check your mobile data connection and try refreshing the dashboard.</p>
+    <button onclick="window.location.reload()">Refresh Page</button>
+  </div>
+</body>
+</html>

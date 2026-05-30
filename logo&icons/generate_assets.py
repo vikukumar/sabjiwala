@@ -5,8 +5,8 @@ import os
 import shutil
 from PIL import Image
 
-SRC_DIR = r"D:\Projects\sabjiwala.in\logo&icons"
-ROOT_DIR = r"D:\Projects\sabjiwala.in"
+SRC_DIR = r"D:\Projects\sabjiwala\logo&icons"
+ROOT_DIR = r"D:\Projects\sabjiwala"
 APPS = ["customer-app", "vendor-app", "delivery-app", "admin-app", "sabjiwala-web"]
 
 def main():
@@ -49,6 +49,11 @@ def main():
         
         icon_512 = img.resize((512, 512), Image.Resampling.LANCZOS)
         icon_512.save(os.path.join(dest_public, "icon-512x512.png"), "PNG")
+        
+        # 4. Generate Apple Touch Icons (iOS PWA)
+        icon_180 = img.resize((180, 180), Image.Resampling.LANCZOS)
+        icon_180.save(os.path.join(dest_public, "apple-touch-icon.png"), "PNG")
+        icon_180.save(os.path.join(dest_public, "apple-touch-icon-precomposed.png"), "PNG")
         
     print("Branding assets generated and replaced successfully across all apps!")
 

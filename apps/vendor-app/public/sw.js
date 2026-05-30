@@ -1,4 +1,4 @@
-const CACHE_NAME = "sabjiwala-delivery-cache-v1";
+const CACHE_NAME = "sabjiwala-vendor-cache-v1";
 const OFFLINE_URL = "/offline.html";
 
 const ASSETS_TO_CACHE = [
@@ -64,12 +64,12 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let data = { title: "Delivery Console", body: "New delivery task assigned!" };
+  let data = { title: "Vendor Dashboard", body: "New order received!" };
   if (event.data) {
     try {
       data = event.data.json().notification;
     } catch (e) {
-      data = { title: "Delivery Console", body: event.data.text() };
+      data = { title: "Vendor Dashboard", body: event.data.text() };
     }
   }
 
@@ -77,7 +77,7 @@ self.addEventListener("push", (event) => {
     body: data.body,
     icon: "/icon-192x192.png",
     badge: "/icon-192x192.png",
-    vibrate: [200, 100, 200],
+    vibrate: [150, 75, 150],
     data: {
       url: data.action_url || "/"
     }

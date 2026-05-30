@@ -1,7 +1,7 @@
 {
-  "name": "SabjiWala Delivery — Courier Console",
-  "short_name": "SabjiWala Delivery",
-  "description": "Manage assignments, locate customers, and complete fast 10-minute vegetable deliveries.",
+  "name": "SabjiWala Vendor — Store Dashboard",
+  "short_name": "SabjiWala Vendor",
+  "description": "Manage catalog, inventory, accept and pack customer vegetable orders.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#090d10",
