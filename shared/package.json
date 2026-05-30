@@ -4,6 +4,12 @@
   "description": "Shared TypeScript types and API client for SabjiWala apps",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
@@ -12,6 +18,8 @@
     "axios": "^1.16.1"
   },
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "react": "^19.0.0",
+    "@types/react": "^19.0.0"
   }
 }

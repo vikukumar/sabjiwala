@@ -130,6 +130,11 @@ export class ApiClient {
     return res.data;
   }
 
+  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<APIResponse<T>> {
+    const res = await this.client.put<APIResponse<T>>(url, data, config);
+    return res.data;
+  }
+
   async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<APIResponse<T>> {
     const res = await this.client.delete<APIResponse<T>>(url, config);
     return res.data;
