@@ -7,7 +7,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import (
-    Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, Text, text,
+    Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
