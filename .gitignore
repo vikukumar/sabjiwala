@@ -58,12 +58,12 @@ out/
 .cache/
 
 # Android & iOS Native Mobile Build Wrappers (Generated dynamically)
-apps/customer-app/android/
-apps/customer-app/ios/
-apps/vendor-app/android/
-apps/vendor-app/ios/
-apps/delivery-app/android/
-apps/delivery-app/ios/
+# apps/customer-app/android/
+# apps/customer-app/ios/
+# apps/vendor-app/android/
+# apps/vendor-app/ios/
+# apps/delivery-app/android/
+# apps/delivery-app/ios/
 
 # Security, Certificates & Private Keystores
 *.keystore
