@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install python dependencies directly
 COPY pyproject.toml .
+COPY app ./app
 RUN pip install --no-cache-dir .
 
 COPY . .

@@ -45,6 +45,7 @@ RUN groupadd -g 65532 nonroot && \
 
 # Install python dependencies from backend project folder
 COPY apps/backend/pyproject.toml ./
+COPY apps/backend/app ./app
 RUN pip install --no-cache-dir .
 
 # Copy backend codebase
