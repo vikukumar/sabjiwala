@@ -30,13 +30,18 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Install Nginx and build tools
+# Install Nginx, build tools, and gettext-base (for envsubst)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     build-essential \
     libpq-dev \
     curl \
+    gettext-base \
     && rm -rf /var/lib/apt/lists/*
+
+# Create nonroot user with UID 65532
+RUN groupadd -g 65532 nonroot && \
+    useradd -r -u 65532 -g nonroot nonroot
 
 # Install python dependencies from backend project folder
 COPY apps/backend/pyproject.toml ./
@@ -48,13 +53,21 @@ COPY apps/backend /app
 # Copy static frontend assets from Next.js builder
 COPY --from=builder /app/apps/sabjiwala-web/out /usr/share/nginx/html
 
-# Copy Nginx complete-routing config
-COPY ./infrastructure/nginx/nginx-complete.conf /etc/nginx/nginx.conf
+# Copy Nginx complete-routing config as template
+COPY ./infrastructure/nginx/nginx-complete.conf /etc/nginx/nginx.conf.template
 
-# Copy startup script and make executable
+# Copy startup script
 COPY ./infrastructure/docker/start.sh /start.sh
-RUN chmod +x /start.sh
 
-EXPOSE 80 443 8000
+# Create Nginx directories and configure permissions for non-root execution
+RUN mkdir -p /var/cache/nginx /var/log/nginx /var/lib/nginx /etc/nginx && \
+    chown -R nonroot:nonroot /var/cache/nginx /var/log/nginx /var/lib/nginx /etc/nginx /usr/share/nginx/html /app && \
+    chmod +x /start.sh && \
+    chown nonroot:nonroot /start.sh
+
+# Run as non-root user
+USER nonroot
+
+EXPOSE 8080 8443 8000
 
 ENTRYPOINT ["/start.sh"]

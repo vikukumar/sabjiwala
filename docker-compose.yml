@@ -63,14 +63,21 @@ services:
       - FACEBOOK_CLIENT_ID=your-facebook-client-id
       - FACEBOOK_CLIENT_SECRET=your-facebook-client-secret
       - FACEBOOK_REDIRECT_URI=http://localhost/auth/callback/facebook
+      # Multi-Domain Routing Settings
+      - CUSTOMER_DOMAIN=${CUSTOMER_DOMAIN:-customer.sabjiwala.local}
+      - VENDOR_DOMAIN=${VENDOR_DOMAIN:-vendor.sabjiwala.local}
+      - DELIVERY_DOMAIN=${DELIVERY_DOMAIN:-delivery.sabjiwala.local}
+      - ADMIN_DOMAIN=${ADMIN_DOMAIN:-admin.sabjiwala.local}
+      - API_DOMAIN=${API_DOMAIN:-api.sabjiwala.local}
+      - BACKEND_URL=${BACKEND_URL:-http://127.0.0.1:8000}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     ports:
-      - "80:80"
-      - "443:443"
+      - "80:8080"
+      - "443:8443"
       - "8000:8000"
     volumes:
       - storage_data:/app/storage
