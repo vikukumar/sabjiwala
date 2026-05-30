@@ -291,6 +291,9 @@ class ProductReview(BaseEntity):
     vendor_reply: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     vendor_replied_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Relationships
+    product: Mapped["Product"] = relationship(back_populates="reviews", lazy="selectin")
+
     __table_args__ = (
         UniqueConstraint("product_id", "user_id", "order_id", name="uq_review_product_user_order"),
         Index("ix_reviews_product_approved", "product_id", "is_approved", "rating"),

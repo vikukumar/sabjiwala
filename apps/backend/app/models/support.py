@@ -135,7 +135,7 @@ class Dispute(BaseEntity):
 
     status: Mapped[DisputeStatus] = mapped_column(
         Enum(DisputeStatus, name="dispute_status_enum"),
-        nullable=False, default=DisputeStatus.OPEN, index=True,
+        nullable=False, default=DisputeStatus.OPEN,
     )
 
     customer_evidence: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True, default=list)

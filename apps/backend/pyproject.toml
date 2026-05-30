@@ -78,6 +78,11 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+exclude = ["storage*"]
+
 [build-system]
 requires = ["setuptools>=75.0"]
 build-backend = "setuptools.build_meta"

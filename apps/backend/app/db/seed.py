@@ -8,11 +8,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User, UserProfile, UserType, Role, UserRole
-from app.models.product import Category, Product, ProductStatus
+from app.models.product import Category, Product, ProductStatus, ProductUnit
 from app.models.vendor import Vendor, VendorStore, VendorStatus, VendorDeliveryRule, VendorWallet
 from app.models.payment import Wallet, WalletType
 from app.models.product import Inventory
+from app.models.delivery import DeliveryBoy, DeliveryBoyStatus, AvailabilityStatus
 from app.core.security.password import hash_password
+from app.core.config import settings
 
 logger = structlog.get_logger()
 
@@ -24,12 +26,12 @@ CATEGORIES = [
 ]
 
 PRODUCTS = [
-    {"name": "Farm Fresh Tomatoes", "slug": "farm-fresh-tomatoes", "unit": "1 kg", "price": 40.0, "image": "🍅", "category_slug": "vegetables"},
-    {"name": "Organic Potatoes", "slug": "organic-potatoes", "unit": "1 kg", "price": 30.0, "image": "🥔", "category_slug": "vegetables"},
-    {"name": "Fresh Coriander Leaves", "slug": "fresh-coriander-leaves", "unit": "100 g", "price": 15.0, "image": "🌿", "category_slug": "leafy-greens"},
-    {"name": "Sweet Hybrid Corn", "slug": "sweet-hybrid-corn", "unit": "1 pc", "price": 25.0, "image": "🌽", "category_slug": "vegetables"},
-    {"name": "Fresh English Cucumber", "slug": "fresh-english-cucumber", "unit": "500 g", "price": 45.0, "image": "🥒", "category_slug": "exotics"},
-    {"name": "Organic Red Onions", "slug": "organic-red-onions", "unit": "1 kg", "price": 35.0, "image": "🧅", "category_slug": "vegetables"},
+    {"name": "Farm Fresh Tomatoes", "slug": "farm-fresh-tomatoes", "unit": ProductUnit.KG, "unit_value": 1.0, "price": 40.0, "image": "🍅", "category_slug": "vegetables"},
+    {"name": "Organic Potatoes", "slug": "organic-potatoes", "unit": ProductUnit.KG, "unit_value": 1.0, "price": 30.0, "image": "🥔", "category_slug": "vegetables"},
+    {"name": "Fresh Coriander Leaves", "slug": "fresh-coriander-leaves", "unit": ProductUnit.GRAM, "unit_value": 100.0, "price": 15.0, "image": "🌿", "category_slug": "leafy-greens"},
+    {"name": "Sweet Hybrid Corn", "slug": "sweet-hybrid-corn", "unit": ProductUnit.PIECE, "unit_value": 1.0, "price": 25.0, "image": "🌽", "category_slug": "vegetables"},
+    {"name": "Fresh English Cucumber", "slug": "fresh-english-cucumber", "unit": ProductUnit.GRAM, "unit_value": 500.0, "price": 45.0, "image": "🥒", "category_slug": "exotics"},
+    {"name": "Organic Red Onions", "slug": "organic-red-onions", "unit": ProductUnit.KG, "unit_value": 1.0, "price": 35.0, "image": "🧅", "category_slug": "vegetables"},
 ]
 
 async def seed_database(db: AsyncSession) -> None:
@@ -55,13 +57,13 @@ async def seed_database(db: AsyncSession) -> None:
         category_map[cat_def["slug"]] = cat.id
 
     # 2. Seed default admin user if not exists
-    admin_email = "admin@sbjiwala.in"
+    admin_email = settings.INITIAL_ADMIN_EMAIL
     res = await db.execute(select(User).where(User.email == admin_email))
     admin_user = res.scalars().first()
     if not admin_user:
         admin_user = User(
             email=admin_email,
-            password_hash=hash_password("admin123"),
+            password_hash=hash_password(settings.INITIAL_ADMIN_PASSWORD),
             first_name="Platform",
             last_name="Admin",
             user_type=UserType.SUPER_ADMIN,
@@ -180,7 +182,7 @@ async def seed_database(db: AsyncSession) -> None:
                 slug=prod_def["slug"],
                 description=f"Fresh quality {prod_def['name']} sourced directly from farms.",
                 unit=prod_def["unit"],
-                unit_value=1.0,
+                unit_value=prod_def["unit_value"],
                 category_id=category_map[prod_def["category_slug"]],
                 status=ProductStatus.ACTIVE,
                 is_featured=True,
@@ -198,13 +200,12 @@ async def seed_database(db: AsyncSession) -> None:
                 product_id=product.id,
                 vendor_id=vendor.id,
                 quantity=100.0,
-                unit_price=prod_def["price"],
                 is_in_stock=True,
                 is_unlimited=False,
                 low_stock_threshold=10.0
             )
             db.add(inventory)
-            await logger.ainfo(f"Seeded inventory for {product.name} with price ₹{prod_def['price']}")
+            await logger.ainfo(f"Seeded inventory for {product.name}")
 
     # 5. Seed a default Customer User
     customer_email = "customer@sbjiwala.in"
@@ -285,14 +286,13 @@ async def seed_database(db: AsyncSession) -> None:
         profile = UserProfile(user_id=delivery_user.id)
         db.add(profile)
         
-        # Delivery Wallet
-        from app.models.delivery import DeliveryBoy
+        # Delivery Boy Profile
         dboy = DeliveryBoy(
             user_id=delivery_user.id,
             vehicle_type="bike",
             vehicle_number="MH-43-AB-1234",
-            status="approved",
-            is_available=True
+            status=DeliveryBoyStatus.ACTIVE,
+            availability=AvailabilityStatus.AVAILABLE
         )
         db.add(dboy)
 
