@@ -6,17 +6,15 @@ const nextConfig: NextConfig = {
   experimental: {
     externalDir: true,
   },
+  turbopack: {
+    resolveAlias: {
+      "@sbjiwala/shared": "./node_modules/@sbjiwala/shared/dist/index.js",
+    },
+  },
   images: {
     unoptimized: true,
   },
   transpilePackages: ["@sbjiwala/shared"],
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      "@sbjiwala/shared": path.resolve(__dirname, "node_modules/@sbjiwala/shared"),
-    };
-    return config;
-  },
 };
 
 export default nextConfig;

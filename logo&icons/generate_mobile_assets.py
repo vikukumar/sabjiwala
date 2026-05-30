@@ -1,7 +1,7 @@
 import os
 from PIL import Image, ImageDraw
 
-ROOT_DIR = r"D:\Projects\sbjiwala"
+ROOT_DIR = r"D:\Projects\sbjiwala" if os.path.exists(r"D:\Projects\sbjiwala") else r"D:\Projects\sabjiwala"
 APPS = ["customer-app", "vendor-app", "delivery-app"]
 
 ICON_PATH = os.path.join(ROOT_DIR, "logo&icons", "icon.png")

@@ -5,9 +5,10 @@ import os
 import shutil
 from PIL import Image
 
-SRC_DIR = r"D:\Projects\sbjiwala\logo&icons"
-ROOT_DIR = r"D:\Projects\sbjiwala"
-APPS = ["customer-app", "vendor-app", "delivery-app", "admin-app", "sbjiwala-web"]
+ROOT_DIR = r"D:\Projects\sbjiwala" if os.path.exists(r"D:\Projects\sbjiwala") else r"D:\Projects\sabjiwala"
+SRC_DIR = os.path.join(ROOT_DIR, "logo&icons")
+web_app_name = "sbjiwala-web" if os.path.exists(os.path.join(ROOT_DIR, "apps", "sbjiwala-web")) else "sabjiwala-web"
+APPS = ["customer-app", "vendor-app", "delivery-app", "admin-app", web_app_name]
 
 def main():
     icon_src = os.path.join(SRC_DIR, "icon.png")
