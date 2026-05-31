@@ -44,8 +44,15 @@ services:
       - APP_DEBUG=True
       - APP_SECRET_KEY=sbjiwala-super-secret-key-change-this-in-production
       - JWT_SECRET_KEY=sbjiwala-jwt-secret-key-change-this-in-production
-      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/sbjiwala
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=password
+      - DATABASE_DB=sbjiwala
+      - DATABASE_SSL=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_SSL=false
       - LOG_LEVEL=INFO
       - RATE_LIMIT_ENABLED=False
       - CORS_ORIGINS=http://localhost,http://127.0.0.1
