@@ -118,7 +118,16 @@ function LoginPageContent() {
       last_name: "",
       password: "",
       confirm_password: "",
-      referral_code: ""
+      referral_code: "",
+      business_name: "",
+      business_type: "individual",
+      description: "",
+      gst_number: "",
+      pan_number: "",
+      fssai_number: "",
+      vehicle_type: "motorcycle",
+      vehicle_number: "",
+      license_number: ""
     }
   });
 
@@ -552,7 +561,16 @@ function LoginPageContent() {
         last_name: data.last_name,
         password: data.password || undefined,
         referral_code: data.referral_code || undefined,
-        role: selectedRole
+        role: selectedRole === "delivery" ? "delivery_boy" : selectedRole,
+        business_name: selectedRole === "vendor" ? (data.business_name || undefined) : undefined,
+        business_type: selectedRole === "vendor" ? (data.business_type || undefined) : undefined,
+        description: selectedRole === "vendor" ? (data.description || undefined) : undefined,
+        gst_number: selectedRole === "vendor" ? (data.gst_number || undefined) : undefined,
+        pan_number: selectedRole === "vendor" ? (data.pan_number || undefined) : undefined,
+        fssai_number: selectedRole === "vendor" ? (data.fssai_number || undefined) : undefined,
+        vehicle_type: selectedRole === "delivery" ? (data.vehicle_type || undefined) : undefined,
+        vehicle_number: selectedRole === "delivery" ? (data.vehicle_number || undefined) : undefined,
+        license_number: selectedRole === "delivery" ? (data.license_number || undefined) : undefined,
       };
 
       const res = await api.post("/auth/register", payload);
@@ -1007,6 +1025,82 @@ function LoginPageContent() {
                   error={regErrors.referral_code?.message}
                   {...regForm("referral_code")}
                 />
+
+                {selectedRole === "vendor" && (
+                  <div className="space-y-4 p-4 rounded-2xl border border-blue-500/20 bg-blue-50/10 dark:bg-blue-955/10 animate-fade-in text-left">
+                    <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2">Business Settings</p>
+                    <Input 
+                      label="Business Name" 
+                      placeholder="e.g. Fresh Veggies Mart" 
+                      error={regErrors.business_name?.message}
+                      {...regForm("business_name", { required: selectedRole === "vendor" ? "Business name is required" : false })}
+                    />
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Business Type</label>
+                      <select 
+                        className="input-base w-full px-4 py-3 text-sm font-sans rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+                        {...regForm("business_type")}
+                      >
+                        <option value="individual">Individual / Sole Proprietor</option>
+                        <option value="partnership">Partnership Firm</option>
+                        <option value="company">Private Limited Company</option>
+                      </select>
+                    </div>
+                    <Input 
+                      label="PAN Number" 
+                      placeholder="e.g. ABCDE1234F" 
+                      error={regErrors.pan_number?.message}
+                      {...regForm("pan_number", { required: selectedRole === "vendor" ? "PAN is required" : false })}
+                    />
+                    <Input 
+                      label="GST Number (Optional)" 
+                      placeholder="e.g. 22AAAAA1111A1Z1" 
+                      error={regErrors.gst_number?.message}
+                      {...regForm("gst_number")}
+                    />
+                    <Input 
+                      label="FSSAI Number (Optional)" 
+                      placeholder="e.g. 12345678901234" 
+                      error={regErrors.fssai_number?.message}
+                      {...regForm("fssai_number")}
+                    />
+                    <Input 
+                      label="Store Description (Optional)" 
+                      placeholder="Describe your store offerings..." 
+                      error={regErrors.description?.message}
+                      {...regForm("description")}
+                    />
+                  </div>
+                )}
+
+                {selectedRole === "delivery" && (
+                  <div className="space-y-4 p-4 rounded-2xl border border-amber-500/20 bg-amber-50/10 dark:bg-amber-955/10 animate-fade-in text-left">
+                    <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">Delivery Partner Settings</p>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Vehicle Type</label>
+                      <select 
+                        className="input-base w-full px-4 py-3 text-sm font-sans rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+                        {...regForm("vehicle_type")}
+                      >
+                        <option value="bicycle">Bicycle</option>
+                        <option value="motorcycle">Motorcycle</option>
+                        <option value="scooter">Scooter</option>
+                      </select>
+                    </div>
+                    <Input 
+                      label="Vehicle Number" 
+                      placeholder="e.g. MH12AB1234" 
+                      error={regErrors.vehicle_number?.message}
+                      {...regForm("vehicle_number", { required: selectedRole === "delivery" ? "Vehicle number is required" : false })}
+                    />
+                    <Input 
+                      label="Driving License Number" 
+                      placeholder="e.g. DL-1234567890123" 
+                      error={regErrors.license_number?.message}
+                      {...regForm("license_number", { required: selectedRole === "delivery" ? "License number is required" : false })}
+                    />
+                  </div>
+                )}
                 <Button type="submit" fullWidth loading={loading} size="lg">
                   Submit Registration <ArrowRight className="w-4 h-4" />
                 </Button>

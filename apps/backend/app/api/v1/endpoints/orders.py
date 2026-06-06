@@ -21,6 +21,123 @@ from app.services.order_service import OrderService
 router = APIRouter()
 
 
+@router.post("/preview", response_model=APIResponse)
+async def preview_order(
+    body: CheckoutRequest,
+    current_user: dict = Depends(get_current_user),
+    vendor_id: UUID = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Preview order totals (delivery charge, tax, packaging, coupon, wallet deduction)."""
+    # 1. Fetch Address
+    from app.models.user import UserAddress
+    addr_result = await db.execute(
+        select(UserAddress).where(UserAddress.id == body.address_id, UserAddress.user_id == current_user["user_id"], UserAddress.is_deleted == False)
+    )
+    address = addr_result.scalars().first()
+    if not address:
+        raise HTTPException(status_code=400, detail="Delivery address not found")
+
+    # 2. Fetch Cart
+    from app.models.order import Cart
+    cart_result = await db.execute(
+        select(Cart)
+        .options(selectinload(Cart.items))
+        .where(Cart.user_id == current_user["user_id"], Cart.vendor_id == vendor_id, Cart.is_deleted == False)
+    )
+    cart = cart_result.scalars().first()
+    if not cart or not cart.items:
+        raise HTTPException(status_code=400, detail="Shopping cart is empty")
+
+    # 3. Calculate subtotal (with markup)
+    subtotal = 0.0
+    for item in cart.items:
+        if item.is_deleted:
+            continue
+        # Get product price (secured 4.5% markup)
+        from app.models.product import ProductPrice
+        price_res = await db.execute(
+            select(ProductPrice).where(
+                ProductPrice.product_id == item.product_id,
+                ProductPrice.vendor_id == vendor_id,
+                ProductPrice.is_active == True
+            )
+        )
+        prod_price = price_res.scalars().first()
+        base_price = float(prod_price.price) if prod_price else float(item.unit_price)
+        marked_up_price = round(base_price * 1.045, 2)
+        subtotal += marked_up_price * item.quantity
+
+    # 4. Calculate delivery and packaging charges
+    service = OrderService(db)
+    delivery_charge, distance_km = await service.calculate_delivery_charges(vendor_id, address)
+
+    from app.models.vendor import VendorDeliveryRule
+    rules_result = await db.execute(
+        select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == vendor_id)
+    )
+    rule = rules_result.scalars().first()
+    packaging_charge = 0.0
+    if rule:
+        if subtotal < float(rule.min_order_amount):
+            raise HTTPException(status_code=400, detail=f"Minimum order amount for this vendor is Rs. {rule.min_order_amount}")
+        if rule.free_delivery_above is not None and subtotal >= float(rule.free_delivery_above):
+            delivery_charge = 0.0
+        if hasattr(rule, "packaging_fee") and rule.packaging_fee is not None:
+            packaging_charge = float(rule.packaging_fee)
+
+    if packaging_charge == 0.0:
+        from app.models.system import SystemSetting
+        setting_res = await db.execute(
+            select(SystemSetting).where(SystemSetting.key == "platform_handling_fee")
+        )
+        setting = setting_res.scalars().first()
+        packaging_charge = float(setting.value) if (setting and setting.value) else 5.0
+
+    # Tax calculation (standard 5%)
+    tax_amount = subtotal * 0.05
+
+    # Coupon discount
+    coupon_discount = 0.0
+    applied_coupon_code = body.coupon_code or cart.coupon_code
+    if applied_coupon_code:
+        from app.services.coupon_engine import CouponEngine
+        coupon_engine = CouponEngine(db)
+        validation = await coupon_engine.validate_coupon(
+            applied_coupon_code, current_user["user_id"], vendor_id, body.payment_method
+        )
+        if validation["valid"]:
+            coupon_discount = float(validation["discount"])
+            if validation.get("coupon_type") == "free_delivery":
+                delivery_charge = 0.0
+
+    # Wallet deduction
+    wallet_amount = 0.0
+    wallet_balance = 0.0
+    if body.use_wallet:
+        wallet = await service.payment_service.get_or_create_wallet(current_user["user_id"])
+        wallet_balance = float(wallet.balance)
+        total_before_wallet = subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount
+        wallet_amount = min(wallet_balance, total_before_wallet)
+
+    total_amount = subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount - wallet_amount
+
+    return APIResponse(
+        success=True,
+        data={
+            "subtotal": subtotal,
+            "delivery_charge": delivery_charge,
+            "tax_amount": tax_amount,
+            "packaging_charge": packaging_charge,
+            "coupon_discount": coupon_discount,
+            "wallet_balance": wallet_balance,
+            "wallet_deduction": wallet_amount,
+            "total_amount": total_amount,
+            "distance_km": distance_km
+        }
+    )
+
+
 @router.post("/", response_model=APIResponse, status_code=201)
 async def place_order(
     body: CheckoutRequest,

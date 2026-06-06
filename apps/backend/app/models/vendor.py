@@ -206,6 +206,7 @@ class VendorDeliveryRule(BaseEntity):
     base_delivery_charge: Mapped[float] = mapped_column(Numeric(10, 2), default=0.0, nullable=False)
     per_km_charge: Mapped[float] = mapped_column(Numeric(10, 2), default=0.0, nullable=False)
     max_delivery_distance_km: Mapped[float] = mapped_column(Float, default=10.0, nullable=False)
+    packaging_fee: Mapped[float] = mapped_column(Numeric(10, 2), default=0.0, nullable=False)
 
     # Distance slabs (JSON: [{from_km: 0, to_km: 3, charge: 20}, ...])
     distance_slabs: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)

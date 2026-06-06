@@ -27,6 +27,7 @@ function ServiceAreaPanel() {
   const [freeAbove, setFreeAbove] = useState("199.00");
   const [baseCharge, setBaseCharge] = useState("30.00");
   const [perKmCharge, setPerKmCharge] = useState("10.00");
+  const [packagingFee, setPackagingFee] = useState("0.00");
 
   const { data: areasData } = useQuery<any>({
     queryKey: ["myServiceAreas"],
@@ -60,6 +61,7 @@ function ServiceAreaPanel() {
       setFreeAbove(activeRule.free_delivery_above ? activeRule.free_delivery_above.toString() : "");
       setBaseCharge(activeRule.base_delivery_charge.toString());
       setPerKmCharge(activeRule.per_km_charge.toString());
+      setPackagingFee(activeRule.packaging_fee ? activeRule.packaging_fee.toString() : "0.00");
     }
   }, [rulesData]);
 
@@ -89,6 +91,7 @@ function ServiceAreaPanel() {
         base_delivery_charge: parseFloat(baseCharge) || 0.0,
         per_km_charge: parseFloat(perKmCharge) || 0.0,
         max_delivery_distance_km: radius,
+        packaging_fee: parseFloat(packagingFee) || 0.0,
       });
     },
     onSuccess: () => {
@@ -271,6 +274,16 @@ function ServiceAreaPanel() {
                 placeholder="Optional"
                 value={freeAbove}
                 onChange={(e) => setFreeAbove(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="space-y-1.5 col-span-2">
+              <label className="text-[11px] font-bold text-slate-500 uppercase">Packaging & Handling Fee (₹)</label>
+              <input
+                type="number"
+                value={packagingFee}
+                onChange={(e) => setPackagingFee(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
               />
             </div>

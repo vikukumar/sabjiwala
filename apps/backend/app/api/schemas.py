@@ -62,6 +62,19 @@ class RegisterRequest(BaseModel):
     device_id: Optional[str] = None
     role: Optional[str] = "customer"
 
+    # Vendor-specific details
+    business_name: Optional[str] = None
+    business_type: Optional[str] = None
+    description: Optional[str] = None
+    gst_number: Optional[str] = None
+    pan_number: Optional[str] = None
+    fssai_number: Optional[str] = None
+
+    # Delivery-specific details
+    vehicle_type: Optional[str] = None
+    vehicle_number: Optional[str] = None
+    license_number: Optional[str] = None
+
 class LoginRequest(BaseModel):
     identifier: Optional[str] = None
     email: Optional[str] = None
@@ -259,6 +272,7 @@ class DeliveryRuleCreate(BaseModel):
     base_delivery_charge: float = 0.0
     per_km_charge: float = 0.0
     max_delivery_distance_km: float = 10.0
+    packaging_fee: float = 0.0
     distance_slabs: Optional[list] = None
 
 
@@ -350,6 +364,7 @@ class OrderResponse(BaseModel):
     discount_amount: float
     coupon_discount: float
     total_amount: float
+    packaging_charge: float = 0.0
     payment_method: str
     payment_status: str
     customer_notes: Optional[str] = None
@@ -490,6 +505,31 @@ class InstallationStep(BaseModel):
 class SystemSettingUpdate(BaseModel):
     value: Optional[str] = None
     value_json: Optional[dict] = None
+
+class UpdateUserStatusRequest(BaseModel):
+    is_active: bool
+
+class UpdateUserRoleRequest(BaseModel):
+    role: str
+
+class UpdateVendorCommissionRequest(BaseModel):
+    commission_rate: float
+    business_name: Optional[str] = None
+    business_type: Optional[str] = None
+    description: Optional[str] = None
+    gst_number: Optional[str] = None
+    pan_number: Optional[str] = None
+    fssai_number: Optional[str] = None
+    # Delivery rule fields
+    min_order_amount: Optional[float] = None
+    free_delivery_above: Optional[float] = None
+    base_delivery_charge: Optional[float] = None
+    per_km_charge: Optional[float] = None
+    max_delivery_distance_km: Optional[float] = None
+    packaging_fee: Optional[float] = None
+
+class UpdateDeliveryBoyStatusRequest(BaseModel):
+    status: str
 
 class BannerCreate(BaseModel):
     title: str

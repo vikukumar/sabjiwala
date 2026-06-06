@@ -160,16 +160,34 @@ class OrderService:
         # 2. Calculate charges
         delivery_charge, distance_km = await self.calculate_delivery_charges(vendor_id, address)
 
-        # Apply vendor delivery rule minima
+        # Apply vendor delivery rule minima and custom packaging fee
         rules_result = await self.db.execute(
             select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == vendor_id)
         )
         rule = rules_result.scalars().first()
+        packaging_charge = 0.0
         if rule:
             if subtotal < float(rule.min_order_amount):
                 raise ValueError(f"Minimum order amount for this vendor is Rs. {rule.min_order_amount}")
             if rule.free_delivery_above is not None and subtotal >= float(rule.free_delivery_above):
                 delivery_charge = 0.0
+            if hasattr(rule, "packaging_fee") and rule.packaging_fee is not None:
+                packaging_charge = float(rule.packaging_fee)
+
+        # If packaging_charge is 0.0, fallback to global platform handling fee
+        if packaging_charge == 0.0:
+            from app.models.system import SystemSetting
+            setting_res = await self.db.execute(
+                select(SystemSetting).where(SystemSetting.key == "platform_handling_fee")
+            )
+            setting = setting_res.scalars().first()
+            if setting and setting.value:
+                try:
+                    packaging_charge = float(setting.value)
+                except ValueError:
+                    packaging_charge = 5.0
+            else:
+                packaging_charge = 5.0
 
         # Tax calculation (standard 5%)
         tax_amount = subtotal * 0.05
@@ -198,10 +216,10 @@ class OrderService:
         if use_wallet:
             wallet = await self.payment_service.get_or_create_wallet(user_id)
             wallet_balance = float(wallet.balance)
-            total_before_wallet = subtotal + delivery_charge + tax_amount - coupon_discount
+            total_before_wallet = subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount
             wallet_amount = min(wallet_balance, total_before_wallet)
 
-        total_amount = subtotal + delivery_charge + tax_amount - coupon_discount - wallet_amount
+        total_amount = subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount - wallet_amount
 
         # 5. Create Order
         delivery_address_dict = {
@@ -232,6 +250,7 @@ class OrderService:
             coupon_discount=coupon_discount,
             wallet_amount=wallet_amount,
             total_amount=total_amount,
+            packaging_charge=packaging_charge,
             coupon_id=coupon_id,
             coupon_code=applied_coupon_code,
             payment_method=payment_method,

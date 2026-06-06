@@ -135,6 +135,7 @@ class Order(BaseEntity):
     coupon_discount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
     wallet_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
     total_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0.0)
+    packaging_charge: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
 
     # Coupon
     coupon_id: Mapped[Optional[UUID]] = mapped_column(PGUUID(as_uuid=True), nullable=True)
@@ -324,6 +325,7 @@ class Invoice(BaseEntity):
     tax_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
     delivery_charge: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
     discount_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
+    packaging_charge: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
     total_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
 
     # Snapshot data

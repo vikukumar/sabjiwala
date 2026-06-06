@@ -141,31 +141,50 @@ async def register(
 
     # Specific profile and wallet creation based on type
     if user_type == UserType.VENDOR:
-        from app.models.vendor import Vendor, VendorWallet, VendorStatus
+        from app.models.vendor import Vendor, VendorWallet, VendorStatus, VendorStore
         vendor = Vendor(
             user_id=user.id,
-            business_name=f"{user.first_name} {user.last_name}'s Store",
+            business_name=body.business_name or f"{user.first_name} {user.last_name}'s Store",
+            business_type=body.business_type or "individual",
+            description=body.description,
+            gst_number=body.gst_number,
+            pan_number=body.pan_number,
+            fssai_number=body.fssai_number,
             slug=f"{user.first_name.lower()}-{user.last_name.lower()}-{secrets.token_hex(4)}",
-            status=VendorStatus.PENDING
+            status=VendorStatus.PENDING,
+            contact_email=user.email,
+            contact_phone=user.phone
         )
         db.add(vendor)
         await db.flush()
 
+        store = VendorStore(
+            vendor_id=vendor.id,
+            store_name=vendor.business_name,
+        )
+        db.add(store)
+
         vendor_wallet = VendorWallet(vendor_id=vendor.id)
         db.add(vendor_wallet)
     elif user_type == UserType.DELIVERY_BOY:
-        from app.models.delivery import DeliveryBoy, DeliveryBoyStatus, AvailabilityStatus
+        from app.models.delivery import DeliveryBoy, DeliveryBoyStatus, AvailabilityStatus, DeliveryWallet
         from app.models.payment import Wallet, WalletType
         delivery_boy = DeliveryBoy(
             user_id=user.id,
             status=DeliveryBoyStatus.ACTIVE,
-            availability=AvailabilityStatus.OFFLINE
+            availability=AvailabilityStatus.OFFLINE,
+            vehicle_type=body.vehicle_type,
+            vehicle_number=body.vehicle_number,
+            license_number=body.license_number
         )
         db.add(delivery_boy)
         await db.flush()
 
         delivery_wallet = Wallet(user_id=user.id, wallet_type=WalletType.DELIVERY)
         db.add(delivery_wallet)
+
+        delivery_boy_wallet = DeliveryWallet(delivery_boy_id=delivery_boy.id)
+        db.add(delivery_boy_wallet)
     elif user_type == UserType.CUSTOMER:
         from app.models.payment import Wallet, WalletType
         customer_wallet = Wallet(user_id=user.id, wallet_type=WalletType.CUSTOMER)

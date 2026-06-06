@@ -121,7 +121,13 @@ export default function CheckoutPage() {
 
   const { data: cartData } = useQuery<any>({
     queryKey: ["cart"],
-    queryFn: async () => { const r = await api.get("/cart"); return r.data || {}; },
+    queryFn: async () => {
+      const r = await api.get("/cart");
+      if (Array.isArray(r.data)) {
+        return r.data[0] || { items: [], subtotal: 0, item_count: 0 };
+      }
+      return r.data || { items: [], subtotal: 0, item_count: 0 };
+    },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
   });
 
@@ -129,6 +135,22 @@ export default function CheckoutPage() {
     queryKey: ["wallet"],
     queryFn: async () => { const r = await api.get("/wallets/me"); return r.data || {}; },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
+  });
+
+  // Calculate dynamic fees and charges via backend preview endpoint
+  const { data: previewData } = useQuery<any>({
+    queryKey: ["orderPreview", selectedAddress, paymentMethod, useWallet, cartData?.items],
+    queryFn: async () => {
+      if (!selectedAddress || !cartData?.items?.length) return null;
+      const vendorId = cartData.items[0]?.vendor_id;
+      const res = await api.post("/orders/preview", {
+        address_id: selectedAddress,
+        payment_method: paymentMethod,
+        use_wallet: useWallet,
+      }, { params: { vendor_id: vendorId } });
+      return res.data;
+    },
+    enabled: typeof window !== "undefined" && !!selectedAddress && !!cartData?.items?.length,
   });
 
   React.useEffect(() => {

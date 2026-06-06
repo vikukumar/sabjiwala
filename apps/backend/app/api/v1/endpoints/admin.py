@@ -5,10 +5,14 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, update, desc, func
+from sqlalchemy import select, update, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.schemas import APIResponse, PaginatedResponse, PaginationMeta, SystemSettingUpdate
+from app.api.schemas import (
+    APIResponse, PaginatedResponse, PaginationMeta, SystemSettingUpdate,
+    UpdateUserStatusRequest, UpdateUserRoleRequest, UpdateVendorCommissionRequest,
+    UpdateDeliveryBoyStatusRequest
+)
 from app.core.rbac.engine import get_current_user
 from app.db.session import get_db
 from app.models.user import User, UserType
@@ -229,3 +233,421 @@ async def get_vendor_details(
         ]
     }
     return APIResponse(success=True, data=data)
+
+
+@router.get("/users", response_model=APIResponse)
+async def list_users(
+    role: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all registered users with role and search query filtering."""
+    await _verify_admin(current_user)
+    
+    # Base query
+    stmt = select(User).where(User.is_deleted == False)
+    
+    # Filter by user type if specified
+    if role:
+        stmt = stmt.where(User.user_type == role)
+        
+    # Search filter
+    if search:
+        search_filter = f"%{search}%"
+        stmt = stmt.where(
+            or_(
+                User.first_name.ilike(search_filter),
+                User.last_name.ilike(search_filter),
+                User.email.ilike(search_filter),
+                User.phone.ilike(search_filter),
+                User.username.ilike(search_filter)
+            )
+        )
+        
+    # Order by creation date descending
+    stmt = stmt.order_by(User.created_at.desc())
+    
+    # Get total count
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total_count_res = await db.execute(count_stmt)
+    total_items = total_count_res.scalar_one()
+    
+    # Paginate
+    stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+    result = await db.execute(stmt)
+    users = result.scalars().all()
+    
+    # Transform
+    user_list = []
+    for u in users:
+        user_list.append({
+            "id": str(u.id),
+            "first_name": u.first_name,
+            "last_name": u.last_name,
+            "email": u.email,
+            "phone": u.phone,
+            "username": u.username,
+            "user_type": u.user_type.value if hasattr(u.user_type, "value") else str(u.user_type),
+            "is_active": u.is_active,
+            "is_verified": u.is_verified,
+            "created_at": u.created_at.isoformat() if u.created_at else ""
+        })
+        
+    total_pages = (total_items + page_size - 1) // page_size
+    pagination = {
+        "page": page,
+        "page_size": page_size,
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "has_next": page < total_pages,
+        "has_previous": page > 1
+    }
+    
+    return APIResponse(success=True, data=user_list, meta={"pagination": pagination})
+
+
+@router.patch("/users/{user_id}/status", response_model=APIResponse)
+async def update_user_status(
+    user_id: UUID,
+    body: UpdateUserStatusRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Enable or block user access."""
+    await _verify_admin(current_user)
+    
+    result = await db.execute(select(User).where(User.id == user_id, User.is_deleted == False))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    user.is_active = body.is_active
+    await db.commit()
+    
+    return APIResponse(success=True, message=f"User status updated to {'active' if body.is_active else 'blocked'}")
+
+
+@router.patch("/users/{user_id}/role", response_model=APIResponse)
+async def update_user_role(
+    user_id: UUID,
+    body: UpdateUserRoleRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Change a user's role and automatically initialize missing profiles, stores, and wallets."""
+    await _verify_admin(current_user)
+    
+    result = await db.execute(select(User).where(User.id == user_id, User.is_deleted == False))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    new_role = body.role
+    if new_role not in ["customer", "vendor", "delivery_boy", "admin"]:
+        raise HTTPException(status_code=400, detail="Invalid role type specified")
+        
+    # Map to UserType enum
+    from app.models.user import UserType, Role, UserRole
+    role_map = {
+        "customer": UserType.CUSTOMER,
+        "vendor": UserType.VENDOR,
+        "delivery_boy": UserType.DELIVERY_BOY,
+        "admin": UserType.ADMIN
+    }
+    user.user_type = role_map[new_role]
+    
+    # Sync UserRoles table
+    role_res = await db.execute(select(Role).where(Role.name == new_role))
+    db_role = role_res.scalars().first()
+    if db_role:
+        # Clear/Update existing user roles
+        await db.execute(update(UserRole).where(UserRole.user_id == user.id).values(role_id=db_role.id))
+        # If no UserRole entry existed, insert one
+        ur_check = await db.execute(select(UserRole).where(UserRole.user_id == user.id))
+        if not ur_check.scalars().first():
+            db.add(UserRole(user_id=user.id, role_id=db_role.id))
+            
+    # Initialize missing profiles/wallets as requested by user
+    import secrets
+    if user.user_type == UserType.VENDOR:
+        from app.models.vendor import Vendor, VendorWallet, VendorStatus, VendorStore
+        
+        # Check if Vendor profile exists
+        v_res = await db.execute(select(Vendor).where(Vendor.user_id == user.id))
+        vendor = v_res.scalars().first()
+        if not vendor:
+            vendor = Vendor(
+                user_id=user.id,
+                business_name=f"{user.first_name} {user.last_name}'s Store",
+                business_type="individual",
+                slug=f"{user.first_name.lower()}-{user.last_name.lower()}-{secrets.token_hex(4)}",
+                status=VendorStatus.APPROVED,
+                contact_email=user.email,
+                contact_phone=user.phone
+            )
+            db.add(vendor)
+            await db.flush()
+            
+        # Check if VendorStore exists
+        vs_res = await db.execute(select(VendorStore).where(VendorStore.vendor_id == vendor.id))
+        if not vs_res.scalars().first():
+            store = VendorStore(
+                vendor_id=vendor.id,
+                store_name=vendor.business_name
+            )
+            db.add(store)
+            
+        # Check if VendorWallet exists
+        vw_res = await db.execute(select(VendorWallet).where(VendorWallet.vendor_id == vendor.id))
+        if not vw_res.scalars().first():
+            db.add(VendorWallet(vendor_id=vendor.id))
+            
+    elif user.user_type == UserType.DELIVERY_BOY:
+        from app.models.delivery import DeliveryBoy, DeliveryBoyStatus, AvailabilityStatus, DeliveryWallet
+        from app.models.payment import Wallet, WalletType
+        
+        # Check if DeliveryBoy profile exists
+        db_res = await db.execute(select(DeliveryBoy).where(DeliveryBoy.user_id == user.id))
+        delivery_boy = db_res.scalars().first()
+        if not delivery_boy:
+            delivery_boy = DeliveryBoy(
+                user_id=user.id,
+                status=DeliveryBoyStatus.ACTIVE,
+                availability=AvailabilityStatus.OFFLINE,
+                vehicle_type="motorcycle"
+            )
+            db.add(delivery_boy)
+            await db.flush()
+            
+        # Check if general delivery wallet exists
+        w_res = await db.execute(select(Wallet).where(Wallet.user_id == user.id, Wallet.wallet_type == WalletType.DELIVERY))
+        if not w_res.scalars().first():
+            db.add(Wallet(user_id=user.id, wallet_type=WalletType.DELIVERY))
+            
+        # Check if DeliveryWallet exists
+        dw_res = await db.execute(select(DeliveryWallet).where(DeliveryWallet.delivery_boy_id == delivery_boy.id))
+        if not dw_res.scalars().first():
+            db.add(DeliveryWallet(delivery_boy_id=delivery_boy.id))
+            
+    elif user.user_type == UserType.CUSTOMER:
+        from app.models.payment import Wallet, WalletType
+        w_res = await db.execute(select(Wallet).where(Wallet.user_id == user.id, Wallet.wallet_type == WalletType.CUSTOMER))
+        if not w_res.scalars().first():
+            db.add(Wallet(user_id=user.id, wallet_type=WalletType.CUSTOMER))
+            
+    await db.commit()
+    return APIResponse(success=True, message=f"User role updated to {new_role} and missing profiles/wallets initialized.")
+
+
+@router.get("/vendors", response_model=APIResponse)
+async def list_vendors(
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all vendors with business details, ratings, orders, commissions, and KYC stats."""
+    await _verify_admin(current_user)
+    
+    stmt = select(Vendor).where(Vendor.is_deleted == False)
+    if search:
+        search_filter = f"%{search}%"
+        stmt = stmt.where(Vendor.business_name.ilike(search_filter))
+        
+    stmt = stmt.order_by(Vendor.created_at.desc())
+    result = await db.execute(stmt)
+    vendors = result.scalars().all()
+    
+    vendor_list = []
+    for v in vendors:
+        user_res = await db.execute(select(User).where(User.id == v.user_id))
+        user = user_res.scalars().first()
+        
+        # Fetch delivery rules
+        from app.models.vendor import VendorDeliveryRule
+        rule_res = await db.execute(select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == v.id))
+        rule = rule_res.scalars().first()
+        
+        vendor_list.append({
+            "id": str(v.id),
+            "business_name": v.business_name,
+            "business_type": v.business_type,
+            "description": v.description,
+            "status": v.status.value if hasattr(v.status, "value") else str(v.status),
+            "commission_rate": v.commission_rate,
+            "gst_number": v.gst_number,
+            "pan_number": v.pan_number,
+            "fssai_number": v.fssai_number,
+            "contact_email": user.email if user else v.contact_email,
+            "contact_phone": user.phone if user else v.contact_phone,
+            "average_rating": v.average_rating,
+            "total_orders": v.total_orders,
+            "created_at": v.created_at.isoformat() if v.created_at else "",
+            # Include individual delivery rules so admin can configure them
+            "min_order_amount": float(rule.min_order_amount) if rule else 0.0,
+            "free_delivery_above": float(rule.free_delivery_above) if rule and rule.free_delivery_above is not None else None,
+            "base_delivery_charge": float(rule.base_delivery_charge) if rule else 0.0,
+            "per_km_charge": float(rule.per_km_charge) if rule else 0.0,
+            "max_delivery_distance_km": float(rule.max_delivery_distance_km) if rule else 10.0,
+            "packaging_fee": float(rule.packaging_fee) if rule and hasattr(rule, "packaging_fee") else 0.0,
+        })
+        
+    return APIResponse(success=True, data=vendor_list)
+
+
+@router.patch("/vendors/{vendor_id}/commission", response_model=APIResponse)
+async def update_vendor_settings(
+    vendor_id: UUID,
+    body: UpdateVendorCommissionRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update vendor settings: commission rate, business metadata, and custom delivery rules."""
+    await _verify_admin(current_user)
+    
+    # 1. Update Vendor table fields
+    res = await db.execute(select(Vendor).where(Vendor.id == vendor_id, Vendor.is_deleted == False))
+    vendor = res.scalars().first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor profile not found")
+        
+    vendor.commission_rate = body.commission_rate
+    
+    if body.business_name is not None:
+        vendor.business_name = body.business_name
+    if body.business_type is not None:
+        vendor.business_type = body.business_type
+    if body.description is not None:
+        vendor.description = body.description
+    if body.gst_number is not None:
+        vendor.gst_number = body.gst_number
+    if body.pan_number is not None:
+        vendor.pan_number = body.pan_number
+    if body.fssai_number is not None:
+        vendor.fssai_number = body.fssai_number
+        
+    # 2. Update VendorStore store_name if business name is updated
+    if body.business_name is not None:
+        from app.models.vendor import VendorStore
+        vs_res = await db.execute(select(VendorStore).where(VendorStore.vendor_id == vendor.id))
+        store = vs_res.scalars().first()
+        if store:
+            store.store_name = body.business_name
+            
+    # 3. Update or Create VendorDeliveryRule
+    from app.models.vendor import VendorDeliveryRule
+    rule_res = await db.execute(select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == vendor_id))
+    rule = rule_res.scalars().first()
+    
+    # Check if we need to update any delivery rule fields
+    has_rule_updates = any(
+        v is not None for v in [
+            body.min_order_amount,
+            body.free_delivery_above,
+            body.base_delivery_charge,
+            body.per_km_charge,
+            body.max_delivery_distance_km,
+            body.packaging_fee
+        ]
+    )
+    
+    if has_rule_updates:
+        if not rule:
+            rule = VendorDeliveryRule(vendor_id=vendor_id)
+            db.add(rule)
+            
+        if body.min_order_amount is not None:
+            rule.min_order_amount = body.min_order_amount
+        if body.free_delivery_above is not None:
+            rule.free_delivery_above = body.free_delivery_above
+        if body.base_delivery_charge is not None:
+            rule.base_delivery_charge = body.base_delivery_charge
+        if body.per_km_charge is not None:
+            rule.per_km_charge = body.per_km_charge
+        if body.max_delivery_distance_km is not None:
+            rule.max_delivery_distance_km = body.max_delivery_distance_km
+        if body.packaging_fee is not None:
+            rule.packaging_fee = body.packaging_fee
+            
+    await db.commit()
+    return APIResponse(success=True, message="Vendor settings updated successfully")
+
+
+@router.get("/delivery-boys", response_model=APIResponse)
+async def list_delivery_boys(
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all delivery boy profiles with vehicle details, active stats, and statuses."""
+    await _verify_admin(current_user)
+    
+    from app.models.delivery import DeliveryBoy
+    stmt = select(DeliveryBoy).where(DeliveryBoy.is_deleted == False)
+    
+    result = await db.execute(stmt)
+    boys = result.scalars().all()
+    
+    boy_list = []
+    for b in boys:
+        user_res = await db.execute(select(User).where(User.id == b.user_id))
+        user = user_res.scalars().first()
+        
+        if not user:
+            continue
+            
+        if search:
+            search_lower = search.lower()
+            full_name = f"{user.first_name} {user.last_name}".lower()
+            if (
+                search_lower not in full_name and
+                search_lower not in (user.email or "").lower() and
+                search_lower not in (user.phone or "").lower() and
+                search_lower not in (b.license_number or "").lower()
+            ):
+                continue
+                
+        boy_list.append({
+            "id": str(b.id),
+            "user_id": str(user.id),
+            "name": f"{user.first_name} {user.last_name}",
+            "email": user.email,
+            "phone": user.phone,
+            "status": b.status.value if hasattr(b.status, "value") else str(b.status),
+            "availability": b.availability.value if hasattr(b.availability, "value") else str(b.availability),
+            "vehicle_type": b.vehicle_type,
+            "vehicle_number": b.vehicle_number,
+            "license_number": b.license_number,
+            "total_deliveries": b.total_deliveries,
+            "average_rating": b.average_rating,
+            "created_at": b.created_at.isoformat() if b.created_at else ""
+        })
+        
+    return APIResponse(success=True, data=boy_list)
+
+
+@router.patch("/delivery-boys/{delivery_boy_id}/status", response_model=APIResponse)
+async def update_delivery_boy_status(
+    delivery_boy_id: UUID,
+    body: UpdateDeliveryBoyStatusRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a delivery boy's status (active, inactive, suspended, on_leave)."""
+    await _verify_admin(current_user)
+    
+    from app.models.delivery import DeliveryBoy, DeliveryBoyStatus
+    res = await db.execute(select(DeliveryBoy).where(DeliveryBoy.id == delivery_boy_id, DeliveryBoy.is_deleted == False))
+    boy = res.scalars().first()
+    if not boy:
+        raise HTTPException(status_code=404, detail="Delivery boy profile not found")
+        
+    try:
+        boy.status = DeliveryBoyStatus(body.status)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid status value. Must be one of active, inactive, suspended, on_leave.")
+        
+    await db.commit()
+    return APIResponse(success=True, message=f"Delivery boy status updated to {body.status}")
