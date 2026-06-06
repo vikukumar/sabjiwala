@@ -106,19 +106,29 @@ export default function CheckoutPage() {
   const [editingAddress, setEditingAddress] = useState<any>(null);
   const queryClient = useQueryClient();
 
+  React.useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
+    if (!token) {
+      router.replace("/login?redirect=/checkout");
+    }
+  }, [router]);
+
   const { data: addresses = [], isLoading: addrLoading, refetch: refetchAddr } = useQuery<any[]>({
     queryKey: ["addresses"],
     queryFn: async () => { const r = await api.get("/users/addresses"); return r.data || []; },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
   });
 
   const { data: cartData } = useQuery<any>({
     queryKey: ["cart"],
     queryFn: async () => { const r = await api.get("/cart"); return r.data || {}; },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
   });
 
   const { data: walletData } = useQuery<any>({
     queryKey: ["wallet"],
     queryFn: async () => { const r = await api.get("/wallets/me"); return r.data || {}; },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
   });
 
   React.useEffect(() => {

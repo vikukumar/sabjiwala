@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { User, Mail, Phone, Edit2, Save, Camera, LogOut, Shield, Bell, Palette, ChevronRight, Award, Package, Star, Heart } from "lucide-react";
@@ -16,10 +16,22 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
 
-  const { data: profile, isLoading } = useQuery<any>({
+  const { data: profile, isLoading, error } = useQuery<any>({
     queryKey: ["profile"],
     queryFn: async () => { const r = await api.get("/users/me"); return r.data; },
+    retry: false,
   });
+
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
+    if (!token || error) {
+      if (error) {
+        localStorage.removeItem("sw_access_token");
+        localStorage.removeItem("sw_refresh_token");
+      }
+      router.replace("/login?redirect=/profile");
+    }
+  }, [router, error]);
 
   const { data: orderStats } = useQuery<any>({
     queryKey: ["orderStats"],

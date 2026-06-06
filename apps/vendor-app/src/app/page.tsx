@@ -300,10 +300,24 @@ export default function VendorDashboard() {
   const [currentView, setCurrentView] = useState("dashboard");
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
     setTheme(isDark ? "dark" : "light");
+  }, []);
+
+  // Check location permission on start
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: "geolocation" as any }).then((result) => {
+        if (result.state !== "granted") {
+          setShowPermissionModal(true);
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   const toggleTheme = () => {
@@ -624,7 +638,10 @@ export default function VendorDashboard() {
                   Verify Documents Now
                 </a>
               )}
-                      {currentView === "dashboard" ? (
+            </div>
+          )}
+
+          {currentView === "dashboard" ? (
             <>
               {/* Metrics Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -749,10 +766,65 @@ export default function VendorDashboard() {
             </>
           ) : (
             <ServiceAreaPanel />
-          )}          </div>
-          </div>
+          )}
         </main>
       </div>
+
+      {/* Geolocation Permission Request Modal */}
+      {showPermissionModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full animate-scale-in text-slate-800 dark:text-white space-y-4 shadow-2xl text-center font-sans">
+            <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-455 mx-auto">
+              <MapPin className="w-8 h-8 animate-bounce" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-xl font-black tracking-tight">Location Access Required 🏪</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Provide location access to pinpoint your shop address on OpenStreetMap and configure your active delivery service area accurately.
+              </p>
+            </div>
+            
+            <div className="text-xs font-semibold text-slate-655 dark:text-slate-355 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2 text-left">
+              <p className="flex items-center gap-2">
+                <span className="text-emerald-500">✔</span>
+                <span>Calibrate your store coordinates on Leaflet map picker</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-emerald-500">✔</span>
+                <span>Determine service range radius overlays correctly</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-emerald-500">✔</span>
+                <span>Inform couriers of precise pickup location point</span>
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                if (typeof window !== "undefined" && "geolocation" in navigator) {
+                  navigator.geolocation.getCurrentPosition(
+                    () => {
+                      setShowPermissionModal(false);
+                      window.location.reload();
+                    },
+                    () => {
+                      alert("Location permission was denied. Please enable location permissions in browser site settings.");
+                    }
+                  );
+                }
+              }}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3.5 rounded-2xl text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer animate-pulse"
+            >
+              Enable Location Access
+            </button>
+            
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              Note: Geolocation permissions can be toggled any time in browser settings.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

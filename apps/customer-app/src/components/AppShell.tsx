@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Home, Search, ShoppingCart, Heart, User, Bell, Wallet,
@@ -10,10 +10,28 @@ import {
   MessageSquare, FileText, Shield, RotateCcw, ShieldCheck, Check,
   Leaf,
   RefreshCw,
-  WifiOff
+  WifiOff,
+  Camera,
+  Smartphone
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
+
+// ==================== ROUTE PROTECTION helper ====================
+export const isProtectedRoute = (path: string) => {
+  const protectedPrefixes = [
+    "/profile",
+    "/orders",
+    "/wishlist",
+    "/wallet",
+    "/referrals",
+    "/addresses",
+    "/reviews",
+    "/settings",
+    "/checkout"
+  ];
+  return protectedPrefixes.some(prefix => path === prefix || path.startsWith(prefix + "/"));
+};
 
 // ==================== NAV ITEMS ====================
 const mainNavItems = [
@@ -183,6 +201,7 @@ function Header({ onMenuOpen }: { onMenuOpen: () => void }) {
 // ==================== SIDEBAR ====================
 function Sidebar({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const isActive = (href: string, exact = false) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
 
@@ -234,7 +253,13 @@ function Sidebar({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean })
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      onClick={onClose}
+                      onClick={(e) => {
+                        if (isProtectedRoute(item.href) && !localStorage.getItem("sw_access_token")) {
+                          e.preventDefault();
+                          router.push(`/login?redirect=${encodeURIComponent(item.href)}`);
+                        }
+                        if (onClose) onClose();
+                      }}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${active
                         ? "bg-emerald-600 text-white shadow-sm shadow-emerald-900/30"
                         : "text-slate-400 hover:text-white hover:bg-white/8"
@@ -287,6 +312,7 @@ function Sidebar({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean })
 // ==================== BOTTOM NAV (Mobile) ====================
 function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const { data: cartData } = useQuery<any>({
     queryKey: ["cart"],
@@ -310,6 +336,12 @@ function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={(e) => {
+                if (isProtectedRoute(item.href) && !localStorage.getItem("sw_access_token")) {
+                  e.preventDefault();
+                  router.push(`/login?redirect=${encodeURIComponent(item.href)}`);
+                }
+              }}
               className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all ${isActive
                 ? "text-emerald-600 dark:text-emerald-400"
                 : "text-slate-400 dark:text-slate-500"
@@ -638,16 +670,200 @@ function NotificationBenefitModal({ onClose, onGrant }: NotificationModalProps) 
 }
 
 // ==================== APP SHELL ====================
+// ==================== STARTUP PERMISSIONS MODAL ====================
+interface UnifiedPermissionsModalProps {
+  onClose: () => void;
+  onPermissionGranted: () => void;
+}
+
+function UnifiedPermissionsModal({ onClose, onPermissionGranted }: UnifiedPermissionsModalProps) {
+  const [geoState, setGeoState] = useState<"default" | "granted" | "denied">("default");
+  const [notifState, setNotifState] = useState<"default" | "granted" | "denied">("default");
+  const [cameraState, setCameraState] = useState<"default" | "granted" | "denied">("default");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const checkStates = async () => {
+      if (navigator.permissions) {
+        try {
+          const geo = await navigator.permissions.query({ name: "geolocation" as any });
+          setGeoState(geo.state as any);
+          geo.onchange = () => setGeoState(geo.state as any);
+        } catch {}
+
+        try {
+          const notif = await navigator.permissions.query({ name: "notifications" as any });
+          setNotifState(notif.state as any);
+          notif.onchange = () => setNotifState(notif.state as any);
+        } catch {}
+
+        try {
+          const cam = await navigator.permissions.query({ name: "camera" as any });
+          setCameraState(cam.state as any);
+          cam.onchange = () => setCameraState(cam.state as any);
+        } catch {}
+      } else {
+        setNotifState(Notification.permission as any);
+      }
+    };
+
+    checkStates();
+  }, []);
+
+  const requestGeo = () => {
+    if (typeof window === "undefined" || !("geolocation" in navigator)) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeoState("granted");
+        localStorage.setItem("sw_latitude", String(pos.coords.latitude));
+        localStorage.setItem("sw_longitude", String(pos.coords.longitude));
+        localStorage.setItem("sw_location_name", "My Precise Location");
+      },
+      () => setGeoState("denied")
+    );
+  };
+
+  const requestNotif = () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    Notification.requestPermission().then((permission) => {
+      setNotifState(permission as any);
+      localStorage.setItem("sw_perm_notifications", permission);
+    });
+  };
+
+  const requestCamera = async () => {
+    if (typeof window === "undefined" || !navigator.mediaDevices) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setCameraState("granted");
+      stream.getTracks().forEach(t => t.stop());
+    } catch {
+      setCameraState("denied");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full animate-scale-in text-slate-800 dark:text-white space-y-4 shadow-2xl">
+        <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+          <ShieldCheck className="w-6 h-6 animate-pulse" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="text-lg font-black tracking-tight">Essential App Permissions 🛡️</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            Sbjiwala requires location, alerts, and camera/file permissions to provide a seamless 10-minute shopping and support experience.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {/* Geolocation */}
+          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <MapPin className="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Location Services</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">For routing & delivery rules</p>
+              </div>
+            </div>
+            {geoState === "granted" ? (
+              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-black">ACTIVE</span>
+            ) : (
+              <button onClick={requestGeo} className="text-[10px] bg-emerald-600 text-white font-extrabold px-3 py-1.5 rounded-lg hover:bg-emerald-500 transition-all">ENABLE</button>
+            )}
+          </div>
+
+          {/* Notifications */}
+          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <Bell className="w-4.5 h-4.5 text-blue-500 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Order Alerts & Sound</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Live maps & delivery status</p>
+              </div>
+            </div>
+            {notifState === "granted" ? (
+              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-black">ACTIVE</span>
+            ) : (
+              <button onClick={requestNotif} className="text-[10px] bg-emerald-600 text-white font-extrabold px-3 py-1.5 rounded-lg hover:bg-emerald-500 transition-all">ALLOW</button>
+            )}
+          </div>
+
+          {/* Camera/File Upload */}
+          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <Camera className="w-4.5 h-4.5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Camera & Storage</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">For photos & profile pictures</p>
+              </div>
+            </div>
+            {cameraState === "granted" ? (
+              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-black">ACTIVE</span>
+            ) : (
+              <button onClick={requestCamera} className="text-[10px] bg-emerald-600 text-white font-extrabold px-3 py-1.5 rounded-lg hover:bg-emerald-500 transition-all">ALLOW</button>
+            )}
+          </div>
+
+          {/* Network & Background Connection status */}
+          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <Smartphone className="w-4.5 h-4.5 text-indigo-500 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Background Connection</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Auto-connect WebSockets & internet</p>
+              </div>
+            </div>
+            <span className="text-[10px] bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full font-black">ENABLED</span>
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 text-xs font-black text-slate-500 hover:text-slate-650 dark:hover:text-slate-400 text-center uppercase tracking-wider"
+          >
+            Skip for now
+          </button>
+          <button
+            onClick={() => {
+              onPermissionGranted();
+              onClose();
+            }}
+            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3 rounded-xl text-xs transition-all shadow-md shadow-emerald-900/20"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== APP SHELL ====================
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [showNotifModal, setShowNotifModal] = useState(false);
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 
   // Network State
   const [isOnline, setIsOnline] = useState(true);
   const [serverAvailable, setServerAvailable] = useState(true);
 
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Guard check for unauthenticated users
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isProtected = isProtectedRoute(pathname);
+    const hasToken = !!localStorage.getItem("sw_access_token");
+    if (isProtected && !hasToken) {
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+    }
+  }, [pathname, router]);
 
   // Network offline listener + server reachability check
   useEffect(() => {
@@ -701,6 +917,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       clearInterval(interval);
     };
   }, []);
+
+  // Check permissions on app start if onboarding is completed
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    if (localStorage.getItem("sw_splash_onboarding") === "completed") {
+      if (navigator.permissions) {
+        navigator.permissions.query({ name: "geolocation" }).then((result) => {
+          if (result.state !== "granted") {
+            setShowPermissionsModal(true);
+          }
+        }).catch(() => {});
+      }
+    }
+  }, [showSplash]);
 
   // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
@@ -784,6 +1015,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <BottomNav />
+
+      {/* Startup Permissions Modal */}
+      {showPermissionsModal && (
+        <UnifiedPermissionsModal
+          onClose={() => setShowPermissionsModal(false)}
+          onPermissionGranted={() => {
+            // refresh page state/items
+            window.location.reload();
+          }}
+        />
+      )}
 
       {/* Contextual Notification Modal Overlay */}
       {showNotifModal && (

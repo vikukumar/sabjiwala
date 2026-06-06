@@ -237,10 +237,24 @@ export default function DeliveryAgentDashboard() {
   const queryClient = useQueryClient();
   const [isOnline, setIsOnline] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
     setTheme(isDark ? "dark" : "light");
+  }, []);
+
+  // Check location permission on start
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: "geolocation" as any }).then((result) => {
+        if (result.state !== "granted") {
+          setShowPermissionModal(true);
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   const toggleTheme = () => {
@@ -531,6 +545,62 @@ export default function DeliveryAgentDashboard() {
           Sbjiwala Delivery v{versionInfo.version}
         </span>
       </footer>
+
+      {/* Geolocation Permission Request Modal */}
+      {showPermissionModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full animate-scale-in text-slate-800 dark:text-white space-y-4 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/50 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
+              <Navigation className="w-8 h-8 animate-bounce" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-xl font-black tracking-tight">Location Access Required 🛵</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                As a delivery partner, sharing your live location is mandatory to receive order assignments, navigate maps, and receive payout credits.
+              </p>
+            </div>
+            
+            <div className="text-xs font-semibold text-slate-650 dark:text-slate-350 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2 text-left">
+              <p className="flex items-center gap-2">
+                <span className="text-emerald-500">✔</span>
+                <span>Receive push order assignments near you</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-emerald-500">✔</span>
+                <span>Get step-by-step navigation routes to stores & homes</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-emerald-500">✔</span>
+                <span>Earn mileage incentives and correct coordinates payouts</span>
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                if (typeof window !== "undefined" && "geolocation" in navigator) {
+                  navigator.geolocation.getCurrentPosition(
+                    () => {
+                      setShowPermissionModal(false);
+                      window.location.reload();
+                    },
+                    () => {
+                      alert("Location permission was denied. Please enable location permissions in browser site settings.");
+                    }
+                  );
+                }
+              }}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3.5 rounded-2xl text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+            >
+              Enable Location Access
+            </button>
+            
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              Note: Geolocation permissions can be toggled any time in browser settings.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
