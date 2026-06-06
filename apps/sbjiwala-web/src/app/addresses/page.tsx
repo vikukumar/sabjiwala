@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { MapPin, Plus, Edit2, Trash2, CheckCircle2, Home, Briefcase, Navigation, Star, Loader2 } from "lucide-react";
-import { Button, Badge, Skeleton } from "@/components/ui/index";
+import { Button, Badge, EmptyState, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 import { useForm } from "react-hook-form";
 
@@ -15,21 +15,21 @@ function AddressCard({ addr, onEdit, onDelete, onDefault }: {
   onDefault: (id: string) => void;
 }) {
   return (
-    <div className={`relative bg-white dark:bg-slate-900 rounded-3xl p-5 space-y-2 border transition-all ${addr.is_default ? "border-emerald-500 shadow-md ring-1 ring-emerald-500/20" : "border-slate-200 dark:border-slate-800"}`}>
+    <div className={`relative card p-5 space-y-2 border transition-all ${addr.is_default ? "border-emerald-500 shadow-md ring-1 ring-emerald-500/20" : "border-slate-200 dark:border-slate-800"}`}>
       {addr.is_default && (
         <div className="absolute top-3 right-3">
           <Badge variant="success" size="sm">Default</Badge>
         </div>
       )}
       <div className="flex items-center gap-2">
-        <div className={`p-1.5 rounded-lg ${addr.label === "Home" ? "bg-blue-50 dark:bg-blue-950/30" : "bg-amber-50 dark:bg-amber-955/30"}`}>
+        <div className={`p-1.5 rounded-lg ${addr.label === "Home" ? "bg-blue-50 dark:bg-blue-950/30" : "bg-amber-50 dark:bg-amber-950/30"}`}>
           {addr.label === "Home" ? <Home className="w-4 h-4 text-blue-600 dark:text-blue-400" /> : <Briefcase className="w-4 h-4 text-amber-600 dark:text-amber-400" />}
         </div>
         <span className="font-bold text-sm text-slate-900 dark:text-white">{addr.label}</span>
       </div>
       <div>
         <p className="font-semibold text-sm text-slate-800 dark:text-slate-200">{addr.full_name}</p>
-        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+        <p className="text-sm text-slate-600 dark:text-slate-400">
           {addr.address_line_1}{addr.address_line_2 ? `, ${addr.address_line_2}` : ""}
         </p>
         <p className="text-sm text-slate-600 dark:text-slate-400">{addr.city}, {addr.postal_code}</p>
@@ -37,25 +37,10 @@ function AddressCard({ addr, onEdit, onDelete, onDefault }: {
         <p className="text-[10px] text-slate-400 font-mono mt-0.5">🌐 Coordinates: {addr.latitude?.toFixed(4)}, {addr.longitude?.toFixed(4)}</p>
       </div>
       <div className="flex gap-2 pt-1">
-        <button
-          onClick={() => onEdit(addr)}
-          className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700 transition-all cursor-pointer"
-        >
-          <Edit2 className="w-3 h-3" /> Edit
-        </button>
-        <button
-          onClick={() => onDelete(addr.id)}
-          className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white dark:bg-rose-955/15 dark:hover:bg-rose-650 px-3 py-1.5 rounded-xl border border-rose-100 dark:border-rose-900/30 transition-all cursor-pointer"
-        >
-          <Trash2 className="w-3 h-3" /> Delete
-        </button>
+        <Button variant="ghost" size="sm" leftIcon={<Edit2 className="w-3 h-3" />} onClick={() => onEdit(addr)}>Edit</Button>
+        <Button variant="ghost" size="sm" leftIcon={<Trash2 className="w-3 h-3" />} className="text-rose-500 hover:text-rose-700" onClick={() => onDelete(addr.id)}>Delete</Button>
         {!addr.is_default && (
-          <button
-            onClick={() => onDefault(addr.id)}
-            className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700 transition-all cursor-pointer"
-          >
-            <Star className="w-3 h-3" /> Set Default
-          </button>
+          <Button variant="ghost" size="sm" leftIcon={<Star className="w-3 h-3" />} onClick={() => onDefault(addr.id)}>Set Default</Button>
         )}
       </div>
     </div>
@@ -114,11 +99,13 @@ function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSav
       const marker = L.marker([initLat, initLng], { draggable: true, icon: pinIcon }).addTo(map);
       markerRef.current = marker;
 
+      // Update coordinates on marker drag
       marker.on("dragend", () => {
         const position = marker.getLatLng();
         setCoords({ lat: position.lat, lng: position.lng });
       });
 
+      // Update coordinates on map click
       map.on("click", (e: any) => {
         marker.setLatLng(e.latlng);
         setCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
@@ -139,10 +126,12 @@ function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSav
       if (markerRef.current) {
         markerRef.current.setLatLng([latitude, longitude]);
       }
+      // Fill address details using OSM reverse geocoding
       fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
         .then(res => res.json())
         .then(data => {
           if (data && data.address) {
+            const road = data.address.road || data.address.suburb || "";
             const city = data.address.city || data.address.town || data.address.suburb || "";
             const postcode = data.address.postcode || "";
             setValue("address_line_1", data.display_name || "");
@@ -176,21 +165,23 @@ function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSav
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4">
-      <div className="absolute inset-0 bg-slate-905/60 backdrop-blur-sm" onClick={onClose} />
-      <form onSubmit={handleSubmit(onSubmit)} className="relative bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 w-full max-w-lg space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto">
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+      <form onSubmit={handleSubmit(onSubmit)} className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-lg space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-black text-slate-900 dark:text-white">
           {existing ? "Edit Address" : "Add New Address"}
         </h3>
         
+        {/* Leaflet CSS */}
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
         
+        {/* Interactive map picker */}
         <div className="space-y-1.5">
           <div className="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400">
             <span>Select exact location on map *</span>
             <button
               type="button"
               onClick={handleLocateMe}
-              className="flex items-center gap-1 text-emerald-650 dark:text-emerald-450 hover:underline cursor-pointer"
+              className="flex items-center gap-1 text-emerald-600 dark:text-emerald-450 hover:underline cursor-pointer"
             >
               <Navigation className="w-3.5 h-3.5" /> Locate Me
             </button>
@@ -205,7 +196,7 @@ function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSav
           {["Home", "Work", "Other"].map(l => (
             <label key={l} className="flex-1">
               <input type="radio" value={l} {...register("label")} className="sr-only peer" defaultChecked={l === (existing?.label || "Home")} />
-              <div className="text-center py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50 dark:peer-checked:bg-emerald-950/30 peer-checked:text-emerald-700 border-slate-202 dark:border-slate-800 text-slate-500">
+              <div className="text-center py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50 dark:peer-checked:bg-emerald-950/30 peer-checked:text-emerald-700 border-slate-200 dark:border-slate-800 text-slate-500">
                 {l}
               </div>
             </label>
@@ -215,46 +206,46 @@ function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSav
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Full Name *</label>
-            <input {...register("full_name", { required: true })} className="input-base px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" placeholder="Recipient name" />
+            <input {...register("full_name", { required: true })} className="input-base px-3 py-2.5 text-sm" placeholder="Recipient name" />
           </div>
           <div className="col-span-2">
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Phone *</label>
-            <input {...register("phone", { required: true })} className="input-base px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" type="tel" placeholder="Mobile number" />
+            <input {...register("phone", { required: true })} className="input-base px-3 py-2.5 text-sm" type="tel" placeholder="Mobile number" />
           </div>
           <div className="col-span-2">
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Address Line 1 *</label>
-            <input {...register("address_line_1", { required: true })} className="input-base px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" placeholder="Flat/House number, building name" />
+            <input {...register("address_line_1", { required: true })} className="input-base px-3 py-2.5 text-sm" placeholder="Flat/House number, building name" />
           </div>
           <div className="col-span-2">
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Landmark / Area</label>
-            <input {...register("address_line_2")} className="input-base px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" placeholder="Landmark (optional)" />
+            <input {...register("address_line_2")} className="input-base px-3 py-2.5 text-sm" placeholder="Landmark (optional)" />
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">City *</label>
-            <input {...register("city", { required: true })} className="input-base px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" />
+            <input {...register("city", { required: true })} className="input-base px-3 py-2.5 text-sm" />
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">PIN Code *</label>
-            <input {...register("postal_code", { required: true })} className="input-base px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" maxLength={6} placeholder="400001" />
+            <input {...register("postal_code", { required: true })} className="input-base px-3 py-2.5 text-sm" maxLength={6} placeholder="400001" />
           </div>
         </div>
         
         <label className="flex items-center gap-2 cursor-pointer py-1">
           <input type="checkbox" {...register("is_default")} className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-350">Set as default address</span>
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Set as default address</span>
         </label>
         
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3.5 rounded-2xl text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3.5 rounded-2xl text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Address"}
           </button>
           <button
             type="button"
-            className="px-6 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850/30 transition-all cursor-pointer"
+            className="px-6 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850/30 transition-all"
             onClick={onClose}
           >
             Cancel
@@ -315,17 +306,12 @@ export default function AddressesPage() {
       {isLoading ? (
         <div className="space-y-3">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-36 w-full" />)}</div>
       ) : addresses.length === 0 ? (
-        <div className="py-12 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 text-center text-slate-455 space-y-3">
-          <span className="text-4xl block">📍</span>
-          <h4 className="text-base font-bold text-slate-700 dark:text-slate-200">No saved addresses</h4>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">Add a precise delivery address for rapid 10-minute order routing.</p>
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm transition-all cursor-pointer"
-          >
-            Add Address
-          </button>
-        </div>
+        <EmptyState
+          emoji="📍"
+          title="No saved addresses"
+          description="Add a precise delivery address for rapid 10-minute order routing."
+          action={<Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowForm(true)}>Add Address</Button>}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {addresses.map((addr: any) => (

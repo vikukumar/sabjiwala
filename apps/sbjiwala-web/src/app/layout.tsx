@@ -1,63 +1,108 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Sbjiwala.in - Online Vegetable Market",
-  description: "Explore Customer, Vendor, Delivery, and Admin portals in a unified web experience.",
+  title: {
+    default: "Sbjiwala.in — Fresh Vegetables & Fruits in 10 Minutes",
+    template: "%s | Sbjiwala.in",
+  },
+  description:
+    "Order fresh farm vegetables & fruits online. Get hygienic, cleaned produce delivered at your doorstep in 10 minutes. Direct from local farms.",
+  keywords: ["vegetables", "fruits", "grocery", "fresh produce", "online vegetables", "home delivery", "Sbjiwala"],
+  authors: [{ name: "Sbjiwala", url: "https://sbjiwala.in" }],
+  metadataBase: new URL("https://sbjiwala.in"),
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: "https://sbjiwala.in",
+    siteName: "Sbjiwala.in",
+    title: "Sbjiwala.in — Fresh Vegetables & Fruits in 10 Minutes",
+    description: "Get fresh farm produce delivered at your doorstep in 10 minutes.",
+    images: [{ url: "/logo_horizontal.png", width: 1200, height: 630, alt: "Sbjiwala.in" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sbjiwala.in — Fresh Vegetables & Fruits in 10 Minutes",
+    description: "Get fresh farm produce delivered at your doorstep in 10 minutes.",
+    images: ["/logo_horizontal.png"],
+  },
+  robots: { index: true, follow: true },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Sbjiwala",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icon-192x192.png" }],
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#059669" },
+    { media: "(prefers-color-scheme: dark)", color: "#10b981" },
+  ],
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} h-full`}
       suppressHydrationWarning
     >
       <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#10b981" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Sbjiwala" />
-        <link rel="apple-touch-icon" href="/icon-192x192.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  var theme = localStorage.getItem('sw_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                  if (theme === 'dark') {
-                    document.documentElement.classList.add('dark');
-                  } else {
-                    document.documentElement.classList.remove('dark');
-                  }
-                } catch (e) {}
+                  var theme = localStorage.getItem('sw_theme') ||
+                    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                  document.documentElement.classList.remove('dark','amoled');
+                  if (theme === 'dark') document.documentElement.classList.add('dark');
+                  else if (theme === 'amoled') document.documentElement.classList.add('dark','amoled');
+                } catch(e) {}
               })();
             `,
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col">
-        <Providers>
-          {children}
-        </Providers>
+      <body className="min-h-full flex flex-col antialiased" style={{ fontFamily: "var(--font-inter, Inter, system-ui, sans-serif)" }}>
+        <Providers>{children}</Providers>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js')
+                    .catch(function(err) { console.warn('SW reg failed:', err); });
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

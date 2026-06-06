@@ -1,17 +1,37 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Home, Search, ShoppingCart, Heart, User, Bell, Wallet,
   MapPin, Tag, Gift, HelpCircle, LogOut, ChevronRight,
   Moon, Sun, Zap, Menu, X, Package, Settings, Star,
   MessageSquare, FileText, Shield, RotateCcw, ShieldCheck, Check,
-  Smartphone, Camera
+  Leaf,
+  RefreshCw,
+  WifiOff,
+  Camera,
+  Smartphone
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
+
+// ==================== ROUTE PROTECTION helper ====================
+export const isProtectedRoute = (path: string) => {
+  const protectedPrefixes = [
+    "/profile",
+    "/orders",
+    "/wishlist",
+    "/wallet",
+    "/referrals",
+    "/addresses",
+    "/reviews",
+    "/settings",
+    "/checkout"
+  ];
+  return protectedPrefixes.some(prefix => path === prefix || path.startsWith(prefix + "/"));
+};
 
 // ==================== NAV ITEMS ====================
 const mainNavItems = [
@@ -181,6 +201,7 @@ function Header({ onMenuOpen }: { onMenuOpen: () => void }) {
 // ==================== SIDEBAR ====================
 function Sidebar({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const isActive = (href: string, exact = false) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
 
@@ -232,7 +253,13 @@ function Sidebar({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean })
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      onClick={onClose}
+                      onClick={(e) => {
+                        if (isProtectedRoute(item.href) && !localStorage.getItem("sw_access_token")) {
+                          e.preventDefault();
+                          router.push(`/login?redirect=${encodeURIComponent(item.href)}`);
+                        }
+                        if (onClose) onClose();
+                      }}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${active
                         ? "bg-emerald-600 text-white shadow-sm shadow-emerald-900/30"
                         : "text-slate-400 hover:text-white hover:bg-white/8"
@@ -285,6 +312,7 @@ function Sidebar({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean })
 // ==================== BOTTOM NAV (Mobile) ====================
 function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const { data: cartData } = useQuery<any>({
     queryKey: ["cart"],
@@ -308,6 +336,12 @@ function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={(e) => {
+                if (isProtectedRoute(item.href) && !localStorage.getItem("sw_access_token")) {
+                  e.preventDefault();
+                  router.push(`/login?redirect=${encodeURIComponent(item.href)}`);
+                }
+              }}
               className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all ${isActive
                 ? "text-emerald-600 dark:text-emerald-400"
                 : "text-slate-400 dark:text-slate-500"
@@ -336,11 +370,53 @@ function BottomNav() {
   );
 }
 
-// ==================== SPLASH & PERMISSIONS SCREEN ====================
+// ==================== GEOLOCATION FALLBACK PICKER ====================
+interface LocationSelectDrawerProps {
+  onSelect: (lat: number, lon: number, name: string) => void;
+  onClose: () => void;
+}
+
+const DEFAULT_CITIES = [
+  { name: "Vashi, Navi Mumbai", lat: 19.0330, lon: 73.0297 },
+  { name: "Bandra West, Mumbai", lat: 19.0596, lon: 72.8295 },
+  { name: "Andheri East, Mumbai", lat: 19.1176, lon: 72.8631 },
+  { name: "Thane West, Maharashtra", lat: 19.2183, lon: 72.9781 },
+  { name: "Powai, Mumbai", lat: 19.1176, lon: 72.9060 },
+];
+
+function LocationSelectDrawer({ onSelect, onClose }: LocationSelectDrawerProps) {
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 animate-scale-in text-white">
+      <h3 className="font-black text-sm uppercase tracking-wider text-slate-400">Select Neighborhood</h3>
+      <p className="text-xs text-slate-400">Since precise geolocation was denied, select a nearby delivery hub:</p>
+      <div className="space-y-2 mt-2 max-h-48 overflow-y-auto pr-1">
+        {DEFAULT_CITIES.map((city) => (
+          <button
+            key={city.name}
+            onClick={() => onSelect(city.lat, city.lon, city.name)}
+            className="w-full text-left px-4 py-3 rounded-xl bg-slate-800 hover:bg-emerald-600 hover:text-white transition-all text-xs font-bold flex items-center justify-between border border-slate-700 hover:border-emerald-500"
+          >
+            <span>{city.name}</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={onClose}
+        className="w-full text-center text-xs font-black text-slate-500 hover:text-slate-400 tracking-wider uppercase pt-2"
+      >
+        Close
+      </button>
+    </div>
+  );
+}
+
+// ==================== SPLASH & MULTI-SLIDE ONBOARDING ====================
 function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
   const [loading, setLoading] = useState(true);
+  const [slide, setSlide] = useState(1);
   const [locPermission, setLocPermission] = useState<"default" | "granted" | "denied">("default");
-  const [notifPermission, setNotifPermission] = useState<"default" | "granted" | "denied">("default");
+  const [showManualPicker, setShowManualPicker] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.permissions) {
@@ -349,49 +425,40 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
         result.onchange = () => setLocPermission(result.state as any);
       }).catch(() => { });
     }
-    if (typeof window !== "undefined" && "Notification" in window) {
-      setNotifPermission(Notification.permission as any);
-    }
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 1800);
+    }, 1200);
     return () => clearTimeout(timer);
   }, []);
 
   const requestLocation = () => {
-    if (typeof window === "undefined" || !("geolocation" in navigator)) return;
+    if (typeof window === "undefined" || !("geolocation" in navigator)) {
+      setLocPermission("denied");
+      setShowManualPicker(true);
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocPermission("granted");
         localStorage.setItem("sw_latitude", String(pos.coords.latitude));
         localStorage.setItem("sw_longitude", String(pos.coords.longitude));
+        localStorage.setItem("sw_location_name", "My Precise Location");
+        localStorage.setItem("sw_perm_location", "granted");
+        localStorage.setItem("sw_splash_onboarding", "completed");
+        onComplete();
       },
       () => {
         setLocPermission("denied");
+        localStorage.setItem("sw_perm_location", "denied");
+        setShowManualPicker(true);
       }
     );
   };
 
-  const requestNotifications = () => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-    Notification.requestPermission().then((permission) => {
-      setNotifPermission(permission as any);
-    });
-  };
-
-  const handleAllAndProceed = async () => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          localStorage.setItem("sw_latitude", String(pos.coords.latitude));
-          localStorage.setItem("sw_longitude", String(pos.coords.longitude));
-        },
-        () => { }
-      );
-    }
-    if ("Notification" in window) {
-      await Notification.requestPermission();
-    }
+  const handleManualLocation = (lat: number, lon: number, name: string) => {
+    localStorage.setItem("sw_latitude", String(lat));
+    localStorage.setItem("sw_longitude", String(lon));
+    localStorage.setItem("sw_location_name", name);
     localStorage.setItem("sw_splash_onboarding", "completed");
     onComplete();
   };
@@ -407,7 +474,7 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
         </div>
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-black tracking-wider text-white">Sbjiwala</h2>
-          <p className="text-xs font-semibold text-emerald-400 uppercase tracking-widest animate-pulse">Freshness loading</p>
+          <p className="text-xs font-semibold text-emerald-400 uppercase tracking-widest animate-pulse">Freshness Loading</p>
         </div>
       </div>
     );
@@ -415,101 +482,194 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-[#090d10] flex flex-col justify-between px-6 py-12 text-white font-sans overflow-y-auto">
+      {/* Onboarding Header */}
       <div className="flex flex-col items-center text-center mt-6 space-y-4">
         <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/30 rounded-3xl p-3 shadow-lg flex items-center justify-center">
           <img src="/icon.png" alt="Sbjiwala" className="w-full h-full object-contain" />
         </div>
         <div className="space-y-1">
           <h1 className="text-3xl font-black tracking-tight text-white">Sbjiwala</h1>
-          <p className="text-xs text-slate-400 font-semibold tracking-wide max-w-sm px-4">
-            Farm-fresh greens at your door in 10 minutes. To deliver on time, we require location and alert permissions.
-          </p>
+          <span className="inline-flex bg-emerald-950/80 border border-emerald-800 text-emerald-400 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+            Step {slide} of 4
+          </span>
         </div>
       </div>
 
-      <div className="max-w-md w-full mx-auto space-y-4 my-8">
-        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-5">
-          <h3 className="text-sm font-black uppercase tracking-wider text-slate-400">Essential Permissions</h3>
+      {/* Onboarding Dynamic Slides */}
+      <div className="max-w-md w-full mx-auto my-8 min-h-[220px] flex items-center">
+        {slide === 1 && (
+          <div className="w-full text-center space-y-4 animate-fade-in">
+            <h2 className="text-xl font-black text-white">Welcome to Sbjiwala</h2>
+            <p className="text-sm text-slate-400 leading-relaxed px-4">
+              Your ultimate farm-to-fork express grocery app. Discover and shop crisp, premium vegetables and fruits directly from local farms.
+            </p>
+          </div>
+        )}
 
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-emerald-950/40 border border-emerald-900/50 rounded-2xl text-emerald-400 flex-shrink-0 mt-0.5">
-              <MapPin className="w-5 h-5" />
+        {slide === 2 && (
+          <div className="w-full text-center space-y-4 animate-fade-in">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
+              <MapPin className="w-8 h-8" />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-center">
-                <p className="font-extrabold text-sm text-slate-200">Precise Geolocation</p>
-                {locPermission === "granted" ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-950/20 px-2.5 py-0.5 rounded-full border border-emerald-900/50">
-                    <Check className="w-3 h-3" /> Granted
-                  </span>
-                ) : locPermission === "denied" ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-400 bg-rose-950/20 px-2.5 py-0.5 rounded-full border border-rose-900/50">
-                    Denied
-                  </span>
-                ) : (
-                  <button onClick={requestLocation} className="text-xs font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-xl">
-                    Enable
+            <h2 className="text-xl font-black text-white">Why We Need Location</h2>
+            <p className="text-sm text-slate-400 leading-relaxed px-4">
+              We detect nearby store radiuses to show available items in your service area, match local couriers, and calculate exact delivery fees.
+            </p>
+          </div>
+        )}
+
+        {slide === 3 && (
+          <div className="w-full text-center space-y-4 animate-fade-in">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
+              <Leaf className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-black text-white">10-Minute Freshness</h2>
+            <p className="text-sm text-slate-400 leading-relaxed px-4">
+              Our products are washed, hygienically packed, and delivered to your doorstep in 10 minutes flat with guaranteed safety.
+            </p>
+          </div>
+        )}
+
+        {slide === 4 && (
+          <div className="w-full space-y-5 animate-fade-in">
+            {showManualPicker ? (
+              <LocationSelectDrawer
+                onSelect={handleManualLocation}
+                onClose={() => setShowManualPicker(false)}
+              />
+            ) : (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-5 text-center">
+                <h3 className="text-sm font-black uppercase tracking-wider text-slate-400">Geolocation Setup</h3>
+                <p className="text-xs text-slate-400 px-2 leading-relaxed">
+                  Provide precise location permissions for live courier updates and accurate mapping.
+                </p>
+                <div className="flex justify-center gap-2">
+                  <button
+                    onClick={requestLocation}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-6 py-3 rounded-xl text-xs transition-all flex items-center gap-2 border border-emerald-500 mx-auto"
+                  >
+                    <MapPin className="w-4 h-4" /> Enable Geolocation
                   </button>
+                </div>
+                {locPermission === "denied" && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-[10px] text-rose-400 font-bold">Location access blocked by browser.</p>
+                    <button
+                      onClick={() => setShowManualPicker(true)}
+                      className="text-xs text-emerald-400 hover:underline font-bold"
+                    >
+                      Choose Manual Location instead →
+                    </button>
+                  </div>
                 )}
               </div>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Needed to calculate delivery fees, pin your home address, and connect with nearby stores.
-              </p>
-            </div>
+            )}
           </div>
-
-          <hr className="border-slate-800" />
-
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-950/40 border border-blue-900/50 rounded-2xl text-blue-400 flex-shrink-0 mt-0.5">
-              <Bell className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-center">
-                <p className="font-extrabold text-sm text-slate-200">Order Alerts & Offers</p>
-                {notifPermission === "granted" ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-950/20 px-2.5 py-0.5 rounded-full border border-emerald-900/50">
-                    <Check className="w-3 h-3" /> Enabled
-                  </span>
-                ) : notifPermission === "denied" ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-400 bg-rose-950/20 px-2.5 py-0.5 rounded-full border border-rose-900/50">
-                    Blocked
-                  </span>
-                ) : (
-                  <button onClick={requestNotifications} className="text-xs font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-xl">
-                    Allow
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Sends live updates on packaging, courier assignment, ETA times, and special discounts.
-              </p>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
+      {/* Onboarding Bottom Controls */}
       <div className="max-w-md w-full mx-auto space-y-4">
-        <button
-          onClick={handleAllAndProceed}
-          className="w-full bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-extrabold py-3.5 rounded-2xl text-sm transition-all shadow-md shadow-emerald-900/30 flex items-center justify-center gap-2"
-        >
-          <ShieldCheck className="w-5 h-5" /> Allow all and proceed
-        </button>
-        <button
-          onClick={() => {
-            localStorage.setItem("sw_splash_onboarding", "completed");
-            onComplete();
-          }}
-          className="w-full text-center text-xs font-black text-slate-500 hover:text-slate-400 tracking-wider uppercase"
-        >
-          Skip for now
-        </button>
+        {/* Navigation Dot controls */}
+        <div className="flex justify-center gap-2 mb-2">
+          {[1, 2, 3, 4].map((i) => (
+            <span
+              key={i}
+              className={`h-1.5 rounded-full transition-all ${i === slide ? "bg-emerald-500 w-6" : "bg-slate-700 w-1.5"}`}
+            />
+          ))}
+        </div>
+
+        {slide < 4 ? (
+          <div className="flex gap-3">
+            <button
+              onClick={() => setSlide(4)}
+              className="flex-1 text-center text-xs font-black text-slate-500 hover:text-slate-400 tracking-wider uppercase py-3.5"
+            >
+              Skip
+            </button>
+            <button
+              onClick={() => setSlide((s) => s + 1)}
+              className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-black py-3.5 rounded-2xl text-xs transition-all text-center border border-slate-700"
+            >
+              Next
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                localStorage.setItem("sw_splash_onboarding", "completed");
+                localStorage.setItem("sw_latitude", "19.0760");
+                localStorage.setItem("sw_longitude", "72.8777");
+                localStorage.setItem("sw_location_name", "Mumbai Center (Default)");
+                onComplete();
+              }}
+              className="w-full text-center text-xs font-black text-slate-550 hover:text-slate-400 tracking-wider uppercase py-2"
+            >
+              Skip for now
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+// ==================== CONTEXTUAL NOTIFICATION PERMISSION BENEFIT MODAL ====================
+interface NotificationModalProps {
+  onClose: () => void;
+  onGrant: () => void;
+}
+
+function NotificationBenefitModal({ onClose, onGrant }: NotificationModalProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full animate-scale-in text-slate-800 dark:text-white space-y-4">
+        <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+          <Bell className="w-6 h-6 animate-bounce" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="text-lg font-black tracking-tight">Enable Live Alerts? 🔔</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            Get instant courier status mappings and special platform coupons delivered contextually:
+          </p>
+        </div>
+        <ul className="space-y-2 text-xs font-semibold text-slate-650 dark:text-slate-300">
+          <li className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-500" />
+            <span>Real-time Courier ETA & Live Map tracking</span>
+          </li>
+          <li className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-500" />
+            <span>Order Packed & Dispatch warnings</span>
+          </li>
+          <li className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-500" />
+            <span>Exclusive flash coupon updates & wallet bonuses</span>
+          </li>
+        </ul>
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 text-xs font-black text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 text-center uppercase tracking-wider"
+          >
+            Later
+          </button>
+          <button
+            onClick={onGrant}
+            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3 rounded-xl text-xs transition-all shadow-md shadow-emerald-900/20"
+          >
+            Allow Alerts
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== APP SHELL ====================
 // ==================== STARTUP PERMISSIONS MODAL ====================
 interface UnifiedPermissionsModalProps {
   onClose: () => void;
@@ -558,6 +718,7 @@ function UnifiedPermissionsModal({ onClose, onPermissionGranted }: UnifiedPermis
         setGeoState("granted");
         localStorage.setItem("sw_latitude", String(pos.coords.latitude));
         localStorage.setItem("sw_longitude", String(pos.coords.longitude));
+        localStorage.setItem("sw_location_name", "My Precise Location");
       },
       () => setGeoState("denied")
     );
@@ -684,13 +845,77 @@ function UnifiedPermissionsModal({ onClose, onPermissionGranted }: UnifiedPermis
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [showNotifModal, setShowNotifModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
-  const pathname = usePathname();
 
+  // Network State
+  const [isOnline, setIsOnline] = useState(true);
+  const [serverAvailable, setServerAvailable] = useState(true);
+
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Guard check for unauthenticated users
   useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem("sw_splash_onboarding") === "completed") {
+    if (typeof window === "undefined") return;
+    const isProtected = isProtectedRoute(pathname);
+    const hasToken = !!localStorage.getItem("sw_access_token");
+    if (isProtected && !hasToken) {
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+    }
+  }, [pathname, router]);
+
+  // Network offline listener + server reachability check
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    // Initial onboarding splash check
+    if (localStorage.getItem("sw_splash_onboarding") === "completed") {
       setShowSplash(false);
     }
+
+    // Check notifications prompt request event
+    const handleNotifPrompt = () => {
+      if ("Notification" in window && Notification.permission === "default") {
+        setShowNotifModal(true);
+      }
+    };
+    window.addEventListener("trigger-notification-benefit", handleNotifPrompt);
+
+    // Poll server health status every 30 seconds
+    const checkServerHealth = async () => {
+      try {
+        const res = await api.get("/health");
+        if (res.success || res.data) {
+          setServerAvailable(true);
+        }
+      } catch (err) {
+        // Fallback check catalog
+        try {
+          await api.get("/catalog/categories");
+          setServerAvailable(true);
+        } catch {
+          setServerAvailable(false);
+        }
+      }
+    };
+
+    checkServerHealth();
+    const interval = setInterval(checkServerHealth, 30000);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("trigger-notification-benefit", handleNotifPrompt);
+      clearInterval(interval);
+    };
   }, []);
 
   // Check permissions on app start if onboarding is completed
@@ -711,6 +936,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
+  // Request alert permission inside browser dialogue
+  const handleRequestNotif = () => {
+    setShowNotifModal(false);
+    if ("Notification" in window) {
+      Notification.requestPermission().then((permission) => {
+        localStorage.setItem("sw_perm_notifications", permission);
+      });
+    }
+  };
+
   // Public routes that don't need app shell (full screen)
   const isAuthRoute = ["/login", "/register"].some(r => pathname?.startsWith(r));
   if (isAuthRoute) return <>{children}</>;
@@ -719,16 +954,62 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <SplashPermissionsScreen onComplete={() => setShowSplash(false)} />;
   }
 
+  // Server Offline / Maintenance Overlay
+  if (!serverAvailable) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#090d10] text-white flex flex-col items-center justify-center p-6 text-center space-y-6 font-sans">
+        <div className="w-20 h-20 bg-amber-500/10 border border-amber-500/30 rounded-3xl p-4 flex items-center justify-center text-amber-500 animate-pulse">
+          <RefreshCw className="w-10 h-10 animate-spin" style={{ animationDuration: '3s' }} />
+        </div>
+        <div className="space-y-2 max-w-sm">
+          <h2 className="text-xl font-black text-white">Sbjiwala Restocking</h2>
+          <p className="text-sm text-slate-400 leading-relaxed">
+            Our farm servers are undergoing cleaning, sorting, and organic updates. We will be fresh and online in a few minutes.
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-6 py-3 rounded-xl text-xs transition-all shadow-md"
+        >
+          Check Connectivity
+        </button>
+      </div>
+    );
+  }
+
+  // Network Offline Overlay
+  if (!isOnline) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#090d10] text-white flex flex-col items-center justify-center p-6 text-center space-y-6 font-sans">
+        <div className="w-20 h-20 bg-rose-500/10 border border-rose-500/30 rounded-3xl p-4 flex items-center justify-center text-rose-500 animate-bounce">
+          <WifiOff className="w-10 h-10" />
+        </div>
+        <div className="space-y-2 max-w-sm">
+          <h2 className="text-xl font-black text-white">No Internet Connection</h2>
+          <p className="text-sm text-slate-400 leading-relaxed">
+            Please check your device parameters, mobile data, or Wi-Fi connectivity and try again.
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-6 py-3 rounded-xl text-xs transition-all shadow-md"
+        >
+          Retry Connection
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex max-w-full overflow-x-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col md:ml-64 min-w-0">
+      <div className="flex-1 flex flex-col md:ml-64 min-w-0 max-w-full overflow-x-hidden pt-[env(safe-area-inset-top)]">
         <Header onMenuOpen={() => setSidebarOpen(true)} />
 
         {/* Page content */}
-        <main className="flex-1 pb-20 md:pb-0 page-enter">
+        <main className="flex-1 pb-20 md:pb-0 page-enter max-w-full overflow-x-hidden">
           {children}
         </main>
       </div>
@@ -740,8 +1021,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <UnifiedPermissionsModal
           onClose={() => setShowPermissionsModal(false)}
           onPermissionGranted={() => {
+            // refresh page state/items
             window.location.reload();
           }}
+        />
+      )}
+
+      {/* Contextual Notification Modal Overlay */}
+      {showNotifModal && (
+        <NotificationBenefitModal
+          onClose={() => setShowNotifModal(false)}
+          onGrant={handleRequestNotif}
         />
       )}
     </div>

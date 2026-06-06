@@ -57,21 +57,18 @@ export default function LoginPage() {
   };
 
   const getBackendUrl = (path: string) => {
-    if (typeof window !== "undefined") {
-      const isNextDev = window.location.port === "3000" || window.location.port === "3001" || window.location.port === "3002" || window.location.port === "3003";
-      const backendUrl = isNextDev ? "http://localhost:8000" : window.location.origin;
-      return `${backendUrl}/api/v1${path}`;
+    const apiBase = api.client.defaults.baseURL || "/api/v1";
+    if (apiBase.startsWith("/")) {
+      if (typeof window !== "undefined") {
+        return `${window.location.origin}${apiBase}${path}`;
+      }
+      return `/api/v1${path}`;
     }
-    return `/api/v1${path}`;
+    return `${apiBase}${path}`;
   };
 
   const configureBaseUrl = () => {
-    const isNextDev = typeof window !== "undefined" && (window.location.port === "3000" || window.location.port === "3001" || window.location.port === "3002" || window.location.port === "3003");
-    if (isNextDev) {
-      (api as any).client.defaults.baseURL = "http://localhost:8000/api/v1";
-    } else {
-      (api as any).client.defaults.baseURL = "/api/v1";
-    }
+    // Shared ApiClient resolves baseURL dynamically; no manual override needed.
   };
 
   const handleSendOtp = async (e: React.FormEvent) => {

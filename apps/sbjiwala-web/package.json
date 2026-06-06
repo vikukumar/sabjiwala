@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "prebuild": "node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json'); fs.copyFileSync('../../version.json', 'src/app/admin/version.json'); fs.copyFileSync('../../version.json', 'src/app/vendor/version.json'); fs.copyFileSync('../../version.json', 'src/app/delivery/version.json');\"",
-    "predev": "node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json'); fs.copyFileSync('../../version.json', 'src/app/admin/version.json'); fs.copyFileSync('../../version.json', 'src/app/vendor/version.json'); fs.copyFileSync('../../version.json', 'src/app/delivery/version.json');\""
+    "prebuild": "node sync-subapps.js && node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json'); fs.copyFileSync('../../version.json', 'src/app/admin/version.json'); fs.copyFileSync('../../version.json', 'src/app/vendor/version.json'); fs.copyFileSync('../../version.json', 'src/app/delivery/version.json');\"",
+    "predev": "node sync-subapps.js && node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json'); fs.copyFileSync('../../version.json', 'src/app/admin/version.json'); fs.copyFileSync('../../version.json', 'src/app/vendor/version.json'); fs.copyFileSync('../../version.json', 'src/app/delivery/version.json');\""
   },
   "dependencies": {
     "@sbjiwala/shared": "file:../../shared",

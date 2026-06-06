@@ -9,8 +9,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 
-import { useRef } from "react";
-
 function DeliveryTrackingMap({ order, isOnline, token }: { order: any; isOnline: boolean; token: string }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [simulationMode, setSimulationMode] = useState(true);
@@ -30,9 +28,18 @@ function DeliveryTrackingMap({ order, isOnline, token }: { order: any; isOnline:
     let reconnectTimeout: any;
 
     const connectWS = () => {
-      const isNextDev = window.location.port === "3000" || window.location.port === "3001" || window.location.port === "3002" || window.location.port === "3003";
-      const baseHost = isNextDev ? "localhost:8000" : window.location.host;
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const apiBase = api.client.defaults.baseURL || "/api/v1";
+      let baseHost = "";
+      let protocol = "ws:";
+
+      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
+        const url = new URL(apiBase);
+        baseHost = url.host;
+        protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      } else {
+        baseHost = window.location.host;
+        protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      }
       
       ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
       wsRef.current = ws;
@@ -233,14 +240,30 @@ function DeliveryTrackingMap({ order, isOnline, token }: { order: any; isOnline:
   );
 }
 
+import { useRef } from "react";
+
 export default function DeliveryAgentDashboard() {
   const queryClient = useQueryClient();
   const [isOnline, setIsOnline] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
     setTheme(isDark ? "dark" : "light");
+  }, []);
+
+  // Check location permission on start
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: "geolocation" as any }).then((result) => {
+        if (result.state !== "granted") {
+          setShowPermissionModal(true);
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   const toggleTheme = () => {
@@ -267,6 +290,16 @@ export default function DeliveryAgentDashboard() {
     queryFn: async () => {
       const res = await api.get("/delivery/assignments");
       return res.data || [];
+    },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token")
+  });
+
+  // 2b. Fetch delivery boy profile
+  const { data: profileData } = useQuery<any>({
+    queryKey: ["deliveryProfile"],
+    queryFn: async () => {
+      const res = await api.get("/delivery/me");
+      return res.data;
     },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token")
   });
@@ -331,13 +364,18 @@ export default function DeliveryAgentDashboard() {
     }
   };
 
+  const profile = profileData || null;
+  const isPrivateCourier = !!profile?.vendor_id;
+  const walletBalance = profile?.wallet_balance ?? 0.0;
+  const cashInHand = profile?.cash_in_hand ?? 0.0;
+
   return (
     <div className="min-h-screen bg-slate-55 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 antialiased font-sans flex flex-col pb-8 transition-colors duration-200">
       {/* Top Banner */}
       <header className="sticky top-0 z-50 bg-emerald-600 dark:bg-slate-900 text-white shadow-md transition-colors duration-200">
         <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-black tracking-tight">Sbjiwala</span>
+            <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-8 w-auto object-contain brightness-0 invert" />
             <span className="text-[10px] uppercase bg-emerald-700 dark:bg-emerald-950/80 text-white dark:text-emerald-300 font-extrabold px-2 py-0.5 rounded-full">
               Delivery
             </span>
@@ -381,24 +419,36 @@ export default function DeliveryAgentDashboard() {
 
       {/* Main Container */}
       <main className="max-w-md w-full mx-auto px-4 py-6 space-y-6 flex-1">
-        {/* Earnings Card */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-800 transition-colors duration-200">
-          <div className="pr-4 space-y-1">
-            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Earnings Today</span>
-            <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-black text-xl">
-              <DollarSign className="w-5 h-5" />
-              <span>₹350.00</span>
+        {/* Earnings Card - Hidden for private couriers */}
+        {!isPrivateCourier ? (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-800 transition-colors duration-200">
+            <div className="pr-4 space-y-1">
+              <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Earnings Balance</span>
+              <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-black text-xl">
+                <span className="text-sm font-bold">₹</span>
+                <span>{walletBalance.toFixed(2)}</span>
+              </div>
             </div>
-          </div>
 
-          <div className="pl-4 space-y-1">
-            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Cash In Hand</span>
-            <div className="flex items-center gap-1 text-slate-900 dark:text-slate-50 font-black text-xl">
-              <Wallet className="w-5 h-5" />
-              <span>₹220.00</span>
+            <div className="pl-4 space-y-1">
+              <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Cash In Hand</span>
+              <div className="flex items-center gap-1 text-slate-900 dark:text-slate-50 font-black text-xl">
+                <span className="text-sm font-bold">₹</span>
+                <span>{cashInHand.toFixed(2)}</span>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 dark:from-emerald-950/20 dark:to-teal-950/20 border border-emerald-300 dark:border-emerald-900/40 rounded-2xl p-4 shadow-sm flex items-center justify-between transition-colors duration-200">
+            <div className="space-y-0.5">
+              <h4 className="text-xs font-black text-emerald-700 dark:text-emerald-300">Linked Store Courier</h4>
+              <p className="text-[10px] text-slate-550 dark:text-slate-455">Offline direct settlements with vendor</p>
+            </div>
+            <span className="text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded">
+              Store Courier
+            </span>
+          </div>
+        )}
 
         {/* Assignments Header */}
         <div className="flex justify-between items-center px-1">
@@ -504,6 +554,62 @@ export default function DeliveryAgentDashboard() {
           Sbjiwala Delivery v{versionInfo.version}
         </span>
       </footer>
+
+      {/* Geolocation Permission Request Modal */}
+      {showPermissionModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full animate-scale-in text-slate-800 dark:text-white space-y-4 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/50 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
+              <Navigation className="w-8 h-8 animate-bounce" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-xl font-black tracking-tight">Location Access Required 🛵</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                As a delivery partner, sharing your live location is mandatory to receive order assignments, navigate maps, and receive payout credits.
+              </p>
+            </div>
+            
+            <div className="text-xs font-semibold text-slate-650 dark:text-slate-350 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2 text-left">
+              <p className="flex items-center gap-2">
+                <span className="text-emerald-500">✔</span>
+                <span>Receive push order assignments near you</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-emerald-500">✔</span>
+                <span>Get step-by-step navigation routes to stores & homes</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-emerald-500">✔</span>
+                <span>Earn mileage incentives and correct coordinates payouts</span>
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                if (typeof window !== "undefined" && "geolocation" in navigator) {
+                  navigator.geolocation.getCurrentPosition(
+                    () => {
+                      setShowPermissionModal(false);
+                      window.location.reload();
+                    },
+                    () => {
+                      alert("Location permission was denied. Please enable location permissions in browser site settings.");
+                    }
+                  );
+                }
+              }}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3.5 rounded-2xl text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+            >
+              Enable Location Access
+            </button>
+            
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              Note: Geolocation permissions can be toggled any time in browser settings.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

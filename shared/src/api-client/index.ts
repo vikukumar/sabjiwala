@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { APIResponse, PaginatedResponse } from '../types';
 
 export class ApiClient {
-  private client: AxiosInstance;
+  public client: AxiosInstance;
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
   private onTokenRefreshed: ((token: string) => void) | null = null;
@@ -10,9 +10,18 @@ export class ApiClient {
   constructor(baseURL: string = '/api/v1') {
     let finalBaseURL = baseURL;
     if (typeof window !== 'undefined') {
-      const isNextDev = window.location.port === '3000' || window.location.port === '3001' || window.location.port === '3002';
-      if (isNextDev) {
-        finalBaseURL = 'http://localhost:8000/api/v1';
+      const storedBaseUrl = localStorage.getItem('sw_api_base_url');
+      if (storedBaseUrl) {
+        finalBaseURL = storedBaseUrl;
+      } else {
+        const isNextDev = window.location.port === '3000' || window.location.port === '3001' || window.location.port === '3002' || window.location.port === '3003';
+        const isCapacitor = window.location.hostname === 'localhost' && (window.location.port === '' || window.location.protocol.startsWith('capacitor'));
+        
+        if (isNextDev) {
+          finalBaseURL = 'http://localhost:8000/api/v1';
+        } else if (isCapacitor) {
+          finalBaseURL = 'http://10.0.2.2/api/v1';
+        }
       }
     }
     this.client = axios.create({
@@ -82,7 +91,7 @@ export class ApiClient {
           if (this.refreshToken) {
             try {
               // Call token refresh endpoint
-              const res = await axios.post<APIResponse>('/api/v1/auth/refresh', {
+              const res = await axios.post<APIResponse>(`${this.client.defaults.baseURL}/auth/refresh`, {
                 refresh_token: this.refreshToken,
               });
               

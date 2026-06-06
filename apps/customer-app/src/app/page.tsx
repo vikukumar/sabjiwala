@@ -604,9 +604,18 @@ export default function HomePage() {
     let reconnectTimeout: any;
 
     const connectWS = () => {
-      const isNextDev = window.location.port === "3000" || window.location.port === "3001" || window.location.port === "3002" || window.location.port === "3003";
-      const baseHost = isNextDev ? "localhost:8000" : window.location.host;
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const apiBase = api.client.defaults.baseURL || "/api/v1";
+      let baseHost = "";
+      let protocol = "ws:";
+
+      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
+        const url = new URL(apiBase);
+        baseHost = url.host;
+        protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      } else {
+        baseHost = window.location.host;
+        protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      }
       
       ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
 

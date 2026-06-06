@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import {
   Building2, Users, Receipt, Settings,
-  CheckCircle2, XCircle, Database, ShieldAlert, Sparkles, ChevronRight, Loader2
+  CheckCircle2, XCircle, Database, ShieldAlert, Sparkles, ChevronRight, Loader2, Menu, X
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
@@ -13,8 +13,11 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [commissionRate, setCommissionRate] = useState(5.0);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const isDark = document.documentElement.classList.contains("dark");
     setTheme(isDark ? "dark" : "light");
   }, []);
@@ -123,11 +126,71 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 antialiased font-sans flex transition-colors duration-200">
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between p-6 border-r border-slate-800">
+      {/* Mobile Navigation Drawer */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden font-sans">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => setIsMobileMenuOpen(false)}
+          ></div>
+          {/* Drawer Content */}
+          <aside className="relative w-64 max-w-xs bg-slate-900 text-slate-300 flex flex-col justify-between p-6 border-r border-slate-800 h-full">
+            <div className="space-y-8">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-6 w-auto object-contain brightness-0 invert" />
+                  <span className="text-[9px] uppercase tracking-wider bg-slate-800 text-slate-400 font-bold px-1.5 py-0.5 rounded">
+                    Admin
+                  </span>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <nav className="space-y-1">
+                <a href="#" className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-800 text-white font-medium text-sm transition-all">
+                  <Building2 className="w-5 h-5" />
+                  <span>Vendors Oversight</span>
+                </a>
+                <a href="#" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-800 hover:text-white text-sm transition-all">
+                  <Database className="w-5 h-5" />
+                  <span>Auto Migration Logs</span>
+                </a>
+                <a href="#" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-800 hover:text-white text-sm transition-all">
+                  <Settings className="w-5 h-5" />
+                  <span>System Settings</span>
+                </a>
+              </nav>
+            </div>
+
+            <div className="space-y-3">
+              <div className="bg-slate-850 rounded-xl p-4 space-y-1 border border-slate-800">
+                <p className="text-xs text-slate-550">Authenticated as</p>
+                <h4 className="text-sm font-bold text-white">System Admin</h4>
+                <span className="inline-block bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold px-2 py-0.5 rounded">
+                  SUPER_USER
+                </span>
+              </div>
+              <div className="text-center">
+                <span className="text-[10px] text-slate-500 font-mono tracking-wider">
+                  Sbjiwala v{versionInfo.version}
+                </span>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* Desktop Sidebar */}
+      <aside className="w-64 bg-slate-900 text-slate-300 hidden md:flex flex-col justify-between p-6 border-r border-slate-800 flex-shrink-0">
         <div className="space-y-8">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-black text-emerald-500 tracking-tight">Sbjiwala</span>
+            <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-6 w-auto object-contain brightness-0 invert" />
             <span className="text-[10px] uppercase tracking-wider bg-slate-800 text-slate-450 font-bold px-2.5 py-0.5 rounded">
               Super Admin
             </span>
@@ -151,7 +214,7 @@ export default function AdminDashboard() {
 
         <div className="space-y-3">
           <div className="bg-slate-850 rounded-xl p-4 space-y-1 border border-slate-800">
-            <p className="text-xs text-slate-550">Authenticated as</p>
+            <p className="text-xs text-slate-555">Authenticated as</p>
             <h4 className="text-sm font-bold text-white">System Admin</h4>
             <span className="inline-block bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold px-2 py-0.5 rounded">
               SUPER_USER
@@ -166,12 +229,31 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
         {/* Header */}
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-8 flex items-center justify-between shadow-sm transition-colors duration-200">
-          <h2 className="text-lg font-black text-slate-800 dark:text-slate-100">Platform Administration Control</h2>
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 flex items-center justify-between shadow-sm transition-colors duration-200 sticky top-0 z-40">
+          <div className="flex items-center gap-3">
+            {/* Hamburger Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-355"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+
+            <div className="flex items-center gap-2 md:hidden">
+              <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-7 w-auto object-contain" />
+              <span className="text-[9px] uppercase bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded-full">
+                Admin
+              </span>
+            </div>
+
+            <h2 className="text-base md:text-lg font-black text-slate-800 dark:text-slate-100 hidden md:block">
+              Platform Administration Control
+            </h2>
+          </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-955/20 border border-emerald-100 dark:border-emerald-900/40 px-3 py-1.5 rounded-full">
+            <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-955/20 border border-emerald-100 dark:border-emerald-900/40 px-3 py-1.5 rounded-full">
               <Sparkles className="w-4 h-4" />
               <span>Platform Status: Live & Optimal</span>
             </div>
