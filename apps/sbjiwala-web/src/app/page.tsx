@@ -1,10 +1,196 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Search, MapPin, ShoppingBag, User, Plus, Minus, ArrowRight, Star, Loader2, X, ClipboardList, XCircle } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Search, MapPin, ShoppingBag, User, Plus, Minus, ArrowRight, Star, Loader2, X, ClipboardList, XCircle, Navigation, BellRing } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
+
+// Dynamic Leaflet order tracking component
+function ActiveTrackingMap({ order, driverLocation, onClose }: { order: any; driverLocation: any; onClose: () => void }) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [mapObj, setMapObj] = useState<any>(null);
+  const driverMarkerRef = useRef<any>(null);
+  const pathLineRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !mapContainerRef.current) return;
+
+    let map: any;
+
+    import("leaflet").then((L) => {
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
+
+      const customerLat = order.delivery_address?.latitude || 19.0735;
+      const customerLng = order.delivery_address?.longitude || 72.9985;
+      const storeLat = 19.0760; // Seeded store lat
+      const storeLng = 72.9977; // Seeded store lng
+
+      const driverLat = driverLocation?.latitude || storeLat;
+      const driverLng = driverLocation?.longitude || storeLng;
+
+      map = L.map(mapContainerRef.current!).setView([driverLat, driverLng], 14);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors"
+      }).addTo(map);
+
+      // Customer marker
+      const homeIcon = L.divIcon({
+        html: '<div style="background:#10b981;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏠</div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+      L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
+
+      // Store marker
+      const storeIcon = L.divIcon({
+        html: '<div style="background:#3b82f6;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏪</div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+      L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup("Pickup Store");
+
+      // Driver marker
+      const vehicleType = order.delivery_agent?.vehicle_type || "scooty";
+      const colors = ["#ef4444", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#10b981"];
+      const charCodeSum = (order.id || "agent").split("").reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
+      const color = colors[charCodeSum % colors.length];
+
+      const emoji = vehicleType === "scooty" ? "🛵" : vehicleType === "bike" ? "🏍️" : vehicleType === "truck" ? "🚚" : "🚲";
+      const driverIcon = L.divIcon({
+        html: `
+          <div style="background:${color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);position:relative;">
+            ${emoji}
+            <span style="position:absolute;bottom:-4px;width:12px;height:12px;background:#10b981;border:2px solid white;border-radius:50%;animation:ping 1s infinite;"></span>
+          </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+
+      const driverMarker = L.marker([driverLat, driverLng], { icon: driverIcon }).addTo(map).bindPopup("Delivery Partner");
+      driverMarkerRef.current = driverMarker;
+
+      // Draw route lines
+      L.polyline([[storeLat, storeLng], [customerLat, customerLng]], { color: "#cbd5e1", weight: 2, dashArray: "4 4" }).addTo(map);
+      pathLineRef.current = L.polyline([[driverLat, driverLng], [customerLat, customerLng]], { color: "#10b981", weight: 4 }).addTo(map);
+
+      map.fitBounds([[customerLat, customerLng], [storeLat, storeLng], [driverLat, driverLng]], { padding: [50, 50] });
+
+      setMapObj(map);
+    });
+
+    return () => {
+      if (map) map.remove();
+    };
+  }, [order.id]);
+
+  useEffect(() => {
+    if (mapObj && driverLocation && driverMarkerRef.current) {
+      const newPos = [driverLocation.latitude, driverLocation.longitude] as [number, number];
+      driverMarkerRef.current.setLatLng(newPos);
+      if (pathLineRef.current) {
+        const customerLat = order.delivery_address?.latitude || 19.0735;
+        const customerLng = order.delivery_address?.longitude || 72.9985;
+        pathLineRef.current.setLatLngs([newPos, [customerLat, customerLng]]);
+      }
+    }
+  }, [driverLocation, mapObj]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-xl shadow-2xl animate-scale-in flex flex-col gap-4 max-h-[95vh] overflow-y-auto" style={{ zIndex: 10 }}>
+        <div className="flex justify-between items-center">
+          <div className="space-y-0.5">
+            <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <span className="animate-bounce">🛵</span> Live Order Tracking
+            </h3>
+            <p className="text-xs text-slate-500">Order #{order.order_number}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div ref={mapContainerRef} className="h-72 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 relative" style={{ zIndex: 1 }} />
+
+        <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center text-xl font-bold">
+              👨‍✈️
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-900 dark:text-white">
+                {order.delivery_agent?.name || "Delivery Agent"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {order.delivery_agent?.vehicle_type?.toUpperCase() || "SCOOTY"} • {order.delivery_agent?.vehicle_number || "MH-43-XY-9988"}
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-xs font-bold text-slate-400 block uppercase">Delivery OTP</span>
+            <span className="text-lg font-black text-emerald-600 dark:text-emerald-450 tracking-wider">
+              {order.delivery_otp || "4004"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const categoryDetails: Record<string, { title: string; subtitle: string; emoji: string; gradient: string; textDark: string; textLight: string }> = {
+  All: {
+    title: "All Items",
+    subtitle: "Browse everything",
+    emoji: "🛒",
+    gradient: "from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20",
+    textDark: "text-emerald-800 dark:text-emerald-300",
+    textLight: "text-emerald-600 dark:text-emerald-400"
+  },
+  Vegetables: {
+    title: "Fresh Vegetables",
+    subtitle: "Direct from farms",
+    emoji: "🥦",
+    gradient: "from-green-50 to-emerald-100 dark:from-green-950/20 dark:to-emerald-950/20",
+    textDark: "text-green-800 dark:text-green-300",
+    textLight: "text-green-600 dark:text-green-400"
+  },
+  "Leafy Greens": {
+    title: "Leafy Greens",
+    subtitle: "Crisp & hygienic",
+    emoji: "🥬",
+    gradient: "from-lime-50 to-green-100 dark:from-lime-950/20 dark:to-green-950/20",
+    textDark: "text-lime-800 dark:text-lime-300",
+    textLight: "text-lime-600 dark:text-lime-450"
+  },
+  Exotics: {
+    title: "Exotic Produce",
+    subtitle: "Premium selections",
+    emoji: "🥑",
+    gradient: "from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20",
+    textDark: "text-purple-800 dark:text-purple-300",
+    textLight: "text-purple-600 dark:text-purple-400"
+  },
+  Herbs: {
+    title: "Fresh Herbs",
+    subtitle: "Aromatic & clean",
+    emoji: "🌿",
+    gradient: "from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20",
+    textDark: "text-teal-800 dark:text-teal-300",
+    textLight: "text-teal-600 dark:text-teal-400"
+  }
+};
 
 export default function Home() {
   const queryClient = useQueryClient();
@@ -12,6 +198,9 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
+  const [activeTrackingOrder, setActiveTrackingOrder] = useState<any>(null);
+  const [driverLocation, setDriverLocation] = useState<any>(null);
+  const [notificationBanner, setNotificationBanner] = useState<{ title: string; body: string } | null>(null);
 
   // Fetch customer past orders
   const { data: myOrders = [], isLoading: myOrdersLoading } = useQuery<any[]>({
@@ -59,6 +248,69 @@ export default function Home() {
       window.location.href = "/login";
     }
   }, []);
+
+  // WebSocket connection for real-time tracking and notifications
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const token = localStorage.getItem("sw_access_token");
+    if (!token) return;
+
+    let ws: WebSocket;
+    let reconnectTimeout: any;
+
+    const connectWS = () => {
+      const isNextDev = window.location.port === "3000" || window.location.port === "3001" || window.location.port === "3002" || window.location.port === "3003";
+      const baseHost = isNextDev ? "localhost:8000" : window.location.host;
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      
+      ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          const { type, data } = message;
+
+          if (type === "notification") {
+            setNotificationBanner({ title: data.title, body: data.body });
+            if (document.visibilityState === "hidden" && "Notification" in window && Notification.permission === "granted") {
+              new Notification(data.title, { body: data.body, icon: "/icon.png" });
+            }
+            setTimeout(() => {
+              setNotificationBanner(null);
+            }, 6000);
+            queryClient.invalidateQueries({ queryKey: ["myOrders"] });
+          } else if (type === "live_location") {
+            if (activeTrackingOrder && data.order_id === activeTrackingOrder.id) {
+              setDriverLocation({
+                latitude: data.latitude,
+                longitude: data.longitude,
+                speed: data.speed,
+                heading: data.heading,
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Error parsing WS message:", err);
+        }
+      };
+
+      ws.onclose = () => {
+        reconnectTimeout = setTimeout(connectWS, 5000);
+      };
+
+      ws.onerror = (err) => {
+        console.error("WS error:", err);
+        ws.close();
+      };
+    };
+
+    connectWS();
+
+    return () => {
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
+  }, [activeTrackingOrder]);
 
   // 2. Fetch categories
   const { data: categories = [] } = useQuery<any[]>({
@@ -261,31 +513,52 @@ export default function Home() {
           />
         </div>
 
-        {/* Categories */}
-        <div className="space-y-3">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Browse by Category</h3>
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            <button
-              onClick={() => setSelectedCategory("All")}
-              className={`px-6 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all border ${selectedCategory === "All"
-                ? "bg-emerald-600 dark:bg-emerald-500 text-white border-emerald-600 dark:border-emerald-500 shadow-sm"
-                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                }`}
-            >
-              All
-            </button>
-            {categories.map((cat: any) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.name)}
-                className={`px-6 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all border ${selectedCategory === cat.name
-                  ? "bg-emerald-600 dark:bg-emerald-500 text-white border-emerald-600 dark:border-emerald-500 shadow-sm"
-                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+        {/* Categories Grid */}
+        <div className="space-y-4">
+          <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Shop by Category</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            {[{ id: "all", name: "All" }, ...categories].map((cat: any) => {
+              const details = (categoryDetails as any)[cat.name] || {
+                title: cat.name,
+                subtitle: "Fresh produce",
+                emoji: "🥗",
+                gradient: "from-slate-50 to-slate-100 dark:from-slate-900/40 dark:to-slate-800/40",
+                textDark: "text-slate-800 dark:text-slate-300",
+                textLight: "text-slate-600 dark:text-slate-400"
+              };
+              const isSelected = selectedCategory === cat.name;
+
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.name)}
+                  className={`relative overflow-hidden rounded-3xl p-5 text-left border transition-all duration-300 hover:scale-[1.03] hover:-translate-y-0.5 group active:scale-95 cursor-pointer ${
+                    isSelected
+                      ? "border-emerald-500 ring-2 ring-emerald-500/20 shadow-md bg-white dark:bg-slate-900"
+                      : "border-slate-200 dark:border-slate-800/80 shadow-sm bg-gradient-to-br " + details.gradient
                   }`}
-              >
-                {cat.name}
-              </button>
-            ))}
+                >
+                  {/* Floating Large background emoji */}
+                  <span className="absolute -right-2 -bottom-2 text-6xl opacity-10 group-hover:scale-125 group-hover:rotate-12 transition-transform duration-300 pointer-events-none select-none">
+                    {details.emoji}
+                  </span>
+
+                  <div className="relative z-10 flex flex-col justify-between h-full min-h-[80px]">
+                    <span className="text-3xl mb-3 block transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300">
+                      {details.emoji}
+                    </span>
+                    <div>
+                      <h4 className={`font-black text-sm tracking-tight ${details.textDark}`}>
+                        {details.title}
+                      </h4>
+                      <p className={`text-[11px] font-medium leading-none mt-0.5 ${details.textLight}`}>
+                        {details.subtitle}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -464,9 +737,23 @@ export default function Home() {
                               }
                             }}
                             disabled={cancelOrderMutation.isPending}
-                            className="text-xs bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white dark:bg-rose-955/20 dark:hover:bg-rose-650 dark:text-rose-450 dark:hover:text-white font-bold px-3.5 py-1.5 rounded-xl border border-rose-100 dark:border-rose-900/30 transition-all flex items-center gap-1 disabled:opacity-50"
+                            className="text-xs bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white dark:bg-rose-955/20 dark:hover:bg-rose-650 dark:text-rose-455 dark:hover:text-white font-bold px-3.5 py-1.5 rounded-xl border border-rose-100 dark:border-rose-900/30 transition-all flex items-center gap-1 disabled:opacity-50"
                           >
                             <XCircle className="w-3.5 h-3.5" /> Cancel Order
+                          </button>
+                        )}
+                        {order.status === "out_for_delivery" && (
+                          <button
+                            onClick={() => {
+                              setActiveTrackingOrder(order);
+                              setDriverLocation({
+                                latitude: order.delivery_agent?.latitude || 19.0760,
+                                longitude: order.delivery_agent?.longitude || 72.9977
+                              });
+                            }}
+                            className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+                          >
+                            <Navigation className="w-3.5 h-3.5" /> Track Live 🛵
                           </button>
                         )}
                       </div>
@@ -483,6 +770,38 @@ export default function Home() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Push Notification Banner */}
+      {notificationBanner && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] w-[90%] max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-4 flex items-start gap-3 border-l-4 border-l-emerald-500 animate-slide-down">
+          <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl flex-shrink-0">
+            <BellRing className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="flex-1 space-y-0.5">
+            <h4 className="text-sm font-black text-slate-900 dark:text-white">
+              {notificationBanner.title}
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
+              {notificationBanner.body}
+            </p>
+          </div>
+          <button
+            onClick={() => setNotificationBanner(null)}
+            className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-650 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Active Tracking Map Modal */}
+      {activeTrackingOrder && (
+        <ActiveTrackingMap
+          order={activeTrackingOrder}
+          driverLocation={driverLocation}
+          onClose={() => setActiveTrackingOrder(null)}
+        />
       )}
     </div>
   );

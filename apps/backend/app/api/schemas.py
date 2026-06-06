@@ -307,6 +307,8 @@ class OrderResponse(BaseModel):
     customer_notes: Optional[str] = None
     estimated_delivery_time: Optional[datetime] = None
     created_at: datetime
+    delivery_otp: Optional[str] = None
+    delivery_agent: Optional[dict] = None
 
     class Config:
         from_attributes = True

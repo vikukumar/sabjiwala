@@ -9,6 +9,230 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 
+function DeliveryTrackingMap({ order, isOnline, token }: { order: any; isOnline: boolean; token: string }) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [simulationMode, setSimulationMode] = useState(true);
+  const [mapObj, setMapObj] = useState<any>(null);
+  const [currentPos, setCurrentPos] = useState<[number, number]>([19.0760, 72.9977]);
+  const [distanceInfo, setDistanceInfo] = useState<string>("Calculating...");
+  
+  const driverMarkerRef = useRef<any>(null);
+  const pathLineRef = useRef<any>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // Setup WebSocket connection for streaming coordinates
+  useEffect(() => {
+    if (!isOnline || !order || typeof window === "undefined") return;
+
+    let ws: WebSocket;
+    let reconnectTimeout: any;
+
+    const connectWS = () => {
+      const isNextDev = window.location.port === "3000" || window.location.port === "3001" || window.location.port === "3002" || window.location.port === "3003";
+      const baseHost = isNextDev ? "localhost:8000" : window.location.host;
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      
+      ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
+      wsRef.current = ws;
+
+      ws.onclose = () => {
+        reconnectTimeout = setTimeout(connectWS, 5000);
+      };
+    };
+
+    connectWS();
+
+    return () => {
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      wsRef.current = null;
+    };
+  }, [isOnline, order, token]);
+
+  // Stream current location updates to the WebSocket backplane every 4 seconds
+  useEffect(() => {
+    if (!isOnline || !order || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+
+    const interval = setInterval(() => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: "location_update",
+          data: {
+            latitude: currentPos[0],
+            longitude: currentPos[1],
+            accuracy: 10,
+            speed: 5,
+            heading: 0,
+            order_id: order.id
+          }
+        }));
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [currentPos, isOnline, order]);
+
+  // Simulation & GPS watch logic
+  useEffect(() => {
+    if (!isOnline || !order) return;
+
+    const storeLat = 19.0760;
+    const storeLng = 72.9977;
+    const customerLat = order.delivery_address?.latitude || 19.0735;
+    const customerLng = order.delivery_address?.longitude || 72.9985;
+
+    if (simulationMode) {
+      let step = 0;
+      const totalSteps = 30;
+      
+      const interval = setInterval(() => {
+        step = (step + 1) % (totalSteps + 1);
+        const ratio = step / totalSteps;
+        const lat = storeLat + (customerLat - storeLat) * ratio;
+        const lng = storeLng + (customerLng - storeLng) * ratio;
+        setCurrentPos([lat, lng]);
+
+        const remainingRatio = 1 - ratio;
+        const totalDist = 2.4; 
+        const remDist = (totalDist * remainingRatio).toFixed(2);
+        setDistanceInfo(`${remDist} km left to customer address`);
+      }, 3000);
+
+      return () => clearInterval(interval);
+    } else {
+      if (!navigator.geolocation) {
+        setDistanceInfo("GPS not supported. Use simulation mode.");
+        return;
+      }
+
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setCurrentPos([lat, lng]);
+
+          const dist = Math.sqrt(Math.pow(lat - customerLat, 2) + Math.pow(lng - customerLng, 2)) * 111.3;
+          setDistanceInfo(`${dist.toFixed(2)} km left to customer`);
+        },
+        (error) => {
+          console.error("GPS tracking error:", error);
+          setDistanceInfo("GPS error: " + error.message);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
+  }, [simulationMode, isOnline, order]);
+
+  // Leaflet map setup
+  useEffect(() => {
+    if (typeof window === "undefined" || !mapContainerRef.current || !order) return;
+
+    let map: any;
+
+    import("leaflet").then((L) => {
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
+
+      const customerLat = order.delivery_address?.latitude || 19.0735;
+      const customerLng = order.delivery_address?.longitude || 72.9985;
+      const storeLat = 19.0760;
+      const storeLng = 72.9977;
+
+      map = L.map(mapContainerRef.current!).setView([storeLat, storeLng], 14);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors"
+      }).addTo(map);
+
+      const homeIcon = L.divIcon({
+        html: '<div style="background:#ef4444;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏠</div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+      L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
+
+      const storeIcon = L.divIcon({
+        html: '<div style="background:#3b82f6;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏪</div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+      L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup("Pickup Store");
+
+      const hash = (order.id || "agent").split("").reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
+      const vehicleColors = ["#ef4444", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#10b981", "#ff4500", "#1e90ff"];
+      const color = vehicleColors[hash % vehicleColors.length];
+      const vehicleType = order.delivery_agent?.vehicle_type || "scooty";
+      const emoji = vehicleType === "scooty" ? "🛵" : vehicleType === "bike" ? "🏍️" : vehicleType === "truck" ? "🚚" : "🚲";
+
+      const driverIcon = L.divIcon({
+        html: `
+          <div style="background:${color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);position:relative;">
+            ${emoji}
+            <span style="position:absolute;bottom:-4px;width:12px;height:12px;background:#10b981;border:2px solid white;border-radius:50%;animation:ping 1s infinite;"></span>
+          </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+
+      const driverMarker = L.marker([storeLat, storeLng], { icon: driverIcon }).addTo(map).bindPopup("My Location");
+      driverMarkerRef.current = driverMarker;
+
+      L.polyline([[storeLat, storeLng], [customerLat, customerLng]], { color: "#cbd5e1", weight: 2, dashArray: "4 4" }).addTo(map);
+      pathLineRef.current = L.polyline([[storeLat, storeLng], [customerLat, customerLng]], { color: "#10b981", weight: 4 }).addTo(map);
+
+      map.fitBounds([[storeLat, storeLng], [customerLat, customerLng]], { padding: [40, 40] });
+      setMapObj(map);
+    });
+
+    return () => {
+      if (map) map.remove();
+    };
+  }, [order]);
+
+  useEffect(() => {
+    if (mapObj && driverMarkerRef.current) {
+      driverMarkerRef.current.setLatLng(currentPos);
+      if (pathLineRef.current && order) {
+        const customerLat = order.delivery_address?.latitude || 19.0735;
+        const customerLng = order.delivery_address?.longitude || 72.9985;
+        pathLineRef.current.setLatLngs([currentPos, [customerLat, customerLng]]);
+      }
+    }
+  }, [currentPos, mapObj, order]);
+
+  return (
+    <div className="space-y-3">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+      <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 p-3 flex-wrap gap-2 rounded-2xl border border-slate-205 dark:border-slate-800 text-xs">
+        <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-100">
+          <Navigation className="w-4 h-4 text-emerald-600 dark:text-emerald-450 animate-bounce" />
+          <span>{distanceInfo}</span>
+        </div>
+        <button
+          onClick={() => setSimulationMode(!simulationMode)}
+          className={`px-3 py-1 rounded-xl font-bold transition-all border ${
+            simulationMode
+              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+          } cursor-pointer`}
+        >
+          {simulationMode ? "Simulated GPS 🛰️" : "Device GPS 📍"}
+        </button>
+      </div>
+
+      <div ref={mapContainerRef} className="h-48 rounded-2xl border border-slate-205 dark:border-slate-800 relative shadow-inner overflow-hidden" style={{ zIndex: 1 }} />
+    </div>
+  );
+}
+
+import { useRef } from "react";
+
 export default function DeliveryAgentDashboard() {
   const queryClient = useQueryClient();
   const [isOnline, setIsOnline] = useState(false);
@@ -261,6 +485,15 @@ export default function DeliveryAgentDashboard() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Active Live Tracking Map */}
+                  {task.status === "out_for_delivery" && (
+                    <DeliveryTrackingMap
+                      order={task}
+                      isOnline={isOnline}
+                      token={localStorage.getItem("sw_access_token") || ""}
+                    />
+                  )}
 
                   {/* Action details */}
                   <div className="border-t border-slate-100 dark:border-slate-800 pt-4 flex items-center justify-between gap-4">

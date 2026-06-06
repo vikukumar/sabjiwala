@@ -126,14 +126,31 @@ async def get_order_details(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    # Visibility check
-    role = current_user.get("role", "customer")
-    if role == "customer" and order.user_id != current_user["user_id"]:
-        raise HTTPException(status_code=403, detail="Access denied")
-    elif role == "delivery_boy" and order.delivery_boy_id != current_user["user_id"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    # Construct the response model with delivery boy details
+    res_data = OrderResponse.model_validate(order)
+    
+    if order.delivery_boy_id:
+        from app.models.user import User
+        from app.models.delivery import DeliveryBoy
+        
+        user_res = await db.execute(select(User).where(User.id == order.delivery_boy_id))
+        user = user_res.scalars().first()
+        
+        boy_res = await db.execute(select(DeliveryBoy).where(DeliveryBoy.user_id == order.delivery_boy_id))
+        boy = boy_res.scalars().first()
+        
+        if user:
+            res_data.delivery_agent = {
+                "name": f"{user.first_name} {user.last_name}".strip(),
+                "phone": user.phone,
+                "vehicle_type": boy.vehicle_type if boy else "scooty",
+                "vehicle_number": boy.vehicle_number if boy else "MH-43-AB-1234",
+                "latitude": boy.current_latitude if boy else None,
+                "longitude": boy.current_longitude if boy else None,
+            }
+            res_data.delivery_otp = order.delivery_otp
 
-    return APIResponse(success=True, data=OrderResponse.model_validate(order))
+    return APIResponse(success=True, data=res_data)
 
 
 @router.patch("/{order_id}/status", response_model=APIResponse[OrderResponse])

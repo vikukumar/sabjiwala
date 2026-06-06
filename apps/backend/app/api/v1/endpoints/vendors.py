@@ -214,6 +214,64 @@ async def create_delivery_rule(
     return APIResponse(success=True, message="Delivery rule created")
 
 
+@router.get("/me/service-areas", response_model=APIResponse)
+async def get_my_service_areas(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get current vendor's service areas."""
+    result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
+    vendor = result.scalars().first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    area_result = await db.execute(
+        select(VendorServiceArea).where(VendorServiceArea.vendor_id == vendor.id, VendorServiceArea.is_deleted == False)
+    )
+    areas = area_result.scalars().all()
+    return APIResponse(success=True, data=[
+        {
+            "id": str(area.id),
+            "name": area.name,
+            "radius_km": area.radius_km,
+            "center_latitude": area.center_latitude,
+            "center_longitude": area.center_longitude,
+            "polygon_geojson": area.polygon_geojson,
+            "is_active": area.is_active,
+        }
+        for area in areas
+    ])
+
+
+@router.get("/me/delivery-rules", response_model=APIResponse)
+async def get_my_delivery_rules(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get current vendor's delivery rules."""
+    result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
+    vendor = result.scalars().first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    rule_result = await db.execute(
+        select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == vendor.id, VendorDeliveryRule.is_deleted == False)
+    )
+    rules = rule_result.scalars().all()
+    return APIResponse(success=True, data=[
+        {
+            "id": str(rule.id),
+            "min_order_amount": float(rule.min_order_amount),
+            "free_delivery_above": float(rule.free_delivery_above) if rule.free_delivery_above is not None else None,
+            "base_delivery_charge": float(rule.base_delivery_charge),
+            "per_km_charge": float(rule.per_km_charge),
+            "max_delivery_distance_km": rule.max_delivery_distance_km,
+            "distance_slabs": rule.distance_slabs,
+        }
+        for rule in rules
+    ])
+
+
 # ===== Admin vendor management =====
 
 @router.get("/", response_model=PaginatedResponse[VendorResponse])

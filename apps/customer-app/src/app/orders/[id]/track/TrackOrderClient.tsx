@@ -8,20 +8,104 @@ import Link from "next/link";
 import { ChevronLeft, Phone, MessageSquare, MapPin, Truck, Clock, CheckCircle2 } from "lucide-react";
 import { Badge, Button, Spinner } from "@/components/ui/index";
 
+const VEHICLES = [
+  { type: "scooty", emoji: "🛵" },
+  { type: "bike", emoji: "🏍️" },
+  { type: "truck", emoji: "🚚" },
+  { type: "bicycle", emoji: "🚲" }
+];
+const COLORS = ["#ef4444", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#10b981", "#ff4500", "#1e90ff"];
+
+const getVehicleDetails = (orderId: string, agentVehicleType?: string) => {
+  const hash = (orderId || "agent").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const vehicle = VEHICLES[hash % VEHICLES.length];
+  const color = COLORS[(hash + 3) % COLORS.length];
+  const type = agentVehicleType || vehicle.type;
+  const emoji = type === "scooty" ? "🛵" : type === "bike" ? "🏍️" : type === "truck" ? "🚚" : "🚲";
+  return { emoji, color };
+};
+
 export default function TrackOrderClient() {
   const { id } = useParams<{ id: string }>();
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [driverLocation, setDriverLocation] = useState<any>(null);
+  const [mapObj, setMapObj] = useState<any>(null);
+  const driverMarkerRef = useRef<any>(null);
+  const pathLineRef = useRef<any>(null);
 
   const { data: order } = useQuery<any>({
     queryKey: ["order", id],
     queryFn: async () => { const r = await api.get(`/orders/${id}`); return r.data; },
-    refetchInterval: 15_000,
   });
+
+  // Seed initial location
+  useEffect(() => {
+    if (order && !driverLocation) {
+      setDriverLocation({
+        latitude: order.delivery_agent?.current_latitude || order.delivery_agent?.latitude || 19.076,
+        longitude: order.delivery_agent?.current_longitude || order.delivery_agent?.longitude || 72.877
+      });
+    }
+  }, [order]);
+
+  // Connect to WebSocket backplane
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const token = localStorage.getItem("sw_access_token");
+    if (!token) return;
+
+    let ws: WebSocket;
+    let reconnectTimeout: any;
+
+    const connectWS = () => {
+      const isNextDev = window.location.port === "3000" || window.location.port === "3001" || window.location.port === "3002" || window.location.port === "3003";
+      const baseHost = isNextDev ? "localhost:8000" : window.location.host;
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      
+      ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          const { type, data } = message;
+
+          if (type === "live_location" && data.order_id === id) {
+            setDriverLocation({
+              latitude: data.latitude,
+              longitude: data.longitude,
+              speed: data.speed,
+              heading: data.heading,
+            });
+          }
+        } catch (err) {
+          console.error("Error parsing WS message:", err);
+        }
+      };
+
+      ws.onclose = () => {
+        reconnectTimeout = setTimeout(connectWS, 5000);
+      };
+
+      ws.onerror = (err) => {
+        console.error("WS error:", err);
+        ws.close();
+      };
+    };
+
+    connectWS();
+
+    return () => {
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
+  }, [id]);
 
   // Initialize Leaflet map
   useEffect(() => {
-    if (typeof window === "undefined" || !mapRef.current || mapLoaded) return;
+    if (typeof window === "undefined" || !mapRef.current || mapLoaded || !order) return;
+
+    let map: any;
 
     import("leaflet").then((L) => {
       // Fix marker icons
@@ -32,12 +116,15 @@ export default function TrackOrderClient() {
         shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
       });
 
-      const lat = order?.delivery_address?.latitude || 19.076;
-      const lng = order?.delivery_address?.longitude || 72.877;
-      const dlat = (order?.delivery_agent?.latitude) || lat + 0.005;
-      const dlng = (order?.delivery_agent?.longitude) || lng + 0.005;
+      const customerLat = order.delivery_address?.latitude || 19.0735;
+      const customerLng = order.delivery_address?.longitude || 72.9985;
+      const storeLat = 19.0760; // Seeded store lat
+      const storeLng = 72.9977; // Seeded store lng
 
-      const map = L.map(mapRef.current!).setView([lat, lng], 14);
+      const initDriverLat = driverLocation?.latitude || storeLat;
+      const initDriverLng = driverLocation?.longitude || storeLng;
+
+      map = L.map(mapRef.current!).setView([customerLat, customerLng], 14);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
       }).addTo(map);
@@ -47,27 +134,60 @@ export default function TrackOrderClient() {
         html: '<div style="background:#059669;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏠</div>',
         iconSize: [32, 32],
         iconAnchor: [16, 16],
-        className: "",
       });
-      L.marker([lat, lng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
+      L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
+
+      // Store marker
+      const storeIcon = L.divIcon({
+        html: '<div style="background:#3b82f6;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏪</div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+      L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup("Pickup Store");
 
       // Delivery agent marker
-      if (order?.status === "out_for_delivery") {
-        const agentIcon = L.divIcon({
-          html: '<div style="background:#f59e0b;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🛵</div>',
-          iconSize: [32, 32],
-          iconAnchor: [16, 16],
-          className: "",
-        });
-        L.marker([dlat, dlng], { icon: agentIcon }).addTo(map).bindPopup("Delivery Agent");
-        // Draw route line
-        L.polyline([[dlat, dlng], [lat, lng]], { color: "#059669", weight: 3, dashArray: "6 6" }).addTo(map);
-        map.fitBounds([[lat, lng], [dlat, dlng]], { padding: [40, 40] });
-      }
+      const { emoji, color } = getVehicleDetails(order.id, order.delivery_agent?.vehicle_type);
+      const agentIcon = L.divIcon({
+        html: `
+          <div style="background:${color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);position:relative;">
+            ${emoji}
+            <span style="position:absolute;bottom:-4px;width:12px;height:12px;background:#10b981;border:2px solid white;border-radius:50%;animation:ping 1s infinite;"></span>
+          </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      });
 
+      const driverMarker = L.marker([initDriverLat, initDriverLng], { icon: agentIcon }).addTo(map).bindPopup("Delivery Partner");
+      driverMarkerRef.current = driverMarker;
+
+      // Draw route line
+      L.polyline([[storeLat, storeLng], [customerLat, customerLng]], { color: "#cbd5e1", weight: 2, dashArray: "4 4" }).addTo(map);
+      pathLineRef.current = L.polyline([[initDriverLat, initDriverLng], [customerLat, customerLng]], { color: "#059669", weight: 4 }).addTo(map);
+
+      map.fitBounds([[customerLat, customerLng], [storeLat, storeLng], [initDriverLat, initDriverLng]], { padding: [50, 50] });
+
+      setMapObj(map);
       setMapLoaded(true);
     });
+
+    return () => {
+      if (map) map.remove();
+    };
   }, [order, mapLoaded]);
+
+  // Handle live location updates reactively
+  useEffect(() => {
+    if (mapObj && driverLocation && driverMarkerRef.current) {
+      const newPos = [driverLocation.latitude, driverLocation.longitude] as [number, number];
+      driverMarkerRef.current.setLatLng(newPos);
+      if (pathLineRef.current && order) {
+        const customerLat = order.delivery_address?.latitude || 19.0735;
+        const customerLng = order.delivery_address?.longitude || 72.9985;
+        pathLineRef.current.setLatLngs([newPos, [customerLat, customerLng]]);
+      }
+    }
+  }, [driverLocation, mapObj, order]);
 
   const eta = order?.status === "out_for_delivery" ? "~5 min" : order?.status === "packed" ? "~15 min" : null;
 

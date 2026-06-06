@@ -9,9 +9,295 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 
+import { useRef } from "react";
+import { Save } from "lucide-react";
+
+function ServiceAreaPanel() {
+  const queryClient = useQueryClient();
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [mapObj, setMapObj] = useState<any>(null);
+  const [markerObj, setMarkerObj] = useState<any>(null);
+  const [circleObj, setCircleObj] = useState<any>(null);
+
+  const [centerLat, setCenterLat] = useState(19.0760);
+  const [centerLng, setCenterLng] = useState(72.9977);
+  const [radius, setRadius] = useState(5.0);
+  
+  const [minOrder, setMinOrder] = useState("0.00");
+  const [freeAbove, setFreeAbove] = useState("199.00");
+  const [baseCharge, setBaseCharge] = useState("30.00");
+  const [perKmCharge, setPerKmCharge] = useState("10.00");
+
+  const { data: areasData } = useQuery<any>({
+    queryKey: ["myServiceAreas"],
+    queryFn: async () => {
+      const res = await api.get("/vendors/me/service-areas");
+      return res.data || [];
+    }
+  });
+
+  const { data: rulesData } = useQuery<any>({
+    queryKey: ["myDeliveryRules"],
+    queryFn: async () => {
+      const res = await api.get("/vendors/me/delivery-rules");
+      return res.data || [];
+    }
+  });
+
+  useEffect(() => {
+    if (areasData && areasData.length > 0) {
+      const activeArea = areasData[0];
+      if (activeArea.center_latitude) setCenterLat(activeArea.center_latitude);
+      if (activeArea.center_longitude) setCenterLng(activeArea.center_longitude);
+      if (activeArea.radius_km) setRadius(activeArea.radius_km);
+    }
+  }, [areasData]);
+
+  useEffect(() => {
+    if (rulesData && rulesData.length > 0) {
+      const activeRule = rulesData[0];
+      setMinOrder(activeRule.min_order_amount.toString());
+      setFreeAbove(activeRule.free_delivery_above ? activeRule.free_delivery_above.toString() : "");
+      setBaseCharge(activeRule.base_delivery_charge.toString());
+      setPerKmCharge(activeRule.per_km_charge.toString());
+    }
+  }, [rulesData]);
+
+  const saveServiceAreaMutation = useMutation({
+    mutationFn: async () => {
+      return api.post("/vendors/me/service-areas", {
+        name: "Main Delivery Zone",
+        radius_km: radius,
+        center_latitude: centerLat,
+        center_longitude: centerLng,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myServiceAreas"] });
+      alert("Service Area updated successfully!");
+    },
+    onError: (err: any) => {
+      alert("Failed to update Service Area: " + (err.response?.data?.detail || err.message));
+    }
+  });
+
+  const saveDeliveryRulesMutation = useMutation({
+    mutationFn: async () => {
+      return api.post("/vendors/me/delivery-rules", {
+        min_order_amount: parseFloat(minOrder) || 0.0,
+        free_delivery_above: freeAbove ? parseFloat(freeAbove) : null,
+        base_delivery_charge: parseFloat(baseCharge) || 0.0,
+        per_km_charge: parseFloat(perKmCharge) || 0.0,
+        max_delivery_distance_km: radius,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myDeliveryRules"] });
+      alert("Delivery Rules updated successfully!");
+    },
+    onError: (err: any) => {
+      alert("Failed to update Delivery Rules: " + (err.response?.data?.detail || err.message));
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !mapContainerRef.current) return;
+
+    let map: any;
+
+    import("leaflet").then((L) => {
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
+
+      map = L.map(mapContainerRef.current!).setView([centerLat, centerLng], 13);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors"
+      }).addTo(map);
+
+      const storeIcon = L.divIcon({
+        html: '<div style="background:#3b82f6;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3)">🏪</div>',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
+      });
+
+      const marker = L.marker([centerLat, centerLng], { icon: storeIcon, draggable: true }).addTo(map);
+      setMarkerObj(marker);
+
+      const circle = L.circle([centerLat, centerLng], {
+        color: "#10b981",
+        fillColor: "#10b981",
+        fillOpacity: 0.15,
+        radius: radius * 1000 
+      }).addTo(map);
+      setCircleObj(circle);
+
+      marker.on("dragend", (event: any) => {
+        const position = event.target.getLatLng();
+        setCenterLat(position.lat);
+        setCenterLng(position.lng);
+        circle.setLatLng(position);
+      });
+
+      map.on("click", (event: any) => {
+        const position = event.latlng;
+        setCenterLat(position.lat);
+        setCenterLng(position.lng);
+        marker.setLatLng(position);
+        circle.setLatLng(position);
+      });
+
+      setMapObj(map);
+    });
+
+    return () => {
+      if (map) map.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (circleObj) {
+      circleObj.setRadius(radius * 1000);
+      if (mapObj) {
+        mapObj.fitBounds(circleObj.getBounds(), { padding: [20, 20] });
+      }
+    }
+  }, [radius, circleObj, mapObj]);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in text-slate-800 dark:text-slate-100">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+      <div className="lg:col-span-7 space-y-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <div>
+              <h3 className="text-base font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-emerald-600 dark:text-emerald-455" /> Configure Store & Delivery Zone
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">Drag the store pin or click on the map to set the center of your delivery area.</p>
+            </div>
+          </div>
+
+          <div ref={mapContainerRef} className="h-[380px] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative shadow-inner" style={{ zIndex: 1 }} />
+          
+          <div className="flex gap-4 text-xs font-mono text-slate-500 bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-150 dark:border-slate-800">
+            <div>Latitude: <span className="font-bold text-slate-800 dark:text-slate-100">{centerLat.toFixed(6)}</span></div>
+            <div>Longitude: <span className="font-bold text-slate-800 dark:text-slate-100">{centerLng.toFixed(6)}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="lg:col-span-5 space-y-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-850 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="space-y-1">
+            <h4 className="text-sm font-black text-slate-800 dark:text-slate-100">Delivery Range Configuration</h4>
+            <p className="text-xs text-slate-500">Configure how far your delivery boys are allowed to travel from your store.</p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs font-bold">
+              <span>Max Service Distance</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-mono text-sm">{radius.toFixed(1)} km</span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="15.0"
+              step="0.5"
+              value={radius}
+              onChange={(e) => setRadius(parseFloat(e.target.value))}
+              className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+            />
+          </div>
+
+          <button
+            onClick={() => saveServiceAreaMutation.mutate()}
+            disabled={saveServiceAreaMutation.isPending}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+          >
+            {saveServiceAreaMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            Save Service Area Center & Radius
+          </button>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-850 rounded-3xl p-6 shadow-sm space-y-5">
+          <div className="space-y-1">
+            <h4 className="text-sm font-black text-slate-800 dark:text-slate-100">Delivery Cost Rules</h4>
+            <p className="text-xs text-slate-500">Configure how delivery charges are calculated for customers.</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-500 uppercase">Base Delivery Charge (₹)</label>
+              <input
+                type="number"
+                value={baseCharge}
+                onChange={(e) => setBaseCharge(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-500 uppercase">Per-KM Charge (₹)</label>
+              <input
+                type="number"
+                value={perKmCharge}
+                onChange={(e) => setPerKmCharge(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-500 uppercase">Min Order Amount (₹)</label>
+              <input
+                type="number"
+                value={minOrder}
+                onChange={(e) => setMinOrder(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-500 uppercase">Free Delivery Above (₹)</label>
+              <input
+                type="number"
+                placeholder="Optional"
+                value={freeAbove}
+                onChange={(e) => setFreeAbove(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={() => saveDeliveryRulesMutation.mutate()}
+            disabled={saveDeliveryRulesMutation.isPending}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+          >
+            {saveDeliveryRulesMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            Save Delivery Pricing Rules
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function VendorDashboard() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("all");
+  const [currentView, setCurrentView] = useState("dashboard");
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
@@ -101,22 +387,38 @@ export default function VendorDashboard() {
           </div>
 
           <nav className="space-y-1">
-            <a href="#" className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-800 text-white font-medium text-sm transition-all">
+            <button
+              onClick={() => setCurrentView("dashboard")}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer ${
+                currentView === "dashboard" ? "bg-slate-800 text-white" : "hover:bg-slate-800/50 hover:text-white text-slate-400"
+              }`}
+            >
               <ShoppingBag className="w-5 h-5" />
               <span>Dashboard</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-800 hover:text-white text-sm transition-all">
+            </button>
+            <button
+              onClick={() => alert("Inventory section coming soon!")}
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-slate-800/50 hover:text-white text-slate-400 text-sm transition-all cursor-pointer"
+            >
               <TrendingUp className="w-5 h-5" />
               <span>Inventory</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-800 hover:text-white text-sm transition-all">
+            </button>
+            <button
+              onClick={() => setCurrentView("service-area")}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer ${
+                currentView === "service-area" ? "bg-slate-800 text-white" : "hover:bg-slate-800/50 hover:text-white text-slate-400"
+              }`}
+            >
               <MapPin className="w-5 h-5" />
               <span>Service Area</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-800 hover:text-white text-sm transition-all">
+            </button>
+            <button
+              onClick={() => alert("Settings section coming soon!")}
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-slate-800/50 hover:text-white text-slate-400 text-sm transition-all cursor-pointer"
+            >
               <Settings className="w-5 h-5" />
               <span>Settings</span>
-            </a>
+            </button>
           </nav>
         </div>
 
@@ -166,126 +468,132 @@ export default function VendorDashboard() {
 
         {/* Content */}
         <main className="flex-1 p-8 space-y-8 max-w-6xl w-full mx-auto">
-          {/* Metrics Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 flex items-center justify-between shadow-sm transition-colors duration-200">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Total Sales</p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-slate-50">₹{metrics.total_sales}</h3>
-              </div>
-              <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl text-emerald-600 dark:text-emerald-400">
-                <DollarSign className="w-6 h-6" />
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 flex items-center justify-between shadow-sm transition-colors duration-200">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Orders Fulfilled</p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-slate-50">{metrics.total_orders}</h3>
-              </div>
-              <div className="p-3.5 bg-blue-50 dark:bg-blue-950/30 rounded-2xl text-blue-600 dark:text-blue-400">
-                <ShoppingBag className="w-6 h-6" />
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 flex items-center justify-between shadow-sm transition-colors duration-200">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Wallet Balance</p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-slate-50">₹{metrics.wallet_balance}</h3>
-              </div>
-              <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 rounded-2xl text-amber-500 dark:text-amber-400">
-                <Award className="w-6 h-6" />
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 flex items-center justify-between shadow-sm transition-colors duration-200">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Pending Balance</p>
-                <h3 className="text-2xl font-black text-rose-600 dark:text-rose-455">₹{metrics.pending_balance}</h3>
-              </div>
-              <div className="p-3.5 bg-rose-50 dark:bg-rose-950/30 rounded-2xl text-rose-600 dark:text-rose-400">
-                <RefreshCw className="w-6 h-6" />
-              </div>
-            </div>
-          </div>
-
-          {/* Orders Section */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors duration-200">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="space-y-0.5">
-                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">Incoming Orders</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Real-time customer requests needing dispatch</p>
-              </div>
-
-              {/* Status Filter Tabs */}
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-semibold">
-                {["all", "pending", "packed", "delivered"].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-1.5 rounded-full capitalize transition-all ${activeTab === tab
-                      ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-205"
-                      }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Orders List */}
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {ordersLoading ? (
-                <div className="py-20 flex flex-col items-center justify-center gap-2">
-                  <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
-                  <span className="text-sm text-slate-500 dark:text-slate-400">Fetching store orders...</span>
-                </div>
-              ) : orders.length > 0 ? (
-                orders.map((order: any) => (
-                  <div key={order.id} className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-850/30 transition-all">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-slate-900 dark:text-slate-100">#Order {order.order_number}</span>
-                        <span className="text-slate-400 dark:text-slate-550 text-xs">•</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-450">{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Customer ID: {order.user_id.substring(0, 8)}...</h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-450">Method: {order.payment_method.toUpperCase()} • Status: {order.payment_status}</p>
-                    </div>
-
-                    <div className="flex items-center gap-6 self-stretch md:self-auto justify-between">
-                      <div className="space-y-1 text-right">
-                        <span className="block font-black text-slate-950 dark:text-slate-50">₹{order.total_amount}</span>
-                        <span className={`inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${order.status === "pending"
-                          ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400"
-                          : order.status === "packed"
-                            ? "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-400"
-                            : "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400"
-                          }`}>
-                          {order.status}
-                        </span>
-                      </div>
-
-                      {order.status === "pending" && (
-                        <button
-                          onClick={() => acceptOrderMutation.mutate(order.id)}
-                          disabled={acceptOrderMutation.isPending}
-                          className="bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm disabled:opacity-50"
-                        >
-                          {acceptOrderMutation.isPending ? "Updating..." : "Accept & Pack"}
-                        </button>
-                      )}
-                    </div>
+          {currentView === "dashboard" ? (
+            <>
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 flex items-center justify-between shadow-sm transition-colors duration-200">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Total Sales</p>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-slate-50">₹{metrics.total_sales}</h3>
                   </div>
-                ))
-              ) : (
-                <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-sm">
-                  No orders found matching this status.
+                  <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl text-emerald-600 dark:text-emerald-400">
+                    <DollarSign className="w-6 h-6" />
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
+
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 flex items-center justify-between shadow-sm transition-colors duration-200">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Orders Fulfilled</p>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-slate-50">{metrics.total_orders}</h3>
+                  </div>
+                  <div className="p-3.5 bg-blue-50 dark:bg-blue-950/30 rounded-2xl text-blue-600 dark:text-blue-400">
+                    <ShoppingBag className="w-6 h-6" />
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 flex items-center justify-between shadow-sm transition-colors duration-200">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Wallet Balance</p>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-slate-50">₹{metrics.wallet_balance}</h3>
+                  </div>
+                  <div className="p-3.5 bg-amber-50 dark:bg-amber-955/30 rounded-2xl text-amber-550 dark:text-amber-400">
+                    <Award className="w-6 h-6" />
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-6 flex items-center justify-between shadow-sm transition-colors duration-200">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Pending Balance</p>
+                    <h3 className="text-2xl font-black text-rose-600 dark:text-rose-455">₹{metrics.pending_balance}</h3>
+                  </div>
+                  <div className="p-3.5 bg-rose-50 dark:bg-rose-955/30 rounded-2xl text-rose-600 dark:text-rose-400">
+                    <RefreshCw className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Orders Section */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors duration-200">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="space-y-0.5">
+                    <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">Incoming Orders</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Real-time customer requests needing dispatch</p>
+                  </div>
+
+                  {/* Status Filter Tabs */}
+                  <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-full border border-slate-205 dark:border-slate-700 text-xs font-semibold">
+                    {["all", "pending", "packed", "delivered"].map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`px-4 py-1.5 rounded-full capitalize transition-all ${activeTab === tab
+                          ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm"
+                          : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-205"
+                          }`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Orders List */}
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {ordersLoading ? (
+                    <div className="py-20 flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
+                      <span className="text-sm text-slate-500 dark:text-slate-400">Fetching store orders...</span>
+                    </div>
+                  ) : orders.length > 0 ? (
+                    orders.map((order: any) => (
+                      <div key={order.id} className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-850/30 transition-all">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-slate-900 dark:text-slate-100">#Order {order.order_number}</span>
+                            <span className="text-slate-400 dark:text-slate-550 text-xs">•</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-455">{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Customer ID: {order.user_id.substring(0, 8)}...</h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-450">Method: {order.payment_method.toUpperCase()} • Status: {order.payment_status}</p>
+                        </div>
+
+                        <div className="flex items-center gap-6 self-stretch md:self-auto justify-between">
+                          <div className="space-y-1 text-right">
+                            <span className="block font-black text-slate-950 dark:text-slate-50">₹{order.total_amount}</span>
+                            <span className={`inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${order.status === "pending"
+                              ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
+                              : order.status === "packed"
+                                ? "bg-blue-100 dark:bg-blue-955/40 text-blue-800 dark:text-blue-400"
+                                : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
+                              }`}>
+                              {order.status}
+                            </span>
+                          </div>
+
+                          {order.status === "pending" && (
+                            <button
+                              onClick={() => acceptOrderMutation.mutate(order.id)}
+                              disabled={acceptOrderMutation.isPending}
+                              className="bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm disabled:opacity-50"
+                            >
+                              {acceptOrderMutation.isPending ? "Updating..." : "Accept & Pack"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-sm">
+                      No orders found matching this status.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <ServiceAreaPanel />
+          )}
         </main>
       </div>
     </div>

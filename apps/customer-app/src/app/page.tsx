@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, ArrowRight, Star, Plus, Minus, ChevronRight, Zap, Truck, Leaf, ShieldCheck, Clock, TrendingUp, Loader2 } from "lucide-react";
+import { Search, ArrowRight, Star, Plus, Minus, ChevronRight, Zap, Truck, Leaf, ShieldCheck, Clock, TrendingUp, Loader2, Bell, X, Navigation } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import Link from "next/link";
@@ -109,9 +109,51 @@ function TrustBadges() {
   );
 }
 
+const categoryDetails: Record<string, { title: string; subtitle: string; emoji: string; gradient: string; textDark: string; textLight: string }> = {
+  All: {
+    title: "All Items",
+    subtitle: "Browse everything",
+    emoji: "🛒",
+    gradient: "from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20",
+    textDark: "text-emerald-800 dark:text-emerald-300",
+    textLight: "text-emerald-600 dark:text-emerald-400"
+  },
+  Vegetables: {
+    title: "Fresh Vegetables",
+    subtitle: "Direct from farms",
+    emoji: "🥦",
+    gradient: "from-green-50 to-emerald-100 dark:from-green-950/20 dark:to-emerald-950/20",
+    textDark: "text-green-800 dark:text-green-300",
+    textLight: "text-green-600 dark:text-green-400"
+  },
+  "Leafy Greens": {
+    title: "Leafy Greens",
+    subtitle: "Crisp & hygienic",
+    emoji: "🥬",
+    gradient: "from-lime-50 to-green-100 dark:from-lime-950/20 dark:to-green-950/20",
+    textDark: "text-lime-800 dark:text-lime-300",
+    textLight: "text-lime-600 dark:text-lime-450"
+  },
+  Exotics: {
+    title: "Exotic Produce",
+    subtitle: "Premium selections",
+    emoji: "🥑",
+    gradient: "from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20",
+    textDark: "text-purple-800 dark:text-purple-300",
+    textLight: "text-purple-600 dark:text-purple-400"
+  },
+  Herbs: {
+    title: "Fresh Herbs",
+    subtitle: "Aromatic & clean",
+    emoji: "🌿",
+    gradient: "from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20",
+    textDark: "text-teal-800 dark:text-teal-300",
+    textLight: "text-teal-600 dark:text-teal-400"
+  }
+};
+
 // ==================== CATEGORIES STRIP ====================
-function CategoriesStrip() {
-  const [active, setActive] = useState("All");
+function CategoriesStrip({ active, setActive }: { active: string; setActive: (val: string) => void }) {
   const { data: categories = [], isLoading } = useQuery<any[]>({
     queryKey: ["categories"],
     queryFn: async () => {
@@ -121,50 +163,59 @@ function CategoriesStrip() {
     staleTime: 5 * 60_000,
   });
 
-  const categoryEmojis: Record<string, string> = {
-    Vegetables: "🥦", Fruits: "🍎", Leafy: "🥬", "Leafy Greens": "🥬",
-    "Root Vegetables": "🥕", Herbs: "🌿", Dairy: "🥛", Grains: "🌾",
-    Spices: "🌶️", Exotics: "🥑", All: "🛒",
-  };
-
   if (isLoading) {
     return (
-      <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4 pb-2">
-        {Array.from({ length: 7 }).map((_, i) => (
-          <div key={i} className="skeleton h-20 w-20 rounded-2xl flex-shrink-0" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 px-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="skeleton h-24 rounded-3xl animate-pulse bg-slate-200 dark:bg-slate-800" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between px-4">
-        <h2 className="text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight">Shop by Category</h2>
-        <Link href="/categories" className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 hover:underline">
-          View All <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
-      <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4 pb-2">
+    <div className="space-y-4 px-4">
+      <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight animate-fade-in">Shop by Category</h2>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
         {[{ id: "all", name: "All" }, ...categories].map((cat: any) => {
-          const isActive = active === cat.name;
-          const emoji = categoryEmojis[cat.name] || "🥗";
+          const details = (categoryDetails as any)[cat.name] || {
+            title: cat.name,
+            subtitle: "Fresh produce",
+            emoji: "🥗",
+            gradient: "from-slate-50 to-slate-100 dark:from-slate-900/40 dark:to-slate-800/40",
+            textDark: "text-slate-800 dark:text-slate-300",
+            textLight: "text-slate-600 dark:text-slate-400"
+          };
+          const isSelected = active === cat.name;
+
           return (
             <button
               key={cat.id}
               onClick={() => setActive(cat.name)}
-              className={`flex flex-col items-center gap-1.5 flex-shrink-0 w-[72px] transition-all ${isActive ? "scale-105" : "hover:scale-102"}`}
+              className={`relative overflow-hidden rounded-3xl p-5 text-left border transition-all duration-300 hover:scale-[1.03] hover:-translate-y-0.5 group active:scale-95 cursor-pointer ${
+                isSelected
+                  ? "border-emerald-500 ring-2 ring-emerald-500/20 shadow-md bg-white dark:bg-slate-900"
+                  : "border-slate-200 dark:border-slate-800/80 shadow-sm bg-gradient-to-br " + details.gradient
+              }`}
             >
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl border-2 transition-all ${isActive
-                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 shadow-md"
-                  : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-emerald-300"
-                }`}>
-                {emoji}
-              </div>
-              <span className={`text-[11px] font-bold text-center leading-tight ${isActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-600 dark:text-slate-400"
-                }`}>
-                {cat.name}
+              {/* Floating Large background emoji */}
+              <span className="absolute -right-2 -bottom-2 text-6xl opacity-10 group-hover:scale-125 group-hover:rotate-12 transition-transform duration-300 pointer-events-none select-none">
+                {details.emoji}
               </span>
+
+              <div className="relative z-10 flex flex-col justify-between h-full min-h-[80px]">
+                <span className="text-3xl mb-3 block transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300">
+                  {details.emoji}
+                </span>
+                <div>
+                  <h4 className={`font-black text-sm tracking-tight ${details.textDark}`}>
+                    {details.title}
+                  </h4>
+                  <p className={`text-[11px] font-medium leading-none mt-0.5 ${details.textLight}`}>
+                    {details.subtitle}
+                  </p>
+                </div>
+              </div>
             </button>
           );
         })}
@@ -532,19 +583,6 @@ function CartFooter() {
   );
 }
 
-// ==================== TRENDING ====================
-function TrendingSection() {
-  return (
-    <div className="px-4">
-      <div className="flex items-center gap-2 mb-4">
-        <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-        <h2 className="text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight">Trending Nearby</h2>
-      </div>
-      <ProductsGrid />
-    </div>
-  );
-}
-
 // ==================== ROUTE GUARD ====================
 function useAuthGuard() {
   // Guard disabled for home page to support Swiggy guest browsing onboarding patterns
@@ -553,14 +591,104 @@ function useAuthGuard() {
 // ==================== PAGE ====================
 export default function HomePage() {
   useAuthGuard();
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [notificationBanner, setNotificationBanner] = useState<{ title: string; body: string } | null>(null);
+
+  // WebSocket for real-time notifications on the customer homepage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const token = localStorage.getItem("sw_access_token");
+    if (!token) return;
+
+    let ws: WebSocket;
+    let reconnectTimeout: any;
+
+    const connectWS = () => {
+      const isNextDev = window.location.port === "3000" || window.location.port === "3001" || window.location.port === "3002" || window.location.port === "3003";
+      const baseHost = isNextDev ? "localhost:8000" : window.location.host;
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      
+      ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          const { type, data } = message;
+
+          if (type === "notification") {
+            setNotificationBanner({ title: data.title, body: data.body });
+            if (document.visibilityState === "hidden" && "Notification" in window && Notification.permission === "granted") {
+              new Notification(data.title, { body: data.body, icon: "/icon.png" });
+            }
+            setTimeout(() => {
+              setNotificationBanner(null);
+            }, 6000);
+          }
+        } catch (err) {
+          console.error("Error parsing WS message:", err);
+        }
+      };
+
+      ws.onclose = () => {
+        reconnectTimeout = setTimeout(connectWS, 5000);
+      };
+
+      ws.onerror = (err) => {
+        console.error("WS error:", err);
+        ws.close();
+      };
+    };
+
+    connectWS();
+
+    return () => {
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
+  }, []);
 
   return (
-    <div className="space-y-8 pb-4">
+    <div className="space-y-8 pb-4 relative">
+      {/* Push Notification Toast Banner */}
+      {notificationBanner && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] w-[90%] max-w-md bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-2xl shadow-2xl p-4 flex items-start gap-3 border-l-4 border-l-emerald-500 animate-slide-down">
+          <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl flex-shrink-0">
+            <Bell className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="flex-1 space-y-0.5">
+            <h4 className="text-sm font-black text-slate-900 dark:text-white">
+              {notificationBanner.title}
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
+              {notificationBanner.body}
+            </p>
+          </div>
+          <button
+            onClick={() => setNotificationBanner(null)}
+            className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-650 transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <Hero />
       <TrustBadges />
       <OffersBanner />
-      <CategoriesStrip />
-      <TrendingSection />
+      
+      <CategoriesStrip active={selectedCategory} setActive={setSelectedCategory} />
+      
+      {/* Products Grid filtered by category selection */}
+      <div className="px-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-pulse" />
+          <h2 className="text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight">
+            {selectedCategory === "All" ? "Trending Nearby" : `Fresh ${selectedCategory}`}
+          </h2>
+        </div>
+        <ProductsGrid categoryFilter={selectedCategory === "All" ? undefined : selectedCategory} />
+      </div>
+
       <CartFooter />
     </div>
   );
