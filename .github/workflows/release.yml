@@ -275,9 +275,9 @@ jobs:
             -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
             -Pandroid.injected.signing.key.password=$KEY_PASS
           cp app/build/outputs/apk/release/app-release.apk \
-            $GITHUB_WORKSPACE/sbjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
+            $GITHUB_WORKSPACE/sbjiwala-v${{ needs.read-version.outputs.version }}.apk
           cp app/build/outputs/bundle/release/app-release.aab \
-            $GITHUB_WORKSPACE/sbjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
+            $GITHUB_WORKSPACE/sbjiwala-v${{ needs.read-version.outputs.version }}.aab
 
       - name: Upload Customer App to Play Store
         if: env.HAS_PROD_KEYSTORE == 'true' && env.HAS_PLAY_STORE_CONFIG == 'true'
@@ -285,7 +285,7 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
           packageName: com.sbjiwala.customer
-          releaseFiles: sbjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
+          releaseFiles: sbjiwala-v${{ needs.read-version.outputs.version }}.aab
           track: internal
           status: completed
 
@@ -374,10 +374,10 @@ jobs:
         with:
           name: android-apks
           path: |
-            sbjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
+            sbjiwala-v${{ needs.read-version.outputs.version }}.apk
             sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
             sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
-            sbjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
+            sbjiwala-v${{ needs.read-version.outputs.version }}.aab
             sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
             sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab
 
@@ -475,17 +475,17 @@ jobs:
           EOF
             xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release archive -archivePath $GITHUB_WORKSPACE/CustomerApp.xcarchive
             xcodebuild -exportArchive -archivePath $GITHUB_WORKSPACE/CustomerApp.xcarchive -exportPath $GITHUB_WORKSPACE/CustomerApp -exportOptionsPlist ExportOptions.plist
-            mv $GITHUB_WORKSPACE/CustomerApp/*.ipa $GITHUB_WORKSPACE/sbjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.ipa
+            mv $GITHUB_WORKSPACE/CustomerApp/*.ipa $GITHUB_WORKSPACE/sbjiwala-v${{ needs.read-version.outputs.version }}-ios.ipa
           else
             xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO build
             BUILD_DIR=$(xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -showBuildSettings 2>/dev/null | grep " BUILT_PRODUCTS_DIR " | awk '{print $3}')
-            zip -r $GITHUB_WORKSPACE/sbjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.zip "$BUILD_DIR/App.app"
+            zip -r $GITHUB_WORKSPACE/sbjiwala-v${{ needs.read-version.outputs.version }}-ios.zip "$BUILD_DIR/App.app"
           fi
 
       - name: Upload Customer App to App Store Connect
         if: env.HAS_APPLE_CERTS == 'true' && env.HAS_APPSTORE_KEY == 'true'
         run: |
-          xcrun altool --upload-app -f $GITHUB_WORKSPACE/sbjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.ipa \
+          xcrun altool --upload-app -f $GITHUB_WORKSPACE/sbjiwala-v${{ needs.read-version.outputs.version }}-ios.ipa \
             -t ios --apiKey "${{ secrets.APPSTORE_KEY_ID }}" \
             --apiIssuer "${{ secrets.APPSTORE_ISSUER_ID }}"
 
@@ -590,7 +590,7 @@ jobs:
         with:
           name: ios-builds
           path: |
-            sbjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.*
+            sbjiwala-v${{ needs.read-version.outputs.version }}-ios.*
             sbjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.*
             sbjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.*
 
@@ -628,16 +628,16 @@ jobs:
         id: release_files
         run: |
           FILES="sbjiwala-web-static.zip
-          sbjiwala-customer-v${{ needs.read-version.outputs.version }}.apk
+          sbjiwala-v${{ needs.read-version.outputs.version }}.apk
           sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
           sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
-          sbjiwala-customer-v${{ needs.read-version.outputs.version }}.aab
+          sbjiwala-v${{ needs.read-version.outputs.version }}.aab
           sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
           sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab"
           
           if [ "${{ github.event_name == 'push' && (github.event.inputs.build_ios != 'false' && github.event.inputs.build_ios != false) }}" = "true" ]; then
             FILES="$FILES
-            sbjiwala-customer-v${{ needs.read-version.outputs.version }}-ios.*
+            sbjiwala-v${{ needs.read-version.outputs.version }}-ios.*
             sbjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.*
             sbjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.*"
           fi

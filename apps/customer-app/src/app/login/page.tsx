@@ -3,7 +3,10 @@
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, ArrowRight, Phone, Lock, Mail, User, CheckCircle2, Loader2, ChevronLeft, Leaf, ShoppingBag, Truck, Shield } from "lucide-react";
+import { 
+  Eye, EyeOff, ArrowRight, Phone, Lock, Mail, User, CheckCircle2, 
+  Loader2, ChevronLeft, Leaf, ShoppingBag, Truck, Shield, Key, Sparkles, AlertCircle
+} from "lucide-react";
 import { api } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import { Button, Input, Divider } from "@/components/ui/index";
@@ -19,7 +22,6 @@ const syncGuestCart = async () => {
     const cart = JSON.parse(raw);
     if (!cart.items || cart.items.length === 0) return;
 
-    // Send items sequentially to the backend
     for (const item of cart.items) {
       await api.post("/cart/items", {
         product_id: item.product_id,
@@ -27,7 +29,6 @@ const syncGuestCart = async () => {
         quantity: item.quantity
       });
     }
-    // Clear guest cart
     localStorage.removeItem("sw_guest_cart");
     window.dispatchEvent(new Event("sw_cart_updated"));
   } catch (err) {
@@ -35,380 +36,30 @@ const syncGuestCart = async () => {
   }
 };
 
-// ==================== SCHEMAS ====================
-const otpLoginSchema = z.object({
-  phone: z.string().min(10, "Enter valid 10-digit mobile number").max(10, "Enter valid 10-digit mobile number").regex(/^\d+$/, "Only digits allowed"),
-});
-const passwordLoginSchema = z.object({
-  email: z.string().email("Enter valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-const registerSchema = z.object({
-  full_name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Enter valid email"),
-  phone: z.string().length(10, "Enter 10-digit mobile number").regex(/^\d+$/, "Only digits allowed"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirm_password: z.string(),
-}).refine(d => d.password === d.confirm_password, { message: "Passwords don't match", path: ["confirm_password"] });
+type ActiveTab = "otp" | "password" | "passkey" | "magic" | "register";
 
-type OTPMode = "phone" | "otp";
-type ActiveTab = "otp" | "password" | "register";
-
-// ==================== OTP TAB ====================
-function OTPLoginTab({ selectedRole }: { selectedRole: "customer" | "vendor" | "delivery" | "admin" }) {
-  const router = useRouter();
-  const { success, error: showError } = useToast();
-  const [mode, setMode] = useState<OTPMode>("phone"); // phone refers to first input stage (email)
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [loading, setLoading] = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  const startResendTimer = () => {
-    setResendTimer(30);
-    const interval = setInterval(() => {
-      setResendTimer(t => {
-        if (t <= 1) { clearInterval(interval); return 0; }
-        return t - 1;
-      });
-    }, 1000);
-  };
-
-  const sendOTP = async () => {
-    if (!email || !email.includes("@")) { showError("Invalid email", "Enter a valid email address"); return; }
-    setLoading(true);
-    try {
-      const res = await api.post("/auth/otp/send", { email, purpose: "login" });
-      setMode("otp");
-      startResendTimer();
-      
-      // Auto-fill OTP in debug mode if present in metadata
-      if (res.meta?.otp) {
-        const otpDigits = String(res.meta.otp).split("").slice(0, 6);
-        const nextOtp = ["", "", "", "", "", ""];
-        otpDigits.forEach((d, i) => { nextOtp[i] = d; });
-        setOtp(nextOtp);
-        success("OTP Sent (Debug)", `Verification code ${res.meta.otp} auto-filled`);
-      } else {
-        success("OTP Sent", `Verification code sent to ${email}`);
-      }
-    } catch (err: any) {
-      showError("Failed to send OTP", err.response?.data?.detail || err.message);
-    } finally { setLoading(false); }
-  };
-
-  const verifyOTP = async () => {
-    const code = otp.join("");
-    if (code.length !== 6) { showError("Invalid OTP", "Enter the 6-digit code"); return; }
-    setLoading(true);
-    try {
-      const res = await api.post("/auth/otp/verify", { email, otp: code, purpose: "login" });
-      const { access_token, refresh_token } = res.meta || {};
-      
-      // Role validation
-      const userType = res.data?.user_type;
-      const isAuthorized = 
-        (selectedRole === "customer" && userType === "customer") ||
-        (selectedRole === "vendor" && (userType === "vendor" || userType === "vendor_manager")) ||
-        (selectedRole === "delivery" && userType === "delivery_boy") ||
-        (selectedRole === "admin" && (userType === "admin" || userType === "super_admin"));
-      
-      if (!isAuthorized) {
-        throw new Error(`Account is not registered as a ${selectedRole.replace("_", " ")}.`);
-      }
-
-      api.setTokens(access_token, refresh_token);
-      success("Welcome back!", "Login successful");
-      await syncGuestCart();
-
-      // Redirect based on role
-      let redirect = "/";
-      if (selectedRole === "vendor") {
-        try {
-          const vProfile = await api.get("/vendors/me");
-          if (vProfile.data?.status === "approved") {
-            redirect = "/vendor";
-          } else {
-            redirect = "/kyc";
-          }
-        } catch {
-          redirect = "/kyc";
-        }
-      } else if (selectedRole === "delivery") {
-        redirect = "/delivery";
-      } else if (selectedRole === "admin") {
-        redirect = "/admin";
-      } else {
-        redirect = new URLSearchParams(window.location.search).get("redirect") || "/";
-      }
-      
-      router.replace(redirect);
-    } catch (err: any) {
-      showError("Login failed", err.response?.data?.detail || err.message || "Invalid OTP code");
-    } finally { setLoading(false); }
-  };
-
-  const handleOtpChange = (idx: number, val: string) => {
-    const digit = val.replace(/\D/g, "").slice(-1);
-    const next = [...otp];
-    next[idx] = digit;
-    setOtp(next);
-    if (digit && idx < 5) otpRefs.current[idx + 1]?.focus();
-    if (!digit && idx > 0) otpRefs.current[idx - 1]?.focus();
-  };
-
-  const handleOtpKeyDown = (idx: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otp[idx] && idx > 0) otpRefs.current[idx - 1]?.focus();
-  };
-
-  if (mode === "otp") {
-    return (
-      <div className="space-y-6">
-        <div className="text-center space-y-1">
-          <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/40 rounded-full flex items-center justify-center mx-auto mb-3">
-            <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <h3 className="text-base font-black text-slate-900 dark:text-white">Enter Verification Code</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Sent to <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span>
-          </p>
-        </div>
-
-        <div className="flex gap-2 justify-center">
-          {otp.map((digit, i) => (
-            <input
-              key={i}
-              ref={el => { otpRefs.current[i] = el; }}
-              type="text"
-              inputMode="numeric"
-              maxLength={1}
-              value={digit}
-              onChange={e => handleOtpChange(i, e.target.value)}
-              onKeyDown={e => handleOtpKeyDown(i, e)}
-              className="w-11 h-13 text-center text-xl font-black border-2 rounded-xl input-base transition-all"
-              style={{ width: "44px", height: "52px" }}
-            />
-          ))}
-        </div>
-
-        <Button fullWidth loading={loading} onClick={verifyOTP} size="lg">
-          Verify & Continue <ArrowRight className="w-4 h-4" />
-        </Button>
-
-        <div className="text-center space-y-2">
-          <button
-            onClick={() => setMode("phone")}
-            className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mx-auto"
-          >
-            <ChevronLeft className="w-4 h-4" /> Change email
-          </button>
-          {resendTimer > 0 ? (
-            <p className="text-xs text-slate-500 dark:text-slate-400">Resend in <span className="font-bold text-emerald-600">{resendTimer}s</span></p>
-          ) : (
-            <button onClick={sendOTP} className="text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
-              Resend OTP
-            </button>
-          )}
-        </div>
-      </div>
-    );
+// Helper: Convert array buffer to base64url string
+const bufferToBase64Url = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
   }
+  const base64 = btoa(binary);
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+};
 
-  return (
-    <div className="space-y-5">
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 font-sans">Email Address</label>
-        <div className="flex gap-2">
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="input-base px-4 py-3 text-sm flex-1 font-sans"
-            onKeyDown={e => e.key === "Enter" && sendOTP()}
-          />
-        </div>
-      </div>
-      <Button fullWidth loading={loading} onClick={sendOTP} size="lg">
-        Send OTP <ArrowRight className="w-4 h-4" />
-      </Button>
-      <p className="text-xs text-center text-slate-500 dark:text-slate-400">
-        By continuing you agree to our{" "}
-        <Link href="/terms" className="text-emerald-600 font-semibold hover:underline">Terms</Link>
-        {" & "}
-        <Link href="/privacy" className="text-emerald-600 font-semibold hover:underline">Privacy Policy</Link>
-      </p>
-    </div>
-  );
-}
-
-// ==================== PASSWORD TAB ====================
-function PasswordLoginTab({ selectedRole }: { selectedRole: "customer" | "vendor" | "delivery" | "admin" }) {
-  const router = useRouter();
-  const { success, error: showError } = useToast();
-  const [showPwd, setShowPwd] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: { email: "", password: "" },
-  });
-
-  const onSubmit = async (data: any) => {
-    setLoading(true);
-    try {
-      const res = await api.post("/auth/login", { email: data.email, password: data.password });
-      const { access_token, refresh_token } = res.data;
-
-      // Role validation
-      const userType = res.data?.user_type;
-      const isAuthorized = 
-        (selectedRole === "customer" && userType === "customer") ||
-        (selectedRole === "vendor" && (userType === "vendor" || userType === "vendor_manager")) ||
-        (selectedRole === "delivery" && userType === "delivery_boy") ||
-        (selectedRole === "admin" && (userType === "admin" || userType === "super_admin"));
-      
-      if (!isAuthorized) {
-        throw new Error(`Account is not registered as a ${selectedRole}.`);
-      }
-
-      api.setTokens(access_token, refresh_token);
-      success("Welcome back!", "Login successful");
-      await syncGuestCart();
-
-      // Redirect based on role
-      let redirect = "/";
-      if (selectedRole === "vendor") {
-        try {
-          const vProfile = await api.get("/vendors/me");
-          if (vProfile.data?.status === "approved") {
-            redirect = "/vendor";
-          } else {
-            redirect = "/kyc";
-          }
-        } catch {
-          redirect = "/kyc";
-        }
-      } else if (selectedRole === "delivery") {
-        redirect = "/delivery";
-      } else if (selectedRole === "admin") {
-        redirect = "/admin";
-      } else {
-        redirect = new URLSearchParams(window.location.search).get("redirect") || "/";
-      }
-      
-      router.replace(redirect);
-    } catch (err: any) {
-      showError("Login failed", err.response?.data?.detail || err.message || "Invalid email or password");
-    } finally { setLoading(false); }
-  };
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      <Input
-        label="Email Address"
-        type="email"
-        placeholder="you@example.com"
-        leftIcon={<Mail className="w-4 h-4" />}
-        error={errors.email?.message}
-        {...register("email", { required: "Email is required", pattern: { value: /\S+@\S+\.\S+/, message: "Invalid email" } })}
-      />
-      <div>
-        <Input
-          label="Password"
-          type={showPwd ? "text" : "password"}
-          placeholder="Enter your password"
-          leftIcon={<Lock className="w-4 h-4" />}
-          rightIcon={
-            <button type="button" onClick={() => setShowPwd(p => !p)}>
-              {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          }
-          error={errors.password?.message}
-          {...register("password", { required: "Password is required" })}
-        />
-        <div className="flex justify-end mt-1.5">
-          <Link href="/forgot-password" className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
-            Forgot password?
-          </Link>
-        </div>
-      </div>
-      <Button type="submit" fullWidth loading={loading} size="lg">
-        Sign In <ArrowRight className="w-4 h-4" />
-      </Button>
-    </form>
-  );
-}
-
-// ==================== REGISTER TAB ====================
-// ==================== REGISTER TAB ====================
-function RegisterTab() {
-  const router = useRouter();
-  const { success, error: showError } = useToast();
-  const [showPwd, setShowPwd] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: { full_name: "", email: "", phone: "", password: "", confirm_password: "" },
-  });
-
-  const onSubmit = async (data: any) => {
-    setLoading(true);
-    try {
-      const parts = (data.full_name || "").trim().split(/\s+/);
-      const first_name = parts[0] || "";
-      const last_name = parts.slice(1).join(" ") || "";
-
-      const res = await api.post("/auth/register", {
-        first_name,
-        last_name,
-        email: data.email,
-        phone: "+91" + data.phone,
-        password: data.password,
-        role: "customer",
-      });
-      const { access_token, refresh_token } = res.data;
-      api.setTokens(access_token, refresh_token);
-      success("Account created! 🎉", "Welcome to Sbjiwala!");
-      await syncGuestCart();
-      const redirect = new URLSearchParams(window.location.search).get("redirect") || "/";
-      router.replace(redirect);
-    } catch (err: any) {
-      showError("Registration failed", err.response?.data?.detail || err.message);
-    } finally { setLoading(false); }
-  };
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <Input label="Full Name" placeholder="Rahul Sharma" leftIcon={<User className="w-4 h-4" />}
-        error={errors.full_name?.message}
-        {...register("full_name", { required: "Name is required", minLength: { value: 2, message: "At least 2 chars" } })} />
-      <Input label="Email" type="email" placeholder="you@example.com" leftIcon={<Mail className="w-4 h-4" />}
-        error={errors.email?.message}
-        {...register("email", { required: "Email is required", pattern: { value: /\S+@\S+\.\S+/, message: "Invalid email" } })} />
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Mobile Number</label>
-        <div className="flex gap-2">
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-sm font-bold flex-shrink-0">🇮🇳 +91</div>
-          <input type="tel" maxLength={10} placeholder="9876543210" className="input-base px-4 py-3 text-sm flex-1"
-            {...register("phone", { required: true, pattern: /^\d{10}$/ })} />
-        </div>
-        {errors.phone && <p className="text-xs text-rose-500 mt-1">Enter valid 10-digit number</p>}
-      </div>
-      <Input label="Password" type={showPwd ? "text" : "password"} placeholder="Min. 8 characters" leftIcon={<Lock className="w-4 h-4" />}
-        rightIcon={<button type="button" onClick={() => setShowPwd(p => !p)}>{showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>}
-        error={errors.password?.message}
-        {...register("password", { required: "Password required", minLength: { value: 8, message: "Min 8 chars" } })} />
-      <Input label="Confirm Password" type="password" placeholder="Re-enter password" leftIcon={<Lock className="w-4 h-4" />}
-        error={errors.confirm_password?.message}
-        {...register("confirm_password", { required: "Please confirm password" })} />
-      <Button type="submit" fullWidth loading={loading} size="lg">
-        Create Account <ArrowRight className="w-4 h-4" />
-      </Button>
-      <p className="text-xs text-center text-slate-500 dark:text-slate-400">
-        By signing up you agree to our <Link href="/terms" className="text-emerald-600 font-semibold hover:underline">Terms</Link> & <Link href="/privacy" className="text-emerald-600 font-semibold hover:underline">Privacy Policy</Link>
-      </p>
-    </form>
-  );
-}
+// Helper: Convert base64url string to Uint8Array
+const base64UrlToBytes = (base64Url: string): Uint8Array => {
+  const padding = "=".repeat((4 - (base64Url.length % 4)) % 4);
+  const base64 = (base64Url + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+};
 
 // ==================== PAGE ====================
 const getStoredUserType = () => {
@@ -429,32 +80,627 @@ const getStoredUserType = () => {
 
 function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { success, error: showError, info } = useToast();
+  
   const [tab, setTab] = useState<ActiveTab>("otp");
   const [selectedRole, setSelectedRole] = useState<"customer" | "vendor" | "delivery" | "admin">("customer");
+  
+  // Dynamic Views
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showPasskeySetup, setShowPasskeySetup] = useState(false);
 
+  // Common loader / state
+  const [loading, setLoading] = useState(false);
+
+  // 1. OTP State
+  const [otpMode, setOtpMode] = useState<"identifier" | "verification">("identifier");
+  const [otpIdentifier, setOtpIdentifier] = useState("");
+  const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""]);
+  const [resendTimer, setResendTimer] = useState(0);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // 2. Password Reset State
+  const [resetStep, setResetStep] = useState<"request" | "verify" | "confirm">("request");
+  const [resetIdentifier, setResetIdentifier] = useState("");
+  const [resetOtp, setResetOtp] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
+  // 3. Register state (RHF)
+  const { register: regForm, handleSubmit: handleRegSubmit, formState: { errors: regErrors } } = useForm({
+    defaultValues: {
+      username: "",
+      email: "",
+      phone: "",
+      first_name: "",
+      last_name: "",
+      password: "",
+      confirm_password: "",
+      referral_code: ""
+    }
+  });
+
+  // Check existing redirect session or verify magic tokens
   useEffect(() => {
+    // Check if magic link verification query is present
+    const magicToken = searchParams.get("magic_token");
+    if (magicToken) {
+      handleVerifyMagicLink(magicToken);
+    }
+
     if (typeof window !== "undefined" && localStorage.getItem("sw_access_token")) {
       const userType = getStoredUserType();
-      if (userType === "vendor" || userType === "vendor_manager") {
-        router.replace("/vendor");
-      } else if (userType === "delivery_boy") {
-        router.replace("/delivery");
-      } else if (userType === "admin" || userType === "super_admin") {
-        router.replace("/admin");
-      } else {
-        router.replace("/");
-      }
+      redirectBasedOnRole(userType || "customer");
     }
-  }, [router]);
+  }, [searchParams]);
 
-  const tabs: { id: ActiveTab; label: string }[] = [
-    { id: "otp", label: "OTP Login" },
-    { id: "password", label: "Password" },
-    { id: "register", label: "Register" },
-  ];
+  const redirectBasedOnRole = (role: string) => {
+    let dest = "/";
+    if (role === "vendor" || role === "vendor_manager") {
+      dest = "/vendor";
+    } else if (role === "delivery_boy") {
+      dest = "/delivery";
+    } else if (role === "admin" || role === "super_admin") {
+      dest = "/admin";
+    } else {
+      dest = searchParams.get("redirect") || "/";
+    }
+    router.replace(dest);
+  };
+
+  // Helper validation for role matching
+  const validateUserRole = (userType: string) => {
+    const isAuthorized = 
+      (selectedRole === "customer" && userType === "customer") ||
+      (selectedRole === "vendor" && (userType === "vendor" || userType === "vendor_manager")) ||
+      (selectedRole === "delivery" && userType === "delivery_boy") ||
+      (selectedRole === "admin" && (userType === "admin" || userType === "super_admin"));
+    
+    if (!isAuthorized) {
+      throw new Error(`Your account does not have access privileges as a ${selectedRole.replace("_", " ")}.`);
+    }
+  };
+
+  // ==================== 1. OTP ACTIONS ====================
+  const startOtpResendTimer = () => {
+    setResendTimer(60);
+    const interval = setInterval(() => {
+      setResendTimer(t => {
+        if (t <= 1) { clearInterval(interval); return 0; }
+        return t - 1;
+      });
+    }, 1000);
+  };
+
+  const handleSendOTP = async () => {
+    if (!otpIdentifier.trim()) {
+      showError("Error", "Please enter your username, email, or mobile number");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/otp/send", {
+        identifier: otpIdentifier,
+        purpose: "login"
+      });
+      setOtpMode("verification");
+      startOtpResendTimer();
+      
+      if (res.meta?.otp) {
+        const otpDigits = String(res.meta.otp).split("").slice(0, 6);
+        const nextOtp = ["", "", "", "", "", ""];
+        otpDigits.forEach((d, i) => { nextOtp[i] = d; });
+        setOtpCode(nextOtp);
+        success("OTP Sent (Debug)", `Verification code ${res.meta.otp} auto-filled`);
+      } else {
+        success("OTP Sent", `Verification code sent to your registered contact details`);
+      }
+    } catch (err: any) {
+      showError("Failed to send OTP", err.response?.data?.detail || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    const code = otpCode.join("");
+    if (code.length !== 6) {
+      showError("Invalid OTP", "Enter the full 6-digit code");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/otp/verify", {
+        identifier: otpIdentifier,
+        otp: code,
+        purpose: "login"
+      });
+      
+      const userType = res.data?.user_type;
+      validateUserRole(userType);
+
+      const { access_token, refresh_token } = res.meta || {};
+      api.setTokens(access_token, refresh_token);
+      success("Welcome Back!", "Logged in successfully!");
+      await syncGuestCart();
+
+      // Check if they want to register passkey, otherwise redirect
+      setShowPasskeySetup(true);
+    } catch (err: any) {
+      showError("Verification failed", err.response?.data?.detail || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpDigitChange = (idx: number, val: string) => {
+    const digit = val.replace(/\D/g, "").slice(-1);
+    const next = [...otpCode];
+    next[idx] = digit;
+    setOtpCode(next);
+    if (digit && idx < 5) otpRefs.current[idx + 1]?.focus();
+    if (!digit && idx > 0) otpRefs.current[idx - 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (idx: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otpCode[idx] && idx > 0) {
+      otpRefs.current[idx - 1]?.focus();
+    }
+  };
+
+  // ==================== 2. PASSWORD ACTIONS ====================
+  const [passwordState, setPasswordState] = useState({ identifier: "", password: "", show: false });
+  
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordState.identifier || !passwordState.password) {
+      showError("Required", "Please fill in all fields");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/login", {
+        identifier: passwordState.identifier,
+        password: passwordState.password
+      });
+
+      const userType = res.data?.user_type;
+      validateUserRole(userType);
+
+      const { access_token, refresh_token } = res.meta || res.data || {};
+      api.setTokens(access_token, refresh_token);
+      success("Welcome Back!", "Logged in successfully!");
+      await syncGuestCart();
+
+      setShowPasskeySetup(true);
+    } catch (err: any) {
+      showError("Login failed", err.response?.data?.detail || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==================== 3. PASSWORD RESET / FORGOT ACTIONS ====================
+  const handleResetRequest = async () => {
+    if (!resetIdentifier.trim()) {
+      showError("Required", "Please enter your identifier");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/password/reset/request", {
+        identifier: resetIdentifier
+      });
+      success("Reset OTP Sent", res.message || "Reset code sent successfully");
+      setResetStep("verify");
+      
+      if (res.meta?.otp) {
+        setResetOtp(res.meta.otp);
+        info("Debug OTP", `Auto-filled reset OTP: ${res.meta.otp}`);
+      }
+    } catch (err: any) {
+      showError("Request failed", err.response?.data?.detail || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetVerify = async () => {
+    if (!resetOtp.trim()) {
+      showError("Required", "Please enter the OTP");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/password/reset/verify", {
+        identifier: resetIdentifier,
+        otp: resetOtp
+      });
+      success("OTP Verified", "Please choose your new password");
+      setResetToken(res.meta?.reset_token || "");
+      setResetStep("confirm");
+    } catch (err: any) {
+      showError("Verification failed", err.response?.data?.detail || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetConfirm = async () => {
+    if (newPassword.length < 8) {
+      showError("Password Weak", "Password must be at least 8 characters");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      showError("Mismatch", "Passwords do not match");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post("/auth/password/reset/confirm", {
+        token: resetToken,
+        new_password: newPassword
+      });
+      success("Success", "Password updated successfully! Please login.");
+      setShowForgotPassword(false);
+      setResetStep("request");
+      setResetIdentifier("");
+      setResetOtp("");
+      setResetToken("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setTab("password");
+    } catch (err: any) {
+      showError("Reset confirmation failed", err.response?.data?.detail || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==================== 4. PASSKEY (WEBAUTHN) ACTIONS ====================
+  const [passkeyIdentifier, setPasskeyIdentifier] = useState("");
+  
+  const handlePasskeyLogin = async () => {
+    if (!passkeyIdentifier.trim()) {
+      showError("Required", "Please enter your username, email, or phone to fetch passkeys");
+      return;
+    }
+    setLoading(true);
+    try {
+      // 1. Get options
+      const optRes = await api.post("/auth/passkey/login/options", {
+        identifier: passkeyIdentifier
+      });
+      
+      const { challenge, allow_credentials } = optRes.data;
+
+      // 2. Format challenge and allowCredentials for credential validation
+      const challengeBytes = base64UrlToBytes(challenge).buffer as any;
+      const allowCredentials = allow_credentials.map((id: string) => ({
+        type: "public-key",
+        id: base64UrlToBytes(id).buffer as any
+      }));
+
+      // 3. Trigger WebAuthn Assertion
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          challenge: challengeBytes,
+          allowCredentials,
+          userVerification: "preferred",
+          timeout: 60000
+        } as any
+      }) as PublicKeyCredential;
+
+      if (!assertion) {
+        throw new Error("Passkey reading failed or was cancelled");
+      }
+
+      const response = assertion.response as AuthenticatorAssertionResponse;
+
+      // 4. Send verification back to backend
+      const verifyRes = await api.post("/auth/passkey/login/verify", {
+        credential_id: assertion.id,
+        authenticator_data_b64: bufferToBase64Url(response.authenticatorData),
+        client_data_json_b64: bufferToBase64Url(response.clientDataJSON),
+        signature_b64: bufferToBase64Url(response.signature),
+        identifier: passkeyIdentifier
+      });
+
+      const userType = verifyRes.data?.user_type;
+      validateUserRole(userType);
+
+      const { access_token, refresh_token } = verifyRes.meta || {};
+      api.setTokens(access_token, refresh_token);
+      success("Welcome Back!", "Passkey verification successful");
+      await syncGuestCart();
+      
+      redirectBasedOnRole(userType);
+    } catch (err: any) {
+      showError("Passkey login failed", err.response?.data?.detail || err.message || "Signature check failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegisterPasskey = async () => {
+    setLoading(true);
+    try {
+      // 1. Get options (needs auth token, which we have since we just verified OTP/Password)
+      const optRes = await api.post("/auth/passkey/register/options", {
+        device_name: navigator.userAgent.split(" ")[0] || "My Desktop/Mobile"
+      });
+
+      const { challenge, rp, user } = optRes.data;
+
+      // 2. Format buffers
+      const challengeBytes = base64UrlToBytes(challenge).buffer as any;
+      // user.id is string UUID, encode to byte array
+      const userBytes = new TextEncoder().encode(user.id).buffer as any;
+
+      // 3. Trigger WebAuthn Registration
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge: challengeBytes,
+          rp: { name: rp.name, id: rp.id },
+          user: {
+            id: userBytes,
+            name: user.name,
+            displayName: user.displayName
+          },
+          pubKeyCredParams: [
+            { type: "public-key", alg: -7 },  // ES256
+            { type: "public-key", alg: -257 } // RS256
+          ],
+          authenticatorSelection: {
+            userVerification: "preferred",
+            residentKey: "preferred"
+          },
+          timeout: 60000,
+          attestation: "none"
+        } as any
+      }) as PublicKeyCredential;
+
+      if (!credential) {
+        throw new Error("Registration was cancelled");
+      }
+
+      // Convert SPKI public key to PEM string
+      const response = credential.response as AuthenticatorAttestationResponse;
+      const publicKeyBuffer = response.getPublicKey();
+      if (!publicKeyBuffer) {
+        throw new Error("Public key could not be extracted from credentials");
+      }
+
+      const base64PublicKey = btoa(String.fromCharCode(...new Uint8Array(publicKeyBuffer)));
+      const publicKeyPem = `-----BEGIN PUBLIC KEY-----\n${base64PublicKey.match(/.{1,64}/g)?.join("\n")}\n-----END PUBLIC KEY-----`;
+
+      // 4. Send options back to verify
+      await api.post("/auth/passkey/register/verify", {
+        credential_id: credential.id,
+        public_key_pem: publicKeyPem,
+        device_name: "Web Browser (" + (navigator.platform || "Platform") + ")"
+      });
+
+      success("Success", "Passkey registered successfully! You can now log in securely using your fingerprint/face/PIN.");
+      setShowPasskeySetup(false);
+      
+      const uType = getStoredUserType();
+      redirectBasedOnRole(uType || "customer");
+    } catch (err: any) {
+      showError("Passkey setup failed", err.response?.data?.detail || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==================== 5. MAGIC LINK ACTIONS ====================
+  const [magicIdentifier, setMagicIdentifier] = useState("");
+
+  const handleSendMagicLink = async () => {
+    if (!magicIdentifier.trim()) {
+      showError("Required", "Please enter your username, email, or mobile number");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/magic-link/request", {
+        identifier: magicIdentifier,
+        role: selectedRole
+      });
+      success("Magic Link Dispatched", res.message || "Check your email or phone messages for the login link");
+    } catch (err: any) {
+      showError("Request failed", err.response?.data?.detail || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyMagicLink = async (token: string) => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/auth/magic-link/verify?token=${token}`);
+      const { access_token, refresh_token } = res.meta || {};
+      api.setTokens(access_token, refresh_token);
+      success("Success", "Logged in via Magic Link!");
+      await syncGuestCart();
+      
+      const userType = res.data?.user_type;
+      redirectBasedOnRole(userType);
+    } catch (err: any) {
+      showError("Magic Link Expired", err.response?.data?.detail || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==================== 6. SIGNUP / REGISTRATION ACTIONS ====================
+  const onRegisterSubmit = async (data: any) => {
+    if (!data.email && !data.phone) {
+      showError("Fields Required", "Please provide at least email or phone number for verification");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        username: data.username || undefined,
+        email: data.email || undefined,
+        phone: data.phone ? "+91" + data.phone : undefined,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        password: data.password || undefined,
+        referral_code: data.referral_code || undefined,
+        role: selectedRole
+      };
+
+      const res = await api.post("/auth/register", payload);
+      
+      // Auto routing based on what verification target was used
+      const target = res.meta?.verification_identifier;
+      success("Registration Complete", res.message || "OTP verification required to activate account");
+
+      // Redirect into OTP tab and pre-fill details for verification
+      setTab("otp");
+      setOtpIdentifier(target);
+      setOtpMode("verification");
+      startOtpResendTimer();
+      
+      if (res.meta?.otp) {
+        const otpDigits = String(res.meta.otp).split("").slice(0, 6);
+        const nextOtp = ["", "", "", "", "", ""];
+        otpDigits.forEach((d, i) => { nextOtp[i] = d; });
+        setOtpCode(nextOtp);
+        info("Debug OTP", `Auto-filled registration OTP: ${res.meta.otp}`);
+      }
+    } catch (err: any) {
+      showError("Registration failed", err.response?.data?.detail || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==================== RENDER HELPER PANELS ====================
+  if (showPasskeySetup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 dark:bg-[#090d10] font-sans">
+        <div className="card w-full max-w-md p-8 text-center space-y-6">
+          <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/40 rounded-full flex items-center justify-center mx-auto shadow-md">
+            <Key className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white">Enable Passkey Login</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              Register this device as a Passkey for instant, secure logins using biometric scanning (fingerprint/face recognition) or PIN.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Button fullWidth onClick={handleRegisterPasskey} loading={loading} size="lg">
+              Set Up Passkey <Sparkles className="w-4 h-4 ml-1.5" />
+            </Button>
+            <Button 
+              fullWidth 
+              variant="outline" 
+              onClick={() => {
+                const role = getStoredUserType();
+                redirectBasedOnRole(role || "customer");
+              }}
+              size="lg"
+            >
+              Skip for Now
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 dark:bg-[#090d10] font-sans">
+        <div className="card w-full max-w-md p-8 space-y-6">
+          <button 
+            onClick={() => { setShowForgotPassword(false); setResetStep("request"); }}
+            className="flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" /> Back to Login
+          </button>
+          
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white">Reset Password</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Recover access using your registered contact details.
+            </p>
+          </div>
+
+          {resetStep === "request" && (
+            <div className="space-y-4">
+              <Input 
+                label="Identifier (Email, Phone, or Username)"
+                placeholder="Enter email or mobile..."
+                value={resetIdentifier}
+                onChange={e => setResetIdentifier(e.target.value)}
+                leftIcon={<Mail className="w-4 h-4" />}
+              />
+              <Button fullWidth loading={loading} onClick={handleResetRequest} size="lg">
+                Send Reset Code <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+
+          {resetStep === "verify" && (
+            <div className="space-y-4">
+              <p className="text-xs text-slate-500 text-center">
+                Enter the verification code sent to your registered contact.
+              </p>
+              <Input 
+                label="OTP Verification Code"
+                placeholder="6-digit code..."
+                maxLength={6}
+                value={resetOtp}
+                onChange={e => setResetOtp(e.target.value)}
+                leftIcon={<Lock className="w-4 h-4" />}
+              />
+              <Button fullWidth loading={loading} onClick={handleResetVerify} size="lg">
+                Verify Code <ArrowRight className="w-4 h-4" />
+              </Button>
+              <button onClick={handleResetRequest} className="text-xs font-semibold text-emerald-600 hover:underline block text-center mx-auto">
+                Resend Code
+              </button>
+            </div>
+          )}
+
+          {resetStep === "confirm" && (
+            <div className="space-y-4">
+              <Input 
+                label="New Password"
+                type="password"
+                placeholder="Min. 8 characters..."
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                leftIcon={<Lock className="w-4 h-4" />}
+              />
+              <Input 
+                label="Confirm New Password"
+                type="password"
+                placeholder="Repeat password..."
+                value={confirmNewPassword}
+                onChange={e => setConfirmNewPassword(e.target.value)}
+                leftIcon={<Lock className="w-4 h-4" />}
+              />
+              <Button fullWidth loading={loading} onClick={handleResetConfirm} size="lg">
+                Update Password <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex animate-fade-in">
+    <div className="min-h-screen flex animate-fade-in font-sans">
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex flex-col justify-between w-[45%] gradient-brand p-12 text-white">
         <div>
@@ -463,14 +709,14 @@ function LoginPageContent() {
         <div className="space-y-6">
           <div className="text-5xl">🥦🍅🥕</div>
           <h1 className="text-4xl font-black leading-tight">
-            Fresh Vegetables<br />Delivered in<br />
-            <span className="text-yellow-300">10 Minutes</span>
+            Farm-Fresh Produce<br />Delivered to Your Door<br />
+            <span className="text-yellow-300">In 10 Minutes</span>
           </h1>
           <p className="text-emerald-100 text-lg max-w-xs">
-            Join thousands of happy customers getting farm-fresh produce delivered daily.
+            Experience premium service. Choose your custom role and start trading.
           </p>
           <div className="flex flex-col gap-3">
-            {["100% Farm Fresh", "Hygienic Packing", "10-Minute Express", "24/7 Support"].map(f => (
+            {["100% Organic Quality", "Hygienic Storage", "Express Super Fast Delivery", "Instant Wallet Refunds"].map(f => (
               <div key={f} className="flex items-center gap-2 text-emerald-100">
                 <CheckCircle2 className="w-4 h-4 text-emerald-300 flex-shrink-0" />
                 <span className="text-sm font-semibold">{f}</span>
@@ -478,38 +724,39 @@ function LoginPageContent() {
             ))}
           </div>
         </div>
-        <p className="text-emerald-300/60 text-xs">© 2025 Sbjiwala — All rights reserved</p>
+        <p className="text-emerald-300/60 text-xs">© 2026 Sbjiwala — Platform Ecosystem</p>
       </div>
 
       {/* Right Panel — Auth Forms */}
       <div className="flex-1 flex items-center justify-center p-6 bg-slate-50 dark:bg-[#090d10]">
-        <div className="w-full max-w-md">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex justify-center mb-8">
-            <img src="/logo_vertical.png" alt="Sbjiwala" className="h-20 w-auto object-contain" />
+        <div className="w-full max-w-md space-y-6">
+          
+          {/* Logo on mobile */}
+          <div className="lg:hidden flex justify-center mb-4">
+            <img src="/logo_vertical.png" alt="Sbjiwala" className="h-16 w-auto object-contain" />
           </div>
 
-          <div className="card p-8">
+          <div className="card p-8 shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl">
             {/* Header */}
             <div className="text-center mb-6">
               <div className="w-12 h-12 gradient-brand rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
                 <Leaf className="w-6 h-6 text-white" />
               </div>
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white">Welcome Back</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Sign in or create your account</p>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white">Access Gateway</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Authenticate or register dynamic accounts</p>
             </div>
 
             {/* Role Selector */}
             <div className="mb-6">
               <label className="block text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5 text-center">
-                I want to log in as:
+                I am accessing as a:
               </label>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-2">
                 {[
-                  { id: "customer", label: "Customer", icon: ShoppingBag, color: "from-emerald-500/10 to-teal-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" },
-                  { id: "vendor", label: "Vendor Partner", icon: Leaf, color: "from-blue-500/10 to-indigo-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
-                  { id: "delivery", label: "Delivery Partner", icon: Truck, color: "from-amber-500/10 to-orange-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
-                  { id: "admin", label: "Administrator", icon: Shield, color: "from-rose-500/10 to-red-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" }
+                  { id: "customer", label: "Customer", icon: ShoppingBag, color: "from-emerald-500/10 to-teal-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" },
+                  { id: "vendor", label: "Vendor Partner", icon: Leaf, color: "from-blue-500/10 to-indigo-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30" },
+                  { id: "delivery", label: "Delivery Boy", icon: Truck, color: "from-amber-500/10 to-orange-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30" },
+                  { id: "admin", label: "Administrator", icon: Shield, color: "from-rose-500/10 to-red-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30" }
                 ].map(r => {
                   const Icon = r.icon;
                   const isSelected = selectedRole === r.id;
@@ -523,9 +770,8 @@ function LoginPageContent() {
                           ? `bg-gradient-to-br ${r.color.split(" ")[0]} ${r.color.split(" ")[1]} border-current shadow-md scale-[1.02] font-black`
                           : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-slate-700"
                       }`}
-                      style={{ color: isSelected ? undefined : "" }}
                     >
-                      <Icon className={`w-5 h-5 mb-1.5 transition-transform ${isSelected ? "animate-pulse" : ""}`} />
+                      <Icon className={`w-5 h-5 mb-1.5 ${isSelected ? "animate-pulse" : ""}`} />
                       <span className="text-[11px] font-black tracking-tight">{r.label}</span>
                     </button>
                   );
@@ -533,15 +779,21 @@ function LoginPageContent() {
               </div>
             </div>
 
-            {/* Tab switcher */}
-            <div className="flex bg-slate-100 dark:bg-slate-800/60 rounded-2xl p-1 mb-6 border border-slate-200 dark:border-slate-700">
-              {tabs.map(t => (
+            {/* Tab Switched Header */}
+            <div className="flex bg-slate-100 dark:bg-slate-800/60 rounded-2xl p-1 mb-6 border border-slate-200/50 dark:border-slate-700/50 overflow-x-auto gap-0.5">
+              {[
+                { id: "otp", label: "OTP" },
+                { id: "password", label: "Password" },
+                { id: "passkey", label: "Passkey" },
+                { id: "magic", label: "Magic" },
+                { id: "register", label: "Register" }
+              ].map(t => (
                 <button
                   key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${tab === t.id
-                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
-                    : "text-slate-500 dark:text-slate-400"
+                  onClick={() => setTab(t.id as ActiveTab)}
+                  className={`flex-1 py-2 rounded-xl text-[11px] font-black tracking-wider transition-all whitespace-nowrap px-2.5 ${tab === t.id
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200/20"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
                     }`}
                 >
                   {t.label}
@@ -549,10 +801,221 @@ function LoginPageContent() {
               ))}
             </div>
 
-            {/* Tab content */}
-            {tab === "otp" && <OTPLoginTab selectedRole={selectedRole} />}
-            {tab === "password" && <PasswordLoginTab selectedRole={selectedRole} />}
-            {tab === "register" && <RegisterTab />}
+            {/* 1. OTP Login Tab */}
+            {tab === "otp" && (
+              <div className="space-y-4">
+                {otpMode === "identifier" ? (
+                  <div className="space-y-4">
+                    <Input 
+                      label="Identifier (Email, Mobile, or Username)"
+                      placeholder="Enter details..."
+                      value={otpIdentifier}
+                      onChange={e => setOtpIdentifier(e.target.value)}
+                      leftIcon={<User className="w-4 h-4" />}
+                    />
+                    <Button fullWidth loading={loading} onClick={handleSendOTP} size="lg">
+                      Request OTP <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="text-center space-y-1">
+                      <h3 className="text-base font-black text-slate-900 dark:text-white">Verify Your Code</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        OTP sent for <span className="font-bold">{otpIdentifier}</span>
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 justify-center">
+                      {otpCode.map((digit, i) => (
+                        <input
+                          key={i}
+                          ref={el => { otpRefs.current[i] = el; }}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={digit}
+                          onChange={e => handleOtpDigitChange(i, e.target.value)}
+                          onKeyDown={e => handleOtpKeyDown(i, e)}
+                          className="w-10 h-12 text-center text-lg font-black border-2 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-emerald-500 transition-colors"
+                        />
+                      ))}
+                    </div>
+
+                    <Button fullWidth loading={loading} onClick={handleVerifyOTP} size="lg">
+                      Verify & Log In <ArrowRight className="w-4 h-4" />
+                    </Button>
+
+                    <div className="text-center space-y-2">
+                      <button
+                        onClick={() => setOtpMode("identifier")}
+                        className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 mx-auto font-semibold"
+                      >
+                        <ChevronLeft className="w-4 h-4" /> Change contact details
+                      </button>
+                      {resendTimer > 0 ? (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Resend in <span className="font-bold text-emerald-600">{resendTimer}s</span></p>
+                      ) : (
+                        <button onClick={handleSendOTP} className="text-xs font-bold text-emerald-600 hover:underline">
+                          Resend Verification OTP
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 2. Password Login Tab */}
+            {tab === "password" && (
+              <form onSubmit={handlePasswordLogin} className="space-y-4">
+                <Input 
+                  label="Identifier (Email, Mobile, or Username)"
+                  placeholder="Enter details..."
+                  value={passwordState.identifier}
+                  onChange={e => setPasswordState(prev => ({ ...prev, identifier: e.target.value }))}
+                  leftIcon={<User className="w-4 h-4" />}
+                />
+                <div>
+                  <Input 
+                    label="Password"
+                    type={passwordState.show ? "text" : "password"}
+                    placeholder="Enter security password"
+                    value={passwordState.password}
+                    onChange={e => setPasswordState(prev => ({ ...prev, password: e.target.value }))}
+                    leftIcon={<Lock className="w-4 h-4" />}
+                    rightIcon={
+                      <button type="button" onClick={() => setPasswordState(prev => ({ ...prev, show: !prev.show }))}>
+                        {passwordState.show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    }
+                  />
+                  <div className="flex justify-end mt-2">
+                    <button 
+                      type="button"
+                      onClick={() => setShowForgotPassword(true)}
+                      className="text-xs font-bold text-emerald-600 hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                </div>
+                <Button type="submit" fullWidth loading={loading} size="lg">
+                  Verify & Log In <ArrowRight className="w-4 h-4" />
+                </Button>
+              </form>
+            )}
+
+            {/* 3. Passkey Login Tab */}
+            {tab === "passkey" && (
+              <div className="space-y-4">
+                <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/10 rounded-2xl flex gap-3 text-xs text-emerald-700 dark:text-emerald-300 leading-normal">
+                  <Key className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <span>Authenticate instantly and securely without typing passcodes or waiting for OTP codes.</span>
+                </div>
+                <Input 
+                  label="Registered Identifier"
+                  placeholder="Enter email, phone, or username..."
+                  value={passkeyIdentifier}
+                  onChange={e => setPasskeyIdentifier(e.target.value)}
+                  leftIcon={<User className="w-4 h-4" />}
+                />
+                <Button fullWidth loading={loading} onClick={handlePasskeyLogin} size="lg">
+                  Verify Credentials <Sparkles className="w-4 h-4 ml-1.5" />
+                </Button>
+              </div>
+            )}
+
+            {/* 4. Magic Link Login Tab */}
+            {tab === "magic" && (
+              <div className="space-y-4">
+                <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-500/10 rounded-2xl flex gap-3 text-xs text-blue-700 dark:text-blue-300 leading-normal">
+                  <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                  <span>Enter email/mobile, receive link, click to login instantly. Fast, passwordless, secure.</span>
+                </div>
+                <Input 
+                  label="Registered Contact Address"
+                  placeholder="Email or phone number..."
+                  value={magicIdentifier}
+                  onChange={e => setMagicIdentifier(e.target.value)}
+                  leftIcon={<Mail className="w-4 h-4" />}
+                />
+                <Button fullWidth loading={loading} onClick={handleSendMagicLink} size="lg">
+                  Send Magic Link <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* 5. Register Tab */}
+            {tab === "register" && (
+              <form onSubmit={handleRegSubmit(onRegisterSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <Input 
+                    label="First Name" 
+                    placeholder="John" 
+                    error={regErrors.first_name?.message}
+                    {...regForm("first_name", { required: "First name is required" })}
+                  />
+                  <Input 
+                    label="Last Name" 
+                    placeholder="Doe" 
+                    error={regErrors.last_name?.message}
+                    {...regForm("last_name")}
+                  />
+                </div>
+                <Input 
+                  label="Username (Optional)" 
+                  placeholder="johndoe123" 
+                  leftIcon={<User className="w-4 h-4" />}
+                  error={regErrors.username?.message}
+                  {...regForm("username")}
+                />
+                <Input 
+                  label="Email (Email or Phone required)" 
+                  type="email" 
+                  placeholder="you@example.com" 
+                  leftIcon={<Mail className="w-4 h-4" />}
+                  error={regErrors.email?.message}
+                  {...regForm("email")}
+                />
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Mobile Number</label>
+                  <div className="flex gap-2">
+                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-sm font-bold flex-shrink-0">🇮🇳 +91</div>
+                    <input 
+                      type="tel" 
+                      maxLength={10} 
+                      placeholder="9876543210" 
+                      className="input-base px-4 py-3 text-sm flex-1 font-sans"
+                      {...regForm("phone", { pattern: /^\d{10}$/ })} 
+                    />
+                  </div>
+                  {regErrors.phone && <p className="text-xs text-rose-500 mt-1">Enter valid 10-digit number</p>}
+                </div>
+                <Input 
+                  label="Password (Optional)" 
+                  type="password" 
+                  placeholder="Min. 8 characters" 
+                  leftIcon={<Lock className="w-4 h-4" />}
+                  error={regErrors.password?.message}
+                  {...regForm("password")} 
+                />
+                <Input 
+                  label="Referral Code (Optional)" 
+                  placeholder="REFCODE12" 
+                  leftIcon={<Sparkles className="w-4 h-4" />}
+                  error={regErrors.referral_code?.message}
+                  {...regForm("referral_code")}
+                />
+                <Button type="submit" fullWidth loading={loading} size="lg">
+                  Submit Registration <ArrowRight className="w-4 h-4" />
+                </Button>
+              </form>
+            )}
+
+            <p className="text-[10px] text-center text-slate-400 dark:text-slate-500 mt-6 leading-relaxed">
+              By proceeding, you agree to our <Link href="/terms" className="text-emerald-600 hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-emerald-600 hover:underline">Privacy Policy</Link>.
+            </p>
           </div>
         </div>
       </div>
@@ -562,7 +1025,11 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-50 dark:bg-[#090d10] flex items-center justify-center"><Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" /></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
+      </div>
+    }>
       <LoginPageContent />
     </Suspense>
   );

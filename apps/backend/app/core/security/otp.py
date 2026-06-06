@@ -68,9 +68,11 @@ async def send_otp(
     # Set rate limit
     await redis.setex(rate_key, OTP_RATE_LIMIT_SECONDS, "1")
 
-    # If identifier is an email, trigger SMTP delivery
+    # Send OTP via SMS or Email based on identifier
     if "@" in identifier:
         await send_otp_via_email(identifier, otp)
+    else:
+        await send_otp_via_sms(identifier, otp)
 
     result = {
         "success": True,
@@ -85,6 +87,82 @@ async def send_otp(
     await logger.ainfo("OTP generated and sent", identifier=_mask_identifier(identifier), purpose=purpose)
 
     return result
+
+
+async def _find_user_by_any_identifier(db, identifier: str):
+    """
+    Look up a user in the database by email, username, or phone number.
+    Handles various phone number formatting styles.
+    """
+    from app.models.user import User
+    from sqlalchemy import select, or_
+
+    clean_id = identifier.strip()
+    phone_candidates = [clean_id]
+    digits = "".join(filter(str.isdigit, clean_id))
+    if digits:
+        phone_candidates.append(digits)
+        if len(digits) == 10:
+            phone_candidates.append(f"+91{digits}")
+            phone_candidates.append(f"91{digits}")
+        elif digits.startswith("91") and len(digits) == 12:
+            phone_candidates.append(digits[2:])
+            phone_candidates.append(f"+{digits}")
+            phone_candidates.append(f"+91{digits[2:]}")
+
+    query = select(User).where(
+        or_(
+            User.email.ilike(clean_id),
+            User.username.ilike(clean_id),
+            User.phone.in_(phone_candidates)
+        ),
+        User.is_deleted == False
+    )
+    result = await db.execute(query)
+    return result.scalars().first()
+
+
+async def send_otp_via_sms(phone: str, otp: str) -> None:
+    """Send OTP to the user's phone using configured MSG91 credentials."""
+    import httpx
+    from app.core.config import settings
+
+    if not settings.MSG91_AUTH_KEY:
+        logger.warning("MSG91 Auth Key not configured, SMS OTP logged but not sent", phone=phone, otp=otp)
+        return
+
+    clean_phone = phone.strip()
+    if clean_phone.startswith("+"):
+        clean_phone = clean_phone[1:]
+    elif len(clean_phone) == 10 and clean_phone.isdigit():
+        clean_phone = f"91{clean_phone}"
+
+    payload = {
+        "template_id": settings.MSG91_TEMPLATE_ID,
+        "mobile": clean_phone,
+        "otp": otp
+    }
+    headers = {
+        "authkey": settings.MSG91_AUTH_KEY,
+        "Content-Type": "application/json"
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://control.msg91.com/api/v5/otp",
+                json=payload,
+                headers=headers,
+                timeout=10
+            )
+        res_data = response.json() if "application/json" in response.headers.get("content-type", "") else {"text": response.text}
+        
+        if response.status_code in [200, 201] and res_data.get("type") != "error":
+            await logger.ainfo("MSG91 OTP SMS sent successfully", to=phone)
+        else:
+            await logger.aerror("Failed to send MSG91 OTP SMS", error=str(res_data), to=phone)
+    except Exception as e:
+        await logger.aerror("Exception occurred while sending MSG91 OTP SMS", error=str(e), to=phone)
 
 
 async def send_otp_via_email(email: str, otp: str) -> None:

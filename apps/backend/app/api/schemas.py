@@ -54,24 +54,29 @@ class ErrorResponse(BaseModel):
 class RegisterRequest(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
+    username: Optional[str] = None
     password: Optional[str] = None
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field("", max_length=100)
     referral_code: Optional[str] = None
     device_id: Optional[str] = None
+    role: Optional[str] = "customer"
 
 class LoginRequest(BaseModel):
+    identifier: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     password: Optional[str] = None
     device_id: Optional[str] = None
 
 class OTPLoginRequest(BaseModel):
+    identifier: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
     purpose: str = "login"
 
 class OTPVerifyRequest(BaseModel):
+    identifier: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
     otp: str = Field(..., min_length=6, max_length=6)
@@ -95,9 +100,52 @@ class MFASetupResponse(BaseModel):
 class MFAVerifyRequest(BaseModel):
     code: str = Field(..., min_length=6, max_length=8)
 
+# ===== Passkey (WebAuthn) Schemas =====
+
+class PasskeyRegisterOptionsRequest(BaseModel):
+    device_name: Optional[str] = None
+
+class PasskeyRegisterOptionsResponse(BaseModel):
+    challenge: str
+    user: dict
+    rp: dict
+
+class PasskeyRegisterVerifyRequest(BaseModel):
+    credential_id: str
+    public_key_pem: str
+    device_name: str
+
+class PasskeyLoginOptionsRequest(BaseModel):
+    identifier: str
+
+class PasskeyLoginOptionsResponse(BaseModel):
+    challenge: str
+    allow_credentials: List[str]
+
+class PasskeyLoginVerifyRequest(BaseModel):
+    credential_id: str
+    authenticator_data_b64: str
+    client_data_json_b64: str
+    signature_b64: str
+    identifier: str
+    device_id: Optional[str] = None
+
+# ===== Magic Link Schemas =====
+
+class MagicLinkRequest(BaseModel):
+    identifier: str
+    role: Optional[str] = "customer"
+
+# ===== Password Reset Schemas =====
+
 class PasswordResetRequest(BaseModel):
+    identifier: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+
+class PasswordResetVerifyRequest(BaseModel):
+    identifier: str
+    otp: str
 
 class PasswordResetConfirm(BaseModel):
     token: str
