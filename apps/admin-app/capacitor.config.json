@@ -1,0 +1,8 @@
+{
+  "appId": "com.sbjiwala.admin",
+  "appName": "Sbjiwala Admin",
+  "webDir": "out",
+  "server": {
+    "androidScheme": "https"
+  }
+}

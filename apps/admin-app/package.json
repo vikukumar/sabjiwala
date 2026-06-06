@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "cap:sync": "npx cap sync",
+    "cap:build": "npm run build && npx cap copy",
     "prebuild": "node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json');\"",
     "predev": "node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json');\""
   },
@@ -21,7 +23,11 @@
     "zod": "^4.4.3",
     "react-hook-form": "^7.76.1",
     "lucide-react": "^1.17.0",
-    "leaflet": "^1.9.4"
+    "leaflet": "^1.9.4",
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
