@@ -167,7 +167,7 @@ async def update_order_status(
             order_id=order_id,
             status=OrderStatus(body.status),
             changed_by=current_user["user_id"],
-            user_type=current_user.get("role", "customer"),
+            user_type=current_user.get("user_type", "customer"),
             notes=body.notes
         )
         return APIResponse(success=True, message="Order status updated", data=OrderResponse.model_validate(order))
@@ -189,7 +189,7 @@ async def cancel_order(
             order_id=order_id,
             status=OrderStatus.CANCELLED,
             changed_by=current_user["user_id"],
-            user_type=current_user.get("role", "customer"),
+            user_type=current_user.get("user_type", "customer"),
             notes=reason or "Cancelled by user request"
         )
         return APIResponse(success=True, message="Order cancelled successfully")

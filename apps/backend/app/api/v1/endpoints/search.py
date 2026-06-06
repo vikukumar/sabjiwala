@@ -52,7 +52,7 @@ async def reindex_catalog(
 ):
     """Triggers database full rebuild of product search index (Admin only)."""
     # Permission verification
-    if current_user.get("role") not in ["admin", "super_admin"]:
+    if current_user.get("user_type") not in ["admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Permission denied")
 
     service = SearchService(db)

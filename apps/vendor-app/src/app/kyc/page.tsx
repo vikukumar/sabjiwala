@@ -164,13 +164,11 @@ export default function KYCOnboarding() {
   const handlePrevStep = () => {
     setStep((prev) => prev - 1);
   };
-
   const submitKYC = async () => {
     try {
       setIsLoading(true);
       
-      // Update vendor profile and submit docs
-      const updateRes = await api.patch("/vendors/me", {
+      const payload = {
         business_name: formData.business_name,
         business_type: formData.business_type,
         description: formData.description,
@@ -180,12 +178,34 @@ export default function KYCOnboarding() {
         pan_number: formData.pan_number,
         fssai_number: formData.fssai_number,
         status: "documents_submitted"
-      });
+      };
+
+      let updateRes;
+      if (vendorData) {
+        // Update vendor profile and submit docs
+        updateRes = await api.patch("/vendors/me", payload);
+      } else {
+        // Register new vendor profile
+        updateRes = await api.post("/vendors/register", payload);
+      }
 
       if (updateRes.data) {
+        // Refresh token to get updated user_type claim ("vendor")
+        try {
+          const refreshToken = localStorage.getItem("sw_refresh_token");
+          if (refreshToken) {
+            const refreshRes = await api.post("/auth/refresh", { refresh_token: refreshToken });
+            if (refreshRes.success && refreshRes.meta) {
+              api.setTokens(refreshRes.meta.access_token, refreshRes.meta.refresh_token);
+            }
+          }
+        } catch (refreshErr) {
+          console.warn("Failed to auto-refresh token:", refreshErr);
+        }
+
         success("KYC Submitted Successfully", "Your documents are now under review by our admin team.");
         setTimeout(() => {
-          window.location.href = "/";
+          window.location.href = "/vendor";
         }, 1500);
       }
     } catch (err: any) {

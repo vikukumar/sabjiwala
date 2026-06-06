@@ -35,7 +35,7 @@ async def upload_file(
     
     # Determine vendor if vendor
     vendor_id = None
-    role = current_user.get("role", "customer")
+    role = current_user.get("user_type", "customer")
     if role in ["vendor", "vendor_manager"]:
         from app.models.vendor import Vendor
         res = await db.execute(

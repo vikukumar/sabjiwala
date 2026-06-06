@@ -21,7 +21,7 @@ router = APIRouter()
 
 async def _verify_admin(current_user: dict):
     """Ensure user is an administrator."""
-    if current_user.get("role") not in ["admin", "super_admin"]:
+    if current_user.get("user_type") not in ["admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Permission denied. Administrator access required.")
 
 

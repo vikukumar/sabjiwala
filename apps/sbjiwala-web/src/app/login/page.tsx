@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, ArrowRight, Phone, Lock, Mail, User, CheckCircle2, Loader2, ChevronLeft, Leaf } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Phone, Lock, Mail, User, CheckCircle2, Loader2, ChevronLeft, Leaf, ShoppingBag, Truck, Shield } from "lucide-react";
 import { api } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import { Button, Input, Divider } from "@/components/ui/index";
@@ -55,11 +55,11 @@ type OTPMode = "phone" | "otp";
 type ActiveTab = "otp" | "password" | "register";
 
 // ==================== OTP TAB ====================
-function OTPLoginTab() {
+function OTPLoginTab({ selectedRole }: { selectedRole: "customer" | "vendor" | "delivery" | "admin" }) {
   const router = useRouter();
   const { success, error: showError } = useToast();
-  const [mode, setMode] = useState<OTPMode>("phone");
-  const [phone, setPhone] = useState("");
+  const [mode, setMode] = useState<OTPMode>("phone"); // phone refers to first input stage (email)
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
@@ -76,13 +76,23 @@ function OTPLoginTab() {
   };
 
   const sendOTP = async () => {
-    if (phone.length !== 10) { showError("Invalid phone", "Enter 10-digit mobile number"); return; }
+    if (!email || !email.includes("@")) { showError("Invalid email", "Enter a valid email address"); return; }
     setLoading(true);
     try {
-      await api.post("/auth/send-otp", { phone: "+91" + phone });
+      const res = await api.post("/auth/otp/send", { email, purpose: "login" });
       setMode("otp");
       startResendTimer();
-      success("OTP Sent", `Verification code sent to +91 ${phone}`);
+      
+      // Auto-fill OTP in debug mode if present in metadata
+      if (res.meta?.otp) {
+        const otpDigits = String(res.meta.otp).split("").slice(0, 6);
+        const nextOtp = ["", "", "", "", "", ""];
+        otpDigits.forEach((d, i) => { nextOtp[i] = d; });
+        setOtp(nextOtp);
+        success("OTP Sent (Debug)", `Verification code ${res.meta.otp} auto-filled`);
+      } else {
+        success("OTP Sent", `Verification code sent to ${email}`);
+      }
     } catch (err: any) {
       showError("Failed to send OTP", err.response?.data?.detail || err.message);
     } finally { setLoading(false); }
@@ -93,16 +103,49 @@ function OTPLoginTab() {
     if (code.length !== 6) { showError("Invalid OTP", "Enter the 6-digit code"); return; }
     setLoading(true);
     try {
-      const res = await api.post("/auth/verify-otp", { phone: "+91" + phone, otp: code });
-      const { access_token, refresh_token } = res.data;
-      localStorage.setItem("sw_access_token", access_token);
-      if (refresh_token) localStorage.setItem("sw_refresh_token", refresh_token);
+      const res = await api.post("/auth/otp/verify", { email, otp: code, purpose: "login" });
+      const { access_token, refresh_token } = res.meta || {};
+      
+      // Role validation
+      const userType = res.data?.user_type;
+      const isAuthorized = 
+        (selectedRole === "customer" && userType === "customer") ||
+        (selectedRole === "vendor" && (userType === "vendor" || userType === "vendor_manager")) ||
+        (selectedRole === "delivery" && userType === "delivery_boy") ||
+        (selectedRole === "admin" && (userType === "admin" || userType === "super_admin"));
+      
+      if (!isAuthorized) {
+        throw new Error(`Account is not registered as a ${selectedRole.replace("_", " ")}.`);
+      }
+
+      api.setTokens(access_token, refresh_token);
       success("Welcome back!", "Login successful");
       await syncGuestCart();
-      const redirect = new URLSearchParams(window.location.search).get("redirect") || "/";
+
+      // Redirect based on role
+      let redirect = "/";
+      if (selectedRole === "vendor") {
+        try {
+          const vProfile = await api.get("/vendors/me");
+          if (vProfile.data?.status === "approved") {
+            redirect = "/vendor";
+          } else {
+            redirect = "/kyc";
+          }
+        } catch {
+          redirect = "/kyc";
+        }
+      } else if (selectedRole === "delivery") {
+        redirect = "/delivery";
+      } else if (selectedRole === "admin") {
+        redirect = "/admin";
+      } else {
+        redirect = new URLSearchParams(window.location.search).get("redirect") || "/";
+      }
+      
       router.replace(redirect);
     } catch (err: any) {
-      showError("Invalid OTP", err.response?.data?.detail || "Please check the code and try again");
+      showError("Login failed", err.response?.data?.detail || err.message || "Invalid OTP code");
     } finally { setLoading(false); }
   };
 
@@ -128,7 +171,7 @@ function OTPLoginTab() {
           </div>
           <h3 className="text-base font-black text-slate-900 dark:text-white">Enter Verification Code</h3>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Sent to <span className="font-bold text-slate-700 dark:text-slate-300">+91 {phone}</span>
+            Sent to <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span>
           </p>
         </div>
 
@@ -158,7 +201,7 @@ function OTPLoginTab() {
             onClick={() => setMode("phone")}
             className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mx-auto"
           >
-            <ChevronLeft className="w-4 h-4" /> Change number
+            <ChevronLeft className="w-4 h-4" /> Change email
           </button>
           {resendTimer > 0 ? (
             <p className="text-xs text-slate-500 dark:text-slate-400">Resend in <span className="font-bold text-emerald-600">{resendTimer}s</span></p>
@@ -175,18 +218,14 @@ function OTPLoginTab() {
   return (
     <div className="space-y-5">
       <div>
-        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Mobile Number</label>
+        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 font-sans">Email Address</label>
         <div className="flex gap-2">
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 flex-shrink-0">
-            🇮🇳 +91
-          </div>
           <input
-            type="tel"
-            maxLength={10}
-            value={phone}
-            onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-            placeholder="9876543210"
-            className="input-base px-4 py-3 text-sm flex-1"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="input-base px-4 py-3 text-sm flex-1 font-sans"
             onKeyDown={e => e.key === "Enter" && sendOTP()}
           />
         </div>
@@ -205,7 +244,7 @@ function OTPLoginTab() {
 }
 
 // ==================== PASSWORD TAB ====================
-function PasswordLoginTab() {
+function PasswordLoginTab({ selectedRole }: { selectedRole: "customer" | "vendor" | "delivery" | "admin" }) {
   const router = useRouter();
   const { success, error: showError } = useToast();
   const [showPwd, setShowPwd] = useState(false);
@@ -219,14 +258,47 @@ function PasswordLoginTab() {
     try {
       const res = await api.post("/auth/login", { email: data.email, password: data.password });
       const { access_token, refresh_token } = res.data;
-      localStorage.setItem("sw_access_token", access_token);
-      if (refresh_token) localStorage.setItem("sw_refresh_token", refresh_token);
+
+      // Role validation
+      const userType = res.data?.user_type;
+      const isAuthorized = 
+        (selectedRole === "customer" && userType === "customer") ||
+        (selectedRole === "vendor" && (userType === "vendor" || userType === "vendor_manager")) ||
+        (selectedRole === "delivery" && userType === "delivery_boy") ||
+        (selectedRole === "admin" && (userType === "admin" || userType === "super_admin"));
+      
+      if (!isAuthorized) {
+        throw new Error(`Account is not registered as a ${selectedRole}.`);
+      }
+
+      api.setTokens(access_token, refresh_token);
       success("Welcome back!", "Login successful");
       await syncGuestCart();
-      const redirect = new URLSearchParams(window.location.search).get("redirect") || "/";
+
+      // Redirect based on role
+      let redirect = "/";
+      if (selectedRole === "vendor") {
+        try {
+          const vProfile = await api.get("/vendors/me");
+          if (vProfile.data?.status === "approved") {
+            redirect = "/vendor";
+          } else {
+            redirect = "/kyc";
+          }
+        } catch {
+          redirect = "/kyc";
+        }
+      } else if (selectedRole === "delivery") {
+        redirect = "/delivery";
+      } else if (selectedRole === "admin") {
+        redirect = "/admin";
+      } else {
+        redirect = new URLSearchParams(window.location.search).get("redirect") || "/";
+      }
+      
       router.replace(redirect);
     } catch (err: any) {
-      showError("Login failed", err.response?.data?.detail || "Invalid email or password");
+      showError("Login failed", err.response?.data?.detail || err.message || "Invalid email or password");
     } finally { setLoading(false); }
   };
 
@@ -268,6 +340,7 @@ function PasswordLoginTab() {
 }
 
 // ==================== REGISTER TAB ====================
+// ==================== REGISTER TAB ====================
 function RegisterTab() {
   const router = useRouter();
   const { success, error: showError } = useToast();
@@ -293,8 +366,7 @@ function RegisterTab() {
         role: "customer",
       });
       const { access_token, refresh_token } = res.data;
-      localStorage.setItem("sw_access_token", access_token);
-      if (refresh_token) localStorage.setItem("sw_refresh_token", refresh_token);
+      api.setTokens(access_token, refresh_token);
       success("Account created! 🎉", "Welcome to Sbjiwala!");
       await syncGuestCart();
       const redirect = new URLSearchParams(window.location.search).get("redirect") || "/";
@@ -339,13 +411,39 @@ function RegisterTab() {
 }
 
 // ==================== PAGE ====================
+const getStoredUserType = () => {
+  if (typeof window === "undefined") return null;
+  const token = localStorage.getItem("sw_access_token");
+  if (!token) return null;
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload).user_type;
+  } catch (e) {
+    return null;
+  }
+};
+
 function LoginPageContent() {
   const router = useRouter();
   const [tab, setTab] = useState<ActiveTab>("otp");
+  const [selectedRole, setSelectedRole] = useState<"customer" | "vendor" | "delivery" | "admin">("customer");
 
   useEffect(() => {
     if (typeof window !== "undefined" && localStorage.getItem("sw_access_token")) {
-      router.replace("/");
+      const userType = getStoredUserType();
+      if (userType === "vendor" || userType === "vendor_manager") {
+        router.replace("/vendor");
+      } else if (userType === "delivery_boy") {
+        router.replace("/delivery");
+      } else if (userType === "admin" || userType === "super_admin") {
+        router.replace("/admin");
+      } else {
+        router.replace("/");
+      }
     }
   }, [router]);
 
@@ -401,6 +499,40 @@ function LoginPageContent() {
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Sign in or create your account</p>
             </div>
 
+            {/* Role Selector */}
+            <div className="mb-6">
+              <label className="block text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5 text-center">
+                I want to log in as:
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { id: "customer", label: "Customer", icon: ShoppingBag, color: "from-emerald-500/10 to-teal-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" },
+                  { id: "vendor", label: "Vendor Partner", icon: Leaf, color: "from-blue-500/10 to-indigo-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
+                  { id: "delivery", label: "Delivery Partner", icon: Truck, color: "from-amber-500/10 to-orange-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
+                  { id: "admin", label: "Administrator", icon: Shield, color: "from-rose-500/10 to-red-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" }
+                ].map(r => {
+                  const Icon = r.icon;
+                  const isSelected = selectedRole === r.id;
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setSelectedRole(r.id as any)}
+                      className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                        isSelected
+                          ? `bg-gradient-to-br ${r.color.split(" ")[0]} ${r.color.split(" ")[1]} border-current shadow-md scale-[1.02] font-black`
+                          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-slate-700"
+                      }`}
+                      style={{ color: isSelected ? undefined : "" }}
+                    >
+                      <Icon className={`w-5 h-5 mb-1.5 transition-transform ${isSelected ? "animate-pulse" : ""}`} />
+                      <span className="text-[11px] font-black tracking-tight">{r.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Tab switcher */}
             <div className="flex bg-slate-100 dark:bg-slate-800/60 rounded-2xl p-1 mb-6 border border-slate-200 dark:border-slate-700">
               {tabs.map(t => (
@@ -418,8 +550,8 @@ function LoginPageContent() {
             </div>
 
             {/* Tab content */}
-            {tab === "otp" && <OTPLoginTab />}
-            {tab === "password" && <PasswordLoginTab />}
+            {tab === "otp" && <OTPLoginTab selectedRole={selectedRole} />}
+            {tab === "password" && <PasswordLoginTab selectedRole={selectedRole} />}
             {tab === "register" && <RegisterTab />}
           </div>
         </div>

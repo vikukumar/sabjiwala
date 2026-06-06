@@ -946,9 +946,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Public routes that don't need app shell (full screen)
-  const isAuthRoute = ["/login", "/register"].some(r => pathname?.startsWith(r));
-  if (isAuthRoute) return <>{children}</>;
+  // Public routes or sub-portals that don't need customer app shell (full screen / own layout)
+  const isBypassRoute = ["/login", "/register", "/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r));
+  if (isBypassRoute) return <>{children}</>;
 
   if (showSplash) {
     return <SplashPermissionsScreen onComplete={() => setShowSplash(false)} />;
