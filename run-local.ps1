@@ -29,10 +29,8 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
 
 # Run physical dependency syncing to bypass Windows symlink boundaries
 Write-Host "`n[2/4] Syncing shared workspace modules..." -ForegroundColor Green
-if (Test-Path "fix_node_modules.py") {
-    python fix_node_modules.py
-} elseif (Test-Path "tmp/fix_node_modules.py") {
-    python tmp/fix_node_modules.py
+if (Test-Path "tmp/fix_node_modules.js") {
+    node tmp/fix_node_modules.js
 } else {
     Write-Host "Shared modules fixer script not found; skipping." -ForegroundColor Yellow
 }

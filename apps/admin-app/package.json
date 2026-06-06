@@ -9,8 +9,8 @@
     "lint": "eslint",
     "cap:sync": "npx cap sync",
     "cap:build": "npm run build && npx cap copy",
-    "prebuild": "node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json');\"",
-    "predev": "node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json');\""
+    "prebuild": "node ../../tmp/fix_node_modules.js && node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json');\"",
+    "predev": "node ../../tmp/fix_node_modules.js && node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json');\""
   },
   "dependencies": {
     "next": "16.2.6",
