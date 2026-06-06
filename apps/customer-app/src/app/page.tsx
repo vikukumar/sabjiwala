@@ -300,7 +300,12 @@ function ProductCard({ product }: { product: any }) {
   // Read backend cart
   const { data: serverCart } = useQuery<any>({
     queryKey: ["cart"],
+    queryFn: async () => {
+      const res = await api.get("/cart");
+      return res.data || { items: [], item_count: 0 };
+    },
     enabled: typeof window !== "undefined" && !isGuest,
+    staleTime: 30_000,
   });
 
   // Track guest cart local state
@@ -470,7 +475,14 @@ function ProductCard({ product }: { product: any }) {
 
 // ==================== PRODUCTS GRID ====================
 function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
-  const { data: categories = [] } = useQuery<any[]>({ queryKey: ["categories"], enabled: false });
+  const { data: categories = [] } = useQuery<any[]>({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const res = await api.get("/catalog/categories");
+      return res.data || [];
+    },
+    staleTime: 5 * 60_000,
+  });
   const catObj = categories.find((c: any) => c.name === categoryFilter);
 
   // Fetch all products
@@ -544,6 +556,10 @@ function CartFooter() {
   // Server cart state
   const { data: serverCart } = useQuery<any>({
     queryKey: ["cart"],
+    queryFn: async () => {
+      const res = await api.get("/cart");
+      return res.data || { items: [], item_count: 0 };
+    },
     enabled: typeof window !== "undefined" && !isGuest,
     staleTime: 30_000,
   });
@@ -643,7 +659,7 @@ export default function HomePage() {
       };
 
       ws.onerror = (err) => {
-        console.error("WS error:", err);
+        console.warn("WS connection offline or closed:", err);
         ws.close();
       };
     };

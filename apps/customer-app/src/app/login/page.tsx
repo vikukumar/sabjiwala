@@ -280,8 +280,13 @@ function RegisterTab() {
   const onSubmit = async (data: any) => {
     setLoading(true);
     try {
+      const parts = (data.full_name || "").trim().split(/\s+/);
+      const first_name = parts[0] || "";
+      const last_name = parts.slice(1).join(" ") || "";
+
       const res = await api.post("/auth/register", {
-        full_name: data.full_name,
+        first_name,
+        last_name,
         email: data.email,
         phone: "+91" + data.phone,
         password: data.password,

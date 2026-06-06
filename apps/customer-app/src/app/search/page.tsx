@@ -12,7 +12,14 @@ import { useToast } from "@/components/ui/Toast";
 function ProductCard({ product }: { product: any }) {
   const queryClient = useQueryClient();
   const { error: showError } = useToast();
-  const { data: cartData } = useQuery<any>({ queryKey: ["cart"], enabled: false });
+  const { data: cartData } = useQuery<any>({
+    queryKey: ["cart"],
+    queryFn: async () => {
+      const res = await api.get("/cart");
+      return res.data || { items: [], item_count: 0 };
+    },
+    staleTime: 30_000,
+  });
   const cartItem = cartData?.items?.find((i: any) => i.product_id === product.id);
 
   const addToCart = useMutation({
