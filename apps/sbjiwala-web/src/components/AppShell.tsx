@@ -12,7 +12,9 @@ import {
   RefreshCw,
   WifiOff,
   Camera,
-  Smartphone
+  Smartphone,
+  Building2,
+  Truck
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
@@ -72,6 +74,13 @@ const sidebarSections = [
       { href: "/support", icon: HelpCircle, label: "Help & Support" },
       { href: "/support/tickets", icon: MessageSquare, label: "My Tickets" },
       { href: "/faq", icon: FileText, label: "FAQ" },
+    ],
+  },
+  {
+    title: "Partnership",
+    items: [
+      { href: "/vendor/login", icon: Building2, label: "Partner with Us" },
+      { href: "/delivery/login", icon: Truck, label: "Deliver with Us" },
     ],
   },
   {

@@ -60,7 +60,7 @@ export default function KYCOnboarding() {
     if (typeof window === "undefined") return;
     const token = localStorage.getItem("sw_access_token");
     if (!token) {
-      window.location.href = "/login";
+      window.location.href = "/vendor/login";
       return;
     }
 

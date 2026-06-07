@@ -80,14 +80,14 @@ export default function AdminDashboard() {
   // Route Protection check
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem("sw_access_token")) {
-      window.location.href = "/login";
+      window.location.href = "/admin/login";
     }
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("sw_access_token");
     localStorage.removeItem("sw_refresh_token");
-    window.location.href = "/login";
+    window.location.href = "/admin/login";
   };
 
   // ==================== QUERIES ====================

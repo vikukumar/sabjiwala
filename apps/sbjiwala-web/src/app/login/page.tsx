@@ -219,7 +219,8 @@ function LoginPageContent() {
       const res = await api.post("/auth/otp/verify", {
         identifier: otpIdentifier,
         otp: code,
-        purpose: "login"
+        purpose: "login",
+        role: "customer"
       });
       
       const userType = res.data?.user_type;
@@ -267,7 +268,8 @@ function LoginPageContent() {
     try {
       const res = await api.post("/auth/login", {
         identifier: passwordState.identifier,
-        password: passwordState.password
+        password: passwordState.password,
+        role: "customer"
       });
 
       const userType = res.data?.user_type;
@@ -409,7 +411,8 @@ function LoginPageContent() {
         authenticator_data_b64: bufferToBase64Url(response.authenticatorData),
         client_data_json_b64: bufferToBase64Url(response.clientDataJSON),
         signature_b64: bufferToBase64Url(response.signature),
-        identifier: passkeyIdentifier
+        identifier: passkeyIdentifier,
+        role: "customer"
       });
 
       const userType = verifyRes.data?.user_type;
@@ -758,8 +761,7 @@ function LoginPageContent() {
                 { id: "otp", label: "OTP" },
                 { id: "password", label: "Password" },
                 { id: "passkey", label: "Passkey" },
-                { id: "magic", label: "Magic" },
-                { id: "register", label: "Register" }
+                { id: "magic", label: "Magic" }
               ].map(t => (
                 <button
                   key={t.id}
@@ -919,73 +921,12 @@ function LoginPageContent() {
               </div>
             )}
 
-            {/* 5. Register Tab */}
-            {tab === "register" && (
-              <form onSubmit={handleRegSubmit(onRegisterSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <Input 
-                    label="First Name" 
-                    placeholder="John" 
-                    error={regErrors.first_name?.message}
-                    {...regForm("first_name", { required: "First name is required" })}
-                  />
-                  <Input 
-                    label="Last Name" 
-                    placeholder="Doe" 
-                    error={regErrors.last_name?.message}
-                    {...regForm("last_name")}
-                  />
-                </div>
-                <Input 
-                  label="Username (Optional)" 
-                  placeholder="johndoe123" 
-                  leftIcon={<User className="w-4 h-4" />}
-                  error={regErrors.username?.message}
-                  {...regForm("username")}
-                />
-                <Input 
-                  label="Email (Email or Phone required)" 
-                  type="email" 
-                  placeholder="you@example.com" 
-                  leftIcon={<Mail className="w-4 h-4" />}
-                  error={regErrors.email?.message}
-                  {...regForm("email")}
-                />
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Mobile Number</label>
-                  <div className="flex gap-2">
-                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-sm font-bold flex-shrink-0">🇮🇳 +91</div>
-                    <input 
-                      type="tel" 
-                      maxLength={10} 
-                      placeholder="9876543210" 
-                      className="input-base px-4 py-3 text-sm flex-1 font-sans"
-                      {...regForm("phone", { pattern: /^\d{10}$/ })} 
-                    />
-                  </div>
-                  {regErrors.phone && <p className="text-xs text-rose-500 mt-1">Enter valid 10-digit number</p>}
-                </div>
-                <Input 
-                  label="Password (Optional)" 
-                  type="password" 
-                  placeholder="Min. 8 characters" 
-                  leftIcon={<Lock className="w-4 h-4" />}
-                  error={regErrors.password?.message}
-                  {...regForm("password")} 
-                />
-                <Input 
-                  label="Referral Code (Optional)" 
-                  placeholder="REFCODE12" 
-                  leftIcon={<Sparkles className="w-4 h-4" />}
-                  error={regErrors.referral_code?.message}
-                  {...regForm("referral_code")}
-                />
-
-                <Button type="submit" fullWidth loading={loading} size="lg">
-                  Submit Registration <ArrowRight className="w-4 h-4" />
-                </Button>
-              </form>
-            )}
+            <div className="text-center text-xs font-semibold text-slate-500 dark:text-slate-450 mt-6">
+              Don't have an account?{" "}
+              <Link href="/register" className="text-emerald-655 dark:text-emerald-400 hover:underline font-extrabold">
+                Register here
+              </Link>
+            </div>
 
             <p className="text-[10px] text-center text-slate-400 dark:text-slate-500 mt-6 leading-relaxed">
               By proceeding, you agree to our <Link href="/terms" className="text-emerald-600 hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-emerald-600 hover:underline">Privacy Policy</Link>.

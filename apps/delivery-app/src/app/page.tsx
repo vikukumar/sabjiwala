@@ -280,7 +280,7 @@ export default function DeliveryAgentDashboard() {
   // 1. Route Protection check
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem("sw_access_token")) {
-      window.location.href = "/login";
+      window.location.href = "/delivery/login";
     }
   }, []);
 

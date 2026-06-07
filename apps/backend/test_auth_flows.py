@@ -534,6 +534,13 @@ async def run_tests():
         # 9. Multi-Role Append & Switch Login Verification
         # =====================================================================
         print("\n=== Test 9: Multi-Role Append Registration & Switch Login ===")
+        # Clear Redis rate limits for specialvendor email to prevent 60-second limit error
+        redis = await from_url(settings.redis_url, decode_responses=True)
+        keys_rate = await redis.keys("otp:rate:*:specialvendor@sbjiwala.in")
+        for k in keys_rate:
+            await redis.delete(k)
+        await redis.close()
+
         # Register the existing 'specialvendor' user as a delivery boy
         append_payload = {
             "first_name": "Special",

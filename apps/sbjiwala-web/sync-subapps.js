@@ -57,6 +57,10 @@ try {
   const vendorLoginDest = path.join(webSrc, 'app/vendor/login');
   removeRecursiveSync(vendorLoginDest);
   copyRecursiveSync(path.join(vendorSrc, 'app/login'), vendorLoginDest);
+  // register directory
+  const vendorRegisterDest = path.join(webSrc, 'app/vendor/register');
+  removeRecursiveSync(vendorRegisterDest);
+  copyRecursiveSync(path.join(vendorSrc, 'app/register'), vendorRegisterDest);
 
   // 3. Clean and Copy Delivery app specific pages
   console.log(`Syncing delivery-app pages...`);
@@ -67,6 +71,10 @@ try {
   const deliveryLoginDest = path.join(webSrc, 'app/delivery/login');
   removeRecursiveSync(deliveryLoginDest);
   copyRecursiveSync(path.join(deliverySrc, 'app/login'), deliveryLoginDest);
+  // register directory
+  const deliveryRegisterDest = path.join(webSrc, 'app/delivery/register');
+  removeRecursiveSync(deliveryRegisterDest);
+  copyRecursiveSync(path.join(deliverySrc, 'app/register'), deliveryRegisterDest);
 
   // 4. Clean and Copy Admin app specific pages
   console.log(`Syncing admin-app pages...`);

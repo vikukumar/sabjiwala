@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Mail, Phone, ArrowRight, ShieldCheck, Loader2, Sparkles, User, Lock, Gift } from "lucide-react";
+import Link from "next/link";
+import { Mail, Phone, ArrowRight, ShieldCheck, Loader2, Sparkles, User, Lock } from "lucide-react";
 import { api } from "@sbjiwala/shared";
 
 export default function LoginPage() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [loginTab, setLoginTab] = useState<"otp" | "password">("otp");
 
   // Login Form States
@@ -14,19 +14,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [isOtpSent, setIsOtpSent] = useState(false);
-
-  // Register Form States
-  const [regFirstName, setRegFirstName] = useState("");
-  const [regLastName, setRegLastName] = useState("");
-  const [regEmail, setRegEmail] = useState("");
-  const [regPhone, setRegPhone] = useState("");
-  const [regPassword, setRegPassword] = useState("");
-  const [regReferral, setRegReferral] = useState("");
-
-  // Delivery settings
-  const [regVehicleType, setRegVehicleType] = useState("motorcycle");
-  const [regVehicleNumber, setRegVehicleNumber] = useState("");
-  const [regLicenseNumber, setRegLicenseNumber] = useState("");
 
   // Loading States
   const [otpLoading, setOtpLoading] = useState(false);
@@ -72,10 +59,6 @@ export default function LoginPage() {
     return `${apiBase}${path}`;
   };
 
-  const configureBaseUrl = () => {
-    // Shared ApiClient resolves baseURL dynamically; no manual override needed.
-  };
-
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -88,7 +71,6 @@ export default function LoginPage() {
 
     setOtpLoading(true);
     try {
-      configureBaseUrl();
       const res = await api.post("/auth/otp/send", {
         email,
         purpose: "login"
@@ -126,7 +108,6 @@ export default function LoginPage() {
 
     setSubmitLoading(true);
     try {
-      configureBaseUrl();
       const res = await api.post("/auth/otp/verify", {
         email,
         otp,
@@ -160,7 +141,6 @@ export default function LoginPage() {
 
     setSubmitLoading(true);
     try {
-      configureBaseUrl();
       const res = await api.post("/auth/login", { email, password, role: "delivery_boy" });
       if (res.success && res.meta) {
         api.setTokens(res.meta.access_token, res.meta.refresh_token);
@@ -171,76 +151,6 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       setErrorMsg(err.response?.data?.detail || err.message || "Login failed.");
-    } finally {
-      setSubmitLoading(false);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg("");
-    setSuccessMsg("");
-
-    if (!regFirstName || !regEmail) {
-      setErrorMsg("First Name and Email are required.");
-      return;
-    }
-    if (!regVehicleNumber) {
-      setErrorMsg("Vehicle Number is required.");
-      return;
-    }
-    if (!regLicenseNumber) {
-      setErrorMsg("License Number is required.");
-      return;
-    }
-
-    setSubmitLoading(true);
-    try {
-      configureBaseUrl();
-      const res = await api.post("/auth/register", {
-        email: regEmail,
-        phone: regPhone ? "+91" + regPhone : undefined,
-        first_name: regFirstName,
-        last_name: regLastName,
-        password: regPassword || undefined,
-        referral_code: regReferral || undefined,
-        role: "delivery_boy",
-        vehicle_type: regVehicleType,
-        vehicle_number: regVehicleNumber,
-        license_number: regLicenseNumber
-      });
-
-      if (res.success) {
-        setSuccessMsg("Registration successful!");
-
-        // If they provided a password, try logging in immediately
-        if (regPassword) {
-          try {
-            const loginRes = await api.post("/auth/login", { email: regEmail, password: regPassword, role: "delivery_boy" });
-            if (loginRes.success && loginRes.meta) {
-              api.setTokens(loginRes.meta.access_token, loginRes.meta.refresh_token);
-              setSuccessMsg("Registration successful! Logging you in...");
-              handleSuccessfulLoginRedirect("delivery_boy");
-              return;
-            }
-          } catch (loginErr) {
-            // Ignore auto-login failures, just fallback to signin tab
-          }
-        }
-
-        // Fallback: switch to signin tab and ask for OTP
-        setTimeout(() => {
-          setEmail(regEmail);
-          setAuthMode("signin");
-          setLoginTab("otp");
-          setIsOtpSent(false);
-          setSuccessMsg("Please verify your email via OTP to login.");
-        }, 1500);
-      } else {
-        setErrorMsg(res.message || "Registration failed.");
-      }
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || err.message || "Registration failed.");
     } finally {
       setSubmitLoading(false);
     }
@@ -286,7 +196,6 @@ export default function LoginPage() {
     if (role === "admin") credentials = { email: "admin@sbjiwala.in", password: "admin123" };
 
     try {
-      configureBaseUrl();
       const res = await api.post("/auth/login", credentials);
       if (res.success && res.meta) {
         api.setTokens(res.meta.access_token, res.meta.refresh_token);
@@ -327,163 +236,56 @@ export default function LoginPage() {
           <div className="text-center space-y-2 relative">
             <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-12 w-auto mx-auto mb-2" />
             <h2 className="text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-              {authMode === "signin" ? "Welcome Back!" : "Create Account"}
+              Welcome Back!
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {authMode === "signin"
-                ? "Log in to manage orders, catalog, and deliveries"
-                : "Register to get fresh vegetables delivered in 10 minutes"}
+              Log in to manage your delivery assignments and track orders
             </p>
-          </div>
-
-          {/* Form Mode Tabs (Sign In vs Sign Up) */}
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200/50 dark:border-slate-700/60 text-xs font-bold">
-            <button
-              onClick={() => { setAuthMode("signin"); setErrorMsg(""); setSuccessMsg(""); }}
-              className={`flex-1 py-2.5 rounded-xl transition-all ${authMode === "signin"
-                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md"
-                : "text-slate-500 dark:text-slate-400 hover:text-slate-800"
-                }`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => { setAuthMode("signup"); setErrorMsg(""); setSuccessMsg(""); }}
-              className={`flex-1 py-2.5 rounded-xl transition-all ${authMode === "signup"
-                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md"
-                : "text-slate-500 dark:text-slate-400 hover:text-slate-800"
-                }`}
-            >
-              Sign Up / Register
-            </button>
           </div>
 
           {/* Messages */}
           {errorMsg && (
-            <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-600 dark:text-rose-455 rounded-2xl text-xs font-semibold leading-relaxed">
+            <div className="p-4 bg-rose-50 dark:bg-rose-955/20 border border-rose-100 dark:border-rose-900/30 text-rose-600 dark:text-rose-455 rounded-2xl text-xs font-semibold leading-relaxed">
               {errorMsg}
             </div>
           )}
           {successMsg && (
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-450 rounded-2xl text-xs font-semibold leading-relaxed">
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-955/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-2xl text-xs font-semibold leading-relaxed">
               {successMsg}
             </div>
           )}
 
           {/* Sign In View */}
-          {authMode === "signin" && (
-            <div className="space-y-4">
-              {/* Login Method Tab (OTP vs Password) */}
-              <div className="flex justify-center gap-4 text-xs font-bold border-b border-slate-100 dark:border-slate-800 pb-2">
-                <button
-                  onClick={() => setLoginTab("otp")}
-                  className={`pb-1 transition-all ${loginTab === "otp"
-                    ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
-                    : "text-slate-400 hover:text-slate-650"
-                    }`}
-                >
-                  Email OTP Login
-                </button>
-                <button
-                  onClick={() => setLoginTab("password")}
-                  className={`pb-1 transition-all ${loginTab === "password"
-                    ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
-                    : "text-slate-400 hover:text-slate-650"
-                    }`}
-                >
-                  Password Login
-                </button>
-              </div>
+          <div className="space-y-4">
+            {/* Login Method Tab (OTP vs Password) */}
+            <div className="flex justify-center gap-4 text-xs font-bold border-b border-slate-100 dark:border-slate-800 pb-2">
+              <button
+                onClick={() => setLoginTab("otp")}
+                className={`pb-1 transition-all ${loginTab === "otp"
+                  ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
+                  : "text-slate-400 hover:text-slate-650"
+                  }`}
+              >
+                Email OTP Login
+              </button>
+              <button
+                onClick={() => setLoginTab("password")}
+                className={`pb-1 transition-all ${loginTab === "password"
+                  ? "text-emerald-600 dark:text-emerald-455 border-b-2 border-emerald-600 dark:border-emerald-455"
+                  : "text-slate-400 hover:text-slate-650"
+                  }`}
+              >
+                Password Login
+              </button>
+            </div>
 
-              {loginTab === "otp" ? (
-                /* OTP FORM */
-                !isOtpSent ? (
-                  <form onSubmit={handleSendOtp} className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Email Address</label>
-                      <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
-                        <Mail className="w-5 h-5 text-slate-400 mr-3" />
-                        <input
-                          type="email"
-                          required
-                          placeholder="you@example.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="bg-transparent border-none outline-none w-full text-sm text-slate-850 dark:text-white placeholder-slate-400"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={otpLoading}
-                      className="w-full bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-extrabold py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50"
-                    >
-                      {otpLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" /> Sending OTP...
-                        </>
-                      ) : (
-                        <>
-                          Send Verification OTP <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleVerifyOtp} className="space-y-4">
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-center">
-                        <label className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Verification Code</label>
-                        <span className="text-xs text-slate-400 font-semibold">{email}</span>
-                      </div>
-                      <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
-                        <ShieldCheck className="w-5 h-5 text-slate-400 mr-3" />
-                        <input
-                          type="text"
-                          required
-                          maxLength={6}
-                          placeholder="Enter 6-digit OTP"
-                          value={otp}
-                          onChange={(e) => setOtp(e.target.value)}
-                          className="bg-transparent border-none outline-none w-full text-sm text-slate-800 dark:text-white tracking-widest placeholder-slate-400 text-center font-bold"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-xs font-semibold px-1">
-                      <button type="button" onClick={() => setIsOtpSent(false)} className="text-slate-500 hover:underline">
-                        Change Email
-                      </button>
-                      {countdown > 0 ? (
-                        <span className="text-slate-400">Resend in {countdown}s</span>
-                      ) : (
-                        <button type="button" onClick={handleSendOtp} className="text-emerald-600 dark:text-emerald-455 hover:underline">
-                          Resend Code
-                        </button>
-                      )}
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={submitLoading}
-                      className="w-full bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-extrabold py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50"
-                    >
-                      {submitLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" /> Logging in...
-                        </>
-                      ) : (
-                        <>
-                          Verify & Login <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )
-              ) : (
-                /* PASSWORD FORM */
-                <form onSubmit={handlePasswordLogin} className="space-y-4">
+            {loginTab === "otp" ? (
+              /* OTP FORM */
+              !isOtpSent ? (
+                <form onSubmit={handleSendOtp} className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Email Address</label>
-                    <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
+                    <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-955 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
                       <Mail className="w-5 h-5 text-slate-400 mr-3" />
                       <input
                         type="email"
@@ -491,26 +293,58 @@ export default function LoginPage() {
                         placeholder="you@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="bg-transparent border-none outline-none w-full text-sm text-slate-850 dark:text-white placeholder-slate-400"
+                        className="bg-transparent border-none outline-none w-full text-sm text-slate-800 dark:text-white placeholder-slate-400"
                       />
                     </div>
                   </div>
-
+                  <button
+                    type="submit"
+                    disabled={otpLoading}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-extrabold py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                  >
+                    {otpLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" /> Sending OTP...
+                      </>
+                    ) : (
+                      <>
+                        Send Verification OTP <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Password</label>
-                    <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
-                      <Lock className="w-5 h-5 text-slate-400 mr-3" />
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Verification Code</label>
+                      <span className="text-xs text-slate-400 font-semibold">{email}</span>
+                    </div>
+                    <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
+                      <ShieldCheck className="w-5 h-5 text-slate-400 mr-3" />
                       <input
-                        type="password"
+                        type="text"
                         required
-                        placeholder="Enter password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="bg-transparent border-none outline-none w-full text-sm text-slate-850 dark:text-white placeholder-slate-400"
+                        maxLength={6}
+                        placeholder="Enter 6-digit OTP"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                        className="bg-transparent border-none outline-none w-full text-sm text-slate-800 dark:text-white tracking-widest placeholder-slate-400 text-center font-bold"
                       />
                     </div>
                   </div>
-
+                  <div className="flex items-center justify-between text-xs font-semibold px-1">
+                    <button type="button" onClick={() => setIsOtpSent(false)} className="text-slate-500 hover:underline">
+                      Change Email
+                    </button>
+                    {countdown > 0 ? (
+                      <span className="text-slate-400">Resend in {countdown}s</span>
+                    ) : (
+                      <button type="button" onClick={handleSendOtp} className="text-emerald-600 dark:text-emerald-455 hover:underline">
+                        Resend Code
+                      </button>
+                    )}
+                  </div>
                   <button
                     type="submit"
                     disabled={submitLoading}
@@ -527,194 +361,104 @@ export default function LoginPage() {
                     )}
                   </button>
                 </form>
-              )}
+              )
+            ) : (
+              /* PASSWORD FORM */
+              <form onSubmit={handlePasswordLogin} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Email Address</label>
+                  <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
+                    <Mail className="w-5 h-5 text-slate-455 mr-3" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="bg-transparent border-none outline-none w-full text-sm text-slate-850 dark:text-white placeholder-slate-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Password</label>
+                  <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-55/50 dark:bg-slate-950 rounded-2xl px-4 py-3 focus-within:border-emerald-500 transition-all">
+                    <Lock className="w-5 h-5 text-slate-455 mr-3" />
+                    <input
+                      type="password"
+                      required
+                      placeholder="Enter password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="bg-transparent border-none outline-none w-full text-sm text-slate-850 dark:text-white placeholder-slate-400"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitLoading}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-extrabold py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                >
+                  {submitLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Logging in...
+                    </>
+                  ) : (
+                    <>
+                      Verify & Login <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+
+            <div className="text-center text-xs font-semibold text-slate-550 dark:text-slate-400 pt-2">
+              Want to deliver with us?{" "}
+              <Link href="/delivery/register" className="text-emerald-650 dark:text-emerald-400 hover:underline font-extrabold">
+                Register as a Delivery Partner here
+              </Link>
             </div>
-          )}
 
-          {/* Sign Up / Register View */}
-          {authMode === "signup" && (
-            <form onSubmit={handleRegister} className="space-y-3.5">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">First Name</label>
-                  <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
-                    <User className="w-4 h-4 text-slate-455 mr-2" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="Rahul"
-                      value={regFirstName}
-                      onChange={(e) => setRegFirstName(e.target.value)}
-                      className="bg-transparent border-none outline-none w-full text-xs text-slate-850 dark:text-white"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Last Name</label>
-                  <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
-                    <User className="w-4 h-4 text-slate-455 mr-2" />
-                    <input
-                      type="text"
-                      placeholder="Sharma"
-                      value={regLastName}
-                      onChange={(e) => setRegLastName(e.target.value)}
-                      className="bg-transparent border-none outline-none w-full text-xs text-slate-850 dark:text-white"
-                    />
-                  </div>
-                </div>
-              </div>
+            <div className="flex justify-between items-center text-[10px] font-semibold text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-slate-800 mt-2">
+              <Link href="/login" className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1">
+                ← Customer Portal
+              </Link>
+              <Link href="/vendor/login" className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1">
+                Partner with Us →
+              </Link>
+            </div>
+          </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Email Address</label>
-                <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
-                  <Mail className="w-4 h-4 text-slate-455 mr-2.5" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="name@example.com"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    className="bg-transparent border-none outline-none w-full text-xs text-slate-850 dark:text-white"
-                  />
-                </div>
-              </div>
+          <div className="relative flex py-1 items-center">
+            <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+            <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-wider">Or Connect With</span>
+            <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+          </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Mobile Number (Optional)</label>
-                <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
-                  <Phone className="w-4 h-4 text-slate-455 mr-2.5" />
-                  <input
-                    type="tel"
-                    placeholder="9820012345"
-                    value={regPhone}
-                    onChange={(e) => setRegPhone(e.target.value)}
-                    className="bg-transparent border-none outline-none w-full text-xs text-slate-850 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Password (Optional)</label>
-                <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
-                  <Lock className="w-4 h-4 text-slate-455 mr-2.5" />
-                  <input
-                    type="password"
-                    placeholder="Create secure password"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    className="bg-transparent border-none outline-none w-full text-xs text-slate-850 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Referral Code (Optional)</label>
-                <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
-                  <Gift className="w-4 h-4 text-slate-455 mr-2.5" />
-                  <input
-                    type="text"
-                    placeholder="e.g. WELCOME100"
-                    value={regReferral}
-                    onChange={(e) => setRegReferral(e.target.value.toUpperCase())}
-                    className="bg-transparent border-none outline-none w-full text-xs text-slate-850 dark:text-white tracking-widest"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-3 p-4 rounded-2xl border border-amber-500/20 bg-amber-50/10 dark:bg-amber-955/10 text-left">
-                <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">Delivery Partner Settings</p>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-semibold text-slate-700 dark:text-slate-350">Vehicle Type</label>
-                  <select
-                    value={regVehicleType}
-                    onChange={(e) => setRegVehicleType(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none focus:border-emerald-500 transition-all"
-                  >
-                    <option value="bicycle">Bicycle</option>
-                    <option value="motorcycle">Motorcycle</option>
-                    <option value="scooter">Scooter</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Vehicle Number</label>
-                  <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. MH12AB1234"
-                      value={regVehicleNumber}
-                      onChange={(e) => setRegVehicleNumber(e.target.value.toUpperCase())}
-                      className="bg-transparent border-none outline-none w-full text-xs text-slate-850 dark:text-white placeholder-slate-400"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Driving License Number</label>
-                  <div className="flex items-center border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 focus-within:border-emerald-500 transition-all">
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. DL-1234567890123"
-                      value={regLicenseNumber}
-                      onChange={(e) => setRegLicenseNumber(e.target.value.toUpperCase())}
-                      className="bg-transparent border-none outline-none w-full text-xs text-slate-850 dark:text-white placeholder-slate-400"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitLoading}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-extrabold py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 text-xs disabled:opacity-50 mt-2"
-              >
-                {submitLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Creating Account...
-                  </>
-                ) : (
-                  <>
-                    Create & Register Account <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* Social Logins */}
-          {authMode === "signin" && (
-            <>
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
-                <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-wider">Or Connect With</span>
-                <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => handleSocialLogin("google")}
-                  className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl py-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <path
-                      fill="#EA4335"
-                      d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.2-5.136 4.2A5.626 5.626 0 0 1 8.28 13a5.626 5.626 0 0 1 5.711-5.6c1.554 0 2.973.57 4.073 1.503l3.24-3.24C19.336 3.793 15.938 2.5 12.24 2.5a10.5 10.5 0 0 0 0 21c5.82 0 10.5-4.2 10.5-10.5 0-.756-.098-1.485-.26-2.215H12.24z"
-                    />
-                  </svg>
-                  <span>Google</span>
-                </button>
-                <button
-                  onClick={() => handleSocialLogin("facebook")}
-                  className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl py-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <svg className="w-4 h-4 fill-[#1877F2]" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                  <span>Facebook</span>
-                </button>
-              </div>
-            </>
-          )}
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => handleSocialLogin("google")}
+              className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl py-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path
+                  fill="#EA4335"
+                  d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.2-5.136 4.2A5.626 5.626 0 0 1 8.28 13a5.626 5.626 0 0 1 5.711-5.6c1.554 0 2.973.57 4.073 1.503l3.24-3.24C19.336 3.793 15.938 2.5 12.24 2.5a10.5 10.5 0 0 0 0 21c5.82 0 10.5-4.2 10.5-10.5 0-.756-.098-1.485-.26-2.215H12.24z"
+                />
+              </svg>
+              <span>Google</span>
+            </button>
+            <button
+              onClick={() => handleSocialLogin("facebook")}
+              className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl py-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <svg className="w-4 h-4 fill-[#1877F2]" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+              </svg>
+              <span>Facebook</span>
+            </button>
+          </div>
 
           {/* Developer Bypass section */}
           <div className="border-t border-dashed border-slate-200 dark:border-slate-800/80 pt-4 space-y-2">
@@ -726,7 +470,7 @@ export default function LoginPage() {
                 onClick={() => handleDeveloperBypass("delivery")}
                 className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-500 transition-colors py-2 rounded-xl"
               >
-                Bypass as Delivery Partner
+                Bypass as Rider
               </button>
             </div>
           </div>

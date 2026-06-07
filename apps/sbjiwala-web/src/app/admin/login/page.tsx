@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { Mail, Phone, ArrowRight, ShieldCheck, Loader2, Sparkles, User, Lock, Gift } from "lucide-react";
 import { api } from "@sbjiwala/shared";
 
@@ -502,6 +503,12 @@ export default function LoginPage() {
               >
                 Bypass as Admin
               </button>
+            </div>
+            
+            <div className="text-center text-xs font-semibold text-slate-550 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <Link href="/login" className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1 justify-center">
+                ← Return to Customer Portal
+              </Link>
             </div>
           </div>
         </div>
