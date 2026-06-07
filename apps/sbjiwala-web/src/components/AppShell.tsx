@@ -592,13 +592,32 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
         {slide < 4 ? (
           <div className="flex gap-3">
             <button
-              onClick={() => setSlide(4)}
+              onClick={() => {
+                const isNative = typeof window !== "undefined" && !!(window as any).Capacitor;
+                if (isNative) {
+                  localStorage.setItem("sw_splash_onboarding", "completed");
+                  localStorage.setItem("sw_latitude", "19.0760");
+                  localStorage.setItem("sw_longitude", "72.8777");
+                  localStorage.setItem("sw_location_name", "Mumbai Center (Default)");
+                  onComplete();
+                } else {
+                  setSlide(4);
+                }
+              }}
               className="flex-1 text-center text-xs font-black text-slate-500 hover:text-slate-400 tracking-wider uppercase py-3.5"
             >
               Skip
             </button>
             <button
-              onClick={() => setSlide((s) => s + 1)}
+              onClick={() => {
+                const isNative = typeof window !== "undefined" && !!(window as any).Capacitor;
+                if (slide === 3 && isNative) {
+                  setSlide(4);
+                  requestLocation();
+                } else {
+                  setSlide((s) => s + 1);
+                }
+              }}
               className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-black py-3.5 rounded-2xl text-xs transition-all text-center border border-slate-700"
             >
               Next
@@ -892,6 +911,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
     // Check notifications prompt request event
     const handleNotifPrompt = () => {
+      const isNative = typeof window !== "undefined" && !!(window as any).Capacitor;
+      if (isNative) return; // Native handles notifications prompt
+
       if ("Notification" in window && Notification.permission === "default") {
         setShowNotifModal(true);
       }
@@ -931,6 +953,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     
+    // Check if running on native mobile platform
+    const isNative = !!(window as any).Capacitor;
+    if (isNative) return;
+
     if (localStorage.getItem("sw_splash_onboarding") === "completed") {
       if (navigator.permissions) {
         navigator.permissions.query({ name: "geolocation" }).then((result) => {

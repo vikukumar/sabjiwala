@@ -85,7 +85,8 @@ export function Input({
   id,
   ...props
 }: InputProps) {
-  const inputId = id || `input-${Math.random().toString(36).slice(2)}`;
+  const defaultId = React.useId();
+  const inputId = id || defaultId;
   const sizes = {
     sm: "px-3 py-2 text-sm",
     md: "px-4 py-3 text-sm",

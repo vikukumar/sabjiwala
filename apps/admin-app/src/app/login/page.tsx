@@ -33,9 +33,29 @@ export default function LoginPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [countdown, setCountdown] = useState(0);
 
+  const [checkingSetup, setCheckingSetup] = useState(true);
+
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
     setTheme(isDark ? "dark" : "light");
+
+    const checkInstallation = async () => {
+      try {
+        const res = await api.get("/installation/status");
+        if (res.success && res.data) {
+          const adminAccount = res.data.admin_account;
+          if (adminAccount && !adminAccount.is_completed) {
+            window.location.href = "/admin/setup";
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check installation status", err);
+      } finally {
+        setCheckingSetup(false);
+      }
+    };
+    checkInstallation();
   }, []);
 
   // Countdown timer for OTP resend
@@ -284,6 +304,14 @@ export default function LoginPage() {
     }
   };
 
+  if (checkingSetup) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] flex items-center justify-center font-sans">
+        <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-55 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 flex flex-col justify-between transition-colors duration-200 antialiased font-sans">
       {/* Header */}
@@ -491,25 +519,11 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Developer Bypass section */}
-          <div className="border-t border-dashed border-slate-200 dark:border-slate-800/80 pt-4 space-y-2">
-            <h4 className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider text-center flex items-center justify-center gap-1.5">
-              <span>🔧</span> Developer Bypass Account
-            </h4>
-            <div className="text-center font-bold text-[10px]">
-              <button
-                onClick={() => handleDeveloperBypass("admin")}
-                className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-500 transition-colors py-2 rounded-xl"
-              >
-                Bypass as Admin
-              </button>
-            </div>
-            
-            <div className="text-center text-xs font-semibold text-slate-550 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <Link href="/login" className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1 justify-center">
-                ← Return to Customer Portal
-              </Link>
-            </div>
+          {/* Return to Customer Portal link */}
+          <div className="border-t border-slate-200 dark:border-slate-800/80 pt-4 text-center text-xs font-semibold text-slate-550 dark:text-slate-400">
+            <Link href="/login" className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1 justify-center">
+              ← Return to Customer Portal
+            </Link>
           </div>
         </div>
       </main>

@@ -88,12 +88,13 @@ async def complete_installation_step(
         profile = UserProfile(user_id=admin.id)
         db.add(profile)
 
-        # Assign role
+        # Assign both super_admin and admin roles so the user satisfies the admin portal checks
         from app.models.user import Role, UserRole
-        role_res = await db.execute(select(Role).where(Role.name == "super_admin"))
-        role = role_res.scalars().first()
-        if role:
-            db.add(UserRole(user_id=admin.id, role_id=role.id))
+        for role_name in ["super_admin", "admin"]:
+            role_res = await db.execute(select(Role).where(Role.name == role_name))
+            role = role_res.scalars().first()
+            if role:
+                db.add(UserRole(user_id=admin.id, role_id=role.id))
 
     state.is_completed = True
     state.completed_at = datetime.now(timezone.utc)

@@ -324,6 +324,10 @@ export default function VendorDashboard() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     
+    // Check if running on native mobile platform
+    const isNative = !!(window as any).Capacitor;
+    if (isNative) return;
+
     if (navigator.permissions) {
       navigator.permissions.query({ name: "geolocation" as any }).then((result) => {
         if (result.state !== "granted") {

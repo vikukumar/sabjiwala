@@ -56,34 +56,8 @@ async def seed_database(db: AsyncSession) -> None:
             await logger.ainfo(f"Seeded category: {cat.name}")
         category_map[cat_def["slug"]] = cat.id
 
-    # 2. Seed default admin user if not exists
-    admin_email = settings.INITIAL_ADMIN_EMAIL
-    res = await db.execute(select(User).where(User.email == admin_email))
-    admin_user = res.scalars().first()
-    if not admin_user:
-        admin_user = User(
-            email=admin_email,
-            password_hash=hash_password(settings.INITIAL_ADMIN_PASSWORD),
-            first_name="Platform",
-            last_name="Admin",
-            user_type=UserType.SUPER_ADMIN,
-            is_active=True,
-            is_verified=True,
-            is_email_verified=True,
-        )
-        db.add(admin_user)
-        await db.flush()
-        
-        profile = UserProfile(user_id=admin_user.id)
-        db.add(profile)
-        
-        # Assign role
-        role_res = await db.execute(select(Role).where(Role.name == "super_admin"))
-        role = role_res.scalars().first()
-        if role:
-            db.add(UserRole(user_id=admin_user.id, role_id=role.id))
-        await db.flush()
-        await logger.ainfo("Seeded default admin user")
+    # Admin user creation is deferred to the /admin/setup installation wizard page.
+    pass
 
     # 3. Seed default vendor user & profile if not exists
     vendor_email = "vendor@sbjiwala.in"

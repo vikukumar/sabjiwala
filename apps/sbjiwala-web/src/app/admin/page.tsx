@@ -77,11 +77,34 @@ export default function AdminDashboard() {
     }
   };
 
-  // Route Protection check
+  const [checkingSetup, setCheckingSetup] = useState(true);
+
+  // Route Protection & Installation Check
   useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem("sw_access_token")) {
-      window.location.href = "/admin/login";
-    }
+    if (typeof window === "undefined") return;
+
+    const checkInstallationAndToken = async () => {
+      try {
+        const res = await api.get("/installation/status");
+        if (res.success && res.data) {
+          const adminAccount = res.data.admin_account;
+          if (adminAccount && !adminAccount.is_completed) {
+            window.location.href = "/admin/setup";
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check installation status", err);
+      }
+
+      if (!localStorage.getItem("sw_access_token")) {
+        window.location.href = "/admin/login";
+      } else {
+        setCheckingSetup(false);
+      }
+    };
+
+    checkInstallationAndToken();
   }, []);
 
   const handleLogout = () => {
@@ -296,6 +319,14 @@ export default function AdminDashboard() {
   };
 
   const usersList = usersData.data || [];
+
+  if (checkingSetup) {
+    return (
+      <div className="min-h-screen bg-slate-55 dark:bg-[#090d10] flex items-center justify-center font-sans">
+        <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 antialiased font-sans flex transition-colors duration-200">

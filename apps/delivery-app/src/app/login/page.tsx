@@ -460,20 +460,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Developer Bypass section */}
-          <div className="border-t border-dashed border-slate-200 dark:border-slate-800/80 pt-4 space-y-2">
-            <h4 className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider text-center flex items-center justify-center gap-1.5">
-              <span>🔧</span> Developer Bypass Account
-            </h4>
-            <div className="text-center font-bold text-[10px]">
-              <button
-                onClick={() => handleDeveloperBypass("delivery")}
-                className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-500 transition-colors py-2 rounded-xl"
-              >
-                Bypass as Rider
-              </button>
-            </div>
-          </div>
+
         </div>
       </main>
 

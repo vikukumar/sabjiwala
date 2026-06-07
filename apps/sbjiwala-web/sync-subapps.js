@@ -89,6 +89,16 @@ try {
   const adminLoginDest = path.join(webSrc, 'app/admin/login');
   removeRecursiveSync(adminLoginDest);
   copyRecursiveSync(path.join(adminSrc, 'app/login'), adminLoginDest);
+  // setup directory
+  const adminSetupDest = path.join(webSrc, 'app/admin/setup');
+  removeRecursiveSync(adminSetupDest);
+  copyRecursiveSync(path.join(adminSrc, 'app/setup'), adminSetupDest);
+
+  // 5. Sync public assets from customer-app to sbjiwala-web (for sw.js and manifest.json)
+  console.log(`Syncing public assets from customer-app...`);
+  const customerPublic = path.join(rootDir, 'apps/customer-app/public');
+  const webPublic = path.join(rootDir, 'apps/sbjiwala-web/public');
+  copyRecursiveSync(customerPublic, webPublic);
 
   console.log('=== Sbjiwala Sub-Apps Synchronization Completed Successfully ===');
 } catch (error) {
