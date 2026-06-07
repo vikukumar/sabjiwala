@@ -16,14 +16,14 @@ from app.models.vendor import Vendor, VendorWallet
 from app.models.delivery import DeliveryBoy
 from app.models.payment import Wallet, WalletType
 
-API_URL = "http://localhost:8000/api/v1"
+API_URL = "http://localhost:8001/api/v1"
 
 async def cleanup_test_data():
     """Clean up test users from the database and Redis before starting."""
     print("[*] Cleaning up existing test users from database...")
-    test_emails = ["testvendor@sbjiwala.in", "testdelivery@sbjiwala.in", "testcustomer@sbjiwala.in", "testadmin@sbjiwala.in"]
-    test_phones = ["+919000000001", "+919000000002", "+919000000003", "+919000000004"]
-    test_usernames = ["testvendor", "testdelivery", "testcustomer", "testadmin"]
+    test_emails = ["testvendor@sbjiwala.in", "testdelivery@sbjiwala.in", "testcustomer@sbjiwala.in", "testadmin@sbjiwala.in", "specialvendor@sbjiwala.in"]
+    test_phones = ["+919000000001", "+919000000002", "+919000000003", "+919000000004", "+919000000005"]
+    test_usernames = ["testvendor", "testdelivery", "testcustomer", "testadmin", "specialvendor"]
 
     async with async_session_factory() as session:
         # Find user IDs to clean up associated records
@@ -71,7 +71,7 @@ async def cleanup_test_data():
         keys_rate = await redis.keys(f"otp:rate:*:{email}")
         for k in keys_rate:
             await redis.delete(k)
-    for phone in test_phones + ["9000000001", "9000000002", "9000000003", "9000000004"]:
+    for phone in test_phones + ["9000000001", "9000000002", "9000000003", "9000000004", "9000000005"]:
         keys = await redis.keys(f"otp:*:{phone}")
         for k in keys:
             await redis.delete(k)

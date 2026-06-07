@@ -235,11 +235,14 @@ export default function CheckoutPage() {
     onError: (err: any) => showError("Order failed", err.response?.data?.detail || err.message),
   });
 
-  const subtotal = cartData?.subtotal || 0;
-  const deliveryFee = subtotal >= 199 ? 0 : 20;
+  const subtotal = previewData ? previewData.subtotal : (cartData?.subtotal || 0);
+  const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= 199 ? 0 : 20);
+  const taxAmount = previewData ? previewData.tax_amount : (subtotal * 0.05);
+  const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
+  const couponDiscount = previewData ? previewData.coupon_discount : 0.0;
   const walletBalance = walletData?.balance || 0;
-  const walletDeduction = useWallet ? Math.min(walletBalance, subtotal + deliveryFee) : 0;
-  const finalTotal = Math.max(0, subtotal + deliveryFee - walletDeduction);
+  const walletDeduction = previewData ? previewData.wallet_deduction : (useWallet ? Math.min(walletBalance, subtotal + deliveryFee) : 0);
+  const finalTotal = previewData ? previewData.total_amount : Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - couponDiscount - walletDeduction);
 
   const payMethods = [
     { id: "cod", icon: Banknote, label: "Cash on Delivery", desc: "Pay when you receive" },
@@ -364,8 +367,11 @@ export default function CheckoutPage() {
               ))}
               <hr className="border-slate-200 dark:border-slate-800" />
               <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Delivery</span><span className={deliveryFee === 0 ? "text-emerald-600 font-bold" : ""}>{deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}</span></div>
-              {walletDeduction > 0 && <div className="flex justify-between"><span className="text-emerald-600 dark:text-emerald-400">Wallet</span><span className="text-emerald-600 dark:text-emerald-400 font-bold">-₹{walletDeduction.toFixed(2)}</span></div>}
+              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Delivery Charge</span><span className={deliveryFee === 0 ? "text-emerald-600 font-bold" : ""}>{deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Packaging & Handling</span><span>₹{packagingCharge.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Taxes (5%)</span><span>₹{taxAmount.toFixed(2)}</span></div>
+              {couponDiscount > 0 && <div className="flex justify-between text-emerald-600 dark:text-emerald-400"><span className="font-semibold">Coupon Discount</span><span className="font-bold">-₹{couponDiscount.toFixed(2)}</span></div>}
+              {walletDeduction > 0 && <div className="flex justify-between"><span className="text-emerald-600 dark:text-emerald-400 font-bold">Wallet Deduction</span><span className="text-emerald-600 dark:text-emerald-400 font-bold">-₹{walletDeduction.toFixed(2)}</span></div>}
               <hr className="border-slate-200 dark:border-slate-800" />
               <div className="flex justify-between">
                 <span className="font-black text-slate-900 dark:text-white">Total</span>

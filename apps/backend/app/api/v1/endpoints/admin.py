@@ -486,12 +486,12 @@ async def list_vendors(
             "total_orders": v.total_orders,
             "created_at": v.created_at.isoformat() if v.created_at else "",
             # Include individual delivery rules so admin can configure them
-            "min_order_amount": float(rule.min_order_amount) if rule else 0.0,
-            "free_delivery_above": float(rule.free_delivery_above) if rule and rule.free_delivery_above is not None else None,
-            "base_delivery_charge": float(rule.base_delivery_charge) if rule else 0.0,
-            "per_km_charge": float(rule.per_km_charge) if rule else 0.0,
-            "max_delivery_distance_km": float(rule.max_delivery_distance_km) if rule else 10.0,
-            "packaging_fee": float(rule.packaging_fee) if rule and hasattr(rule, "packaging_fee") else 0.0,
+            "min_order_amount": float(rule.min_order_amount) if rule and getattr(rule, "min_order_amount", None) is not None else 0.0,
+            "free_delivery_above": float(rule.free_delivery_above) if rule and getattr(rule, "free_delivery_above", None) is not None else None,
+            "base_delivery_charge": float(rule.base_delivery_charge) if rule and getattr(rule, "base_delivery_charge", None) is not None else 0.0,
+            "per_km_charge": float(rule.per_km_charge) if rule and getattr(rule, "per_km_charge", None) is not None else 0.0,
+            "max_delivery_distance_km": float(rule.max_delivery_distance_km) if rule and getattr(rule, "max_delivery_distance_km", None) is not None else 10.0,
+            "packaging_fee": float(rule.packaging_fee) if rule and getattr(rule, "packaging_fee", None) is not None else 0.0,
         })
         
     return APIResponse(success=True, data=vendor_list)
