@@ -320,6 +320,60 @@ async def register(
     )
 
 
+async def verify_and_resolve_user_role(db: AsyncSession, user_id: UUID, requested_role_name: str) -> str:
+    """
+    Verifies that the user has the requested role (or a role that encompasses it).
+    Returns the resolved role name if verified, else raises HTTPException.
+    """
+    from sqlalchemy import select as sa_select
+    from sqlalchemy.orm import selectinload
+    from app.models.user import Role, UserRole
+    
+    if requested_role_name == "delivery":
+        requested_role_name = "delivery_boy"
+        
+    role_res = await db.execute(sa_select(Role).where(Role.name == requested_role_name))
+    db_role = role_res.scalars().first()
+    if not db_role:
+        raise HTTPException(status_code=400, detail="Invalid role specified")
+        
+    # Get all direct roles for this user
+    ur_res = await db.execute(
+        sa_select(UserRole)
+        .options(selectinload(UserRole.role))
+        .where(UserRole.user_id == user_id, UserRole.is_deleted == False)
+    )
+    user_roles = [ur.role for ur in ur_res.scalars().all() if ur.role]
+    user_role_names = {r.name for r in user_roles}
+    
+    # 1. Exact match check
+    if requested_role_name in user_role_names:
+        return requested_role_name
+        
+    # 2. Super admin encompasses all roles
+    if "super_admin" in user_role_names:
+        return requested_role_name
+        
+    # 3. Admin encompasses admin, support_agent, and customer
+    if "admin" in user_role_names and requested_role_name in ["admin", "support_agent", "customer"]:
+        return requested_role_name
+        
+    # 4. Check hierarchical relationship via parent role IDs recursively/iteratively
+    current_role = db_role
+    visited = set()
+    while current_role and current_role.id not in visited:
+        visited.add(current_role.id)
+        if current_role.name in user_role_names:
+            return requested_role_name
+        if current_role.parent_role_id:
+            parent_res = await db.execute(sa_select(Role).where(Role.id == current_role.parent_role_id))
+            current_role = parent_res.scalars().first()
+        else:
+            break
+            
+    raise HTTPException(status_code=403, detail=f"User does not have the {requested_role_name} role")
+
+
 @router.post("/login", response_model=APIResponse[UserResponse])
 async def login(
     body: LoginRequest,
@@ -362,19 +416,7 @@ async def login(
     # Resolve active login role
     active_role = user.user_type.value
     if body.role:
-        from sqlalchemy import select as sa_select
-        from app.models.user import Role, UserRole
-        role_name = body.role
-        if role_name == "delivery":
-            role_name = "delivery_boy"
-        role_res = await db.execute(sa_select(Role).where(Role.name == role_name))
-        db_role = role_res.scalars().first()
-        if not db_role:
-            raise HTTPException(status_code=400, detail="Invalid role specified")
-        ur_check = await db.execute(select(UserRole).where(UserRole.user_id == user.id, UserRole.role_id == db_role.id))
-        if not ur_check.scalars().first():
-            raise HTTPException(status_code=403, detail=f"User does not have the {role_name} role")
-        active_role = role_name
+        active_role = await verify_and_resolve_user_role(db, user.id, body.role)
 
     # Check MFA
     if user.mfa_enabled:
@@ -525,19 +567,7 @@ async def verify_login_otp(
     # Resolve active login role
     active_role = user.user_type.value
     if body.role:
-        from sqlalchemy import select as sa_select
-        from app.models.user import Role, UserRole
-        role_name = body.role
-        if role_name == "delivery":
-            role_name = "delivery_boy"
-        role_res = await db.execute(sa_select(Role).where(Role.name == role_name))
-        db_role = role_res.scalars().first()
-        if not db_role:
-            raise HTTPException(status_code=400, detail="Invalid role specified")
-        ur_check = await db.execute(select(UserRole).where(UserRole.user_id == user.id, UserRole.role_id == db_role.id))
-        if not ur_check.scalars().first():
-            raise HTTPException(status_code=403, detail=f"User does not have the {role_name} role")
-        active_role = role_name
+        active_role = await verify_and_resolve_user_role(db, user.id, body.role)
 
     # Generate tokens
     access_token = create_access_token(user.id, active_role, body.device_id)
@@ -1236,19 +1266,7 @@ async def passkey_login_verify(
     # Resolve active login role
     active_role = user.user_type.value
     if body.role:
-        from sqlalchemy import select as sa_select
-        from app.models.user import Role, UserRole
-        role_name = body.role
-        if role_name == "delivery":
-            role_name = "delivery_boy"
-        role_res = await db.execute(sa_select(Role).where(Role.name == role_name))
-        db_role = role_res.scalars().first()
-        if not db_role:
-            raise HTTPException(status_code=400, detail="Invalid role specified")
-        ur_check = await db.execute(select(UserRole).where(UserRole.user_id == user.id, UserRole.role_id == db_role.id))
-        if not ur_check.scalars().first():
-            raise HTTPException(status_code=403, detail=f"User does not have the {role_name} role")
-        active_role = role_name
+        active_role = await verify_and_resolve_user_role(db, user.id, body.role)
 
     access_token = create_access_token(user.id, active_role, body.device_id)
     refresh_token, token_hash = create_refresh_token(user.id, body.device_id)
@@ -1410,17 +1428,7 @@ async def magic_link_verify(
     # Resolve active login role
     active_role = user.user_type.value
     if role:
-        from sqlalchemy import select as sa_select
-        from app.models.user import Role, UserRole
-        role_name = role
-        if role_name == "delivery":
-            role_name = "delivery_boy"
-        role_res = await db.execute(sa_select(Role).where(Role.name == role_name))
-        db_role = role_res.scalars().first()
-        if db_role:
-            ur_check = await db.execute(select(UserRole).where(UserRole.user_id == user.id, UserRole.role_id == db_role.id))
-            if ur_check.scalars().first():
-                active_role = role_name
+        active_role = await verify_and_resolve_user_role(db, user.id, role)
 
     access_token = create_access_token(user.id, active_role)
     refresh_token, token_hash = create_refresh_token(user.id)

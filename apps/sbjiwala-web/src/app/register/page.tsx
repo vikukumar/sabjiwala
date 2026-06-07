@@ -18,6 +18,43 @@ function RegisterPageContent() {
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [otpMode, setOtpMode] = useState<"register" | "verification">("register");
+
+  const getStoredUserType = () => {
+    if (typeof window === "undefined") return null;
+    const token = localStorage.getItem("sw_access_token");
+    if (!token) return null;
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload).user_type;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && localStorage.getItem("sw_access_token")) {
+      const role = getStoredUserType() || "customer";
+      const isStandaloneCustomer = window.location.port === "3000";
+      const isStandaloneVendor = window.location.port === "3001" || window.location.host.startsWith("vendor.");
+      const isStandaloneDelivery = window.location.port === "3002" || window.location.host.startsWith("delivery.");
+      const isStandaloneAdmin = window.location.port === "3003" || window.location.host.startsWith("admin.");
+
+      if (isStandaloneCustomer) window.location.href = "/";
+      else if (isStandaloneVendor) window.location.href = "/";
+      else if (isStandaloneDelivery) window.location.href = "/";
+      else if (isStandaloneAdmin) window.location.href = "/";
+      else {
+        if (role === "vendor" || role === "vendor_manager") window.location.href = "/vendor";
+        else if (role === "delivery_boy") window.location.href = "/delivery";
+        else if (role === "admin" || role === "super_admin") window.location.href = "/admin";
+        else window.location.href = "/";
+      }
+    }
+  }, []);
   const [otpIdentifier, setOtpIdentifier] = useState("");
   const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""]);
   const otpRefs = React.useRef<(HTMLInputElement | null)[]>([]);

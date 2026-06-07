@@ -57,7 +57,14 @@ async def complete_installation_step(
         # Create Super Admin account
         from app.models.user import User, UserProfile, UserType, AuthProvider
         from app.core.security.password import hash_password
+        from sqlalchemy import func
         
+        # Check if there is already a super admin in the database
+        count_res = await db.execute(select(func.count(User.id)).where(User.user_type == UserType.SUPER_ADMIN))
+        super_admin_count = count_res.scalar() or 0
+        if super_admin_count > 0:
+            raise HTTPException(status_code=403, detail="Super Admin account has already been configured")
+            
         email = body.data.get("email")
         password = body.data.get("password")
         first_name = body.data.get("first_name", "Super")

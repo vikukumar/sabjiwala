@@ -119,6 +119,11 @@
   --color-accent: var(--sw-accent);
   --color-muted: var(--foreground-muted);
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  
+  --color-slate-350: #b0c2d4;
+  --color-slate-450: #7c8e9f;
+  --color-slate-550: #52627a;
+  --color-slate-850: #151e2e;
 }
 
 /* ===== BASE STYLES ===== */

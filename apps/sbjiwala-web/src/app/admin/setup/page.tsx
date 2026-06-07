@@ -23,6 +23,21 @@ export default function SetupPage() {
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
     setTheme(isDark ? "dark" : "light");
+
+    const checkInstallation = async () => {
+      try {
+        const res = await api.get("/installation/status");
+        if (res.success && res.data) {
+          const adminAccount = res.data.admin_account;
+          if (adminAccount && adminAccount.is_completed) {
+            window.location.href = "/admin/login";
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check installation status", err);
+      }
+    };
+    checkInstallation();
   }, []);
 
   const handleSetup = async (e: React.FormEvent) => {

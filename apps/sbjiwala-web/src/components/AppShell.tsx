@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Home, Search, ShoppingCart, Heart, User, Bell, Wallet,
-  MapPin, Tag, Gift, HelpCircle, LogOut, ChevronRight,
+  MapPin, Tag, Gift, HelpCircle, LogOut, LogIn, ChevronRight,
   Moon, Sun, Zap, Menu, X, Package, Settings, Star,
   MessageSquare, FileText, Shield, RotateCcw, ShieldCheck, Check,
   Leaf,
@@ -211,12 +211,19 @@ function Header({ onMenuOpen }: { onMenuOpen: () => void }) {
 function Sidebar({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem("sw_access_token"));
+  }, []);
+
   const isActive = (href: string, exact = false) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
 
   const handleLogout = () => {
     localStorage.removeItem("sw_access_token");
     localStorage.removeItem("sw_refresh_token");
+    setIsLoggedIn(false);
     window.location.href = "/login";
   };
 
@@ -285,15 +292,26 @@ function Sidebar({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean })
         ))}
       </nav>
 
-      {/* Footer: logout */}
+      {/* Footer: logout / signin */}
       <div className="p-4 border-t border-white/10">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
-        >
-          <LogOut className="w-4.5 h-4.5" />
-          <span>Sign Out</span>
-        </button>
+        {isLoggedIn ? (
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+          >
+            <LogOut className="w-4.5 h-4.5" />
+            <span>Sign Out</span>
+          </button>
+        ) : (
+          <Link
+            href="/login"
+            onClick={onClose}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-emerald-450 hover:bg-emerald-500/10 transition-all"
+          >
+            <LogIn className="w-4.5 h-4.5" />
+            <span>Sign In / Login</span>
+          </Link>
+        )}
       </div>
     </div>
   );
