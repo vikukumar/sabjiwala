@@ -76,8 +76,112 @@ async def register(
     result = await db.execute(
         select(User).where(or_(*conditions), User.is_deleted == False)
     )
-    if result.scalars().first():
-        raise HTTPException(status_code=409, detail="User with this email or phone already exists")
+    existing_user = result.scalars().first()
+    if existing_user:
+        from sqlalchemy import select as sa_select
+        from app.models.user import Role
+        role_name = body.role or "customer"
+        if role_name == "delivery":
+            role_name = "delivery_boy"
+
+        role_result = await db.execute(sa_select(Role).where(Role.name == role_name))
+        db_role = role_result.scalars().first()
+        if db_role:
+            ur_check = await db.execute(select(UserRole).where(UserRole.user_id == existing_user.id, UserRole.role_id == db_role.id))
+            if ur_check.scalars().first():
+                raise HTTPException(status_code=409, detail=f"User is already registered as a {role_name}")
+
+            # Append the new role
+            user_role = UserRole(user_id=existing_user.id, role_id=db_role.id)
+            db.add(user_role)
+
+            # Initialize profiles based on new role
+            if role_name == "vendor":
+                from app.models.vendor import Vendor, VendorWallet, VendorStatus, VendorStore, VendorDeliveryRule
+                v_check = await db.execute(select(Vendor).where(Vendor.user_id == existing_user.id))
+                vendor = v_check.scalars().first()
+                if not vendor:
+                    vendor = Vendor(
+                        user_id=existing_user.id,
+                        business_name=body.business_name or f"{existing_user.first_name} {existing_user.last_name}'s Store",
+                        business_type=body.business_type or "individual",
+                        description=body.description,
+                        gst_number=body.gst_number,
+                        pan_number=body.pan_number,
+                        fssai_number=body.fssai_number,
+                        slug=f"{existing_user.first_name.lower()}-{existing_user.last_name.lower()}-{secrets.token_hex(4)}",
+                        status=VendorStatus.PENDING,
+                        contact_email=existing_user.email,
+                        contact_phone=existing_user.phone
+                    )
+                    db.add(vendor)
+                    await db.flush()
+
+                vs_check = await db.execute(select(VendorStore).where(VendorStore.vendor_id == vendor.id))
+                if not vs_check.scalars().first():
+                    store = VendorStore(vendor_id=vendor.id, store_name=vendor.business_name)
+                    db.add(store)
+
+                vw_check = await db.execute(select(VendorWallet).where(VendorWallet.vendor_id == vendor.id))
+                if not vw_check.scalars().first():
+                    db.add(VendorWallet(vendor_id=vendor.id))
+
+                vdr_check = await db.execute(select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == vendor.id))
+                if not vdr_check.scalars().first():
+                    db.add(VendorDeliveryRule(vendor_id=vendor.id))
+
+            elif role_name == "delivery_boy":
+                from app.models.delivery import DeliveryBoy, DeliveryBoyStatus, AvailabilityStatus, DeliveryWallet
+                from app.models.payment import Wallet, WalletType
+                db_check = await db.execute(select(DeliveryBoy).where(DeliveryBoy.user_id == existing_user.id))
+                delivery_boy = db_check.scalars().first()
+                if not delivery_boy:
+                    delivery_boy = DeliveryBoy(
+                        user_id=existing_user.id,
+                        status=DeliveryBoyStatus.ACTIVE,
+                        availability=AvailabilityStatus.OFFLINE,
+                        vehicle_type=body.vehicle_type or "motorcycle",
+                        vehicle_number=body.vehicle_number or "",
+                        license_number=body.license_number or ""
+                    )
+                    db.add(delivery_boy)
+                    await db.flush()
+
+                w_check = await db.execute(select(Wallet).where(Wallet.user_id == existing_user.id, Wallet.wallet_type == WalletType.DELIVERY))
+                if not w_check.scalars().first():
+                    db.add(Wallet(user_id=existing_user.id, wallet_type=WalletType.DELIVERY))
+
+                dw_check = await db.execute(select(DeliveryWallet).where(DeliveryWallet.delivery_boy_id == delivery_boy.id))
+                if not dw_check.scalars().first():
+                    db.add(DeliveryWallet(delivery_boy_id=delivery_boy.id))
+
+            await db.flush()
+
+            # Send registration OTP to existing user
+            verification_identifier = existing_user.email if (existing_user.email and existing_user.phone) else (existing_user.email or existing_user.phone)
+            redis = await _get_redis(request)
+            otp_res = await send_otp(redis, verification_identifier, purpose="register")
+            if not otp_res["success"]:
+                raise HTTPException(status_code=400, detail=otp_res["message"])
+
+            meta_data = {
+                "requires_otp_verification": True,
+                "verification_identifier": verification_identifier,
+            }
+            if "otp" in otp_res:
+                meta_data["otp"] = otp_res["otp"]
+
+            await db.commit()
+            await logger.ainfo("Role added to existing user", user_id=str(existing_user.id), role=role_name)
+
+            return APIResponse(
+                success=True,
+                message=f"Added {role_name} role. Please verify using the OTP sent to your contact details.",
+                data=UserResponse.model_validate(existing_user),
+                meta=meta_data
+            )
+        else:
+            raise HTTPException(status_code=409, detail="User with this email or phone already exists")
 
     # Validate password if provided
     if body.password:
@@ -255,11 +359,28 @@ async def login(
         await db.flush()
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    # Resolve active login role
+    active_role = user.user_type.value
+    if body.role:
+        from sqlalchemy import select as sa_select
+        from app.models.user import Role, UserRole
+        role_name = body.role
+        if role_name == "delivery":
+            role_name = "delivery_boy"
+        role_res = await db.execute(sa_select(Role).where(Role.name == role_name))
+        db_role = role_res.scalars().first()
+        if not db_role:
+            raise HTTPException(status_code=400, detail="Invalid role specified")
+        ur_check = await db.execute(select(UserRole).where(UserRole.user_id == user.id, UserRole.role_id == db_role.id))
+        if not ur_check.scalars().first():
+            raise HTTPException(status_code=403, detail=f"User does not have the {role_name} role")
+        active_role = role_name
+
     # Check MFA
     if user.mfa_enabled:
         # Return partial response — client must verify MFA
         mfa_token = create_access_token(
-            user.id, user.user_type.value, body.device_id,
+            user.id, active_role, body.device_id,
             extra_claims={"mfa_required": True, "mfa_pending": True}
         )
         return APIResponse(
@@ -277,7 +398,7 @@ async def login(
 
     # Generate tokens
     redis = await _get_redis(request)
-    access_token = create_access_token(user.id, user.user_type.value, body.device_id)
+    access_token = create_access_token(user.id, active_role, body.device_id)
     refresh_token, token_hash = create_refresh_token(user.id, body.device_id)
     await store_refresh_token(redis, user.id, token_hash, body.device_id)
 
@@ -401,8 +522,25 @@ async def verify_login_otp(
     user.last_login_ip = request.client.host if request.client else None
     await db.flush()
 
+    # Resolve active login role
+    active_role = user.user_type.value
+    if body.role:
+        from sqlalchemy import select as sa_select
+        from app.models.user import Role, UserRole
+        role_name = body.role
+        if role_name == "delivery":
+            role_name = "delivery_boy"
+        role_res = await db.execute(sa_select(Role).where(Role.name == role_name))
+        db_role = role_res.scalars().first()
+        if not db_role:
+            raise HTTPException(status_code=400, detail="Invalid role specified")
+        ur_check = await db.execute(select(UserRole).where(UserRole.user_id == user.id, UserRole.role_id == db_role.id))
+        if not ur_check.scalars().first():
+            raise HTTPException(status_code=403, detail=f"User does not have the {role_name} role")
+        active_role = role_name
+
     # Generate tokens
-    access_token = create_access_token(user.id, user.user_type.value, body.device_id)
+    access_token = create_access_token(user.id, active_role, body.device_id)
     refresh_token, token_hash = create_refresh_token(user.id, body.device_id)
     await store_refresh_token(redis, user.id, token_hash, body.device_id)
 
@@ -1095,7 +1233,24 @@ async def passkey_login_verify(
     user.last_login_ip = request.client.host if request.client else None
     await db.flush()
 
-    access_token = create_access_token(user.id, user.user_type.value, body.device_id)
+    # Resolve active login role
+    active_role = user.user_type.value
+    if body.role:
+        from sqlalchemy import select as sa_select
+        from app.models.user import Role, UserRole
+        role_name = body.role
+        if role_name == "delivery":
+            role_name = "delivery_boy"
+        role_res = await db.execute(sa_select(Role).where(Role.name == role_name))
+        db_role = role_res.scalars().first()
+        if not db_role:
+            raise HTTPException(status_code=400, detail="Invalid role specified")
+        ur_check = await db.execute(select(UserRole).where(UserRole.user_id == user.id, UserRole.role_id == db_role.id))
+        if not ur_check.scalars().first():
+            raise HTTPException(status_code=403, detail=f"User does not have the {role_name} role")
+        active_role = role_name
+
+    access_token = create_access_token(user.id, active_role, body.device_id)
     refresh_token, token_hash = create_refresh_token(user.id, body.device_id)
     await store_refresh_token(redis, user.id, token_hash, body.device_id)
 
@@ -1139,8 +1294,10 @@ async def magic_link_request(
 
     token = secrets.token_urlsafe(32)
     
+    import json
     redis = await _get_redis(request)
-    await redis.setex(f"magic_link:{token}", 600, str(user.id))
+    redis_data = json.dumps({"user_id": str(user.id), "role": body.role})
+    await redis.setex(f"magic_link:{token}", 600, redis_data)
 
     # Formulate login URL
     origin = request.headers.get("origin") or "http://localhost:3000"
@@ -1216,12 +1373,21 @@ async def magic_link_verify(
 ):
     """Verify magic link token and complete login."""
     redis = await _get_redis(request)
-    user_id_str = await redis.get(f"magic_link:{token}")
-    if not user_id_str:
+    stored_str = await redis.get(f"magic_link:{token}")
+    if not stored_str:
         raise HTTPException(status_code=400, detail="Invalid or expired magic link token")
 
-    if isinstance(user_id_str, bytes):
-        user_id_str = user_id_str.decode()
+    if isinstance(stored_str, bytes):
+        stored_str = stored_str.decode()
+
+    import json
+    try:
+        data = json.loads(stored_str)
+        user_id_str = data["user_id"]
+        role = data.get("role")
+    except Exception:
+        user_id_str = stored_str
+        role = None
 
     result = await db.execute(select(User).where(User.id == UUID(user_id_str), User.is_deleted == False))
     user = result.scalars().first()
@@ -1241,7 +1407,22 @@ async def magic_link_verify(
     user.last_login_ip = request.client.host if request.client else None
     await db.flush()
 
-    access_token = create_access_token(user.id, user.user_type.value)
+    # Resolve active login role
+    active_role = user.user_type.value
+    if role:
+        from sqlalchemy import select as sa_select
+        from app.models.user import Role, UserRole
+        role_name = role
+        if role_name == "delivery":
+            role_name = "delivery_boy"
+        role_res = await db.execute(sa_select(Role).where(Role.name == role_name))
+        db_role = role_res.scalars().first()
+        if db_role:
+            ur_check = await db.execute(select(UserRole).where(UserRole.user_id == user.id, UserRole.role_id == db_role.id))
+            if ur_check.scalars().first():
+                active_role = role_name
+
+    access_token = create_access_token(user.id, active_role)
     refresh_token, token_hash = create_refresh_token(user.id)
     await store_refresh_token(redis, user.id, token_hash)
 

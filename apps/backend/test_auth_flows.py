@@ -530,6 +530,117 @@ async def run_tests():
             assert float(rule_ref.per_km_charge) == 6.5
             print("[+] Custom vendor settings and delivery rules updates verified.")
 
+        # =====================================================================
+        # 9. Multi-Role Append & Switch Login Verification
+        # =====================================================================
+        print("\n=== Test 9: Multi-Role Append Registration & Switch Login ===")
+        # Register the existing 'specialvendor' user as a delivery boy
+        append_payload = {
+            "first_name": "Special",
+            "last_name": "Vendor",
+            "username": "specialvendor",
+            "email": "specialvendor@sbjiwala.in",
+            "phone": "9000000005",
+            "password": "Password123!",
+            "role": "delivery_boy",
+            "vehicle_type": "scooter",
+            "vehicle_number": "MH12XY9999",
+            "license_number": "DL-99999999999"
+        }
+        append_res = await client.post(f"{API_URL}/auth/register", json=append_payload)
+        assert append_res.status_code == 200, f"Append registration failed: {append_res.text}"
+        append_data = append_res.json()
+        assert append_data["success"] is True
+        print("[+] Append registration request succeeded (Vendor adding Delivery Boy role).")
+        
+        # Verify message mentions adding role
+        assert "delivery_boy" in append_data["message"]
+        
+        # Verify registration OTP
+        append_otp = append_data["meta"]["otp"]
+        verify_append_res = await client.post(f"{API_URL}/auth/otp/verify", json={
+            "identifier": "specialvendor@sbjiwala.in",
+            "otp": append_otp,
+            "purpose": "register"
+        })
+        assert verify_append_res.status_code == 200, f"Verify append OTP failed: {verify_append_res.text}"
+        print("[+] OTP verified for append role.")
+        
+        # Let DB commit
+        await asyncio.sleep(0.5)
+        
+        # Check DB State for User Roles and Delivery Boy Profile
+        async with async_session_factory() as session:
+            stmt = select(User).where(User.username == "specialvendor")
+            sv_user = (await session.execute(stmt)).scalars().first()
+            assert sv_user is not None
+            
+            # User roles check: must have BOTH roles
+            from app.models.user import UserRole, Role
+            roles_stmt = select(Role.name).join(UserRole).where(UserRole.user_id == sv_user.id)
+            user_role_names = list((await session.execute(roles_stmt)).scalars().all())
+            assert "vendor" in user_role_names, "Should keep existing vendor role"
+            assert "delivery_boy" in user_role_names, "Should append delivery_boy role"
+            print(f"[+] Verified user holds multiple roles: {user_role_names}")
+            
+            # Check Delivery Boy record
+            dboy_stmt = select(DeliveryBoy).where(DeliveryBoy.user_id == sv_user.id)
+            dboy = (await session.execute(dboy_stmt)).scalars().first()
+            assert dboy is not None
+            assert dboy.vehicle_type == "scooter"
+            assert dboy.vehicle_number == "MH12XY9999"
+            assert dboy.license_number == "DL-99999999999"
+            print("[+] Verified DeliveryBoy profile created with vehicle details.")
+            
+            # Check Delivery Wallet
+            wallet_stmt = select(Wallet).where(Wallet.user_id == sv_user.id, Wallet.wallet_type == WalletType.DELIVERY)
+            wallet = (await session.execute(wallet_stmt)).scalars().first()
+            assert wallet is not None
+            print("[+] Verified Delivery Wallet initialized.")
+
+        # Test Switch Logins with Role Claim Verification
+        # 9.1 Login as Vendor
+        vendor_login_res = await client.post(f"{API_URL}/auth/login", json={
+            "identifier": "specialvendor",
+            "password": "Password123!",
+            "role": "vendor"
+        })
+        assert vendor_login_res.status_code == 200
+        vendor_login_data = vendor_login_res.json()
+        assert vendor_login_data["data"]["active_role"] == "vendor"
+        
+        # Verify JWT role claim for Vendor
+        v_token = vendor_login_data["meta"]["access_token"]
+        import jwt
+        decoded_v = jwt.decode(v_token, options={"verify_signature": False})
+        assert decoded_v["user_type"] == "vendor"
+        print("[+] Logged in as Vendor. Verified JWT user_type claim is 'vendor'.")
+        
+        # 9.2 Login as Delivery Boy
+        delivery_login_res = await client.post(f"{API_URL}/auth/login", json={
+            "identifier": "specialvendor",
+            "password": "Password123!",
+            "role": "delivery_boy"
+        })
+        assert delivery_login_res.status_code == 200
+        delivery_login_data = delivery_login_res.json()
+        assert delivery_login_data["data"]["active_role"] == "delivery_boy"
+        
+        # Verify JWT role claim for Delivery Boy
+        d_token = delivery_login_data["meta"]["access_token"]
+        decoded_d = jwt.decode(d_token, options={"verify_signature": False})
+        assert decoded_d["user_type"] == "delivery_boy"
+        print("[+] Logged in as Delivery Boy. Verified JWT user_type claim is 'delivery_boy'.")
+
+        # 9.3 Login as Customer (which they don't have)
+        cust_login_res = await client.post(f"{API_URL}/auth/login", json={
+            "identifier": "specialvendor",
+            "password": "Password123!",
+            "role": "customer"
+        })
+        assert cust_login_res.status_code == 400, "Should reject login for unassigned role"
+        print("[+] Rejected login with unassigned role (customer) as expected.")
+
     print("\n[SUCCESS] All authentication test suites passed!")
 
 

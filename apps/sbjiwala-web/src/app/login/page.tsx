@@ -84,7 +84,7 @@ function LoginPageContent() {
   const { success, error: showError, info } = useToast();
   
   const [tab, setTab] = useState<ActiveTab>("otp");
-  const [selectedRole, setSelectedRole] = useState<"customer" | "vendor" | "delivery" | "admin">("customer");
+  const selectedRole = "customer";
   
   // Dynamic Views
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -161,14 +161,9 @@ function LoginPageContent() {
 
   // Helper validation for role matching
   const validateUserRole = (userType: string) => {
-    const isAuthorized = 
-      (selectedRole === "customer" && userType === "customer") ||
-      (selectedRole === "vendor" && (userType === "vendor" || userType === "vendor_manager")) ||
-      (selectedRole === "delivery" && userType === "delivery_boy") ||
-      (selectedRole === "admin" && (userType === "admin" || userType === "super_admin"));
-    
+    const isAuthorized = userType === "customer";
     if (!isAuthorized) {
-      throw new Error(`Your account does not have access privileges as a ${selectedRole.replace("_", " ")}.`);
+      throw new Error("Your account does not have access privileges as a customer.");
     }
   };
 
@@ -561,16 +556,7 @@ function LoginPageContent() {
         last_name: data.last_name,
         password: data.password || undefined,
         referral_code: data.referral_code || undefined,
-        role: selectedRole === "delivery" ? "delivery_boy" : selectedRole,
-        business_name: selectedRole === "vendor" ? (data.business_name || undefined) : undefined,
-        business_type: selectedRole === "vendor" ? (data.business_type || undefined) : undefined,
-        description: selectedRole === "vendor" ? (data.description || undefined) : undefined,
-        gst_number: selectedRole === "vendor" ? (data.gst_number || undefined) : undefined,
-        pan_number: selectedRole === "vendor" ? (data.pan_number || undefined) : undefined,
-        fssai_number: selectedRole === "vendor" ? (data.fssai_number || undefined) : undefined,
-        vehicle_type: selectedRole === "delivery" ? (data.vehicle_type || undefined) : undefined,
-        vehicle_number: selectedRole === "delivery" ? (data.vehicle_number || undefined) : undefined,
-        license_number: selectedRole === "delivery" ? (data.license_number || undefined) : undefined,
+        role: "customer",
       };
 
       const res = await api.post("/auth/register", payload);
@@ -764,38 +750,7 @@ function LoginPageContent() {
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Authenticate or register dynamic accounts</p>
             </div>
 
-            {/* Role Selector */}
-            <div className="mb-6">
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5 text-center">
-                I am accessing as a:
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: "customer", label: "Customer", icon: ShoppingBag, color: "from-emerald-500/10 to-teal-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" },
-                  { id: "vendor", label: "Vendor Partner", icon: Leaf, color: "from-blue-500/10 to-indigo-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30" },
-                  { id: "delivery", label: "Delivery Boy", icon: Truck, color: "from-amber-500/10 to-orange-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30" },
-                  { id: "admin", label: "Administrator", icon: Shield, color: "from-rose-500/10 to-red-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30" }
-                ].map(r => {
-                  const Icon = r.icon;
-                  const isSelected = selectedRole === r.id;
-                  return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => setSelectedRole(r.id as any)}
-                      className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                        isSelected
-                          ? `bg-gradient-to-br ${r.color.split(" ")[0]} ${r.color.split(" ")[1]} border-current shadow-md scale-[1.02] font-black`
-                          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-slate-700"
-                      }`}
-                    >
-                      <Icon className={`w-5 h-5 mb-1.5 ${isSelected ? "animate-pulse" : ""}`} />
-                      <span className="text-[11px] font-black tracking-tight">{r.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+
 
             {/* Tab Switched Header */}
             <div className="flex bg-slate-100 dark:bg-slate-800/60 rounded-2xl p-1 mb-6 border border-slate-200/50 dark:border-slate-700/50 overflow-x-auto gap-0.5">
@@ -1026,81 +981,6 @@ function LoginPageContent() {
                   {...regForm("referral_code")}
                 />
 
-                {selectedRole === "vendor" && (
-                  <div className="space-y-4 p-4 rounded-2xl border border-blue-500/20 bg-blue-50/10 dark:bg-blue-955/10 animate-fade-in text-left">
-                    <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2">Business Settings</p>
-                    <Input 
-                      label="Business Name" 
-                      placeholder="e.g. Fresh Veggies Mart" 
-                      error={regErrors.business_name?.message}
-                      {...regForm("business_name", { required: selectedRole === "vendor" ? "Business name is required" : false })}
-                    />
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Business Type</label>
-                      <select 
-                        className="input-base w-full px-4 py-3 text-sm font-sans rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-                        {...regForm("business_type")}
-                      >
-                        <option value="individual">Individual / Sole Proprietor</option>
-                        <option value="partnership">Partnership Firm</option>
-                        <option value="company">Private Limited Company</option>
-                      </select>
-                    </div>
-                    <Input 
-                      label="PAN Number" 
-                      placeholder="e.g. ABCDE1234F" 
-                      error={regErrors.pan_number?.message}
-                      {...regForm("pan_number", { required: selectedRole === "vendor" ? "PAN is required" : false })}
-                    />
-                    <Input 
-                      label="GST Number (Optional)" 
-                      placeholder="e.g. 22AAAAA1111A1Z1" 
-                      error={regErrors.gst_number?.message}
-                      {...regForm("gst_number")}
-                    />
-                    <Input 
-                      label="FSSAI Number (Optional)" 
-                      placeholder="e.g. 12345678901234" 
-                      error={regErrors.fssai_number?.message}
-                      {...regForm("fssai_number")}
-                    />
-                    <Input 
-                      label="Store Description (Optional)" 
-                      placeholder="Describe your store offerings..." 
-                      error={regErrors.description?.message}
-                      {...regForm("description")}
-                    />
-                  </div>
-                )}
-
-                {selectedRole === "delivery" && (
-                  <div className="space-y-4 p-4 rounded-2xl border border-amber-500/20 bg-amber-50/10 dark:bg-amber-955/10 animate-fade-in text-left">
-                    <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">Delivery Partner Settings</p>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Vehicle Type</label>
-                      <select 
-                        className="input-base w-full px-4 py-3 text-sm font-sans rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-                        {...regForm("vehicle_type")}
-                      >
-                        <option value="bicycle">Bicycle</option>
-                        <option value="motorcycle">Motorcycle</option>
-                        <option value="scooter">Scooter</option>
-                      </select>
-                    </div>
-                    <Input 
-                      label="Vehicle Number" 
-                      placeholder="e.g. MH12AB1234" 
-                      error={regErrors.vehicle_number?.message}
-                      {...regForm("vehicle_number", { required: selectedRole === "delivery" ? "Vehicle number is required" : false })}
-                    />
-                    <Input 
-                      label="Driving License Number" 
-                      placeholder="e.g. DL-1234567890123" 
-                      error={regErrors.license_number?.message}
-                      {...regForm("license_number", { required: selectedRole === "delivery" ? "License number is required" : false })}
-                    />
-                  </div>
-                )}
                 <Button type="submit" fullWidth loading={loading} size="lg">
                   Submit Registration <ArrowRight className="w-4 h-4" />
                 </Button>

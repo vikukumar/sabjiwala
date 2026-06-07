@@ -53,12 +53,20 @@ try {
   const vendorKycDest = path.join(webSrc, 'app/kyc');
   removeRecursiveSync(vendorKycDest);
   copyRecursiveSync(path.join(vendorSrc, 'app/kyc'), vendorKycDest);
+  // login directory
+  const vendorLoginDest = path.join(webSrc, 'app/vendor/login');
+  removeRecursiveSync(vendorLoginDest);
+  copyRecursiveSync(path.join(vendorSrc, 'app/login'), vendorLoginDest);
 
   // 3. Clean and Copy Delivery app specific pages
   console.log(`Syncing delivery-app pages...`);
   // page.tsx
   const deliveryPageDest = path.join(webSrc, 'app/delivery/page.tsx');
   copyRecursiveSync(path.join(deliverySrc, 'app/page.tsx'), deliveryPageDest);
+  // login directory
+  const deliveryLoginDest = path.join(webSrc, 'app/delivery/login');
+  removeRecursiveSync(deliveryLoginDest);
+  copyRecursiveSync(path.join(deliverySrc, 'app/login'), deliveryLoginDest);
 
   // 4. Clean and Copy Admin app specific pages
   console.log(`Syncing admin-app pages...`);
@@ -69,6 +77,10 @@ try {
   const adminUsersDest = path.join(webSrc, 'app/users');
   removeRecursiveSync(adminUsersDest);
   copyRecursiveSync(path.join(adminSrc, 'app/users'), adminUsersDest);
+  // login directory
+  const adminLoginDest = path.join(webSrc, 'app/admin/login');
+  removeRecursiveSync(adminLoginDest);
+  copyRecursiveSync(path.join(adminSrc, 'app/login'), adminLoginDest);
 
   console.log('=== Sbjiwala Sub-Apps Synchronization Completed Successfully ===');
 } catch (error) {

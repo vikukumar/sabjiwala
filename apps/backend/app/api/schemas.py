@@ -81,6 +81,7 @@ class LoginRequest(BaseModel):
     phone: Optional[str] = None
     password: Optional[str] = None
     device_id: Optional[str] = None
+    role: Optional[str] = None
 
 class OTPLoginRequest(BaseModel):
     identifier: Optional[str] = None
@@ -95,6 +96,7 @@ class OTPVerifyRequest(BaseModel):
     otp: str = Field(..., min_length=6, max_length=6)
     purpose: str = "login"
     device_id: Optional[str] = None
+    role: Optional[str] = None
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
@@ -142,6 +144,7 @@ class PasskeyLoginVerifyRequest(BaseModel):
     signature_b64: str
     identifier: str
     device_id: Optional[str] = None
+    role: Optional[str] = None
 
 # ===== Magic Link Schemas =====
 
