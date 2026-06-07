@@ -15,7 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.schemas import (
     APIResponse, CategoryResponse, PaginatedResponse, PaginationMeta,
-    ProductCreate, ProductResponse, ProductUpdate,
+    ProductCreate, ProductResponse, ProductUpdate, CategoryCreate,
 )
 from app.core.rbac.engine import get_current_user
 from app.db.session import get_db
@@ -137,9 +137,33 @@ async def update_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    for field, value in body.model_dump(exclude_unset=True).items():
+    for field, value in body.model_dump(exclude_unset=True, exclude={"price", "compare_at_price"}).items():
         if hasattr(product, field) and value is not None:
             setattr(product, field, value)
+
+    # If the user is a vendor and passed price or compare_at_price, update ProductPrice
+    if vendor and (body.price is not None or body.compare_at_price is not None):
+        price_result = await db.execute(
+            select(ProductPrice).where(
+                ProductPrice.product_id == product.id,
+                ProductPrice.vendor_id == vendor.id,
+                ProductPrice.is_active == True
+            )
+        )
+        price_obj = price_result.scalars().first()
+        if price_obj:
+            if body.price is not None:
+                price_obj.price = body.price
+            if body.compare_at_price is not None:
+                price_obj.compare_at_price = body.compare_at_price
+        else:
+            price_obj = ProductPrice(
+                product_id=product.id,
+                vendor_id=vendor.id,
+                price=body.price if body.price is not None else 30.0,
+                compare_at_price=body.compare_at_price
+            )
+            db.add(price_obj)
 
     product.updated_by = current_user["user_id"]
     await db.flush()
@@ -300,3 +324,42 @@ async def get_category_tree(db: AsyncSession = Depends(get_db)):
     )
     categories = result.scalars().all()
     return APIResponse(success=True, data=[CategoryResponse.model_validate(c) for c in categories])
+
+
+@router.post("/categories", response_model=APIResponse[CategoryResponse], status_code=201)
+async def create_category(
+    body: CategoryCreate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new category or subcategory."""
+    # Generate unique slug
+    slug = _slugify(body.name)
+    existing = await db.execute(select(Category).where(Category.slug == slug, Category.is_deleted == False))
+    if existing.scalars().first():
+        import secrets
+        slug = f"{slug}-{secrets.token_hex(2)}"
+
+    level = 0
+    if body.parent_id:
+        parent_result = await db.execute(select(Category).where(Category.id == body.parent_id, Category.is_deleted == False))
+        parent = parent_result.scalars().first()
+        if not parent:
+            raise HTTPException(status_code=400, detail="Parent category not found")
+        level = parent.level + 1
+
+    category = Category(
+        name=body.name,
+        slug=slug,
+        description=body.description,
+        icon=body.icon,
+        image_url=body.image_url,
+        parent_id=body.parent_id,
+        level=level,
+        sort_order=body.sort_order,
+        is_active=body.is_active,
+        created_by=current_user["user_id"],
+    )
+    db.add(category)
+    await db.flush()
+    return APIResponse(success=True, message="Category created successfully", data=CategoryResponse.model_validate(category))

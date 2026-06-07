@@ -1,16 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   TrendingUp, Users, ShoppingBag, DollarSign,
-  Settings, Award, RefreshCw, Clock, MapPin, Loader2, Menu, X
+  Settings, Award, RefreshCw, Clock, MapPin, Loader2, Menu, X,
+  Plus, Trash2, ArrowLeft, Save
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
-
-import { useRef } from "react";
-import { Save } from "lucide-react";
 
 function ServiceAreaPanel() {
   const queryClient = useQueryClient();
@@ -302,6 +300,938 @@ function ServiceAreaPanel() {
             Save Delivery Pricing Rules
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+
+function InventoryPanel({ vendorId }: { vendorId: string }) {
+  const queryClient = useQueryClient();
+  const [activeSubTab, setActiveSubTab] = useState<"list" | "add-product" | "add-category">("list");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("");
+
+  // Form states for adding product
+  const [newProdName, setNewProdName] = useState("");
+  const [newProdDesc, setNewProdDesc] = useState("");
+  const [newProdCategoryId, setNewProdCategoryId] = useState("");
+  const [newProdUnit, setNewProdUnit] = useState("kg");
+  const [newProdUnitValue, setNewProdUnitValue] = useState("1.0");
+  const [newProdPrice, setNewProdPrice] = useState("");
+  const [newProdComparePrice, setNewProdComparePrice] = useState("");
+  const [newProdEmoji, setNewProdEmoji] = useState("🥬");
+  const [newProdInitialStock, setNewProdInitialStock] = useState("50.0");
+
+  // Form states for adding category/subcategory
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatDesc, setNewCatDesc] = useState("");
+  const [newCatParentId, setNewCatParentId] = useState("");
+  const [newCatIcon, setNewCatIcon] = useState("");
+
+  // Edit Pricing / Stock states for selected product
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editPrice, setEditPrice] = useState("");
+  const [editComparePrice, setEditComparePrice] = useState("");
+  const [editStock, setEditStock] = useState("");
+  const [stockChangeType, setStockChangeType] = useState<"add" | "remove" | "set">("set");
+
+  // Queries
+  const { data: productsData, isLoading: productsLoading } = useQuery<any>({
+    queryKey: ["vendorCatalog", vendorId, searchQuery, selectedCategoryFilter],
+    queryFn: async () => {
+      const res = await api.get("/catalog/products", {
+        params: {
+          vendor_id: vendorId,
+          search: searchQuery || undefined,
+          category_id: selectedCategoryFilter || undefined,
+          page_size: 100,
+        }
+      });
+      return res.data || [];
+    },
+    enabled: !!vendorId
+  });
+
+  const { data: categoriesData } = useQuery<any>({
+    queryKey: ["allCategories"],
+    queryFn: async () => {
+      const res = await api.get("/catalog/categories", {
+        params: { all_levels: true }
+      });
+      return res.data || [];
+    }
+  });
+
+  // Mutations
+  const addCategoryMutation = useMutation({
+    mutationFn: async () => {
+      return api.post("/products/categories", {
+        name: newCatName,
+        description: newCatDesc || null,
+        parent_id: newCatParentId || null,
+        icon: newCatIcon || null,
+        is_active: true,
+        sort_order: 0
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allCategories"] });
+      alert("Category created successfully!");
+      setNewCatName("");
+      setNewCatDesc("");
+      setNewCatParentId("");
+      setNewCatIcon("");
+      setActiveSubTab("list");
+    },
+    onError: (err: any) => {
+      alert("Failed to create category: " + (err.response?.data?.detail || err.message));
+    }
+  });
+
+  const addProductMutation = useMutation({
+    mutationFn: async () => {
+      // Create product
+      const res = await api.post("/products", {
+        name: newProdName,
+        description: newProdDesc || null,
+        category_id: newProdCategoryId,
+        unit: newProdUnit,
+        unit_value: parseFloat(newProdUnitValue) || 1.0,
+        price: parseFloat(newProdPrice) || 0.0,
+        compare_at_price: newProdComparePrice ? parseFloat(newProdComparePrice) : null,
+        attributes: {
+          image_emoji: newProdEmoji
+        }
+      });
+      
+      const createdProd = res.data;
+      // Set initial stock if specified and > 0
+      const initialStockVal = parseFloat(newProdInitialStock) || 0.0;
+      if (createdProd && createdProd.id && initialStockVal > 0) {
+        await api.post(`/products/${createdProd.id}/inventory`, null, {
+          params: {
+            quantity: initialStockVal,
+            change_type: "set",
+            notes: "Initial inventory setup"
+          }
+        });
+      }
+      return createdProd;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorCatalog"] });
+      queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
+      alert("Product added to catalog successfully!");
+      setNewProdName("");
+      setNewProdDesc("");
+      setNewProdCategoryId("");
+      setNewProdPrice("");
+      setNewProdComparePrice("");
+      setNewProdInitialStock("50.0");
+      setNewProdEmoji("🥬");
+      setActiveSubTab("list");
+    },
+    onError: (err: any) => {
+      alert("Failed to add product: " + (err.response?.data?.detail || err.message));
+    }
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: async () => {
+      // Update Price (via patch product)
+      await api.patch(`/products/${editingProduct.id}`, {
+        price: parseFloat(editPrice) || 0.0,
+        compare_at_price: editComparePrice ? parseFloat(editComparePrice) : null
+      });
+
+      // Update Stock (via POST inventory)
+      const stockVal = parseFloat(editStock);
+      if (!isNaN(stockVal)) {
+        await api.post(`/products/${editingProduct.id}/inventory`, null, {
+          params: {
+            quantity: stockVal,
+            change_type: stockChangeType,
+            notes: "Manual vendor catalog adjustment"
+          }
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorCatalog"] });
+      queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
+      alert("Product pricing and stock updated successfully!");
+      setEditingProduct(null);
+    },
+    onError: (err: any) => {
+      alert("Failed to update product details: " + (err.response?.data?.detail || err.message));
+    }
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (prodId: string) => {
+      return api.delete(`/products/${prodId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorCatalog"] });
+      alert("Product removed from catalog successfully!");
+    },
+    onError: (err: any) => {
+      alert("Failed to delete product: " + (err.response?.data?.detail || err.message));
+    }
+  });
+
+  const categories = categoriesData || [];
+  const products = productsData || [];
+
+  return (
+    <div className="space-y-6 text-slate-800 dark:text-slate-100 animate-fade-in">
+      <div className="flex justify-between items-center flex-wrap gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 p-5 rounded-3xl shadow-sm">
+        <div>
+          <h3 className="text-base font-black flex items-center gap-2">
+            🥦 Store Catalog & Inventory
+          </h3>
+          <p className="text-xs text-slate-550 mt-0.5">Manage products, adjust stock quantities, configure pricing, and add categories.</p>
+        </div>
+        <div className="flex gap-2">
+          {activeSubTab !== "list" ? (
+            <button
+              onClick={() => setActiveSubTab("list")}
+              className="bg-slate-100 dark:bg-slate-850 text-slate-700 dark:text-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-1 cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to List
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setActiveSubTab("add-category")}
+                className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 text-xs font-black px-4 py-2.5 rounded-xl cursor-pointer hover:bg-emerald-100/50"
+              >
+                + New Category
+              </button>
+              <button
+                onClick={() => {
+                  if (categories.length === 0) {
+                    alert("Please add a category first!");
+                    return;
+                  }
+                  setActiveSubTab("add-product");
+                }}
+                className="bg-emerald-600 hover:bg-emerald-505 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md cursor-pointer flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" /> Add Product
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {activeSubTab === "add-category" && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-3xl p-6 shadow-sm max-w-xl mx-auto space-y-4">
+          <h4 className="text-sm font-black border-b pb-2">Add New Catalog Category / Subcategory</h4>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newCatName.trim()) return;
+              addCategoryMutation.mutate();
+            }}
+            className="space-y-4 text-xs"
+          >
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-550 uppercase">Category Name *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Exotic Veggies, Root Vegetables"
+                value={newCatName}
+                onChange={e => setNewCatName(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              />
+            </div>
+            
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-550 uppercase">Parent Category (Optional)</label>
+              <select
+                value={newCatParentId}
+                onChange={e => setNewCatParentId(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              >
+                <option value="">None (Creates a Top-Level Parent Category)</option>
+                {categories.filter((c: any) => c.parent_id === null).map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <p className="text-[10px] text-slate-400">Select a parent category if you are adding a subcategory.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-550 uppercase">Description</label>
+              <textarea
+                placeholder="Brief description of category..."
+                value={newCatDesc}
+                onChange={e => setNewCatDesc(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm h-20 focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-550 uppercase">Category Icon/Emoji (Optional)</label>
+              <input
+                type="text"
+                placeholder="e.g. 🥦, 🍎, 🥕"
+                value={newCatIcon}
+                onChange={e => setNewCatIcon(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={addCategoryMutation.isPending}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            >
+              {addCategoryMutation.isPending ? "Creating Category..." : "Create Category / Subcategory"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {activeSubTab === "add-product" && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-3xl p-6 shadow-sm max-w-2xl mx-auto space-y-4">
+          <h4 className="text-sm font-black border-b pb-2">Add New Product to Shop Catalog</h4>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newProdCategoryId) {
+                alert("Please select a category!");
+                return;
+              }
+              addProductMutation.mutate();
+            }}
+            className="space-y-4 text-xs"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-550 uppercase">Product Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Organic Red Tomatoes"
+                  value={newProdName}
+                  onChange={e => setNewProdName(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-550 uppercase">Category / Subcategory *</label>
+                <select
+                  required
+                  value={newProdCategoryId}
+                  onChange={e => setNewProdCategoryId(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((c: any) => (
+                    <option key={c.id} value={c.id}>
+                      {c.parent_id ? `└── ${c.name} (Subcategory)` : `${c.name}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-550 uppercase">Description</label>
+              <textarea
+                placeholder="Product description and details..."
+                value={newProdDesc}
+                onChange={e => setNewProdDesc(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm h-20 focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-550 uppercase">Unit Type</label>
+                <select
+                  value={newProdUnit}
+                  onChange={e => setNewProdUnit(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+                >
+                  <option value="kg">kg</option>
+                  <option value="gram">gram</option>
+                  <option value="piece">piece</option>
+                  <option value="dozen">dozen</option>
+                  <option value="bunch">bunch</option>
+                  <option value="packet">packet</option>
+                  <option value="litre">litre</option>
+                  <option value="ml">ml</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-550 uppercase">Unit Value</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newProdUnitValue}
+                  onChange={e => setNewProdUnitValue(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-550 uppercase">Representative Emoji</label>
+                <select
+                  value={newProdEmoji}
+                  onChange={e => setNewProdEmoji(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+                >
+                  <option value="🥬">🥬 Greens</option>
+                  <option value="🍅">🍅 Tomato</option>
+                  <option value="🥔">🥔 Potato</option>
+                  <option value="🧅">🧅 Onion</option>
+                  <option value="🥦">🥦 Broccoli</option>
+                  <option value="🥕">🥕 Carrot</option>
+                  <option value="🍎">🍎 Apple</option>
+                  <option value="🥭">🥭 Mango</option>
+                  <option value="🍌">🍌 Banana</option>
+                  <option value="🌶️">🌶️ Chilli</option>
+                  <option value="🌿">🌿 Herb</option>
+                  <option value="🍊">🍊 Orange</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-550 uppercase">Price (₹) *</label>
+                <input
+                  type="number"
+                  required
+                  step="0.01"
+                  placeholder="Selling Price"
+                  value={newProdPrice}
+                  onChange={e => setNewProdPrice(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-550 uppercase">Compare At Price (₹)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="MRP/Original Price"
+                  value={newProdComparePrice}
+                  onChange={e => setNewProdComparePrice(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-550 uppercase">Initial Stock Quantity</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={newProdInitialStock}
+                  onChange={e => setNewProdInitialStock(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={addProductMutation.isPending}
+              className="w-full bg-emerald-600 hover:bg-emerald-505 text-white font-bold py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            >
+              {addProductMutation.isPending ? "Adding Product..." : "Save Product to Catalog"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {activeSubTab === "list" && (
+        <div className="space-y-4">
+          {/* Filters Bar */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search catalog products..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-955 text-xs focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              />
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <select
+                value={selectedCategoryFilter}
+                onChange={e => setSelectedCategoryFilter(e.target.value)}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              >
+                <option value="">All Categories</option>
+                {categories.map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.parent_id ? `└── ${c.name}` : c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Product Items Table */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            {productsLoading ? (
+              <div className="py-20 flex flex-col items-center justify-center gap-2">
+                <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
+                <span className="text-xs text-slate-500">Loading catalog items...</span>
+              </div>
+            ) : products.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-850/50 text-slate-400 uppercase font-black tracking-wider border-b border-slate-200 dark:border-slate-800">
+                      <th className="p-4 w-12 text-center">Emoji</th>
+                      <th className="p-4">Product Info</th>
+                      <th className="p-4">Category</th>
+                      <th className="p-4">Sell Price (₹)</th>
+                      <th className="p-4 text-center">Available Stock</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-150 dark:divide-slate-850">
+                    {products.map((p: any) => {
+                      const attrs = p.attributes || {};
+                      const isLowStock = parseFloat(attrs.quantity || 0) < 10;
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/10 transition-colors">
+                          <td className="p-4 text-center text-3xl font-normal">
+                            {attrs.image_emoji || "🥬"}
+                          </td>
+                          <td className="p-4">
+                            <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">{p.name}</h4>
+                            <p className="text-slate-500 mt-0.5">{p.unit_value} {p.unit}</p>
+                            <p className="text-[10px] text-slate-400 mt-1 line-clamp-1 max-w-[200px]">{p.description}</p>
+                          </td>
+                          <td className="p-4">
+                            <span className="bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full font-bold text-[10px] text-slate-600 dark:text-slate-350">
+                              {p.category?.name || "Uncategorized"}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-black text-sm text-slate-900 dark:text-white">₹{attrs.price}</span>
+                            {attrs.compare_at_price && (
+                              <span className="text-slate-400 line-through ml-1.5">₹{attrs.compare_at_price}</span>
+                            )}
+                          </td>
+                          <td className="p-4 text-center">
+                            <span className={`inline-block px-3 py-1 rounded-full font-black text-[10px] ${
+                              isLowStock
+                                ? "bg-rose-500/10 text-rose-550 border border-rose-500/20"
+                                : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                            }`}>
+                              {attrs.quantity || 0} {p.unit}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right space-x-2">
+                            <button
+                              onClick={() => {
+                                setEditingProduct(p);
+                                setEditPrice(String(attrs.price));
+                                setEditComparePrice(attrs.compare_at_price ? String(attrs.compare_at_price) : "");
+                                setEditStock("");
+                                setStockChangeType("set");
+                              }}
+                              className="px-3 py-1.5 border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-900 rounded-lg font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer text-slate-800 dark:text-white"
+                            >
+                              Edit Stock/Price
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(`Remove "${p.name}" from your catalog?`)) {
+                                  deleteProductMutation.mutate(p.id);
+                                }
+                              }}
+                              className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-all cursor-pointer inline-flex items-center"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="py-20 text-center text-slate-400 dark:text-slate-500 text-sm">
+                No catalog items found. Click "Add Product" to add your first vegetable or fruit item!
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Product Price/Stock Modal */}
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEditingProduct(null)} />
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full animate-scale-in text-slate-800 dark:text-white space-y-4 shadow-2xl text-left">
+            <div>
+              <h3 className="text-base font-black">Edit Pricing & Stock: {editingProduct.name}</h3>
+              <p className="text-xs text-slate-550">Configure catalog price details and stock quantity changes.</p>
+            </div>
+            
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                updateProductMutation.mutate();
+              }}
+              className="space-y-4 text-xs"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-500 uppercase">Selling Price (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={editPrice}
+                    onChange={e => setEditPrice(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-transparent text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-500 uppercase">Compare At Price (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editComparePrice}
+                    onChange={e => setEditComparePrice(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-transparent text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t dark:border-slate-800 pt-3 space-y-3">
+                <h4 className="font-bold text-slate-550 uppercase">Adjust Inventory Stock</h4>
+                
+                <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-950 p-1 rounded-xl border dark:border-slate-850">
+                  {["set", "add", "remove"].map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setStockChangeType(mode as any)}
+                      className={`py-1.5 rounded-lg text-[10px] capitalize font-bold transition-all ${
+                        stockChangeType === mode
+                          ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-100 dark:border-slate-800"
+                          : "text-slate-450 hover:text-slate-700"
+                      }`}
+                    >
+                      {mode === "set" ? "Set Stock" : mode === "add" ? "+ Add Stock" : "- Deduct"}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-550 uppercase">Stock Quantity ({editingProduct.unit})</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder={stockChangeType === "set" ? "e.g. 50" : "Quantity change amount"}
+                    value={editStock}
+                    onChange={e => setEditStock(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-transparent text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="px-4 py-2 border dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 font-bold text-slate-800 dark:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateProductMutation.isPending}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow cursor-pointer"
+                >
+                  {updateProductMutation.isPending ? "Saving..." : "Save Modifications"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SettingsPanel({ vendor }: { vendor: any }) {
+  const queryClient = useQueryClient();
+  const [bizName, setBizName] = useState(vendor?.business_name || "");
+  const [bizType, setBizType] = useState(vendor?.business_type || "individual");
+  const [desc, setDesc] = useState(vendor?.description || "");
+  const [email, setEmail] = useState(vendor?.contact_email || "");
+  const [phone, setPhone] = useState(vendor?.contact_phone || "");
+  const [gst, setGst] = useState(vendor?.gst_number || "");
+  const [pan, setPan] = useState(vendor?.pan_number || "");
+  const [fssai, setFssai] = useState(vendor?.fssai_number || "");
+
+  // Timings states
+  const [storeTimings, setStoreTimings] = useState<any>({
+    monday: { open: "09:00", close: "21:00", is_closed: false },
+    tuesday: { open: "09:00", close: "21:00", is_closed: false },
+    wednesday: { open: "09:00", close: "21:00", is_closed: false },
+    thursday: { open: "09:00", close: "21:00", is_closed: false },
+    friday: { open: "09:00", close: "21:00", is_closed: false },
+    saturday: { open: "09:00", close: "21:00", is_closed: false },
+    sunday: { open: "09:00", close: "21:00", is_closed: false },
+  });
+
+  useEffect(() => {
+    if (vendor?.store?.store_timings) {
+      setStoreTimings(vendor.store.store_timings);
+    }
+  }, [vendor]);
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async () => {
+      return api.patch("/vendors/me", {
+        business_name: bizName,
+        business_type: bizType,
+        description: desc,
+        contact_email: email,
+        contact_phone: phone,
+        gst_number: gst,
+        pan_number: pan,
+        fssai_number: fssai
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorProfile"] });
+      alert("Business settings updated successfully!");
+    },
+    onError: (err: any) => {
+      alert("Failed to update business settings: " + (err.response?.data?.detail || err.message));
+    }
+  });
+
+  const updateTimingsMutation = useMutation({
+    mutationFn: async () => {
+      return api.put("/vendors/me/store/timings", {
+        store_timings: storeTimings
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorProfile"] });
+      alert("Store operating hours updated successfully!");
+    },
+    onError: (err: any) => {
+      alert("Failed to update store timings: " + (err.response?.data?.detail || err.message));
+    }
+  });
+
+  const handleTimingChange = (day: string, field: string, value: any) => {
+    setStoreTimings((prev: any) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value
+      }
+    }));
+  };
+
+  const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in text-slate-800 dark:text-slate-100">
+      {/* Profile Info */}
+      <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-3xl p-6 shadow-sm space-y-6">
+        <div>
+          <h3 className="text-base font-black">🏪 Shop Profile Settings</h3>
+          <p className="text-xs text-slate-550 mt-0.5">Manage business credentials, contact details, and regulatory codes.</p>
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            updateProfileMutation.mutate();
+          }}
+          className="space-y-4 text-xs"
+        >
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5 col-span-2">
+              <label className="font-bold text-slate-500 uppercase">Store / Business Name *</label>
+              <input
+                type="text"
+                required
+                value={bizName}
+                onChange={e => setBizName(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">Contact Phone</label>
+              <input
+                type="text"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">Contact Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div className="space-y-1.5 col-span-2">
+              <label className="font-bold text-slate-550 uppercase">Business Description</label>
+              <textarea
+                value={desc}
+                onChange={e => setDesc(e.target.value)}
+                placeholder="Describe your fresh produce products and services..."
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm h-24 text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div className="border-t dark:border-slate-800 pt-4 space-y-4">
+            <h4 className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wider">Regulatory Credentials</h4>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-500 uppercase">PAN Code</label>
+                <input
+                  type="text"
+                  placeholder="Permanent Account Num"
+                  value={pan}
+                  onChange={e => setPan(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm font-mono text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-500 uppercase">GST Registration</label>
+                <input
+                  type="text"
+                  placeholder="Goods & Services Tax"
+                  value={gst}
+                  onChange={e => setGst(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm font-mono text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-500 uppercase">FSSAI Licence</label>
+                <input
+                  type="text"
+                  placeholder="Food Safety Licence"
+                  value={fssai}
+                  onChange={e => setFssai(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm font-mono text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={updateProfileMutation.isPending}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer text-xs"
+          >
+            {updateProfileMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            Save Profile Credentials
+          </button>
+        </form>
+      </div>
+
+      {/* Timings */}
+      <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-3xl p-6 shadow-sm space-y-4">
+        <div>
+          <h3 className="text-base font-black">⏰ Store Operating Hours</h3>
+          <p className="text-xs text-slate-550 mt-0.5">Define when your store is active and accepting courier collections.</p>
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            updateTimingsMutation.mutate();
+          }}
+          className="space-y-4 text-xs"
+        >
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {days.map((day) => {
+              const timing = storeTimings[day] || { open: "09:00", close: "21:00", is_closed: false };
+              return (
+                <div key={day} className="py-2.5 flex items-center justify-between gap-4 capitalize">
+                  <span className="font-bold w-20 text-slate-700 dark:text-slate-350">{day}</span>
+                  
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="time"
+                      disabled={timing.is_closed}
+                      value={timing.open}
+                      onChange={e => handleTimingChange(day, "open", e.target.value)}
+                      className="px-2 py-1 rounded-lg border dark:border-slate-850 bg-transparent font-semibold font-mono text-[11px] disabled:opacity-30 text-slate-900 dark:text-white"
+                    />
+                    <span className="text-slate-400 font-mono text-[10px]">to</span>
+                    <input
+                      type="time"
+                      disabled={timing.is_closed}
+                      value={timing.close}
+                      onChange={e => handleTimingChange(day, "close", e.target.value)}
+                      className="px-2 py-1 rounded-lg border dark:border-slate-850 bg-transparent font-semibold font-mono text-[11px] disabled:opacity-30 text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={timing.is_closed}
+                      onChange={e => handleTimingChange(day, "is_closed", e.target.checked)}
+                      className="rounded accent-rose-500"
+                    />
+                    <span className={`text-[10px] font-bold ${timing.is_closed ? "text-rose-550" : "text-slate-400"}`}>
+                      Closed
+                    </span>
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            type="submit"
+            disabled={updateTimingsMutation.isPending}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer text-xs"
+          >
+            {updateTimingsMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            Update Operating Hours
+          </button>
+        </form>
       </div>
     </div>
   );

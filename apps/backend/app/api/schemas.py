@@ -303,6 +303,18 @@ class ProductUpdate(BaseModel):
     status: Optional[str] = None
     tags: Optional[List[str]] = None
     attributes: Optional[dict] = None
+    price: Optional[float] = None
+    compare_at_price: Optional[float] = None
+
+class CategoryCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    image_url: Optional[str] = None
+    parent_id: Optional[UUID] = None
+    is_active: bool = True
+    sort_order: int = 0
+
 
 class ProductResponse(BaseModel):
     id: UUID

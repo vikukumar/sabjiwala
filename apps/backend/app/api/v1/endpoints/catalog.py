@@ -40,8 +40,25 @@ async def browse_products(
         .where(Product.is_deleted == False, Product.status == ProductStatus.ACTIVE)
     )
 
+    if vendor_id:
+        query = query.join(Inventory, Inventory.product_id == Product.id).where(
+            Inventory.vendor_id == vendor_id,
+            Inventory.is_deleted == False
+        )
+
     if category_id:
-        query = query.where(Product.category_id == category_id)
+        # Get category and all its children subcategories
+        cat_tree_query = select(Category).where(
+            (Category.id == category_id) | (Category.parent_id == category_id),
+            Category.is_deleted == False
+        )
+        cat_tree_res = await db.execute(cat_tree_query)
+        cat_ids = [c.id for c in cat_tree_res.scalars().all()]
+        if cat_ids:
+            query = query.where(Product.category_id.in_(cat_ids))
+        else:
+            query = query.where(Product.category_id == category_id)
+
     if is_featured:
         query = query.where(Product.is_featured == True)
     if search:
@@ -71,24 +88,41 @@ async def browse_products(
     # Enrich products with database inventory price and stock details
     for p in products:
         p_attrs = dict(p.attributes or {})
+        
+        # Get inventory entry
         inv_query = select(Inventory).where(Inventory.product_id == p.id, Inventory.is_deleted == False)
         if vendor_id:
             inv_query = inv_query.where(Inventory.vendor_id == vendor_id)
         inv_res = await db.execute(inv_query)
         inv = inv_res.scalars().first()
+        
+        # Get product price entry
+        price_query = select(ProductPrice).where(
+            ProductPrice.product_id == p.id,
+            ProductPrice.is_active == True
+        )
+        if vendor_id:
+            price_query = price_query.where(ProductPrice.vendor_id == vendor_id)
+        elif inv:
+            price_query = price_query.where(ProductPrice.vendor_id == inv.vendor_id)
+            
+        price_res = await db.execute(price_query)
+        price_obj = price_res.scalars().first()
+        
+        p_attrs["price"] = float(price_obj.price) if price_obj else 30.0
+        
         if inv:
-            p_attrs["price"] = float(inv.unit_price)
             p_attrs["quantity"] = float(inv.quantity)
             p_attrs["vendor_id"] = str(inv.vendor_id)
         else:
-            p_attrs["price"] = 30.0
             p_attrs["quantity"] = 0.0
             p_attrs["vendor_id"] = ""
+            
         if "image_emoji" not in p_attrs:
             p_attrs["image_emoji"] = "🥬"
         p.attributes = p_attrs
 
-    total_pages = (total + page_size - 1) // page_size
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 1
 
     return PaginatedResponse(
         data=[ProductResponse.model_validate(p) for p in products],
@@ -99,14 +133,16 @@ async def browse_products(
 @router.get("/categories", response_model=APIResponse[List[CategoryResponse]])
 async def list_categories(
     parent_id: Optional[UUID] = None,
+    all_levels: bool = False,
     db: AsyncSession = Depends(get_db),
 ):
-    """List categories, optionally filtered by parent."""
+    """List categories, optionally filtered by parent, or all levels."""
     query = select(Category).where(Category.is_deleted == False, Category.is_active == True)
-    if parent_id:
-        query = query.where(Category.parent_id == parent_id)
-    else:
-        query = query.where(Category.parent_id == None)
+    if not all_levels:
+        if parent_id:
+            query = query.where(Category.parent_id == parent_id)
+        else:
+            query = query.where(Category.parent_id == None)
 
     query = query.order_by(Category.sort_order)
     result = await db.execute(query)
