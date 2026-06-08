@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import Providers from "./providers";
 
@@ -73,25 +74,27 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script
+        <Script
+          id="theme-loader"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              (function() {
-                try {
-                  var theme = localStorage.getItem('sw_theme') ||
-                    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                  document.documentElement.classList.remove('dark','amoled');
-                  if (theme === 'dark') document.documentElement.classList.add('dark');
-                  else if (theme === 'amoled') document.documentElement.classList.add('dark','amoled');
-                } catch(e) {}
-              })();
+              try {
+                var theme = localStorage.getItem('sw_theme') ||
+                  (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.classList.remove('dark','amoled');
+                if (theme === 'dark') document.documentElement.classList.add('dark');
+                else if (theme === 'amoled') document.documentElement.classList.add('dark','amoled');
+              } catch(e) {}
             `,
           }}
         />
       </head>
       <body className="min-h-full flex flex-col antialiased" style={{ fontFamily: "var(--font-inter, Inter, system-ui, sans-serif)" }}>
         <Providers>{children}</Providers>
-        <script
+        <Script
+          id="sw-register"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {

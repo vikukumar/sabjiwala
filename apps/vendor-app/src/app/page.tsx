@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   TrendingUp, Users, ShoppingBag, DollarSign,
   Settings, Award, RefreshCw, Clock, MapPin, Loader2, Menu, X,
-  Plus, Trash2, ArrowLeft, Save
+  Plus, Trash2, ArrowLeft, Save, Search
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
@@ -1244,6 +1244,11 @@ export default function VendorDashboard() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
@@ -1350,6 +1355,14 @@ export default function VendorDashboard() {
 
   const orders = ordersData || [];
 
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-slate-100 dark:bg-[#090d10] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 antialiased font-sans flex transition-colors duration-200">
       {/* Mobile Navigation Drawer */}
@@ -1389,8 +1402,10 @@ export default function VendorDashboard() {
                   <span>Dashboard</span>
                 </button>
                 <button
-                  onClick={() => { alert("Inventory section coming soon!"); setIsMobileMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-slate-800/50 hover:text-white text-slate-400 text-sm transition-all cursor-pointer"
+                  onClick={() => { setCurrentView("inventory"); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer ${
+                    currentView === "inventory" ? "bg-slate-800 text-white" : "hover:bg-slate-800/50 hover:text-white text-slate-400"
+                  }`}
                 >
                   <TrendingUp className="w-5 h-5" />
                   <span>Inventory</span>
@@ -1405,8 +1420,10 @@ export default function VendorDashboard() {
                   <span>Service Area</span>
                 </button>
                 <button
-                  onClick={() => { alert("Settings section coming soon!"); setIsMobileMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-slate-800/50 hover:text-white text-slate-400 text-sm transition-all cursor-pointer"
+                  onClick={() => { setCurrentView("settings"); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer ${
+                    currentView === "settings" ? "bg-slate-800 text-white" : "hover:bg-slate-800/50 hover:text-white text-slate-400"
+                  }`}
                 >
                   <Settings className="w-5 h-5" />
                   <span>Settings</span>
@@ -1464,8 +1481,10 @@ export default function VendorDashboard() {
               <span>Dashboard</span>
             </button>
             <button
-              onClick={() => alert("Inventory section coming soon!")}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-slate-800/50 hover:text-white text-slate-400 text-sm transition-all cursor-pointer"
+              onClick={() => setCurrentView("inventory")}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer ${
+                currentView === "inventory" ? "bg-slate-800 text-white" : "hover:bg-slate-800/50 hover:text-white text-slate-400"
+              }`}
             >
               <TrendingUp className="w-5 h-5" />
               <span>Inventory</span>
@@ -1480,8 +1499,10 @@ export default function VendorDashboard() {
               <span>Service Area</span>
             </button>
             <button
-              onClick={() => alert("Settings section coming soon!")}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-slate-800/50 hover:text-white text-slate-400 text-sm transition-all cursor-pointer"
+              onClick={() => setCurrentView("settings")}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer ${
+                currentView === "settings" ? "bg-slate-800 text-white" : "hover:bg-slate-800/50 hover:text-white text-slate-400"
+              }`}
             >
               <Settings className="w-5 h-5" />
               <span>Settings</span>
@@ -1711,8 +1732,12 @@ export default function VendorDashboard() {
                 </div>
               </div>
             </>
-          ) : (
+          ) : currentView === "service-area" ? (
             <ServiceAreaPanel />
+          ) : currentView === "inventory" ? (
+            <InventoryPanel vendorId={vendorProfile?.id} />
+          ) : (
+            <SettingsPanel vendor={vendorProfile} />
           )}
         </main>
       </div>
