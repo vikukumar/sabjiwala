@@ -73,7 +73,16 @@ function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSav
   useEffect(() => {
     if (typeof window === "undefined" || !mapRef.current) return;
 
+    let map: any = null;
+    let active = true;
+
     import("leaflet").then((L) => {
+      if (!active || !mapRef.current) return;
+
+      if ((mapRef.current as any)._leaflet_id) {
+        return;
+      }
+
       // Fix default icons
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
@@ -85,7 +94,7 @@ function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSav
       const initLat = coords.lat;
       const initLng = coords.lng;
 
-      const map = L.map(mapRef.current!).setView([initLat, initLng], 14);
+      map = L.map(mapRef.current!).setView([initLat, initLng], 14);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors"
       }).addTo(map);
@@ -113,6 +122,13 @@ function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSav
 
       setMapObj(map);
     });
+
+    return () => {
+      active = false;
+      if (map) {
+        map.remove();
+      }
+    };
   }, []);
 
   const handleLocateMe = () => {
@@ -151,9 +167,9 @@ function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSav
         longitude: coords.lng
       };
       if (existing?.id) {
-        await api.put(`/users/addresses/${existing.id}`, payload);
+        await api.put(`/users/me/addresses/${existing.id}`, payload);
       } else {
-        await api.post("/users/addresses", payload);
+        await api.post("/users/me/addresses", payload);
       }
       onSave();
     } catch (err: any) {
@@ -264,17 +280,17 @@ export default function AddressesPage() {
 
   const { data: addresses = [], isLoading } = useQuery<any[]>({
     queryKey: ["addresses"],
-    queryFn: async () => { const r = await api.get("/users/addresses"); return r.data || []; },
+    queryFn: async () => { const r = await api.get("/users/me/addresses"); return r.data || []; },
   });
 
   const deleteAddr = useMutation({
-    mutationFn: (id: string) => api.delete(`/users/addresses/${id}`),
+    mutationFn: (id: string) => api.delete(`/users/me/addresses/${id}`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["addresses"] }); success("Address removed"); },
     onError: (err: any) => showError("Delete failed", err.response?.data?.detail || err.message),
   });
 
   const setDefault = useMutation({
-    mutationFn: (id: string) => api.patch(`/users/addresses/${id}`, { is_default: true }),
+    mutationFn: (id: string) => api.patch(`/users/me/addresses/${id}`, { is_default: true }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["addresses"] }); success("Default address updated"); },
   });
 

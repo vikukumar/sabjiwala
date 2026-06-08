@@ -104,9 +104,16 @@ function ServiceAreaPanel() {
   useEffect(() => {
     if (typeof window === "undefined" || !mapContainerRef.current) return;
 
-    let map: any;
+    let map: any = null;
+    let active = true;
 
     import("leaflet").then((L) => {
+      if (!active || !mapContainerRef.current) return;
+
+      if ((mapContainerRef.current as any)._leaflet_id) {
+        return;
+      }
+
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -155,6 +162,7 @@ function ServiceAreaPanel() {
     });
 
     return () => {
+      active = false;
       if (map) map.remove();
     };
   }, []);

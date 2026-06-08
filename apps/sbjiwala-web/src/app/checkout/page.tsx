@@ -26,9 +26,9 @@ function AddressForm({ onSave, onCancel, existing }: {
     try {
       let res;
       if (existing?.id) {
-        res = await api.put(`/users/addresses/${existing.id}`, data);
+        res = await api.put(`/users/me/addresses/${existing.id}`, data);
       } else {
-        res = await api.post("/users/addresses", { ...data, latitude: 19.076, longitude: 72.877 });
+        res = await api.post("/users/me/addresses", { ...data, latitude: 19.076, longitude: 72.877 });
       }
       onSave(res.data);
     } catch (err: any) {
@@ -115,7 +115,7 @@ export default function CheckoutPage() {
 
   const { data: addresses = [], isLoading: addrLoading, refetch: refetchAddr } = useQuery<any[]>({
     queryKey: ["addresses"],
-    queryFn: async () => { const r = await api.get("/users/addresses"); return r.data || []; },
+    queryFn: async () => { const r = await api.get("/users/me/addresses"); return r.data || []; },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
   });
 

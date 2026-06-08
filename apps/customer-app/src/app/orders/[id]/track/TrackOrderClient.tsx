@@ -114,9 +114,16 @@ export default function TrackOrderClient() {
   useEffect(() => {
     if (typeof window === "undefined" || !mapRef.current || mapLoaded || !order) return;
 
-    let map: any;
+    let map: any = null;
+    let active = true;
 
     import("leaflet").then((L) => {
+      if (!active || !mapRef.current) return;
+
+      if ((mapRef.current as any)._leaflet_id) {
+        return;
+      }
+
       // Fix marker icons
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
@@ -181,6 +188,7 @@ export default function TrackOrderClient() {
     });
 
     return () => {
+      active = false;
       if (map) map.remove();
     };
   }, [order, mapLoaded]);

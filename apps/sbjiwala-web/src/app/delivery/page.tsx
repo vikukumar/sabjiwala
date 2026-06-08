@@ -32,9 +32,16 @@ function DeliveryTrackingMap({
   useEffect(() => {
     if (typeof window === "undefined" || !mapContainerRef.current || !order) return;
 
-    let map: any;
+    let map: any = null;
+    let active = true;
 
     import("leaflet").then((L) => {
+      if (!active || !mapContainerRef.current) return;
+
+      if ((mapContainerRef.current as any)._leaflet_id) {
+        return;
+      }
+
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -83,7 +90,7 @@ function DeliveryTrackingMap({
         iconAnchor: [18, 18]
       });
 
-      const driverMarker = L.marker(currentPos, { icon: driverIcon }).addTo(map).bindPopup("My Location");
+      const driverMarker = L.marker(currentPos, { icon: driverIcon }).addTo(map);
       driverMarkerRef.current = driverMarker;
 
       L.polyline([[storeLat, storeLng], [customerLat, customerLng]], { color: "#cbd5e1", weight: 2, dashArray: "4 4" }).addTo(map);
@@ -94,6 +101,7 @@ function DeliveryTrackingMap({
     });
 
     return () => {
+      active = false;
       if (map) map.remove();
     };
   }, [order]);
