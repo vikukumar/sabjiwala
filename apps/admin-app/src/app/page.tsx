@@ -11,10 +11,12 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
+import { useToast } from "@/components/ui/Toast";
 
 type AdminTab = "overview" | "users" | "vendors" | "delivery" | "pricing" | "config" | "categories" | "coupons" | "banners";
 
 function AdminCategoriesPanel() {
+  const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [newCatName, setNewCatName] = useState("");
@@ -45,14 +47,14 @@ function AdminCategoriesPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminCategories"] });
-      alert("Category / Subcategory added to global catalog successfully!");
+      success("Category / Subcategory added to global catalog successfully!");
       setNewCatName("");
       setNewCatDesc("");
       setNewCatParentId("");
       setNewCatIcon("");
     },
     onError: (err: any) => {
-      alert("Failed to create category: " + (err.response?.data?.detail || err.message));
+      showError("Creation Failed", "Failed to create category: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -195,6 +197,7 @@ function AdminCategoriesPanel() {
 
 // ==================== ADMIN COUPONS PANEL ====================
 function AdminCouponsPanel() {
+  const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -233,7 +236,7 @@ function AdminCouponsPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminCoupons"] });
-      alert("Coupon created successfully!");
+      success("Coupon created successfully!");
       setCode("");
       setName("");
       setDesc("");
@@ -244,7 +247,7 @@ function AdminCouponsPanel() {
       setExpiresAt("");
     },
     onError: (err: any) => {
-      alert("Failed to create coupon: " + (err.response?.data?.detail || err.message));
+      showError("Creation Failed", "Failed to create coupon: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -254,10 +257,10 @@ function AdminCouponsPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminCoupons"] });
-      alert("Coupon deactivated!");
+      success("Coupon deactivated!");
     },
     onError: (err: any) => {
-      alert("Failed to deactivate coupon: " + (err.response?.data?.detail || err.message));
+      showError("Action Failed", "Failed to deactivate coupon: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -459,6 +462,7 @@ function AdminCouponsPanel() {
 
 // ==================== ADMIN BANNERS PANEL ====================
 function AdminBannersPanel() {
+  const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
@@ -491,7 +495,7 @@ function AdminBannersPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminBanners"] });
-      alert("Banner created successfully!");
+      success("Banner created successfully!");
       setTitle("");
       setSubtitle("");
       setImageUrl("");
@@ -499,7 +503,7 @@ function AdminBannersPanel() {
       setSortOrder("0");
     },
     onError: (err: any) => {
-      alert("Failed to create banner: " + (err.response?.data?.detail || err.message));
+      showError("Creation Failed", "Failed to create banner: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -509,10 +513,10 @@ function AdminBannersPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminBanners"] });
-      alert("Banner deleted successfully!");
+      success("Banner deleted successfully!");
     },
     onError: (err: any) => {
-      alert("Failed to delete banner: " + (err.response?.data?.detail || err.message));
+      showError("Deletion Failed", "Failed to delete banner: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -658,6 +662,7 @@ function AdminBannersPanel() {
 }
 
 export default function AdminDashboard() {
+  const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -863,10 +868,10 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["pendingVendors"] });
       queryClient.invalidateQueries({ queryKey: ["adminMetrics"] });
       queryClient.invalidateQueries({ queryKey: ["adminVendors"] });
-      alert("Vendor KYC status updated successfully!");
+      success("Vendor KYC status updated successfully!");
     },
     onError: (err: any) => {
-      alert("KYC action failed: " + (err.response?.data?.detail || err.message));
+      showError("KYC Action Failed", err.response?.data?.detail || err.message);
     }
   });
 
@@ -877,10 +882,10 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
-      alert("User access status updated successfully!");
+      success("User access status updated successfully!");
     },
     onError: (err: any) => {
-      alert("Failed to update user status: " + (err.response?.data?.detail || err.message));
+      showError("Status Update Failed", err.response?.data?.detail || err.message);
     }
   });
 
@@ -892,10 +897,10 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
       setEditingUserId(null);
-      alert("User role updated and profile initialized!");
+      success("User role updated and profile initialized!");
     },
     onError: (err: any) => {
-      alert("Failed to update user role: " + (err.response?.data?.detail || err.message));
+      showError("Role Change Failed", err.response?.data?.detail || err.message);
     }
   });
 
@@ -907,10 +912,10 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminVendors"] });
       setEditingVendorId(null);
-      alert("Vendor configurations updated successfully!");
+      success("Vendor configurations updated successfully!");
     },
     onError: (err: any) => {
-      alert("Failed to update vendor settings: " + (err.response?.data?.detail || err.message));
+      showError("Update Failed", err.response?.data?.detail || err.message);
     }
   });
 
@@ -921,10 +926,10 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminDeliveryBoys"] });
-      alert("Delivery partner status updated!");
+      success("Delivery partner status updated!");
     },
     onError: (err: any) => {
-      alert("Failed to update delivery partner status: " + (err.response?.data?.detail || err.message));
+      showError("Update Failed", err.response?.data?.detail || err.message);
     }
   });
 
@@ -937,7 +942,7 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["systemSettings"] });
     },
     onError: (err: any) => {
-      alert(`Failed to save system setting: ${err.message}`);
+      showError("Failed to save system setting", err.message);
     }
   });
 
@@ -947,7 +952,7 @@ export default function AdminDashboard() {
       for (const [key, val] of Object.entries(globalConfig)) {
         await updateSettingMutation.mutateAsync({ key, value: val });
       }
-      alert("Global application configurations saved successfully!");
+      success("Global application configurations saved successfully!");
     } catch (err) {
       // already handles in mutation
     }

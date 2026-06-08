@@ -272,11 +272,53 @@ function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSav
   );
 }
 
+function ConfirmModal({
+  isOpen,
+  title,
+  message,
+  onConfirm,
+  onCancel
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl">
+        <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">{title}</h3>
+        <p className="text-xs text-slate-550 dark:text-slate-400 leading-normal">{message}</p>
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="danger"
+            onClick={onConfirm}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Yes, Remove
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AddressesPage() {
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingAddr, setEditingAddr] = useState<any>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const { data: addresses = [], isLoading } = useQuery<any[]>({
     queryKey: ["addresses"],
@@ -335,12 +377,25 @@ export default function AddressesPage() {
               key={addr.id}
               addr={addr}
               onEdit={a => setEditingAddr(a)}
-              onDelete={id => { if (confirm("Remove this address?")) deleteAddr.mutate(id); }}
+              onDelete={id => setConfirmDeleteId(id)}
               onDefault={id => setDefault.mutate(id)}
             />
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteId}
+        title="Remove Address?"
+        message="Are you sure you want to remove this saved address? This action cannot be undone."
+        onConfirm={() => {
+          if (confirmDeleteId) {
+            deleteAddr.mutate(confirmDeleteId);
+            setConfirmDeleteId(null);
+          }
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

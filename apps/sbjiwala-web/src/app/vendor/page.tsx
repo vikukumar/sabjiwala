@@ -9,8 +9,56 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
+import { useToast } from "@/components/ui/Toast";
+import { Button } from "@/components/ui/index";
+
+function ConfirmModal({
+  isOpen,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  loading
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading?: boolean;
+}) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl">
+        <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">{title}</h3>
+        <p className="text-xs text-slate-550 dark:text-slate-400 leading-normal">{message}</p>
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="danger"
+            onClick={onConfirm}
+            loading={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Yes, Remove
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ServiceAreaPanel() {
+  const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [mapObj, setMapObj] = useState<any>(null);
@@ -74,10 +122,10 @@ function ServiceAreaPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myServiceAreas"] });
-      alert("Service Area updated successfully!");
+      success("Service Area updated successfully!");
     },
     onError: (err: any) => {
-      alert("Failed to update Service Area: " + (err.response?.data?.detail || err.message));
+      showError("Update Failed", "Failed to update Service Area: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -94,10 +142,10 @@ function ServiceAreaPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myDeliveryRules"] });
-      alert("Delivery Rules updated successfully!");
+      success("Delivery Rules updated successfully!");
     },
     onError: (err: any) => {
-      alert("Failed to update Delivery Rules: " + (err.response?.data?.detail || err.message));
+      showError("Update Failed", "Failed to update Delivery Rules: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -213,7 +261,7 @@ function ServiceAreaPanel() {
             <button
               onClick={() => {
                 if (typeof window === "undefined" || !navigator.geolocation) {
-                  alert("Geolocation is not supported by your browser");
+                  showError("Not Supported", "Geolocation is not supported by your browser");
                   return;
                 }
                 navigator.geolocation.getCurrentPosition(
@@ -222,7 +270,7 @@ function ServiceAreaPanel() {
                     setCenterLng(position.coords.longitude);
                   },
                   (error) => {
-                    alert("GPS position acquisition failed. Please enable location permissions.");
+                    showError("Acquisition Failed", "GPS position acquisition failed. Please enable location permissions.");
                   },
                   { enableHighAccuracy: true }
                 );
@@ -351,6 +399,8 @@ function ServiceAreaPanel() {
 
 
 function InventoryPanel({ vendorId }: { vendorId: string }) {
+  const { success, error: showError } = useToast();
+  const [productToDelete, setProductToDelete] = useState<any | null>(null);
   const queryClient = useQueryClient();
   const [activeSubTab, setActiveSubTab] = useState<"list" | "add-product" | "add-category">("list");
   const [searchQuery, setSearchQuery] = useState("");
@@ -421,7 +471,7 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["allCategories"] });
-      alert("Category created successfully!");
+      success("Category created successfully!");
       setNewCatName("");
       setNewCatDesc("");
       setNewCatParentId("");
@@ -429,7 +479,7 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
       setActiveSubTab("list");
     },
     onError: (err: any) => {
-      alert("Failed to create category: " + (err.response?.data?.detail || err.message));
+      showError("Creation Failed", "Failed to create category: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -466,7 +516,7 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendorCatalog"] });
       queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
-      alert("Product added to catalog successfully!");
+      success("Product added to catalog successfully!");
       setNewProdName("");
       setNewProdDesc("");
       setNewProdCategoryId("");
@@ -477,7 +527,7 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
       setActiveSubTab("list");
     },
     onError: (err: any) => {
-      alert("Failed to add product: " + (err.response?.data?.detail || err.message));
+      showError("Add Failed", "Failed to add product: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -504,11 +554,11 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendorCatalog"] });
       queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
-      alert("Product pricing and stock updated successfully!");
+      success("Product pricing and stock updated successfully!");
       setEditingProduct(null);
     },
     onError: (err: any) => {
-      alert("Failed to update product details: " + (err.response?.data?.detail || err.message));
+      showError("Update Failed", "Failed to update product details: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -518,10 +568,10 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendorCatalog"] });
-      alert("Product removed from catalog successfully!");
+      success("Product removed from catalog successfully!");
     },
     onError: (err: any) => {
-      alert("Failed to delete product: " + (err.response?.data?.detail || err.message));
+      showError("Deletion Failed", "Failed to delete product: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -556,7 +606,7 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
               <button
                 onClick={() => {
                   if (categories.length === 0) {
-                    alert("Please add a category first!");
+                    showError("Category Required", "Please add a category first!");
                     return;
                   }
                   setActiveSubTab("add-product");
@@ -647,7 +697,7 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
             onSubmit={(e) => {
               e.preventDefault();
               if (!newProdCategoryId) {
-                alert("Please select a category!");
+                showError("Category Required", "Please select a category!");
                 return;
               }
               addProductMutation.mutate();
@@ -896,11 +946,9 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
                             </button>
                             <button
                               onClick={() => {
-                                if (confirm(`Remove "${p.name}" from your catalog?`)) {
-                                  deleteProductMutation.mutate(p.id);
-                                }
+                                setProductToDelete(p);
                               }}
-                              className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-all cursor-pointer inline-flex items-center"
+                              className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-955/20 rounded-lg transition-all cursor-pointer inline-flex items-center"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1014,11 +1062,27 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
           </div>
         </div>
       )}
+
+      {/* Deletion Confirm Modal */}
+      <ConfirmModal
+        isOpen={!!productToDelete}
+        title="Remove Product?"
+        message={productToDelete ? `Remove "${productToDelete.name}" from your catalog?` : ""}
+        loading={deleteProductMutation.isPending}
+        onConfirm={async () => {
+          if (productToDelete) {
+            await deleteProductMutation.mutateAsync(productToDelete.id);
+            setProductToDelete(null);
+          }
+        }}
+        onCancel={() => setProductToDelete(null)}
+      />
     </div>
   );
 }
 
 function SettingsPanel({ vendor }: { vendor: any }) {
+  const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [bizName, setBizName] = useState(vendor?.business_name || "");
   const [bizType, setBizType] = useState(vendor?.business_type || "individual");
@@ -1061,10 +1125,10 @@ function SettingsPanel({ vendor }: { vendor: any }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendorProfile"] });
-      alert("Business settings updated successfully!");
+      success("Business settings updated successfully!");
     },
     onError: (err: any) => {
-      alert("Failed to update business settings: " + (err.response?.data?.detail || err.message));
+      showError("Update Failed", "Failed to update business settings: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -1076,10 +1140,10 @@ function SettingsPanel({ vendor }: { vendor: any }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendorProfile"] });
-      alert("Store operating hours updated successfully!");
+      success("Store operating hours updated successfully!");
     },
     onError: (err: any) => {
-      alert("Failed to update store timings: " + (err.response?.data?.detail || err.message));
+      showError("Update Failed", "Failed to update store timings: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -1282,6 +1346,7 @@ function SettingsPanel({ vendor }: { vendor: any }) {
 }
 
 export default function VendorDashboard() {
+  const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("all");
   const [currentView, setCurrentView] = useState("dashboard");
@@ -1379,10 +1444,10 @@ export default function VendorDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendorOrders"] });
       queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
-      alert("Order accepted and marked as packed successfully!");
+      success("Order accepted and marked as packed successfully!");
     },
     onError: (err: any) => {
-      alert("Failed to update order: " + (err.response?.data?.detail || err.message));
+      showError("Update Failed", "Failed to update order: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -1825,7 +1890,7 @@ export default function VendorDashboard() {
                       window.location.reload();
                     },
                     () => {
-                      alert("Location permission was denied. Please enable location permissions in browser site settings.");
+                      showError("Permission Denied", "Location permission was denied. Please enable location permissions in browser site settings.");
                     }
                   );
                 }

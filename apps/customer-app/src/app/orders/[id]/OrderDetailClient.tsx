@@ -77,6 +77,51 @@ function OrderTimeline({ status }: { status: string }) {
   );
 }
 
+function ConfirmModal({
+  isOpen,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  loading
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading?: boolean;
+}) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl">
+        <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">{title}</h3>
+        <p className="text-xs text-slate-550 dark:text-slate-400 leading-normal">{message}</p>
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="danger"
+            onClick={onConfirm}
+            loading={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Yes, Cancel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Go Back
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OrderDetailClient() {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -84,6 +129,7 @@ export default function OrderDetailClient() {
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const isNew = searchParams?.get("new") === "1";
+  const [showCancelModal, setShowCancelModal] = React.useState(false);
 
   const { data: order, isLoading } = useQuery<any>({
     queryKey: ["order", id],
@@ -181,7 +227,7 @@ export default function OrderDetailClient() {
             </Link>
           )}
           {canCancel && (
-            <Button variant="danger" onClick={() => { if (confirm("Cancel this order?")) cancelOrder.mutate(); }} loading={cancelOrder.isPending} leftIcon={<XCircle className="w-4 h-4" />}>
+            <Button variant="danger" onClick={() => setShowCancelModal(true)} leftIcon={<XCircle className="w-4 h-4" />}>
               Cancel Order
             </Button>
           )}
@@ -263,6 +309,18 @@ export default function OrderDetailClient() {
           <ArrowRight className="w-4 h-4 text-slate-400" />
         </div>
       </Link>
+
+      <ConfirmModal
+        isOpen={showCancelModal}
+        title="Cancel Order?"
+        message="Are you sure you want to cancel this order? This action cannot be undone."
+        loading={cancelOrder.isPending}
+        onConfirm={async () => {
+          await cancelOrder.mutateAsync();
+          setShowCancelModal(false);
+        }}
+        onCancel={() => setShowCancelModal(false)}
+      />
     </div>
   );
 }

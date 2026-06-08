@@ -88,10 +88,52 @@ function OrderCard({ order, onCancel }: { order: any; onCancel: (id: string) => 
   );
 }
 
+function ConfirmModal({
+  isOpen,
+  title,
+  message,
+  onConfirm,
+  onCancel
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl">
+        <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">{title}</h3>
+        <p className="text-xs text-slate-550 dark:text-slate-400 leading-normal">{message}</p>
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="danger"
+            onClick={onConfirm}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Yes, Cancel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Go Back
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OrdersPage() {
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("all");
+  const [cancelId, setCancelId] = useState<string | null>(null);
 
   const { data: orders = [], isLoading } = useQuery<any[]>({
     queryKey: ["orders", activeTab],
@@ -121,7 +163,7 @@ export default function OrdersPage() {
   ];
 
   const handleCancel = (id: string) => {
-    if (confirm("Cancel this order?")) cancelOrder.mutate(id);
+    setCancelId(id);
   };
 
   return (
@@ -153,6 +195,19 @@ export default function OrdersPage() {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!cancelId}
+        title="Cancel Order?"
+        message="Are you sure you want to cancel this order? This action cannot be undone."
+        onConfirm={() => {
+          if (cancelId) {
+            cancelOrder.mutate(cancelId);
+            setCancelId(null);
+          }
+        }}
+        onCancel={() => setCancelId(null)}
+      />
     </div>
   );
 }

@@ -8,6 +8,81 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
+import { useToast } from "@/components/ui/Toast";
+import { Button } from "@/components/ui/index";
+
+function OtpPromptModal({
+  isOpen,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  loading
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: (otp: string) => void;
+  onCancel: () => void;
+  loading?: boolean;
+}) {
+  const [otp, setOtp] = useState("");
+  useEffect(() => {
+    if (isOpen) {
+      setOtp("");
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl text-slate-800 dark:text-white">
+        <h3 className="text-base font-black uppercase tracking-wider">{title}</h3>
+        <p className="text-xs text-slate-550 dark:text-slate-400 leading-normal">{message}</p>
+        
+        <div className="space-y-1.5">
+          <input
+            type="text"
+            maxLength={4}
+            pattern="[0-9]*"
+            inputMode="numeric"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+            className="w-full text-center tracking-[1.5em] pl-[1.5em] py-3 text-lg font-black border border-slate-200 dark:border-slate-800 rounded-2xl bg-transparent focus:outline-none focus:border-emerald-500"
+            placeholder="••••"
+            disabled={loading}
+          />
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="primary"
+            onClick={() => {
+              if (otp.length === 4) {
+                onConfirm(otp);
+              }
+            }}
+            disabled={otp.length !== 4 || loading}
+            loading={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Verify & Deliver
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function DeliveryTrackingMap({
   order,
@@ -142,6 +217,8 @@ function DeliveryTrackingMap({
 }
 
 export default function DeliveryAgentDashboard() {
+  const { success, error: showError } = useToast();
+  const [otpPromptConfig, setOtpPromptConfig] = useState<{ isOpen: boolean; orderId: string } | null>(null);
   const queryClient = useQueryClient();
   const [isOnline, setIsOnline] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -389,10 +466,10 @@ export default function DeliveryAgentDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] });
-      alert("Order picked up successfully. It is now out for delivery!");
+      success("Order picked up successfully. It is now out for delivery!");
     },
     onError: (err: any) => {
-      alert("Pickup failed: " + (err.response?.data?.detail || err.message));
+      showError("Pickup Failed", "Pickup failed: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -406,10 +483,11 @@ export default function DeliveryAgentDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] });
-      alert("Order delivered successfully! Payment captured.");
+      success("Order delivered successfully! Payment captured.");
+      setOtpPromptConfig(null);
     },
     onError: (err: any) => {
-      alert("Delivery verification failed: " + (err.response?.data?.detail || err.message));
+      showError("Delivery Failed", "Delivery verification failed: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -421,10 +499,7 @@ export default function DeliveryAgentDashboard() {
     if (currentStatus === "assigned" || currentStatus === "packed" || currentStatus === "accepted") {
       pickupOrderMutation.mutate(id);
     } else {
-      const otp = prompt("Please enter the 4-digit Delivery OTP from the customer:");
-      if (otp) {
-        deliverOrderMutation.mutate({ orderId: id, otp });
-      }
+      setOtpPromptConfig({ isOpen: true, orderId: id });
     }
   };
 
@@ -660,7 +735,7 @@ export default function DeliveryAgentDashboard() {
                       window.location.reload();
                     },
                     () => {
-                      alert("Location permission was denied. Please enable location permissions in browser site settings.");
+                      showError("Permission Denied", "Location permission was denied. Please enable location permissions in browser site settings.");
                     }
                   );
                 }
@@ -676,6 +751,19 @@ export default function DeliveryAgentDashboard() {
           </div>
         </div>
       )}
+
+      <OtpPromptModal
+        isOpen={!!otpPromptConfig?.isOpen}
+        title="Enter Delivery OTP"
+        message="Please enter the 4-digit Delivery OTP provided by the customer to verify handover."
+        loading={deliverOrderMutation.isPending}
+        onConfirm={(otp) => {
+          if (otpPromptConfig?.orderId) {
+            deliverOrderMutation.mutate({ orderId: otpPromptConfig.orderId, otp });
+          }
+        }}
+        onCancel={() => setOtpPromptConfig(null)}
+      />
     </div>
   );
 }
