@@ -38,7 +38,7 @@ class DeliveryBoy(BaseEntity):
         nullable=False, unique=True, index=True,
     )
     vendor_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"),
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
         nullable=True, index=True,
     )
 
@@ -85,7 +85,7 @@ class DeliveryLocation(BaseEntity):
         nullable=False, index=True,
     )
     order_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("orders.id"),
+        PGUUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"),
         nullable=True, index=True,
     )
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
@@ -143,7 +143,7 @@ class DeliverySettlement(BaseEntity):
     __tablename__ = "delivery_settlements"
 
     delivery_boy_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("delivery_boys.id"),
+        PGUUID(as_uuid=True), ForeignKey("delivery_boys.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -165,11 +165,11 @@ class CashCollection(BaseEntity):
     __tablename__ = "cash_collections"
 
     delivery_boy_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("delivery_boys.id"),
+        PGUUID(as_uuid=True), ForeignKey("delivery_boys.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     order_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("orders.id"),
+        PGUUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)

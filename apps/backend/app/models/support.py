@@ -45,11 +45,11 @@ class SupportTicket(BaseEntity):
 
     ticket_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
     user_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"),
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     assigned_to: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True,
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True,
     )
 
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -94,7 +94,7 @@ class SupportMessage(BaseEntity):
         nullable=False, index=True,
     )
     sender_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"),
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
     message: Mapped[str] = mapped_column(Text, nullable=False, default="")
@@ -114,19 +114,19 @@ class Dispute(BaseEntity):
     __tablename__ = "disputes"
 
     order_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("orders.id"),
+        PGUUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     customer_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"),
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     vendor_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"),
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     assigned_to: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True,
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True,
     )
 
     reason: Mapped[str] = mapped_column(Text, nullable=False, default="")

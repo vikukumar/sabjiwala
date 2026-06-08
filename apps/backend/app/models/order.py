@@ -57,7 +57,7 @@ class Cart(BaseEntity):
         nullable=False, index=True,
     )
     vendor_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"), nullable=True, index=True,
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=True, index=True,
     )
     coupon_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -78,14 +78,14 @@ class CartItem(BaseEntity):
         nullable=False, index=True,
     )
     product_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("products.id"),
+        PGUUID(as_uuid=True), ForeignKey("products.id", ondelete="CASCADE"),
         nullable=False,
     )
     variant_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("product_variants.id"), nullable=True,
+        PGUUID(as_uuid=True), ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=True,
     )
     vendor_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"),
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
         nullable=False,
     )
     quantity: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
@@ -106,13 +106,13 @@ class Order(BaseEntity):
 
     # Customer
     user_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"),
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
 
     # Vendor
     vendor_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"),
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
 
@@ -148,7 +148,7 @@ class Order(BaseEntity):
 
     # Delivery
     delivery_boy_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True,
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True,
     )
     estimated_delivery_time: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     actual_delivery_time: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -157,7 +157,7 @@ class Order(BaseEntity):
 
     # Split order reference
     parent_order_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("orders.id"), nullable=True, index=True,
+        PGUUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"), nullable=True, index=True,
     )
     is_split_order: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
@@ -194,14 +194,14 @@ class OrderItem(BaseEntity):
         nullable=False, index=True,
     )
     product_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("products.id"),
+        PGUUID(as_uuid=True), ForeignKey("products.id", ondelete="CASCADE"),
         nullable=False,
     )
     variant_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("product_variants.id"), nullable=True,
+        PGUUID(as_uuid=True), ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=True,
     )
     vendor_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"),
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
         nullable=False,
     )
 
@@ -249,15 +249,15 @@ class ReturnRequest(BaseEntity):
     __tablename__ = "return_requests"
 
     order_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("orders.id"),
+        PGUUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     user_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"),
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     vendor_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"),
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     status: Mapped[ReturnStatus] = mapped_column(
@@ -277,15 +277,15 @@ class Refund(BaseEntity):
     __tablename__ = "refunds"
 
     order_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("orders.id"),
+        PGUUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     user_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"),
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     return_request_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("return_requests.id"), nullable=True,
+        PGUUID(as_uuid=True), ForeignKey("return_requests.id", ondelete="CASCADE"), nullable=True,
     )
     amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     status: Mapped[RefundStatus] = mapped_column(
@@ -307,16 +307,16 @@ class Invoice(BaseEntity):
     __tablename__ = "invoices"
 
     order_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("orders.id"),
+        PGUUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"),
         nullable=False, unique=True, index=True,
     )
     invoice_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
     user_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"),
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     vendor_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"),
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
         nullable=False,
     )
 

@@ -20,10 +20,10 @@ class FileMetadata(BaseEntity):
 
     # Owner
     owner_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True,
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True,
     )
     vendor_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"), nullable=True, index=True,
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=True, index=True,
     )
 
     # File info

@@ -45,7 +45,7 @@ class Category(BaseEntity):
 
     # Hierarchy (MPTT / Adjacency List)
     parent_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("categories.id"), nullable=True, index=True,
+        PGUUID(as_uuid=True), ForeignKey("categories.id", ondelete="CASCADE"), nullable=True, index=True,
     )
     level: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -79,7 +79,7 @@ class Product(BaseEntity):
 
     # Category
     category_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("categories.id"),
+        PGUUID(as_uuid=True), ForeignKey("categories.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
 
@@ -174,7 +174,7 @@ class ProductPrice(BaseEntity):
         nullable=False, index=True,
     )
     variant_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("product_variants.id"), nullable=True,
+        PGUUID(as_uuid=True), ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=True,
     )
     vendor_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
@@ -204,7 +204,7 @@ class Inventory(BaseEntity):
         nullable=False, index=True,
     )
     variant_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("product_variants.id"), nullable=True,
+        PGUUID(as_uuid=True), ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=True,
     )
     vendor_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
@@ -231,7 +231,7 @@ class InventoryLog(BaseEntity):
         nullable=False, index=True,
     )
     vendor_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"), nullable=False, index=True,
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False, index=True,
     )
     change_type: Mapped[str] = mapped_column(String(50), nullable=False)  # add, remove, reserve, release, adjustment
     quantity_change: Mapped[float] = mapped_column(Float, nullable=False)
@@ -278,7 +278,7 @@ class ProductReview(BaseEntity):
         PGUUID(as_uuid=True), nullable=True,
     )
     vendor_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"), nullable=False, index=True,
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False, index=True,
     )
     rating: Mapped[int] = mapped_column(Integer, nullable=False)  # 1-5
     title: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)

@@ -77,7 +77,7 @@ class User(BaseEntity):
 
     # Referral
     referral_code: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True, index=True)
-    referred_by: Mapped[Optional[UUID]] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    referred_by: Mapped[Optional[UUID]] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     # Metadata
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -182,7 +182,7 @@ class UserSession(BaseEntity):
         nullable=False, index=True,
     )
     device_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("user_devices.id"), nullable=True,
+        PGUUID(as_uuid=True), ForeignKey("user_devices.id", ondelete="SET NULL"), nullable=True,
     )
     refresh_token_hash: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
@@ -209,7 +209,7 @@ class Role(BaseEntity):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_system: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # Cannot be deleted
     parent_role_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("roles.id"), nullable=True,
+        PGUUID(as_uuid=True), ForeignKey("roles.id", ondelete="SET NULL"), nullable=True,
     )
     hierarchy_level: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 

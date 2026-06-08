@@ -76,7 +76,7 @@ class Coupon(BaseEntity):
 
     # Vendor (for vendor-scoped coupons)
     vendor_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"), nullable=True, index=True,
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=True, index=True,
     )
 
     # Relationships
@@ -118,11 +118,11 @@ class CouponUsage(BaseEntity):
         nullable=False, index=True,
     )
     user_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"),
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     order_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("orders.id"),
+        PGUUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     discount_applied: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
@@ -149,10 +149,10 @@ class Offer(BaseEntity):
 
     # Scope
     vendor_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"), nullable=True, index=True,
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=True, index=True,
     )
     category_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("categories.id"), nullable=True,
+        PGUUID(as_uuid=True), ForeignKey("categories.id", ondelete="CASCADE"), nullable=True,
     )
 
     # Stacking rules
@@ -185,7 +185,7 @@ class OfferProduct(BaseEntity):
         nullable=False, index=True,
     )
     product_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("products.id"),
+        PGUUID(as_uuid=True), ForeignKey("products.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     offer_price: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
@@ -216,15 +216,15 @@ class ReferralReward(BaseEntity):
     __tablename__ = "referral_rewards"
 
     referrer_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"),
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     referred_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"),
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     referral_code_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("referral_codes.id"),
+        PGUUID(as_uuid=True), ForeignKey("referral_codes.id", ondelete="CASCADE"),
         nullable=False,
     )
     referrer_reward: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)

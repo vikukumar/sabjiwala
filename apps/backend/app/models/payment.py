@@ -56,11 +56,11 @@ class Payment(BaseEntity):
     __tablename__ = "payments"
 
     order_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("orders.id"),
+        PGUUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"),
         nullable=True, index=True,
     )
     user_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"),
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
 
@@ -106,7 +106,7 @@ class RazorpayOrder(BaseEntity):
     __tablename__ = "razorpay_orders"
 
     payment_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("payments.id"),
+        PGUUID(as_uuid=True), ForeignKey("payments.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     razorpay_order_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
@@ -125,7 +125,7 @@ class PhonepeTransaction(BaseEntity):
     __tablename__ = "phonepe_transactions"
 
     payment_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("payments.id"),
+        PGUUID(as_uuid=True), ForeignKey("payments.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     merchant_transaction_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
@@ -164,7 +164,7 @@ class WalletTransaction(BaseEntity):
         nullable=False, index=True,
     )
     user_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"),
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     transaction_type: Mapped[WalletTransactionType] = mapped_column(
@@ -189,7 +189,7 @@ class Settlement(BaseEntity):
     __tablename__ = "settlements"
 
     vendor_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendors.id"),
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
     period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

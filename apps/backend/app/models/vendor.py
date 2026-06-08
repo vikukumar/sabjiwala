@@ -244,7 +244,7 @@ class VendorStaff(BaseEntity):
         nullable=False, index=True,
     )
     role_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("roles.id"), nullable=True,
+        PGUUID(as_uuid=True), ForeignKey("roles.id", ondelete="SET NULL"), nullable=True,
     )
     designation: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -278,7 +278,7 @@ class VendorPayout(BaseEntity):
         nullable=False, index=True,
     )
     bank_account_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("vendor_bank_accounts.id"), nullable=True,
+        PGUUID(as_uuid=True), ForeignKey("vendor_bank_accounts.id", ondelete="SET NULL"), nullable=True,
     )
     amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")  # pending, processing, completed, failed
