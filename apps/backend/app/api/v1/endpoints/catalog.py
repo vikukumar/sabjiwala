@@ -224,3 +224,42 @@ async def find_nearby_vendors(
             has_previous=page > 1
         ),
     )
+
+
+@router.get("/banners", response_model=APIResponse)
+async def get_active_banners(
+    position: str = "home_top",
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve active banners filtered by position."""
+    from app.models.cms import Banner
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    
+    stmt = (
+        select(Banner)
+        .where(
+            Banner.is_active == True,
+            Banner.position == position,
+            (Banner.starts_at == None) | (Banner.starts_at <= now),
+            (Banner.expires_at == None) | (Banner.expires_at >= now)
+        )
+        .order_by(Banner.sort_order.asc())
+    )
+    res = await db.execute(stmt)
+    banners = res.scalars().all()
+    
+    data = [
+        {
+            "id": str(b.id),
+            "title": b.title,
+            "subtitle": b.subtitle,
+            "image_url": b.image_url,
+            "mobile_image_url": b.mobile_image_url,
+            "action_url": b.action_url,
+            "action_type": b.action_type,
+            "position": b.position,
+        }
+        for b in banners
+    ]
+    return APIResponse(success=True, data=data)

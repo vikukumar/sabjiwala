@@ -139,8 +139,19 @@ function ThemeCycleButton() {
 }
 
 // ==================== HEADER ====================
-function Header({ onMenuOpen }: { onMenuOpen: () => void }) {
+function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpenLocation: () => void }) {
   const queryClient = useQueryClient();
+  const [locationName, setLocationName] = useState("Loading...");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateLoc = () => {
+      setLocationName(localStorage.getItem("sw_location_name") || "Mumbai, Maharashtra");
+    };
+    updateLoc();
+    window.addEventListener("sw_location_updated", updateLoc);
+    return () => window.removeEventListener("sw_location_updated", updateLoc);
+  }, []);
 
   const { data: cartData } = useQuery<any>({
     queryKey: ["cart"],
@@ -157,21 +168,36 @@ function Header({ onMenuOpen }: { onMenuOpen: () => void }) {
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
       <div className="flex items-center justify-between h-16 px-4 md:px-6 max-w-7xl mx-auto">
-        {/* Left: menu (mobile) + logo */}
-        <div className="flex items-center gap-3">
+        {/* Left: menu (mobile) + logo + location selector */}
+        <div className="flex items-center gap-2 min-w-0 flex-1 md:flex-initial">
           <button
             onClick={onMenuOpen}
-            className="md:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+            className="md:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors flex-shrink-0"
             aria-label="Open menu"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
             <img src="/logo_horizontal.png" alt="Sbjiwala" className="h-8 w-auto object-contain" />
             <span className="hidden sm:inline-flex bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
               Express
             </span>
           </Link>
+
+          {/* Location dropdown display */}
+          <div
+            onClick={onOpenLocation}
+            className="flex items-center gap-1 cursor-pointer max-w-[130px] sm:max-w-[180px] md:max-w-[220px] ml-2 text-left hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex-shrink min-w-0"
+          >
+            <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0 animate-bounce" />
+            <div className="min-w-0 leading-none">
+              <span className="text-[8px] text-slate-400 font-extrabold uppercase tracking-wider block">Deliver to</span>
+              <span className="text-xs font-black text-slate-700 dark:text-slate-200 truncate flex items-center gap-0.5 block">
+                {locationName}
+                <span className="text-emerald-500 text-[9px]">▼</span>
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Center: search (md+) */}
@@ -208,13 +234,24 @@ function Header({ onMenuOpen }: { onMenuOpen: () => void }) {
 }
 
 // ==================== SIDEBAR ====================
-function Sidebar({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean }) {
+function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isOpen?: boolean; onOpenLocation: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [locationName, setLocationName] = useState("Mumbai, Maharashtra");
 
   useEffect(() => {
     setIsLoggedIn(!!localStorage.getItem("sw_access_token"));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateLoc = () => {
+      setLocationName(localStorage.getItem("sw_location_name") || "Mumbai, Maharashtra");
+    };
+    updateLoc();
+    window.addEventListener("sw_location_updated", updateLoc);
+    return () => window.removeEventListener("sw_location_updated", updateLoc);
   }, []);
 
   const isActive = (href: string, exact = false) =>
@@ -245,11 +282,17 @@ function Sidebar({ onClose, isOpen }: { onClose: () => void; isOpen?: boolean })
       </div>
 
       {/* Location Bar */}
-      <div className="mx-4 mt-4 flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2.5 border border-white/10">
+      <div
+        onClick={() => {
+          onClose();
+          onOpenLocation();
+        }}
+        className="mx-4 mt-4 flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2.5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all"
+      >
         <MapPin className="w-4 h-4 text-emerald-400 flex-shrink-0" />
         <div className="min-w-0">
           <p className="text-[10px] text-slate-500 font-medium">Delivering to</p>
-          <p className="text-sm font-bold text-white truncate">Mumbai, Maharashtra</p>
+          <p className="text-sm font-bold text-white truncate">{locationName}</p>
         </div>
         <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto flex-shrink-0" />
       </div>
@@ -736,19 +779,19 @@ function UnifiedPermissionsModal({ onClose, onPermissionGranted }: UnifiedPermis
           const geo = await navigator.permissions.query({ name: "geolocation" as any });
           setGeoState(geo.state as any);
           geo.onchange = () => setGeoState(geo.state as any);
-        } catch {}
+        } catch { }
 
         try {
           const notif = await navigator.permissions.query({ name: "notifications" as any });
           setNotifState(notif.state as any);
           notif.onchange = () => setNotifState(notif.state as any);
-        } catch {}
+        } catch { }
 
         try {
           const cam = await navigator.permissions.query({ name: "camera" as any });
           setCameraState(cam.state as any);
           cam.onchange = () => setCameraState(cam.state as any);
-        } catch {}
+        } catch { }
       } else {
         setNotifState(Notification.permission as any);
       }
@@ -887,10 +930,237 @@ function UnifiedPermissionsModal({ onClose, onPermissionGranted }: UnifiedPermis
   );
 }
 
+// ==================== LOCATION SELECTION MODAL ====================
+interface LocationSelectionModalProps {
+  onClose: () => void;
+  onSelect: (lat: number, lon: number, name: string) => void;
+}
+
+function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [loadingGPS, setLoadingGPS] = useState(false);
+  const [gpsError, setGpsError] = useState("");
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+
+  // Fetch saved addresses if logged in
+  useEffect(() => {
+    const fetchSavedAddresses = async () => {
+      const token = localStorage.getItem("sw_access_token");
+      if (!token) return;
+      setLoadingAddresses(true);
+      try {
+        const res = await api.get("/users/me/addresses");
+        if (res.success && Array.isArray(res.data)) {
+          setSavedAddresses(res.data);
+        }
+      } catch (err) {
+        console.error("Error fetching saved addresses:", err);
+      } finally {
+        setLoadingAddresses(false);
+      }
+    };
+    fetchSavedAddresses();
+  }, []);
+
+  // Search geocoding
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (searchQuery.trim().length < 3) return;
+    setLoadingSearch(true);
+    try {
+      const res = await api.get("/maps/geocode", { params: { q: searchQuery } });
+      if (res.success && res.data) {
+        const results = Array.isArray(res.data) ? res.data : [res.data];
+        setSearchResults(results);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (err) {
+      console.error("Geocoding search failed:", err);
+      setSearchResults([]);
+    } finally {
+      setLoadingSearch(false);
+    }
+  };
+
+  // Get current location via GPS
+  const handleUseCurrentLocation = () => {
+    if (!("geolocation" in navigator)) {
+      setGpsError("Geolocation is not supported by your browser");
+      return;
+    }
+    setLoadingGPS(true);
+    setGpsError("");
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await api.get("/maps/reverse-geocode", {
+            params: { lat: latitude, lon: longitude }
+          });
+          const addressName = res.success && res.data?.formatted_address
+            ? res.data.formatted_address
+            : `Coordinates: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          
+          onSelect(latitude, longitude, addressName);
+        } catch (err) {
+          console.error("Reverse geocoding failed, using coordinates as name:", err);
+          onSelect(latitude, longitude, `Coordinates: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        } finally {
+          setLoadingGPS(false);
+        }
+      },
+      (error) => {
+        console.error("GPS error:", error);
+        setGpsError("Permission denied or GPS signal lost");
+        setLoadingGPS(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      
+      {/* Card */}
+      <div className="relative bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full animate-scale-in text-slate-800 dark:text-white space-y-4 shadow-2xl flex flex-col max-h-[85vh]">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+          <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-emerald-500 animate-pulse" />
+            Select Delivery Location
+          </h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* GPS Locate Button */}
+        <button
+          onClick={handleUseCurrentLocation}
+          disabled={loadingGPS}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-all font-black text-xs uppercase tracking-wider disabled:opacity-50"
+        >
+          {loadingGPS ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Locating via GPS...
+            </>
+          ) : (
+            <>
+              <Zap className="w-4 h-4 animate-bounce" />
+              Use Current Location (GPS)
+            </>
+          )}
+        </button>
+        
+        {gpsError && (
+          <p className="text-[10px] text-rose-500 font-bold text-center -mt-2">{gpsError}</p>
+        )}
+
+        {/* Search Input */}
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Search for area, street name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-semibold focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-500 text-slate-800 dark:text-slate-200"
+            />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
+          </div>
+          <button
+            type="submit"
+            disabled={loadingSearch || searchQuery.trim().length < 3}
+            className="px-4 bg-emerald-600 hover:bg-emerald-505 text-white font-extrabold text-xs rounded-xl disabled:opacity-50 transition-all uppercase tracking-wider"
+          >
+            {loadingSearch ? "..." : "Search"}
+          </button>
+        </form>
+
+        {/* Results / saved list scroll container */}
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-hide">
+          {/* Geocoding Search Results */}
+          {searchResults.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">Search Results</h4>
+              <div className="space-y-1.5">
+                {searchResults.map((res: any, idx: number) => {
+                  const name = res.display_name || res.formatted_address || res.name || searchQuery;
+                  const lat = parseFloat(res.lat);
+                  const lon = parseFloat(res.lon);
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => onSelect(lat, lon, name)}
+                      className="w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all flex items-start gap-2.5"
+                    >
+                      <MapPin className="w-4 h-4 text-emerald-505 flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-tight">{name}</p>
+                        <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">Lat: {lat.toFixed(4)}, Lon: {lon.toFixed(4)}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Saved Addresses list */}
+          <div className="space-y-2">
+            <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">Saved Addresses</h4>
+            {loadingAddresses ? (
+              <div className="text-center py-4">
+                <RefreshCw className="w-5 h-5 animate-spin mx-auto text-slate-400" />
+              </div>
+            ) : savedAddresses.length > 0 ? (
+              <div className="space-y-1.5">
+                {savedAddresses.map((addr: any) => {
+                  const displayName = addr.name || addr.address_type || "Address";
+                  const fullAddress = `${addr.street_address}, ${addr.city}, ${addr.state}`;
+                  const lat = parseFloat(addr.latitude);
+                  const lon = parseFloat(addr.longitude);
+                  return (
+                    <button
+                      key={addr.id}
+                      onClick={() => onSelect(lat, lon, fullAddress)}
+                      className="w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all flex items-start gap-2.5"
+                    >
+                      <Home className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-black text-slate-900 dark:text-slate-100">{displayName}</span>
+                          {addr.is_default && (
+                            <span className="text-[8px] bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 font-extrabold px-1.5 py-0.5 rounded">DEFAULT</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate leading-snug">{fullAddress}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center py-4">No saved addresses found. Login to sync addresses.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ==================== APP SHELL ====================
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 
@@ -970,7 +1240,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Check permissions on app start if onboarding is completed
   useEffect(() => {
     if (typeof window === "undefined") return;
-    
+
     // Check if running on native mobile platform
     const isNative = !!(window as any).Capacitor;
     if (isNative) return;
@@ -981,7 +1251,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           if (result.state !== "granted") {
             setShowPermissionsModal(true);
           }
-        }).catch(() => {});
+        }).catch(() => { });
       }
     }
   }, [showSplash]);
@@ -1055,11 +1325,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex max-w-full overflow-x-hidden">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenLocation={() => setShowLocationModal(true)} />
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col md:ml-64 min-w-0 max-w-full overflow-x-hidden pt-[env(safe-area-inset-top)]">
-        <Header onMenuOpen={() => setSidebarOpen(true)} />
+        <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} />
 
         {/* Page content */}
         <main className="flex-1 pb-20 md:pb-0 page-enter max-w-full overflow-x-hidden">
@@ -1068,6 +1338,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <BottomNav />
+
+      {/* Location Selection Modal */}
+      {showLocationModal && (
+        <LocationSelectionModal
+          onClose={() => setShowLocationModal(false)}
+          onSelect={(lat, lon, name) => {
+            localStorage.setItem("sw_latitude", String(lat));
+            localStorage.setItem("sw_longitude", String(lon));
+            localStorage.setItem("sw_location_name", name);
+            window.dispatchEvent(new Event("sw_location_updated"));
+            setShowLocationModal(false);
+          }}
+        />
+      )}
 
       {/* Startup Permissions Modal */}
       {showPermissionsModal && (

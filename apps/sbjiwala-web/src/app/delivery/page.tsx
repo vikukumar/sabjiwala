@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Navigation, CheckCircle2, AlertCircle, ShoppingBag,
   MapPin, ToggleLeft, ToggleRight, DollarSign, Wallet, Loader2
@@ -9,130 +9,24 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 
-function DeliveryTrackingMap({ order, isOnline, token }: { order: any; isOnline: boolean; token: string }) {
+function DeliveryTrackingMap({
+  order,
+  currentPos,
+  simulationMode,
+  setSimulationMode,
+  distanceInfo
+}: {
+  order: any;
+  currentPos: [number, number];
+  simulationMode: boolean;
+  setSimulationMode: (val: boolean) => void;
+  distanceInfo: string;
+}) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const [simulationMode, setSimulationMode] = useState(true);
   const [mapObj, setMapObj] = useState<any>(null);
-  const [currentPos, setCurrentPos] = useState<[number, number]>([19.0760, 72.9977]);
-  const [distanceInfo, setDistanceInfo] = useState<string>("Calculating...");
-  
+
   const driverMarkerRef = useRef<any>(null);
   const pathLineRef = useRef<any>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-
-  // Setup WebSocket connection for streaming coordinates
-  useEffect(() => {
-    if (!isOnline || !order || typeof window === "undefined") return;
-
-    let ws: WebSocket;
-    let reconnectTimeout: any;
-
-    const connectWS = () => {
-      const apiBase = api.client.defaults.baseURL || "/api/v1";
-      let baseHost = "";
-      let protocol = "ws:";
-
-      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
-        const url = new URL(apiBase);
-        baseHost = url.host;
-        protocol = url.protocol === "https:" ? "wss:" : "ws:";
-      } else {
-        baseHost = window.location.host;
-        protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      }
-      
-      ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
-      wsRef.current = ws;
-
-      ws.onclose = () => {
-        reconnectTimeout = setTimeout(connectWS, 5000);
-      };
-    };
-
-    connectWS();
-
-    return () => {
-      if (ws) ws.close();
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      wsRef.current = null;
-    };
-  }, [isOnline, order, token]);
-
-  // Stream current location updates to the WebSocket backplane every 4 seconds
-  useEffect(() => {
-    if (!isOnline || !order || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-
-    const interval = setInterval(() => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({
-          type: "location_update",
-          data: {
-            latitude: currentPos[0],
-            longitude: currentPos[1],
-            accuracy: 10,
-            speed: 5,
-            heading: 0,
-            order_id: order.id
-          }
-        }));
-      }
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [currentPos, isOnline, order]);
-
-  // Simulation & GPS watch logic
-  useEffect(() => {
-    if (!isOnline || !order) return;
-
-    const storeLat = 19.0760;
-    const storeLng = 72.9977;
-    const customerLat = order.delivery_address?.latitude || 19.0735;
-    const customerLng = order.delivery_address?.longitude || 72.9985;
-
-    if (simulationMode) {
-      let step = 0;
-      const totalSteps = 30;
-      
-      const interval = setInterval(() => {
-        step = (step + 1) % (totalSteps + 1);
-        const ratio = step / totalSteps;
-        const lat = storeLat + (customerLat - storeLat) * ratio;
-        const lng = storeLng + (customerLng - storeLng) * ratio;
-        setCurrentPos([lat, lng]);
-
-        const remainingRatio = 1 - ratio;
-        const totalDist = 2.4; 
-        const remDist = (totalDist * remainingRatio).toFixed(2);
-        setDistanceInfo(`${remDist} km left to customer address`);
-      }, 3000);
-
-      return () => clearInterval(interval);
-    } else {
-      if (!navigator.geolocation) {
-        setDistanceInfo("GPS not supported. Use simulation mode.");
-        return;
-      }
-
-      const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          setCurrentPos([lat, lng]);
-
-          const dist = Math.sqrt(Math.pow(lat - customerLat, 2) + Math.pow(lng - customerLng, 2)) * 111.3;
-          setDistanceInfo(`${dist.toFixed(2)} km left to customer`);
-        },
-        (error) => {
-          console.error("GPS tracking error:", error);
-          setDistanceInfo("GPS error: " + error.message);
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
-
-      return () => navigator.geolocation.clearWatch(watchId);
-    }
-  }, [simulationMode, isOnline, order]);
 
   // Leaflet map setup
   useEffect(() => {
@@ -189,11 +83,11 @@ function DeliveryTrackingMap({ order, isOnline, token }: { order: any; isOnline:
         iconAnchor: [18, 18]
       });
 
-      const driverMarker = L.marker([storeLat, storeLng], { icon: driverIcon }).addTo(map).bindPopup("My Location");
+      const driverMarker = L.marker(currentPos, { icon: driverIcon }).addTo(map).bindPopup("My Location");
       driverMarkerRef.current = driverMarker;
 
       L.polyline([[storeLat, storeLng], [customerLat, customerLng]], { color: "#cbd5e1", weight: 2, dashArray: "4 4" }).addTo(map);
-      pathLineRef.current = L.polyline([[storeLat, storeLng], [customerLat, customerLng]], { color: "#10b981", weight: 4 }).addTo(map);
+      pathLineRef.current = L.polyline([currentPos, [customerLat, customerLng]], { color: "#10b981", weight: 4 }).addTo(map);
 
       map.fitBounds([[storeLat, storeLng], [customerLat, customerLng]], { padding: [40, 40] });
       setMapObj(map);
@@ -218,35 +112,38 @@ function DeliveryTrackingMap({ order, isOnline, token }: { order: any; isOnline:
   return (
     <div className="space-y-3">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-      <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 p-3 flex-wrap gap-2 rounded-2xl border border-slate-205 dark:border-slate-800 text-xs">
+      <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 p-3 flex-wrap gap-2 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs">
         <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-100">
           <Navigation className="w-4 h-4 text-emerald-600 dark:text-emerald-450 animate-bounce" />
           <span>{distanceInfo}</span>
         </div>
         <button
           onClick={() => setSimulationMode(!simulationMode)}
-          className={`px-3 py-1 rounded-xl font-bold transition-all border ${
-            simulationMode
+          className={`px-3 py-1 rounded-xl font-bold transition-all border ${simulationMode
               ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
               : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-          } cursor-pointer`}
+            } cursor-pointer`}
         >
           {simulationMode ? "Simulated GPS 🛰️" : "Device GPS 📍"}
         </button>
       </div>
 
-      <div ref={mapContainerRef} className="h-48 rounded-2xl border border-slate-205 dark:border-slate-800 relative shadow-inner overflow-hidden" style={{ zIndex: 1 }} />
+      <div ref={mapContainerRef} className="h-48 rounded-2xl border border-slate-200 dark:border-slate-800 relative shadow-inner overflow-hidden" style={{ zIndex: 1 }} />
     </div>
   );
 }
-
-import { useRef } from "react";
 
 export default function DeliveryAgentDashboard() {
   const queryClient = useQueryClient();
   const [isOnline, setIsOnline] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+
+  const [globalPos, setGlobalPos] = useState<[number, number]>([19.0760, 72.9977]);
+  const [simulationMode, setSimulationMode] = useState(true);
+  const [distanceInfo, setDistanceInfo] = useState<string>("Offline");
+
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
@@ -256,8 +153,7 @@ export default function DeliveryAgentDashboard() {
   // Check location permission on start
   useEffect(() => {
     if (typeof window === "undefined") return;
-    
-    // Check if running on native mobile platform
+
     const isNative = !!(window as any).Capacitor;
     if (isNative) return;
 
@@ -266,7 +162,7 @@ export default function DeliveryAgentDashboard() {
         if (result.state !== "granted") {
           setShowPermissionModal(true);
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, []);
 
@@ -281,14 +177,14 @@ export default function DeliveryAgentDashboard() {
     }
   };
 
-  // 1. Route Protection check
+  // Route Protection check
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem("sw_access_token")) {
       window.location.href = "/delivery/login";
     }
   }, []);
 
-  // 2. Fetch active assignments
+  // Fetch active assignments
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<any[]>({
     queryKey: ["deliveryAssignments"],
     queryFn: async () => {
@@ -298,7 +194,7 @@ export default function DeliveryAgentDashboard() {
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token")
   });
 
-  // 2b. Fetch delivery boy profile
+  // Fetch delivery boy profile
   const { data: profileData } = useQuery<any>({
     queryKey: ["deliveryProfile"],
     queryFn: async () => {
@@ -308,7 +204,164 @@ export default function DeliveryAgentDashboard() {
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token")
   });
 
-  // 3. Toggle Online/Offline Mutation
+  // Global Geolocation / Simulation loop
+  useEffect(() => {
+    if (!isOnline) {
+      setDistanceInfo("Offline");
+      return;
+    }
+
+    const activeDelivery = assignments.find((a: any) => a.status === "out_for_delivery");
+
+    if (simulationMode) {
+      if (activeDelivery) {
+        const storeLat = 19.0760;
+        const storeLng = 72.9977;
+        const customerLat = activeDelivery.delivery_address?.latitude || 19.0735;
+        const customerLng = activeDelivery.delivery_address?.longitude || 72.9985;
+
+        let step = 0;
+        const totalSteps = 30;
+
+        const interval = setInterval(() => {
+          step = (step + 1) % (totalSteps + 1);
+          const ratio = step / totalSteps;
+          const lat = storeLat + (customerLat - storeLat) * ratio;
+          const lng = storeLng + (customerLng - storeLng) * ratio;
+          setGlobalPos([lat, lng]);
+
+          const remainingRatio = 1 - ratio;
+          const totalDist = 2.4;
+          const remDist = (totalDist * remainingRatio).toFixed(2);
+          setDistanceInfo(`${remDist} km left to customer address`);
+        }, 3050);
+
+        return () => clearInterval(interval);
+      } else {
+        const interval = setInterval(() => {
+          setGlobalPos(([lat, lng]) => {
+            const nextLat = lat + (Math.random() - 0.5) * 0.0003;
+            const nextLng = lng + (Math.random() - 0.5) * 0.0003;
+            if (Math.abs(nextLat - 19.0760) > 0.015 || Math.abs(nextLng - 72.9977) > 0.015) {
+              return [19.0760, 72.9977];
+            }
+            return [nextLat, nextLng];
+          });
+          setDistanceInfo("Simulating background location updates...");
+        }, 4000);
+
+        return () => clearInterval(interval);
+      }
+    } else {
+      if (typeof window === "undefined" || !navigator.geolocation) {
+        setDistanceInfo("Device GPS not supported");
+        return;
+      }
+
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setGlobalPos([lat, lng]);
+
+          if (activeDelivery) {
+            const customerLat = activeDelivery.delivery_address?.latitude || 19.0735;
+            const customerLng = activeDelivery.delivery_address?.longitude || 72.9985;
+            const dist = Math.sqrt(Math.pow(lat - customerLat, 2) + Math.pow(lng - customerLng, 2)) * 111.3;
+            setDistanceInfo(`${dist.toFixed(2)} km left to customer`);
+          } else {
+            setDistanceInfo("Streaming live background GPS position...");
+          }
+        },
+        (error) => {
+          console.error("GPS tracking error:", error);
+          setDistanceInfo("GPS error: " + error.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
+  }, [simulationMode, isOnline, assignments]);
+
+  // Setup WebSocket connection globally when online
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
+    if (!isOnline || !token || typeof window === "undefined") {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      return;
+    }
+
+    let ws: WebSocket;
+    let reconnectTimeout: any;
+
+    const connectWS = () => {
+      const apiBase = api.client.defaults.baseURL || "/api/v1";
+      let baseHost = "";
+      let protocol = "ws:";
+
+      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
+        const url = new URL(apiBase);
+        baseHost = url.host;
+        protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      } else {
+        baseHost = window.location.host;
+        protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      }
+
+      ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log("Global Delivery WebSocket connected");
+      };
+
+      ws.onclose = () => {
+        reconnectTimeout = setTimeout(connectWS, 5000);
+      };
+
+      ws.onerror = (err) => {
+        console.warn("Global Delivery WS connection error:", err);
+        ws.close();
+      };
+    };
+
+    connectWS();
+
+    return () => {
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      wsRef.current = null;
+    };
+  }, [isOnline]);
+
+  // Stream current location updates to the WebSocket backplane every 4 seconds
+  useEffect(() => {
+    if (!isOnline || !wsRef.current) return;
+
+    const interval = setInterval(() => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: "location_update",
+          data: {
+            latitude: globalPos[0],
+            longitude: globalPos[1],
+            accuracy: 10,
+            speed: 5,
+            heading: 0,
+            order_id: assignments.find((a: any) => a.status === "out_for_delivery")?.id || null
+          }
+        }));
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [globalPos, isOnline, assignments]);
+
+  // Toggle Online/Offline Mutation
   const toggleOnlineMutation = useMutation({
     mutationFn: async (online: boolean) => {
       return api.patch("/delivery/availability", {
@@ -321,7 +374,7 @@ export default function DeliveryAgentDashboard() {
     }
   });
 
-  // 4. Pickup Order Mutation
+  // Pickup Order Mutation
   const pickupOrderMutation = useMutation({
     mutationFn: async (orderId: string) => {
       return api.post(`/delivery/orders/${orderId}/pickup`);
@@ -335,7 +388,7 @@ export default function DeliveryAgentDashboard() {
     }
   });
 
-  // 5. Deliver Order Mutation
+  // Deliver Order Mutation
   const deliverOrderMutation = useMutation({
     mutationFn: async ({ orderId, otp }: { orderId: string; otp: string }) => {
       return api.post(`/delivery/orders/${orderId}/deliver`, {
@@ -360,7 +413,6 @@ export default function DeliveryAgentDashboard() {
     if (currentStatus === "assigned" || currentStatus === "packed" || currentStatus === "accepted") {
       pickupOrderMutation.mutate(id);
     } else {
-      // Prompt for delivery verification OTP (seeded or customer provided)
       const otp = prompt("Please enter the 4-digit Delivery OTP from the customer:");
       if (otp) {
         deliverOrderMutation.mutate({ orderId: id, otp });
@@ -517,8 +569,10 @@ export default function DeliveryAgentDashboard() {
                   {task.status === "out_for_delivery" && (
                     <DeliveryTrackingMap
                       order={task}
-                      isOnline={isOnline}
-                      token={localStorage.getItem("sw_access_token") || ""}
+                      currentPos={globalPos}
+                      simulationMode={simulationMode}
+                      setSimulationMode={setSimulationMode}
+                      distanceInfo={distanceInfo}
                     />
                   )}
 
@@ -573,7 +627,7 @@ export default function DeliveryAgentDashboard() {
                 As a delivery partner, sharing your live location is mandatory to receive order assignments, navigate maps, and receive payout credits.
               </p>
             </div>
-            
+
             <div className="text-xs font-semibold text-slate-650 dark:text-slate-350 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2 text-left">
               <p className="flex items-center gap-2">
                 <span className="text-emerald-500">✔</span>
@@ -607,7 +661,7 @@ export default function DeliveryAgentDashboard() {
             >
               Enable Location Access
             </button>
-            
+
             <p className="text-[10px] text-slate-400 dark:text-slate-500">
               Note: Geolocation permissions can be toggled any time in browser settings.
             </p>

@@ -226,33 +226,65 @@ function CategoriesStrip({ active, setActive }: { active: string; setActive: (va
 
 // ==================== OFFERS BANNER ====================
 function OffersBanner() {
-  const offers = [
-    { label: "WELCOME20", desc: "20% off on first order", color: "from-violet-600 to-purple-700", emoji: "🎉" },
-    { label: "FRESH10", desc: "10% off on vegetables", color: "from-emerald-600 to-teal-700", emoji: "🥦" },
-    { label: "FRUIT15", desc: "15% off on fruits", color: "from-orange-500 to-amber-600", emoji: "🍊" },
-  ];
+  const { data: banners = [], isLoading } = useQuery<any[]>({
+    queryKey: ["activeBanners"],
+    queryFn: async () => {
+      const res = await api.get("/catalog/banners", { params: { position: "home_top" } });
+      return res.data || [];
+    },
+    staleTime: 5 * 60_000,
+  });
+
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    const t = setInterval(() => setIdx((i) => (i + 1) % offers.length), 3000);
+    if (!banners.length) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % banners.length), 4000);
     return () => clearInterval(t);
-  }, []);
+  }, [banners]);
 
-  const offer = offers[idx];
+  if (isLoading) {
+    return <div className="h-44 rounded-2xl mx-4 animate-pulse bg-slate-100 dark:bg-slate-800" />;
+  }
+
+  if (!banners.length) {
+    return (
+      <div className="mx-4 rounded-2xl p-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 text-7xl opacity-20 -translate-y-2 translate-x-2 pointer-events-none">🥬</div>
+        <div className="relative z-10">
+          <Badge variant="outline" size="sm" className="border-white/30 text-white mb-2">Welcome Offer</Badge>
+          <p className="text-2xl font-black tracking-tight">Farm-Fresh Delivery</p>
+          <p className="text-sm text-white/80 mt-0.5">Crisp, premium vegetables directly from local farms in 10 minutes.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const banner = banners[idx];
+  const gradients = [
+    "from-violet-650 to-purple-750",
+    "from-emerald-600 to-teal-700",
+    "from-orange-500 to-amber-600",
+    "from-blue-600 to-indigo-700"
+  ];
+  const color = gradients[idx % gradients.length];
+
   return (
-    <Link href="/offers" className={`block mx-4 rounded-2xl p-5 bg-gradient-to-r ${offer.color} text-white transition-all animate-fade-in relative overflow-hidden`}>
-      <div className="absolute top-0 right-0 text-7xl opacity-20 -translate-y-2 translate-x-2 pointer-events-none">{offer.emoji}</div>
+    <Link href={banner.action_url || "/offers"} className={`block mx-4 rounded-2xl p-5 bg-gradient-to-r ${color} text-white transition-all animate-fade-in relative overflow-hidden`}>
+      {banner.image_url && (
+        <img src={banner.image_url} alt={banner.title} className="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-overlay pointer-events-none" />
+      )}
       <div className="relative z-10">
-        <Badge variant="outline" size="sm" className="border-white/30 text-white mb-2">Limited Time</Badge>
-        <p className="text-2xl font-black tracking-tight">{offer.label}</p>
-        <p className="text-sm text-white/80 mt-0.5">{offer.desc}</p>
+        <Badge variant="outline" size="sm" className="border-white/30 text-white mb-2">{banner.subtitle || "Exclusive Deal"}</Badge>
+        <p className="text-2xl font-black tracking-tight">{banner.title}</p>
+        {banner.subtitle && <p className="text-sm text-white/85 mt-0.5">{banner.subtitle}</p>}
         <div className="flex items-center gap-1 mt-3 text-xs font-bold">
-          Apply now <ArrowRight className="w-3.5 h-3.5" />
+          Shop Now <ArrowRight className="w-3.5 h-3.5" />
         </div>
       </div>
       {/* Dots */}
       <div className="absolute bottom-3 right-4 flex gap-1.5">
-        {offers.map((_, i) => (
+        {banners.map((_, i) => (
           <span key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === idx ? "bg-white w-4" : "bg-white/40"}`} />
         ))}
       </div>
@@ -485,6 +517,25 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
   });
   const catObj = categories.find((c: any) => c.name === categoryFilter);
 
+  // Track coordinates locally so changes trigger react rerender and refilter
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateLoc = () => {
+      const latRaw = localStorage.getItem("sw_latitude");
+      const lonRaw = localStorage.getItem("sw_longitude");
+      if (latRaw && lonRaw) {
+        setCoords({ lat: parseFloat(latRaw), lon: parseFloat(lonRaw) });
+      } else {
+        setCoords(null);
+      }
+    };
+    updateLoc();
+    window.addEventListener("sw_location_updated", updateLoc);
+    return () => window.removeEventListener("sw_location_updated", updateLoc);
+  }, []);
+
   // Fetch all products
   const { data: rawProducts = [], isLoading } = useQuery<any[]>({
     queryKey: ["products", categoryFilter],
@@ -499,33 +550,26 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
 
   // Calculate distances and filter within 10 km radius, nearest first
   const products = React.useMemo(() => {
-    if (typeof window === "undefined" || !rawProducts.length) return rawProducts;
-
-    const latRaw = localStorage.getItem("sw_latitude");
-    const lonRaw = localStorage.getItem("sw_longitude");
-    if (!latRaw || !lonRaw) return rawProducts.slice(0, 20);
-
-    const uLat = parseFloat(latRaw);
-    const uLon = parseFloat(lonRaw);
+    if (!rawProducts.length) return [];
+    if (!coords) return rawProducts.slice(0, 20);
 
     return rawProducts
       .map((p: any) => {
-        // Find vendor coords
         const vLat = p.attributes?.vendor_latitude || p.vendor?.store?.latitude || 19.0760;
         const vLon = p.attributes?.vendor_longitude || p.vendor?.store?.longitude || 72.8777;
-        const distance = getHaversineDistance(uLat, uLon, vLat, vLon);
+        const distance = getHaversineDistance(coords.lat, coords.lon, vLat, vLon);
         return { ...p, distance };
       })
       .filter((p: any) => p.distance <= 10.0) // 10 km radius filter!
       .sort((a: any, b: any) => a.distance - b.distance) // Nearest first!
       .slice(0, 30);
-  }, [rawProducts]);
+  }, [rawProducts, coords]);
 
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
         {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="skeleton h-56 rounded-2xl" />
+          <div key={i} className="skeleton h-56 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
         ))}
       </div>
     );

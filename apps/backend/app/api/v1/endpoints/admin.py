@@ -651,3 +651,174 @@ async def update_delivery_boy_status(
         
     await db.commit()
     return APIResponse(success=True, message=f"Delivery boy status updated to {body.status}")
+
+
+# ---- Coupon & Banner CMS Management ----
+from app.models.coupon import Coupon, CouponType, CouponScope
+from app.models.cms import Banner, CmsPage
+from app.api.schemas import CouponCreate, BannerCreate, CmsPageCreate
+
+@router.get("/coupons", response_model=APIResponse)
+async def list_admin_coupons(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all coupons for admin panel."""
+    await _verify_admin(current_user)
+    
+    result = await db.execute(select(Coupon).order_by(Coupon.created_at.desc()))
+    coupons = result.scalars().all()
+    
+    data = [
+        {
+            "id": str(c.id),
+            "code": c.code,
+            "name": c.name,
+            "description": c.description,
+            "coupon_type": c.coupon_type.value if hasattr(c.coupon_type, "value") else str(c.coupon_type),
+            "discount_value": c.discount_value,
+            "max_discount_amount": float(c.max_discount_amount) if c.max_discount_amount else None,
+            "min_order_amount": float(c.min_order_amount),
+            "max_total_uses": c.max_total_uses,
+            "max_uses_per_user": c.max_uses_per_user,
+            "current_uses": c.current_uses,
+            "starts_at": c.starts_at.isoformat() if c.starts_at else None,
+            "expires_at": c.expires_at.isoformat() if c.expires_at else None,
+            "is_active": c.is_active,
+            "vendor_id": str(c.vendor_id) if c.vendor_id else None,
+        }
+        for c in coupons
+    ]
+    return APIResponse(success=True, data=data)
+
+
+@router.post("/coupons", response_model=APIResponse)
+async def create_admin_coupon(
+    body: CouponCreate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new global or store coupon."""
+    await _verify_admin(current_user)
+    
+    # Check duplicate code
+    dup_res = await db.execute(select(Coupon).where(Coupon.code == body.code.upper()))
+    if dup_res.scalars().first():
+        raise HTTPException(status_code=400, detail=f"Coupon with code '{body.code}' already exists")
+
+    coupon = Coupon(
+        code=body.code.upper(),
+        name=body.name,
+        description=body.description,
+        coupon_type=CouponType(body.coupon_type),
+        scope=CouponScope.PLATFORM, # Default admin coupons to platform
+        discount_value=body.discount_value,
+        max_discount_amount=body.max_discount_amount,
+        min_order_amount=body.min_order_amount,
+        max_total_uses=body.max_total_uses,
+        max_uses_per_user=body.max_uses_per_user,
+        starts_at=body.starts_at,
+        expires_at=body.expires_at,
+        is_active=True,
+    )
+    db.add(coupon)
+    await db.commit()
+    
+    return APIResponse(success=True, message=f"Coupon '{body.code}' created successfully")
+
+
+@router.delete("/coupons/{coupon_id}", response_model=APIResponse)
+async def delete_admin_coupon(
+    coupon_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Deactivate or delete a coupon."""
+    await _verify_admin(current_user)
+    
+    res = await db.execute(select(Coupon).where(Coupon.id == coupon_id))
+    coupon = res.scalars().first()
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Coupon not found")
+        
+    coupon.is_active = False
+    await db.commit()
+    return APIResponse(success=True, message="Coupon deactivated successfully")
+
+
+@router.get("/banners", response_model=APIResponse)
+async def list_admin_banners(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all layout banners for admin panel."""
+    await _verify_admin(current_user)
+    
+    result = await db.execute(select(Banner).order_by(Banner.sort_order.asc(), Banner.created_at.desc()))
+    banners = result.scalars().all()
+    
+    data = [
+        {
+            "id": str(b.id),
+            "title": b.title,
+            "subtitle": b.subtitle,
+            "image_url": b.image_url,
+            "mobile_image_url": b.mobile_image_url,
+            "action_url": b.action_url,
+            "action_type": b.action_type,
+            "position": b.position,
+            "sort_order": b.sort_order,
+            "is_active": b.is_active,
+            "starts_at": b.starts_at.isoformat() if b.starts_at else None,
+            "expires_at": b.expires_at.isoformat() if b.expires_at else None,
+        }
+        for b in banners
+    ]
+    return APIResponse(success=True, data=data)
+
+
+@router.post("/banners", response_model=APIResponse)
+async def create_admin_banner(
+    body: BannerCreate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new promotional layout banner."""
+    await _verify_admin(current_user)
+    
+    banner = Banner(
+        title=body.title,
+        subtitle=body.subtitle,
+        image_url=body.image_url,
+        mobile_image_url=body.mobile_image_url,
+        action_url=body.action_url,
+        action_type=body.action_type,
+        position=body.position,
+        sort_order=body.sort_order,
+        starts_at=body.starts_at,
+        expires_at=body.expires_at,
+        is_active=True,
+    )
+    db.add(banner)
+    await db.commit()
+    
+    return APIResponse(success=True, message="Banner created successfully")
+
+
+@router.delete("/banners/{banner_id}", response_model=APIResponse)
+async def delete_admin_banner(
+    banner_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Deactivate or remove a promotional banner."""
+    await _verify_admin(current_user)
+    
+    res = await db.execute(select(Banner).where(Banner.id == banner_id))
+    banner = res.scalars().first()
+    if not banner:
+        raise HTTPException(status_code=404, detail="Banner not found")
+        
+    await db.delete(banner)
+    await db.commit()
+    return APIResponse(success=True, message="Banner deleted successfully")

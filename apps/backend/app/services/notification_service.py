@@ -168,17 +168,25 @@ class NotificationService:
                 # We can dispatch push notifications in background or using Celery tasks,
                 # let's trigger it directly asynchronously in a try-block
                 try:
-                    subscription_info = {
-                        "endpoint": sub.endpoint,
-                        "keys": {
-                            "p256dh": sub.p256dh_key,
-                            "auth": sub.auth_key
+                    if sub.endpoint == "fcm":
+                        await send_fcm_legacy_push(
+                            token=sub.auth_key,
+                            title=push_title,
+                            body=push_body,
+                            data={"reference_type": reference_type, "reference_id": reference_id, **variables}
+                        )
+                    else:
+                        subscription_info = {
+                            "endpoint": sub.endpoint,
+                            "keys": {
+                                "p256dh": sub.p256dh_key,
+                                "auth": sub.auth_key
+                            }
                         }
-                    }
-                    # webpush call
-                    await any_webpush_send(subscription_info, push_title, push_body, variables)
+                        # webpush call
+                        await any_webpush_send(subscription_info, push_title, push_body, variables)
                 except Exception as e:
-                    logger.debug("Failed to send webpush subscription, marking inactive", sub_id=str(sub.id), error=str(e))
+                    logger.debug("Failed to send push subscription, marking inactive", sub_id=str(sub.id), error=str(e))
                     sub.is_active = False
 
         await self.db.flush()
@@ -304,4 +312,42 @@ async def send_queued_sms(sms_q: SmsQueue) -> bool:
         logger.error("SMS gateway transmission failed", error=str(e), phone=sms_q.to_phone)
         sms_q.error_message = str(e)
         sms_q.status = QueueStatus.FAILED if sms_q.attempts >= sms_q.max_attempts else QueueStatus.RETRYING
+        return False
+
+
+async def send_fcm_legacy_push(token: str, title: str, body: str, data: Optional[Dict[str, Any]] = None) -> bool:
+    """Send a legacy FCM notification via HTTP POST to Google's legacy endpoint."""
+    import httpx
+    if not settings.FCM_SERVER_KEY:
+        logger.warning("FCM server key not configured, push notification logged but not sent", token=token)
+        return False
+
+    url = "https://fcm.googleapis.com/fcm/send"
+    headers = {
+        "Authorization": f"key={settings.FCM_SERVER_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "to": token,
+        "notification": {
+            "title": title,
+            "body": body,
+            "sound": "default",
+            "badge": "1",
+            "click_action": "FLUTTER_NOTIFICATION_CLICK"
+        },
+        "data": data or {}
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=payload, headers=headers, timeout=10)
+        if response.status_code == 200:
+            logger.info("FCM push notification sent successfully", token=token)
+            return True
+        else:
+            logger.error("FCM service returned non-200 status", status=response.status_code, response=response.text)
+            return False
+    except Exception as e:
+        logger.error("Failed to send FCM push notification", error=str(e), token=token)
         return False

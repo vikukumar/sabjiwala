@@ -352,6 +352,12 @@ class OrderService:
             # Order is fully paid by wallet/coupon
             order.payment_status = "paid"
             order.status = OrderStatus.CONFIRMED
+            try:
+                from app.services.delivery_assignment_service import DeliveryAssignmentService
+                das = DeliveryAssignmentService(self.db)
+                await das.assign_delivery(order.id)
+            except Exception as e:
+                logger.error("Failed to automatically assign delivery boy on place_order", order_id=str(order.id), error=str(e))
             # Create dummy completed payment transaction for tracking
             from app.models.payment import Payment
             pay = Payment(
@@ -466,6 +472,15 @@ class OrderService:
                     reference_id=str(order.id),
                     description=f"Refund for cancelled order {order.order_number}"
                 )
+
+        elif status in [OrderStatus.CONFIRMED, OrderStatus.PACKED]:
+            if not order.delivery_boy_id:
+                try:
+                    from app.services.delivery_assignment_service import DeliveryAssignmentService
+                    das = DeliveryAssignmentService(self.db)
+                    await das.assign_delivery(order.id)
+                except Exception as e:
+                    logger.error("Failed to automatically assign delivery boy on status update", order_id=str(order.id), error=str(e))
 
         elif status == OrderStatus.DELIVERED:
             order.actual_delivery_time = datetime.now(timezone.utc)

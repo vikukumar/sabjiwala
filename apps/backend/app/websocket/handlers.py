@@ -29,7 +29,7 @@ async def get_user_from_token(token: str) -> Optional[Dict[str, Any]]:
             return None
         return {
             "user_id": UUID(payload["sub"]),
-            "role": payload.get("role", "customer"),
+            "role": payload.get("user_type", payload.get("role", "customer")),
         }
     except Exception:
         return None

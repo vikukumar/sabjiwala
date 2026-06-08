@@ -348,6 +348,12 @@ class PaymentService:
             order.payment_id = payment.id
             if order.status == OrderStatus.PENDING:
                 order.status = OrderStatus.CONFIRMED
+                try:
+                    from app.services.delivery_assignment_service import DeliveryAssignmentService
+                    das = DeliveryAssignmentService(self.db)
+                    await das.assign_delivery(order.id)
+                except Exception as e:
+                    logger.error("Failed to automatically assign delivery boy on payment confirmation", order_id=str(order.id), error=str(e))
 
         await self.db.flush()
         return True

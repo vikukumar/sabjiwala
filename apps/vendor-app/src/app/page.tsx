@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   TrendingUp, Users, ShoppingBag, DollarSign,
   Settings, Award, RefreshCw, Clock, MapPin, Loader2, Menu, X,
-  Plus, Trash2, ArrowLeft, Save, Search
+  Plus, Trash2, ArrowLeft, Save, Search, Navigation
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
@@ -168,6 +168,19 @@ function ServiceAreaPanel() {
     }
   }, [radius, circleObj, mapObj]);
 
+  // Sync Leaflet map centering and marker positions reactively with lat/lng state updates
+  useEffect(() => {
+    if (mapObj && markerObj && circleObj) {
+      const currentMarkerLatLng = markerObj.getLatLng();
+      if (Math.abs(currentMarkerLatLng.lat - centerLat) > 0.00001 || Math.abs(currentMarkerLatLng.lng - centerLng) > 0.00001) {
+        const latlng = [centerLat, centerLng] as [number, number];
+        mapObj.setView(latlng, mapObj.getZoom());
+        markerObj.setLatLng(latlng);
+        circleObj.setLatLng(latlng);
+      }
+    }
+  }, [centerLat, centerLng, mapObj, markerObj, circleObj]);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in text-slate-800 dark:text-slate-100">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
@@ -184,9 +197,32 @@ function ServiceAreaPanel() {
 
           <div ref={mapContainerRef} className="h-[380px] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative shadow-inner" style={{ zIndex: 1 }} />
           
-          <div className="flex gap-4 text-xs font-mono text-slate-500 bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-150 dark:border-slate-800">
-            <div>Latitude: <span className="font-bold text-slate-800 dark:text-slate-100">{centerLat.toFixed(6)}</span></div>
-            <div>Longitude: <span className="font-bold text-slate-800 dark:text-slate-100">{centerLng.toFixed(6)}</span></div>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-150 dark:border-slate-800">
+            <div className="flex gap-4 text-xs font-mono text-slate-500">
+              <div>Latitude: <span className="font-bold text-slate-800 dark:text-slate-100">{centerLat.toFixed(6)}</span></div>
+              <div>Longitude: <span className="font-bold text-slate-800 dark:text-slate-100">{centerLng.toFixed(6)}</span></div>
+            </div>
+            <button
+              onClick={() => {
+                if (typeof window === "undefined" || !navigator.geolocation) {
+                  alert("Geolocation is not supported by your browser");
+                  return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                  (position) => {
+                    setCenterLat(position.coords.latitude);
+                    setCenterLng(position.coords.longitude);
+                  },
+                  (error) => {
+                    alert("GPS position acquisition failed. Please enable location permissions.");
+                  },
+                  { enableHighAccuracy: true }
+                );
+              }}
+              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl text-[11px] font-black border border-blue-150 dark:border-blue-900/50 flex items-center gap-1 cursor-pointer transition-all uppercase tracking-wider"
+            >
+              <Navigation className="w-3.5 h-3.5" /> Locate Store GPS
+            </button>
           </div>
         </div>
       </div>
