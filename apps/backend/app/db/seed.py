@@ -19,22 +19,23 @@ from app.core.config import settings
 logger = structlog.get_logger()
 
 CATEGORIES = [
-    {"name": "Vegetables", "slug": "vegetables", "sort_order": 1},
-    {"name": "Leafy Greens", "slug": "leafy-greens", "sort_order": 2},
-    {"name": "Exotics", "slug": "exotics", "sort_order": 3},
-    {"name": "Herbs", "slug": "herbs", "sort_order": 4},
+    # {"name": "Vegetables", "slug": "vegetables", "sort_order": 1},
+    # {"name": "Leafy Greens", "slug": "leafy-greens", "sort_order": 2},
+    # {"name": "Exotics", "slug": "exotics", "sort_order": 3},
+    # {"name": "Herbs", "slug": "herbs", "sort_order": 4},
 ]
 
 PRODUCTS = [
-    {"name": "Farm Fresh Tomatoes", "slug": "farm-fresh-tomatoes", "unit": ProductUnit.KG, "unit_value": 1.0, "price": 40.0, "image": "🍅", "category_slug": "vegetables"},
-    {"name": "Organic Potatoes", "slug": "organic-potatoes", "unit": ProductUnit.KG, "unit_value": 1.0, "price": 30.0, "image": "🥔", "category_slug": "vegetables"},
-    {"name": "Fresh Coriander Leaves", "slug": "fresh-coriander-leaves", "unit": ProductUnit.GRAM, "unit_value": 100.0, "price": 15.0, "image": "🌿", "category_slug": "leafy-greens"},
-    {"name": "Sweet Hybrid Corn", "slug": "sweet-hybrid-corn", "unit": ProductUnit.PIECE, "unit_value": 1.0, "price": 25.0, "image": "🌽", "category_slug": "vegetables"},
-    {"name": "Fresh English Cucumber", "slug": "fresh-english-cucumber", "unit": ProductUnit.GRAM, "unit_value": 500.0, "price": 45.0, "image": "🥒", "category_slug": "exotics"},
-    {"name": "Organic Red Onions", "slug": "organic-red-onions", "unit": ProductUnit.KG, "unit_value": 1.0, "price": 35.0, "image": "🧅", "category_slug": "vegetables"},
+    # {"name": "Farm Fresh Tomatoes", "slug": "farm-fresh-tomatoes", "unit": ProductUnit.KG, "unit_value": 1.0, "price": 40.0, "image": "🍅", "category_slug": "vegetables"},
+    # {"name": "Organic Potatoes", "slug": "organic-potatoes", "unit": ProductUnit.KG, "unit_value": 1.0, "price": 30.0, "image": "🥔", "category_slug": "vegetables"},
+    # {"name": "Fresh Coriander Leaves", "slug": "fresh-coriander-leaves", "unit": ProductUnit.GRAM, "unit_value": 100.0, "price": 15.0, "image": "🌿", "category_slug": "leafy-greens"},
+    # {"name": "Sweet Hybrid Corn", "slug": "sweet-hybrid-corn", "unit": ProductUnit.PIECE, "unit_value": 1.0, "price": 25.0, "image": "🌽", "category_slug": "vegetables"},
+    # {"name": "Fresh English Cucumber", "slug": "fresh-english-cucumber", "unit": ProductUnit.GRAM, "unit_value": 500.0, "price": 45.0, "image": "🥒", "category_slug": "exotics"},
+    # {"name": "Organic Red Onions", "slug": "organic-red-onions", "unit": ProductUnit.KG, "unit_value": 1.0, "price": 35.0, "image": "🧅", "category_slug": "vegetables"},
 ]
 
 async def seed_database(db: AsyncSession) -> None:
+    return
     """Idempotent seed script to populate catalog and a default vendor."""
     await logger.ainfo("Starting database seeding...")
 
@@ -118,7 +119,7 @@ async def seed_database(db: AsyncSession) -> None:
             country="India",
             postal_code="400703",
             latitude=19.0760,
-            longitude=72.9977,
+            longitude=72.8777,
             is_open=True
         )
         db.add(store)
@@ -216,7 +217,7 @@ async def seed_database(db: AsyncSession) -> None:
             country="India",
             postal_code="400703",
             latitude=19.0735,
-            longitude=72.9985,
+            longitude=72.8777,
             is_default=True,
             formatted_address="Flat 402, Shiv Shakti Tower, Sector 17, Vashi, Navi Mumbai, Maharashtra, 400703"
         )
