@@ -1324,11 +1324,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex max-w-full overflow-x-hidden">
+    <div className="min-h-screen flex max-w-full">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenLocation={() => setShowLocationModal(true)} />
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col md:ml-64 min-w-0 max-w-full overflow-x-hidden pt-[env(safe-area-inset-top)]">
+      <div className="flex-1 flex flex-col md:ml-64 min-w-0 max-w-full pt-[env(safe-area-inset-top)]">
         <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} />
 
         {/* Page content */}

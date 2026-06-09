@@ -1104,7 +1104,7 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+      <div className="flex-1 flex flex-col min-h-screen">
         
         {/* Header bar */}
         <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 flex items-center justify-between shadow-sm sticky top-0 z-40">
@@ -1142,7 +1142,7 @@ export default function AdminDashboard() {
         </header>
 
         {/* Content main */}
-        <main className="flex-1 p-6 space-y-6 max-w-6xl w-full mx-auto">
+        <main className="flex-1 p-6 space-y-6 max-w-6xl w-full mx-auto overflow-x-hidden">
 
           {/* ==================== 1. TAB: OVERVIEW ==================== */}
           {activeTab === "overview" && (
