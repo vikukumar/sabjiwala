@@ -9,6 +9,7 @@ COPY apps/vendor-app ./apps/vendor-app
 COPY apps/delivery-app ./apps/delivery-app
 COPY apps/admin-app ./apps/admin-app
 COPY apps/sbjiwala-web ./apps/sbjiwala-web
+COPY tmp ./tmp
 
 RUN cd shared && npm install && npm run build
 RUN cd apps/sbjiwala-web && \

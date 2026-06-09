@@ -6,6 +6,11 @@ on:
       - main
   workflow_dispatch:
     inputs:
+      api_url:
+        description: 'Backend API URL (e.g., https://api.example.com/api/v1)'
+        required: false
+        type: string
+        default: 'https://sbjiwala.qzz.io/api/v1'
       build_ios:
         description: 'Build, sign, upload, and release iOS apps'
         required: true
@@ -158,8 +163,17 @@ jobs:
           npm run build
 
       - name: Setup Web App
+        env:
+          API_URL: ${{ github.event.inputs.api_url }}
         run: |
           cd apps/sbjiwala-web
+          
+          # Create .env.production with API URL if provided
+          if [ -n "$API_URL" ]; then
+            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
+            echo "API URL configured: $API_URL"
+          fi
+          
           npm install
           
           # Replace symlink with physical copy of shared package to satisfy Turbopack
@@ -181,9 +195,17 @@ jobs:
           cp -r apps/admin-app/src/app/users apps/sbjiwala-web/src/app/
 
       - name: Build Web App Static Export
+        env:
+          API_URL: ${{ github.event.inputs.api_url }}
         run: |
           cd apps/sbjiwala-web
-          npm run build
+          
+          # Build with NEXT_PUBLIC_API_URL if provided
+          if [ -n "$API_URL" ]; then
+            NEXT_PUBLIC_API_URL="$API_URL" npm run build
+          else
+            npm run build
+          fi
 
       - name: Zip Web App Static Export
         run: |
@@ -251,15 +273,31 @@ jobs:
 
       # ── Customer App ────────────────────────────────────────────────────────
       - name: Build & Sync Customer App (Android)
+        env:
+          API_URL: ${{ github.event.inputs.api_url }}
         run: |
           cd apps/customer-app
+          
+          # Create .env.production with API URL if provided
+          if [ -n "$API_URL" ]; then
+            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
+            echo "API URL configured: $API_URL"
+          fi
+          
           npm install
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
           cp -r ../../shared/dist node_modules/@sbjiwala/shared/
           cp -r ../../shared/src  node_modules/@sbjiwala/shared/
           cp ../../shared/package.json node_modules/@sbjiwala/shared/
-          npm run build
+          
+          # Build with NEXT_PUBLIC_API_URL if provided
+          if [ -n "$API_URL" ]; then
+            NEXT_PUBLIC_API_URL="$API_URL" npm run build
+          else
+            npm run build
+          fi
+          
           npm install @capacitor/core @capacitor/cli @capacitor/android
           #npx cap add android
           npx cap sync android
@@ -291,15 +329,31 @@ jobs:
 
       # ── Vendor App ──────────────────────────────────────────────────────────
       - name: Build & Sync Vendor App (Android)
+        env:
+          API_URL: ${{ github.event.inputs.api_url }}
         run: |
           cd apps/vendor-app
+          
+          # Create .env.production with API URL if provided
+          if [ -n "$API_URL" ]; then
+            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
+            echo "API URL configured: $API_URL"
+          fi
+          
           npm install
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
           cp -r ../../shared/dist node_modules/@sbjiwala/shared/
           cp -r ../../shared/src  node_modules/@sbjiwala/shared/
           cp ../../shared/package.json node_modules/@sbjiwala/shared/
-          npm run build
+          
+          # Build with NEXT_PUBLIC_API_URL if provided
+          if [ -n "$API_URL" ]; then
+            NEXT_PUBLIC_API_URL="$API_URL" npm run build
+          else
+            npm run build
+          fi
+          
           npm install @capacitor/core @capacitor/cli @capacitor/android
           #npx cap add android
           npx cap sync android
@@ -331,15 +385,31 @@ jobs:
 
       # ── Delivery App ────────────────────────────────────────────────────────
       - name: Build & Sync Delivery App (Android)
+        env:
+          API_URL: ${{ github.event.inputs.api_url }}
         run: |
           cd apps/delivery-app
+          
+          # Create .env.production with API URL if provided
+          if [ -n "$API_URL" ]; then
+            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
+            echo "API URL configured: $API_URL"
+          fi
+          
           npm install
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
           cp -r ../../shared/dist node_modules/@sbjiwala/shared/
           cp -r ../../shared/src  node_modules/@sbjiwala/shared/
           cp ../../shared/package.json node_modules/@sbjiwala/shared/
-          npm run build
+          
+          # Build with NEXT_PUBLIC_API_URL if provided
+          if [ -n "$API_URL" ]; then
+            NEXT_PUBLIC_API_URL="$API_URL" npm run build
+          else
+            npm run build
+          fi
+          
           npm install @capacitor/core @capacitor/cli @capacitor/android
           #npx cap add android
           npx cap sync android
@@ -443,15 +513,31 @@ jobs:
 
       # ── Customer App ────────────────────────────────────────────────────────
       - name: Build & Sync Customer App (iOS)
+        env:
+          API_URL: ${{ github.event.inputs.api_url }}
         run: |
           cd apps/customer-app
+          
+          # Create .env.production with API URL if provided
+          if [ -n "$API_URL" ]; then
+            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
+            echo "API URL configured: $API_URL"
+          fi
+          
           npm install
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
           cp -r ../../shared/dist node_modules/@sbjiwala/shared/
           cp -r ../../shared/src  node_modules/@sbjiwala/shared/
           cp ../../shared/package.json node_modules/@sbjiwala/shared/
-          npm run build
+          
+          # Build with NEXT_PUBLIC_API_URL if provided
+          if [ -n "$API_URL" ]; then
+            NEXT_PUBLIC_API_URL="$API_URL" npm run build
+          else
+            npm run build
+          fi
+          
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           #npx cap add ios || true
           sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile || true
@@ -491,15 +577,31 @@ jobs:
 
       # ── Vendor App ──────────────────────────────────────────────────────────
       - name: Build & Sync Vendor App (iOS)
+        env:
+          API_URL: ${{ github.event.inputs.api_url }}
         run: |
           cd apps/vendor-app
+          
+          # Create .env.production with API URL if provided
+          if [ -n "$API_URL" ]; then
+            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
+            echo "API URL configured: $API_URL"
+          fi
+          
           npm install
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
           cp -r ../../shared/dist node_modules/@sbjiwala/shared/
           cp -r ../../shared/src  node_modules/@sbjiwala/shared/
           cp ../../shared/package.json node_modules/@sbjiwala/shared/
-          npm run build
+          
+          # Build with NEXT_PUBLIC_API_URL if provided
+          if [ -n "$API_URL" ]; then
+            NEXT_PUBLIC_API_URL="$API_URL" npm run build
+          else
+            npm run build
+          fi
+          
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           #npx cap add ios || true
           sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile || true
@@ -539,15 +641,31 @@ jobs:
 
       # ── Delivery App ────────────────────────────────────────────────────────
       - name: Build & Sync Delivery App (iOS)
+        env:
+          API_URL: ${{ github.event.inputs.api_url }}
         run: |
           cd apps/delivery-app
+          
+          # Create .env.production with API URL if provided
+          if [ -n "$API_URL" ]; then
+            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
+            echo "API URL configured: $API_URL"
+          fi
+          
           npm install
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
           cp -r ../../shared/dist node_modules/@sbjiwala/shared/
           cp -r ../../shared/src  node_modules/@sbjiwala/shared/
           cp ../../shared/package.json node_modules/@sbjiwala/shared/
-          npm run build
+          
+          # Build with NEXT_PUBLIC_API_URL if provided
+          if [ -n "$API_URL" ]; then
+            NEXT_PUBLIC_API_URL="$API_URL" npm run build
+          else
+            npm run build
+          fi
+          
           npm install @capacitor/core @capacitor/cli @capacitor/ios
           #npx cap add ios || true
           sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile || true
