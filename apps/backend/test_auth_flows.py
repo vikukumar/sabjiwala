@@ -21,7 +21,7 @@ API_URL = "http://localhost:8001/api/v1"
 async def cleanup_test_data():
     """Clean up test users from the database and Redis before starting."""
     print("[*] Cleaning up existing test users from database...")
-    test_emails = ["testvendor@sbjiwala.in", "testdelivery@sbjiwala.in", "testcustomer@sbjiwala.in", "testadmin@sbjiwala.in", "specialvendor@sbjiwala.in"]
+    test_emails = ["testvendor@sbjiwala.qzz.io", "testdelivery@sbjiwala.qzz.io", "testcustomer@sbjiwala.qzz.io", "testadmin@sbjiwala.qzz.io", "specialvendor@sbjiwala.qzz.io"]
     test_phones = ["+919000000001", "+919000000002", "+919000000003", "+919000000004", "+919000000005"]
     test_usernames = ["testvendor", "testdelivery", "testcustomer", "testadmin", "specialvendor"]
 
@@ -95,7 +95,7 @@ async def run_tests():
             "first_name": "Test",
             "last_name": "Vendor",
             "username": "testvendor",
-            "email": "testvendor@sbjiwala.in",
+            "email": "testvendor@sbjiwala.qzz.io",
             "phone": "9000000001",  # input format is 10 digit, backend formats to +91 phone
             "password": "Password123!",
             "role": "vendor"
@@ -107,7 +107,7 @@ async def run_tests():
         print("[+] Vendor register request succeeded.")
         
         # Verify that verification target is email
-        assert data["meta"]["verification_identifier"] == "testvendor@sbjiwala.in", "OTP should prioritize email when both are provided"
+        assert data["meta"]["verification_identifier"] == "testvendor@sbjiwala.qzz.io", "OTP should prioritize email when both are provided"
         print("[+] OTP prioritized email as expected.")
 
         # Read the debug OTP
@@ -119,7 +119,7 @@ async def run_tests():
 
         # Verify registration OTP
         verify_res = await client.post(f"{API_URL}/auth/otp/verify", json={
-            "identifier": "testvendor@sbjiwala.in",
+            "identifier": "testvendor@sbjiwala.qzz.io",
             "otp": otp,
             "purpose": "register"
         })
@@ -160,7 +160,7 @@ async def run_tests():
             "first_name": "Test",
             "last_name": "Delivery",
             "username": "testdelivery",
-            "email": "testdelivery@sbjiwala.in",
+            "email": "testdelivery@sbjiwala.qzz.io",
             "password": "Password123!",
             "role": "delivery_boy"
         }
@@ -174,7 +174,7 @@ async def run_tests():
         await asyncio.sleep(0.5)
 
         verify_res = await client.post(f"{API_URL}/auth/otp/verify", json={
-            "identifier": "testdelivery@sbjiwala.in",
+            "identifier": "testdelivery@sbjiwala.qzz.io",
             "otp": otp,
             "purpose": "register"
         })
@@ -262,11 +262,11 @@ async def run_tests():
 
         # Email
         login_res2 = await client.post(f"{API_URL}/auth/login", json={
-            "identifier": "testvendor@sbjiwala.in",
+            "identifier": "testvendor@sbjiwala.qzz.io",
             "password": "Password123!"
         })
         assert login_res2.status_code == 200
-        print("[+] Logged in successfully using email: testvendor@sbjiwala.in")
+        print("[+] Logged in successfully using email: testvendor@sbjiwala.qzz.io")
 
         # Phone
         login_res3 = await client.post(f"{API_URL}/auth/login", json={
@@ -288,7 +288,7 @@ async def run_tests():
         assert send_otp_res.status_code == 200
         otp_data = send_otp_res.json()
         assert "otp" in otp_data["meta"]
-        assert "@sbjiwala.in" in otp_data["message"], "OTP should be sent to email since both exist"
+        assert "@sbjiwala.qzz.io" in otp_data["message"], "OTP should be sent to email since both exist"
         print("[+] OTP login request correctly routed to email.")
 
         otp = otp_data["meta"]["otp"]
@@ -380,7 +380,7 @@ async def run_tests():
             "first_name": "System",
             "last_name": "Admin",
             "username": "testadmin",
-            "email": "testadmin@sbjiwala.in",
+            "email": "testadmin@sbjiwala.qzz.io",
             "phone": "9000000004",
             "password": "Password123!",
             "role": "admin"
@@ -392,7 +392,7 @@ async def run_tests():
         await asyncio.sleep(0.5)
         
         admin_verify = await client.post(f"{API_URL}/auth/otp/verify", json={
-            "identifier": "testadmin@sbjiwala.in",
+            "identifier": "testadmin@sbjiwala.qzz.io",
             "otp": admin_otp,
             "purpose": "register"
         })
@@ -406,7 +406,7 @@ async def run_tests():
             "first_name": "Special",
             "last_name": "Vendor",
             "username": "specialvendor",
-            "email": "specialvendor@sbjiwala.in",
+            "email": "specialvendor@sbjiwala.qzz.io",
             "phone": "9000000005",
             "password": "Password123!",
             "role": "vendor",
@@ -445,7 +445,7 @@ async def run_tests():
         await asyncio.sleep(0.5)
         
         await client.post(f"{API_URL}/auth/otp/verify", json={
-            "identifier": "specialvendor@sbjiwala.in",
+            "identifier": "specialvendor@sbjiwala.qzz.io",
             "otp": v_otp,
             "purpose": "register"
         })
@@ -536,7 +536,7 @@ async def run_tests():
         print("\n=== Test 9: Multi-Role Append Registration & Switch Login ===")
         # Clear Redis rate limits for specialvendor email to prevent 60-second limit error
         redis = await from_url(settings.redis_url, decode_responses=True)
-        keys_rate = await redis.keys("otp:rate:*:specialvendor@sbjiwala.in")
+        keys_rate = await redis.keys("otp:rate:*:specialvendor@sbjiwala.qzz.io")
         for k in keys_rate:
             await redis.delete(k)
         await redis.close()
@@ -546,7 +546,7 @@ async def run_tests():
             "first_name": "Special",
             "last_name": "Vendor",
             "username": "specialvendor",
-            "email": "specialvendor@sbjiwala.in",
+            "email": "specialvendor@sbjiwala.qzz.io",
             "phone": "9000000005",
             "password": "Password123!",
             "role": "delivery_boy",
@@ -566,7 +566,7 @@ async def run_tests():
         # Verify registration OTP
         append_otp = append_data["meta"]["otp"]
         verify_append_res = await client.post(f"{API_URL}/auth/otp/verify", json={
-            "identifier": "specialvendor@sbjiwala.in",
+            "identifier": "specialvendor@sbjiwala.qzz.io",
             "otp": append_otp,
             "purpose": "register"
         })

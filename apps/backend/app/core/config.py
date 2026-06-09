@@ -92,7 +92,7 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM_NAME: str = "Sbjiwala"
-    SMTP_FROM_EMAIL: str = "noreply@sbjiwala.in"
+    SMTP_FROM_EMAIL: str = "noreply@sbjiwala.qzz.io"
     SMTP_USE_TLS: bool = True
     SMTP_START_TLS: bool = True
 
@@ -105,7 +105,7 @@ class Settings(BaseSettings):
     # ---- Push Notifications ----
     VAPID_PUBLIC_KEY: str = ""
     VAPID_PRIVATE_KEY: str = ""
-    VAPID_SUBJECT: str = "mailto:admin@sbjiwala.in"
+    VAPID_SUBJECT: str = "mailto:admin@sbjiwala.qzz.io"
     FCM_SERVER_KEY: Optional[str] = None
 
     # ---- Google OAuth2 ----
@@ -155,7 +155,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_UPLOAD: str = "5/minute"
 
     # ---- CORS ----
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003"
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,https://localhost,capacitor://localhost"
 
     @property
     def CORS_ORIGINS_LIST(self) -> List[str]:
@@ -169,7 +169,7 @@ class Settings(BaseSettings):
     BACKEND_PORT: int = 8000
 
     # ---- Initial Admin ----
-    INITIAL_ADMIN_EMAIL: str = "admin@sbjiwala.in"
+    INITIAL_ADMIN_EMAIL: str = "admin@sbjiwala.qzz.io"
     INITIAL_ADMIN_PASSWORD: str = "change-this-immediately"
 
     # ---- Geo Blocking ----

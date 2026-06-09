@@ -56,7 +56,7 @@ gh workflow run release.yml \
 curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: token YOUR_GITHUB_TOKEN" \
-  https://api.github.com/repos/YOUR_ORG/sabjiwala/actions/workflows/release.yml/dispatches \
+  https://api.github.com/repos/YOUR_ORG/sbjiwala/actions/workflows/release.yml/dispatches \
   -d '{
     "ref":"main",
     "inputs":{
@@ -127,7 +127,7 @@ gh workflow run release.yml \
 
 ```bash
 gh workflow run release.yml \
-  -f api_url="https://api.sbjiwala.in/api/v1" \
+  -f api_url="https://api.sbjiwala.qzz.io/api/v1" \
   -f build_ios=true
 ```
 

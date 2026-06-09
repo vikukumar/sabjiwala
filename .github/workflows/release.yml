@@ -21,6 +21,9 @@ permissions:
   contents: write
   packages: write
 
+env:
+  API_URL: ${{ github.event.inputs.api_url || 'https://sbjiwala.qzz.io/api/v1' }}
+
 jobs:
   read-version:
     runs-on: ubuntu-latest
@@ -164,7 +167,7 @@ jobs:
 
       - name: Setup Web App
         env:
-          API_URL: ${{ github.event.inputs.api_url }}
+          API_URL: ${{ env.API_URL }}
         run: |
           cd apps/sbjiwala-web
           
@@ -196,7 +199,7 @@ jobs:
 
       - name: Build Web App Static Export
         env:
-          API_URL: ${{ github.event.inputs.api_url }}
+          API_URL: ${{ env.API_URL }}
         run: |
           cd apps/sbjiwala-web
           
@@ -256,7 +259,7 @@ jobs:
           else
             echo "Using self-signed fallback keystore."
             keytool -genkey -v -keystore $GITHUB_WORKSPACE/release.keystore -alias sbjiwala -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=sbjiwala.in, OU=Dev, O=Sbjiwala, L=Mumbai, S=MH, C=IN" \
+              -dname "CN=sbjiwala.qzz.io, OU=Dev, O=Sbjiwala, L=Mumbai, S=MH, C=IN" \
               -storepass password -keypass password
             echo "HAS_PROD_KEYSTORE=false" >> $GITHUB_ENV
             echo "KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore" >> $GITHUB_ENV
@@ -274,7 +277,7 @@ jobs:
       # ── Customer App ────────────────────────────────────────────────────────
       - name: Build & Sync Customer App (Android)
         env:
-          API_URL: ${{ github.event.inputs.api_url }}
+          API_URL: ${{ env.API_URL }}
         run: |
           cd apps/customer-app
           
@@ -330,7 +333,7 @@ jobs:
       # ── Vendor App ──────────────────────────────────────────────────────────
       - name: Build & Sync Vendor App (Android)
         env:
-          API_URL: ${{ github.event.inputs.api_url }}
+          API_URL: ${{ env.API_URL }}
         run: |
           cd apps/vendor-app
           
@@ -386,7 +389,7 @@ jobs:
       # ── Delivery App ────────────────────────────────────────────────────────
       - name: Build & Sync Delivery App (Android)
         env:
-          API_URL: ${{ github.event.inputs.api_url }}
+          API_URL: ${{ env.API_URL }}
         run: |
           cd apps/delivery-app
           
@@ -514,7 +517,7 @@ jobs:
       # ── Customer App ────────────────────────────────────────────────────────
       - name: Build & Sync Customer App (iOS)
         env:
-          API_URL: ${{ github.event.inputs.api_url }}
+          API_URL: ${{ env.API_URL }}
         run: |
           cd apps/customer-app
           
@@ -578,7 +581,7 @@ jobs:
       # ── Vendor App ──────────────────────────────────────────────────────────
       - name: Build & Sync Vendor App (iOS)
         env:
-          API_URL: ${{ github.event.inputs.api_url }}
+          API_URL: ${{ env.API_URL }}
         run: |
           cd apps/vendor-app
           
@@ -642,7 +645,7 @@ jobs:
       # ── Delivery App ────────────────────────────────────────────────────────
       - name: Build & Sync Delivery App (iOS)
         env:
-          API_URL: ${{ github.event.inputs.api_url }}
+          API_URL: ${{ env.API_URL }}
         run: |
           cd apps/delivery-app
           
@@ -730,17 +733,20 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: web-static
+          path: ./
 
       - name: Download Android APKS
         uses: actions/download-artifact@v4
         with:
           name: android-apks
+          path: ./
 
       - name: Download iOS Builds
         if: ${{ github.event_name == 'push' && (github.event.inputs.build_ios != 'false' && github.event.inputs.build_ios != false) }}
         uses: actions/download-artifact@v4
         with:
           name: ios-builds
+          path: ./
 
       - name: Prepare Release Files
         id: release_files

@@ -92,6 +92,7 @@ class CartItem(BaseEntity):
     unit_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
 
     cart: Mapped["Cart"] = relationship(back_populates="items")
+    product: Mapped["Product"] = relationship("Product", lazy="selectin")
 
     __table_args__ = (
         UniqueConstraint("cart_id", "product_id", "variant_id", "vendor_id", name="uq_cart_item"),

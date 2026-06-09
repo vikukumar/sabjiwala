@@ -150,8 +150,10 @@ function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSav
             const road = data.address.road || data.address.suburb || "";
             const city = data.address.city || data.address.town || data.address.suburb || "";
             const postcode = data.address.postcode || "";
+            const state = data.address.state || "";
             setValue("address_line_1", data.display_name || "");
             setValue("city", city);
+            setValue("state", state);
             setValue("postal_code", postcode);
           }
         });
@@ -241,6 +243,10 @@ function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSav
             <input {...register("city", { required: true })} className="input-base px-3 py-2.5 text-sm" />
           </div>
           <div>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">State *</label>
+            <input {...register("state", { required: true })} className="input-base px-3 py-2.5 text-sm" placeholder="e.g. Maharashtra" />
+          </div>
+          <div className="col-span-2">
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">PIN Code *</label>
             <input {...register("postal_code", { required: true })} className="input-base px-3 py-2.5 text-sm" maxLength={6} placeholder="400001" />
           </div>

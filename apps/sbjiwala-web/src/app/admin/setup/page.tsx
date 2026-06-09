@@ -164,7 +164,7 @@ export default function SetupPage() {
                   label="Super Admin Email"
                   required
                   type="email"
-                  placeholder="admin@sbjiwala.in"
+                  placeholder="admin@sbjiwala.qzz.io"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   leftIcon={<Mail className="w-4 h-4" />}

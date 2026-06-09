@@ -313,7 +313,7 @@ class PaymentService:
                                 "order_currency": "INR",
                                 "customer_details": {
                                     "customer_id": str(user_id),
-                                    "customer_email": "customer@sbjiwala.in",
+                                    "customer_email": "customer@sbjiwala.qzz.io",
                                     "customer_phone": "9999999999",
                                 },
                                 "order_meta": {

@@ -34,7 +34,7 @@ Sbjiwala is a complete, production-ready, multi-tenant vegetable commerce platfo
 ## 📂 Project Directory Structure
 
 ```
-sbjiwala.in/
+sbjiwala.qzz.io/
 ├── .github/
 │   └── workflows/
 │       └── release.yml         # Unified CI/CD build & release pipeline

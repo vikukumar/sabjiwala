@@ -5,9 +5,9 @@ import os
 import shutil
 from PIL import Image
 
-ROOT_DIR = r"D:\Projects\sbjiwala" if os.path.exists(r"D:\Projects\sbjiwala") else r"D:\Projects\sabjiwala"
+ROOT_DIR = r"D:\Projects\sbjiwala" if os.path.exists(r"D:\Projects\sbjiwala") else r"D:\Projects\sbjiwala"
 SRC_DIR = os.path.join(ROOT_DIR, "logo&icons")
-web_app_name = "sbjiwala-web" if os.path.exists(os.path.join(ROOT_DIR, "apps", "sbjiwala-web")) else "sabjiwala-web"
+web_app_name = "sbjiwala-web" if os.path.exists(os.path.join(ROOT_DIR, "apps", "sbjiwala-web")) else "sbjiwala-web"
 APPS = ["customer-app", "vendor-app", "delivery-app", "admin-app", web_app_name]
 
 def main():

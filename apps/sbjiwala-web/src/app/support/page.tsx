@@ -93,7 +93,7 @@ function SupportContent() {
             <p className="text-xs text-slate-500 dark:text-slate-400">9AM – 9PM</p>
           </div>
         </a>
-        <a href="mailto:support@sbjiwala.in" className="card p-4 flex items-center gap-3 hover:border-emerald-400 transition-colors">
+        <a href="mailto:support@sbjiwala.qzz.io" className="card p-4 flex items-center gap-3 hover:border-emerald-400 transition-colors">
           <div className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded-xl">
             <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>

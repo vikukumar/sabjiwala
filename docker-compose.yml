@@ -62,7 +62,7 @@ services:
       - SMTP_USER=your-email@gmail.com
       - SMTP_PASSWORD=your-app-password
       - SMTP_FROM_NAME=Sbjiwala
-      - SMTP_FROM_EMAIL=noreply@sbjiwala.in
+      - SMTP_FROM_EMAIL=noreply@sbjiwala.qzz.io
       # Social OAuth2 Settings (Google & Facebook)
       - GOOGLE_CLIENT_ID=your-google-client-id
       - GOOGLE_CLIENT_SECRET=your-google-client-secret

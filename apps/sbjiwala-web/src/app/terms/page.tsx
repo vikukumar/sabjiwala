@@ -75,7 +75,7 @@ export default function TermsPage() {
       {/* Compliance Note */}
       <div className="bg-slate-55 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-850 rounded-2xl p-5 text-center">
         <p className="text-[11px] leading-relaxed text-slate-550 dark:text-slate-450 font-semibold">
-          For formal legal inquiries, partnership terms, or compliance disputes, please write directly to our counsel at <span className="text-emerald-600 dark:text-emerald-400">legal@sbjiwala.in</span>.
+          For formal legal inquiries, partnership terms, or compliance disputes, please write directly to our counsel at <span className="text-emerald-600 dark:text-emerald-400">legal@sbjiwala.qzz.io</span>.
         </p>
       </div>
     </div>
