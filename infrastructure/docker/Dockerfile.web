@@ -14,6 +14,7 @@ COPY apps/vendor-app ./apps/vendor-app
 COPY apps/delivery-app ./apps/delivery-app
 COPY apps/admin-app ./apps/admin-app
 COPY apps/sbjiwala-web ./apps/sbjiwala-web
+COPY tmp ./tmp
 
 # Build the shared library first
 RUN cd shared && npm install && npm run build
