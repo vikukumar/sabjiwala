@@ -53,6 +53,14 @@ class SchemaEvolutionEngine:
 
     async def evolve(self, engine: AsyncEngine) -> None:
         """Main entry point: run schema evolution against the given engine."""
+        # 0. Attempt to create the public schema outside the main transaction block
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("CREATE SCHEMA IF NOT EXISTS public;"))
+                await conn.commit()
+        except Exception as e:
+            await logger.awarning(f"Failed to create public schema outside transaction: {e}")
+
         async with engine.begin() as conn:
             # Ensure the evolution log table exists first
             await self._ensure_log_table(conn)
@@ -390,6 +398,10 @@ class SchemaEvolutionEngine:
 
     async def _ensure_log_table(self, conn: AsyncConnection) -> None:
         """Create the schema evolution log table if it doesn't exist."""
+        try:
+            await conn.execute(text("SET search_path TO public;"))
+        except Exception:
+            pass
         await conn.execute(text(f"""
             CREATE TABLE IF NOT EXISTS {self.EVOLUTION_LOG_TABLE} (
                 id SERIAL PRIMARY KEY,
@@ -400,6 +412,9 @@ class SchemaEvolutionEngine:
                 applied_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
             )
         """))
+
+
+
 
     async def _log_change(self, conn: AsyncConnection, change: Dict[str, Any]) -> None:
         """Log a schema change to the evolution log table."""

@@ -1,6 +1,8 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { APIResponse, PaginatedResponse } from '../types';
 
+declare const process: any;
+
 export class ApiClient {
   public client: AxiosInstance;
   private accessToken: string | null = null;
@@ -13,6 +15,8 @@ export class ApiClient {
       const storedBaseUrl = localStorage.getItem('sw_api_base_url');
       if (storedBaseUrl) {
         finalBaseURL = storedBaseUrl;
+      } else if (process.env.NEXT_PUBLIC_API_URL) {
+        finalBaseURL = process.env.NEXT_PUBLIC_API_URL;
       } else {
         const isNextDev = window.location.port === '3000' || window.location.port === '3001' || window.location.port === '3002' || window.location.port === '3003';
         const isCapacitor = window.location.hostname === 'localhost' && (window.location.port === '' || window.location.protocol.startsWith('capacitor'));

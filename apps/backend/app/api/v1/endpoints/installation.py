@@ -95,13 +95,33 @@ async def complete_installation_step(
         profile = UserProfile(user_id=admin.id)
         db.add(profile)
 
+        # Ensure default roles and permissions are seeded first
+        from app.core.rbac.seed import seed_default_roles_and_permissions
+        await seed_default_roles_and_permissions(db)
+        await db.flush()
+
         # Assign both super_admin and admin roles so the user satisfies the admin portal checks
         from app.models.user import Role, UserRole
         for role_name in ["super_admin", "admin"]:
             role_res = await db.execute(select(Role).where(Role.name == role_name))
             role = role_res.scalars().first()
             if role:
-                db.add(UserRole(user_id=admin.id, role_id=role.id))
+                # Avoid duplicate insertion (even if soft-deleted)
+                ur_check = await db.execute(
+                    select(UserRole).where(
+                        UserRole.user_id == admin.id,
+                        UserRole.role_id == role.id
+                    )
+                )
+                existing_ur = ur_check.scalars().first()
+                if existing_ur:
+                    if existing_ur.is_deleted:
+                        existing_ur.is_deleted = False
+                        existing_ur.deleted_at = None
+                        existing_ur.deleted_by = None
+                else:
+                    db.add(UserRole(user_id=admin.id, role_id=role.id))
+
 
     state.is_completed = True
     state.completed_at = datetime.now(timezone.utc)

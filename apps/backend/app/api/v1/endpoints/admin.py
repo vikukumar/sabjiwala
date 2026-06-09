@@ -77,8 +77,22 @@ async def verify_vendor(
             role_result = await db.execute(sa_select(Role).where(Role.name == "vendor"))
             vendor_role = role_result.scalars().first()
             if vendor_role:
-                # Add to UserRole
-                db.add(UserRole(user_id=user.id, role_id=vendor_role.id))
+                # Check if this role is already assigned (even if soft-deleted) to avoid duplicate key errors
+                existing_role_res = await db.execute(
+                    sa_select(UserRole).where(
+                        UserRole.user_id == user.id,
+                        UserRole.role_id == vendor_role.id
+                    )
+                )
+                existing_user_role = existing_role_res.scalars().first()
+                if existing_user_role:
+                    if existing_user_role.is_deleted:
+                        existing_user_role.is_deleted = False
+                        existing_user_role.deleted_at = None
+                        existing_user_role.deleted_by = None
+                else:
+                    db.add(UserRole(user_id=user.id, role_id=vendor_role.id))
+
 
     await db.commit()
     return APIResponse(success=True, message=f"Vendor status updated to {new_status.value}")

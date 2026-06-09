@@ -114,7 +114,35 @@ def create_app() -> FastAPI:
     from app.websocket.handlers import router as ws_router
     app.include_router(ws_router)
 
+    # Serve Next.js static UI files at root
+    import os
+    from fastapi.staticfiles import StaticFiles
+    from starlette.responses import FileResponse, Response
+    
+    # Path to nextjs build out folder
+    ui_dir = settings.UI_DIR or os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../sbjiwala-web/out"))
+    if os.path.exists(ui_dir):
+        class SPAStaticFiles(StaticFiles):
+            async def get_response(self, path: str, scope) -> Response:
+                # If path has no extension, check if path + ".html" exists
+                if path and not os.path.splitext(path)[1]:
+                    html_path = f"{path}.html"
+                    full_html_path = os.path.join(self.directory, html_path)
+                    if os.path.isfile(full_html_path):
+                        path = html_path
+                try:
+                    return await super().get_response(path, scope)
+                except Exception:
+                    # Fallback to index.html for SPA client-side routing
+                    index_path = os.path.join(self.directory, "index.html")
+                    if os.path.isfile(index_path):
+                        return FileResponse(index_path)
+                    raise
+        
+        app.mount("/", SPAStaticFiles(directory=ui_dir, html=True), name="ui")
+
     return app
+
 
 
 app = create_app()

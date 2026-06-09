@@ -84,6 +84,7 @@ class Settings(BaseSettings):
     STORAGE_ROOT: str = "/app/storage"
     STORAGE_MAX_UPLOAD_SIZE_MB: int = 50
     STORAGE_ENCRYPTION_KEY: str = ""
+    UI_DIR: Optional[str] = None
 
     # ---- Email (SMTP) ----
     SMTP_HOST: str = "smtp.gmail.com"

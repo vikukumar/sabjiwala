@@ -21,18 +21,16 @@ RUN cd apps/sbjiwala-web && \
     cp ../../shared/tsconfig.json node_modules/@sbjiwala/shared/ && \
     npm run build
 
-# Stage 2: Combined Python Backend & Nginx Frontend
+# Stage 2: Combined Python Backend & Next.js Static UI
 FROM python:3.13-slim
 
 WORKDIR /app
 
-# Install Nginx, build tools, and gettext-base (for envsubst)
+# Install build tools and dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    nginx \
     build-essential \
     libpq-dev \
     curl \
-    gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
 # Create nonroot user with UID 65532
@@ -48,23 +46,21 @@ RUN pip install --no-cache-dir .
 COPY apps/backend /app
 
 # Copy static frontend assets from Next.js builder
-COPY --from=builder /app/apps/sbjiwala-web/out /usr/share/nginx/html
+COPY --from=builder /app/apps/sbjiwala-web/out /app/sbjiwala-web/out
 
-# Copy Nginx complete-routing config as template
-COPY ./infrastructure/nginx/nginx-complete.conf /etc/nginx/nginx.conf.template
+# Set UI_DIR environment variable
+ENV UI_DIR=/app/sbjiwala-web/out
 
 # Copy startup script
 COPY ./infrastructure/docker/start.sh /start.sh
 
-# Create Nginx directories and configure permissions for non-root execution
-RUN mkdir -p /var/cache/nginx /var/log/nginx /var/lib/nginx /etc/nginx && \
-    chown -R nonroot:nonroot /var/cache/nginx /var/log/nginx /var/lib/nginx /etc/nginx /usr/share/nginx/html /app && \
-    chmod +x /start.sh && \
-    chown nonroot:nonroot /start.sh
+# Configure permissions for non-root execution
+RUN chmod +x /start.sh && \
+    chown -R nonroot:nonroot /app /start.sh
 
 # Run as non-root user
 USER nonroot
 
-EXPOSE 8080 8443 8000
+EXPOSE 8080
 
 ENTRYPOINT ["/start.sh"]
