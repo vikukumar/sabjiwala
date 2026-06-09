@@ -129,6 +129,16 @@ class Settings(BaseSettings):
     PHONEPE_SALT_INDEX: int = 1
     PHONEPE_ENV: str = "UAT"
 
+    # ---- Cashfree ----
+    CASHFREE_APP_ID: str = ""
+    CASHFREE_SECRET_KEY: str = ""
+    CASHFREE_ENV: str = "sandbox"  # sandbox | production
+
+    @property
+    def cashfree_enabled(self) -> bool:
+        """Returns True only if both Cashfree credentials are configured."""
+        return bool(self.CASHFREE_APP_ID and self.CASHFREE_SECRET_KEY)
+
     # ---- WhatsApp ----
     WHATSAPP_API_URL: str = ""
     WHATSAPP_API_KEY: str = ""

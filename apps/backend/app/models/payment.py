@@ -30,6 +30,7 @@ class PaymentStatus(str, enum.Enum):
 class PaymentGateway(str, enum.Enum):
     RAZORPAY = "razorpay"
     PHONEPE = "phonepe"
+    CASHFREE = "cashfree"
     COD = "cod"
     WALLET = "wallet"
 

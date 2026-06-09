@@ -27,7 +27,6 @@ from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
     mapped_column,
-    declared_attr,
     Session,
 )
 from uuid6 import uuid7
@@ -57,10 +56,13 @@ class BaseEntity(Base):
     """
 
     __abstract__ = True
+    __tablename__: str = ""  # overridden per concrete class or auto-derived below
 
-    @declared_attr.directive
-    def __tablename__(cls) -> str:
-        return _camel_to_snake(cls.__name__) + "s"
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        super().__init_subclass__(**kwargs)
+        # Auto-derive table name only if not explicitly set by the concrete class
+        if "__tablename__" not in cls.__dict__:
+            cls.__tablename__ = _camel_to_snake(cls.__name__) + "s"
 
     id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),

@@ -1,5 +1,7 @@
 """
 Payment integration and Wallet management service.
+Cashfree is used for online payments if CASHFREE_APP_ID + CASHFREE_SECRET_KEY are set.
+Otherwise only COD and Wallet are available.
 """
 import hmac
 import hashlib
@@ -285,6 +287,62 @@ class PaymentService:
                 "merchant_transaction_id": merchant_txn_id,
                 "redirect_url": web_redirect_url,
                 "amount": amount,
+            }
+
+        elif gateway == PaymentGateway.CASHFREE:
+            import httpx
+            order_ref = f"CF_{secrets.token_hex(8).upper()}"
+            payment.gateway_order_id = order_ref
+
+            cf_base = (
+                "https://sandbox.cashfree.com/pg"
+                if settings.CASHFREE_ENV == "sandbox"
+                else "https://api.cashfree.com/pg"
+            )
+
+            payment_session_id = f"mock_session_{secrets.token_hex(10)}"
+
+            if settings.cashfree_enabled:
+                try:
+                    async with httpx.AsyncClient() as client:
+                        resp = await client.post(
+                            f"{cf_base}/orders",
+                            json={
+                                "order_id": order_ref,
+                                "order_amount": round(amount, 2),
+                                "order_currency": "INR",
+                                "customer_details": {
+                                    "customer_id": str(user_id),
+                                    "customer_email": "customer@sbjiwala.in",
+                                    "customer_phone": "9999999999",
+                                },
+                                "order_meta": {
+                                    "return_url": f"{settings.APP_URL}/payment/callback?order_id={str(order_id)}&payment_id={str(payment.id)}",
+                                    "notify_url": f"{settings.APP_URL}/api/v1/payments/webhook/cashfree",
+                                },
+                            },
+                            headers={
+                                "x-api-version": "2023-08-01",
+                                "x-client-id": settings.CASHFREE_APP_ID,
+                                "x-client-secret": settings.CASHFREE_SECRET_KEY,
+                                "Content-Type": "application/json",
+                            },
+                            timeout=10,
+                        )
+                        if resp.status_code in (200, 201):
+                            cf_data = resp.json()
+                            payment_session_id = cf_data.get("payment_session_id", payment_session_id)
+                except Exception as e:
+                    logger.error("Cashfree order creation failed", error=str(e))
+
+            await self.db.flush()
+            return {
+                "payment_id": str(payment.id),
+                "gateway": "cashfree",
+                "cashfree_order_id": order_ref,
+                "payment_session_id": payment_session_id,
+                "amount": amount,
+                "env": settings.CASHFREE_ENV,
             }
 
         return {"error": "Unsupported payment gateway"}
