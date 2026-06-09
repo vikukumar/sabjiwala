@@ -502,8 +502,9 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
       const createdProd = res.data;
       // Set initial stock if specified and > 0
       const initialStockVal = parseFloat(newProdInitialStock) || 0.0;
-      if (createdProd && createdProd.id && initialStockVal > 0) {
-        await api.post(`/products/${createdProd.id}/inventory`, null, {
+      const prodId = createdProd?.id;
+      if (prodId && initialStockVal > 0) {
+        await api.post(`/products/${prodId}/inventory`, null, {
           params: {
             quantity: initialStockVal,
             change_type: "set",

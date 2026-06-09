@@ -114,9 +114,20 @@ async def browse_products(
         if inv:
             p_attrs["quantity"] = float(inv.quantity)
             p_attrs["vendor_id"] = str(inv.vendor_id)
+            from app.models.vendor import VendorStore
+            store_res = await db.execute(select(VendorStore).where(VendorStore.vendor_id == inv.vendor_id))
+            store = store_res.scalars().first()
+            if store and store.latitude is not None and store.longitude is not None:
+                p_attrs["vendor_latitude"] = store.latitude
+                p_attrs["vendor_longitude"] = store.longitude
+            else:
+                p_attrs["vendor_latitude"] = 19.0760
+                p_attrs["vendor_longitude"] = 72.8777
         else:
             p_attrs["quantity"] = 0.0
             p_attrs["vendor_id"] = ""
+            p_attrs["vendor_latitude"] = 19.0760
+            p_attrs["vendor_longitude"] = 72.8777
             
         if "image_emoji" not in p_attrs:
             p_attrs["image_emoji"] = "🥬"

@@ -35,7 +35,7 @@ def _slugify(text: str) -> str:
     return text[:200] + "-" + secrets.token_hex(3)
 
 
-@router.post("/", response_model=APIResponse[ProductResponse], status_code=201)
+@router.post("", response_model=APIResponse[ProductResponse], status_code=201)
 async def create_product(
     body: ProductCreate,
     current_user: dict = Depends(get_current_user),
@@ -50,7 +50,8 @@ async def create_product(
 
     # Verify category exists
     cat_result = await db.execute(select(Category).where(Category.id == body.category_id, Category.is_deleted == False))
-    if not cat_result.scalars().first():
+    category = cat_result.scalars().first()
+    if not category:
         raise HTTPException(status_code=400, detail="Category not found")
 
     product = Product(
@@ -59,6 +60,7 @@ async def create_product(
         description=body.description,
         short_description=body.short_description,
         category_id=body.category_id,
+        category=category,
         unit=body.unit,
         unit_value=body.unit_value,
         tags=body.tags or [],
@@ -132,13 +134,23 @@ async def update_product(
     vendor_result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
     vendor = vendor_result.scalars().first()
 
-    result = await db.execute(select(Product).where(Product.id == product_id, Product.is_deleted == False))
+    result = await db.execute(
+        select(Product)
+        .options(selectinload(Product.category))
+        .where(Product.id == product_id, Product.is_deleted == False)
+    )
     product = result.scalars().first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
     for field, value in body.model_dump(exclude_unset=True, exclude={"price", "compare_at_price"}).items():
         if hasattr(product, field) and value is not None:
+            if field == "category_id":
+                cat_res = await db.execute(select(Category).where(Category.id == value, Category.is_deleted == False))
+                category = cat_res.scalars().first()
+                if not category:
+                    raise HTTPException(status_code=400, detail="Category not found")
+                product.category = category
             setattr(product, field, value)
 
     # If the user is a vendor and passed price or compare_at_price, update ProductPrice

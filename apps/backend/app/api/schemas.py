@@ -316,25 +316,6 @@ class CategoryCreate(BaseModel):
     sort_order: int = 0
 
 
-class ProductResponse(BaseModel):
-    id: UUID
-    name: str
-    slug: str
-    description: Optional[str] = None
-    short_description: Optional[str] = None
-    category_id: UUID
-    unit: str
-    unit_value: float
-    primary_image_url: Optional[str] = None
-    status: str
-    is_featured: bool
-    tags: Optional[List[str]] = None
-    attributes: Optional[dict] = None
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
 class CategoryResponse(BaseModel):
     id: UUID
     name: str
@@ -345,6 +326,27 @@ class CategoryResponse(BaseModel):
     level: int
     is_active: bool
     sort_order: int
+
+    class Config:
+        from_attributes = True
+
+
+class ProductResponse(BaseModel):
+    id: UUID
+    name: str
+    slug: str
+    description: Optional[str] = None
+    short_description: Optional[str] = None
+    category_id: UUID
+    category: Optional[CategoryResponse] = None
+    unit: str
+    unit_value: float
+    primary_image_url: Optional[str] = None
+    status: str
+    is_featured: bool
+    tags: Optional[List[str]] = None
+    attributes: Optional[dict] = None
+    created_at: datetime
 
     class Config:
         from_attributes = True
