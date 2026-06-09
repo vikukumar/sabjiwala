@@ -119,7 +119,6 @@ redis_data/
 *.log
 logs/
 temp/
-tmp/
 
 # Nginx SSL & Cache configurations
 infrastructure/nginx/ssl/*.pem
@@ -147,6 +146,8 @@ coverage.xml
 .ruff_cache/
 
 # Temporary scripts
-tmp/
+#tmp/
 apps/backend/Storage
 apps/backend/storage
+tmp/copy_shared.py
+tmp/fix_node_modules.py
