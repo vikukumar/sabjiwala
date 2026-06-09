@@ -140,7 +140,7 @@ function RegisterPageContent() {
       const res = await api.post("/auth/otp/verify", {
         identifier: otpIdentifier,
         otp: code,
-        purpose: "login",
+        purpose: "register",
         role: "customer"
       });
 
@@ -176,7 +176,7 @@ function RegisterPageContent() {
     try {
       const res = await api.post("/auth/otp/send", {
         identifier: otpIdentifier,
-        purpose: "login"
+        purpose: "register"
       });
       startOtpResendTimer();
       if (res.meta?.otp) {

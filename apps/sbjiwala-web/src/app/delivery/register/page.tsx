@@ -157,7 +157,7 @@ export default function DeliveryRegisterPage() {
       const res = await api.post("/auth/otp/verify", {
         email: regEmail,
         otp,
-        purpose: "login",
+        purpose: "register",
         role: "delivery_boy"
       });
 
@@ -184,7 +184,7 @@ export default function DeliveryRegisterPage() {
     try {
       const res = await api.post("/auth/otp/send", {
         email: regEmail,
-        purpose: "login"
+        purpose: "register"
       });
       if (res.success) {
         setCountdown(60);

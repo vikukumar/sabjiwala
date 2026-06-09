@@ -163,7 +163,7 @@ export default function VendorRegisterPage() {
       const res = await api.post("/auth/otp/verify", {
         email: regEmail,
         otp,
-        purpose: "login",
+        purpose: "register",
         role: "vendor"
       });
 
@@ -190,7 +190,7 @@ export default function VendorRegisterPage() {
     try {
       const res = await api.post("/auth/otp/send", {
         email: regEmail,
-        purpose: "login"
+        purpose: "register"
       });
       if (res.success) {
         setCountdown(60);

@@ -219,26 +219,6 @@ export default function LoginPage() {
     }, 1000);
   };
 
-  const handleDeveloperBypass = async (role: "customer" | "vendor" | "delivery" | "admin") => {
-    setErrorMsg("");
-    setSuccessMsg("");
-    setOtpLoading(true);
-
-    let credentials = { email: "", password: "" };
-
-    try {
-      const res = await api.post("/auth/login", credentials);
-      if (res.success && res.meta) {
-        api.setTokens(res.meta.access_token, res.meta.refresh_token);
-        setSuccessMsg(`Bypassed as ${role.toUpperCase()} successfully!`);
-        handleSuccessfulLoginRedirect(role);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || err.message || "Bypass failed.");
-    } finally {
-      setOtpLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 flex flex-col justify-between transition-colors duration-200 antialiased font-sans">

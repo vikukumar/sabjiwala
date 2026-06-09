@@ -313,26 +313,6 @@ export default function LoginPage() {
     }, 1000);
   };
 
-  const handleDeveloperBypass = async (role: "customer" | "vendor" | "delivery" | "admin") => {
-    setErrorMsg("");
-    setSuccessMsg("");
-    setOtpLoading(true);
-
-    let credentials = { email: "", password: "" };
-    try {
-      configureBaseUrl();
-      const res = await api.post("/auth/login", credentials);
-      if (res.success && res.meta) {
-        api.setTokens(res.meta.access_token, res.meta.refresh_token);
-        setSuccessMsg(`Bypassed as ${role.toUpperCase()} successfully!`);
-        handleSuccessfulLoginRedirect(role);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || err.message || "Bypass failed.");
-    } finally {
-      setOtpLoading(false);
-    }
-  };
 
   if (checkingSetup) {
     return (
