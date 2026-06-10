@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">SbjiWala</string>
     <string name="title_activity_main">SbjiWala</string>
-    <string name="package_name">com.sbjiwala.customer</string>
-    <string name="custom_url_scheme">com.sbjiwala.customer</string>
+    <string name="package_name">in.sbjiwala.customer</string>
+    <string name="custom_url_scheme">in.sbjiwala.customer</string>
 </resources>

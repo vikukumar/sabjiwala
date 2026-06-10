@@ -1,4 +1,4 @@
-package com.sbjiwala.customer;
+package in.sbjiwala.delivery;
 
 import com.getcapacitor.BridgeActivity;
 

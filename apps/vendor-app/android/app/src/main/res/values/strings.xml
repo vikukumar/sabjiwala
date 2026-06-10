@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">SbjiWala Vendor</string>
-    <string name="title_activity_main">SbjiWala Vendor</string>
-    <string name="package_name">com.sbjiwala.vendor</string>
-    <string name="custom_url_scheme">com.sbjiwala.vendor</string>
+    <string name="app_name">Sbjiwala Vendor</string>
+    <string name="title_activity_main">Sbjiwala Vendor</string>
+    <string name="package_name">in.sbjiwala.vendor</string>
+    <string name="custom_url_scheme">in.sbjiwala.vendor</string>
 </resources>

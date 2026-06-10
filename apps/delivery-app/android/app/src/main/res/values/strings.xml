@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">SbjiWala Delivery</string>
-    <string name="title_activity_main">SbjiWala Delivery</string>
-    <string name="package_name">com.sbjiwala.delivery</string>
-    <string name="custom_url_scheme">com.sbjiwala.delivery</string>
+    <string name="app_name">Sbjiwala Delivery</string>
+    <string name="title_activity_main">Sbjiwala Delivery</string>
+    <string name="package_name">in.sbjiwala.delivery</string>
+    <string name="custom_url_scheme">in.sbjiwala.delivery</string>
 </resources>

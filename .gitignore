@@ -74,6 +74,7 @@ out/
 *.crt
 *.der
 *.pfx
+keystore.properties
 secrets/
 .env
 .env.local
