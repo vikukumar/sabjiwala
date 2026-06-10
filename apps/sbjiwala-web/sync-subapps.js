@@ -8,7 +8,7 @@ const vendorSrc = path.join(rootDir, 'apps/vendor-app/src');
 const deliverySrc = path.join(rootDir, 'apps/delivery-app/src');
 const adminSrc = path.join(rootDir, 'apps/admin-app/src');
 
-console.log('=== Sbjiwala Sub-Apps Synchronization Started ===');
+console.log('=== Sbjiwala Sub-Apps Path-Based Synchronization Started ===');
 
 // Helper to copy recursively
 function copyRecursiveSync(src, dest) {
@@ -40,67 +40,114 @@ function removeRecursiveSync(targetPath) {
 }
 
 try {
-  // 1. Sync customer-app src as base
-  console.log(`Syncing base from customer-app...`);
-  copyRecursiveSync(customerSrc, webSrc);
+  // 1. Clean the destination webSrc folder entirely to prevent stale files or duplicate routes
+  console.log(`Cleaning target source folder...`);
+  removeRecursiveSync(webSrc);
 
-  // 2. Clean and Copy Vendor app specific pages
+  // 2. Copy customer-app src subdirectories except 'app' (components, hooks, etc. go to base)
+  console.log(`Syncing base assets (components, hooks, utils)...`);
+  fs.readdirSync(customerSrc).forEach((child) => {
+    if (child !== 'app') {
+      copyRecursiveSync(path.join(customerSrc, child), path.join(webSrc, child));
+    }
+  });
+
+  // 3. Setup app directory under sbjiwala-web
+  console.log(`Creating next app layout structures...`);
+  const customerAppDir = path.join(customerSrc, 'app');
+  const webAppDir = path.join(webSrc, 'app');
+  const webCustomerNestedDir = path.join(webAppDir, 'app'); // customer nested under /app
+
+  fs.mkdirSync(webAppDir, { recursive: true });
+  fs.mkdirSync(webCustomerNestedDir, { recursive: true });
+
+  // Copy customer-app/src/app files
+  fs.readdirSync(customerAppDir).forEach((child) => {
+    const srcChildPath = path.join(customerAppDir, child);
+    const isDir = fs.statSync(srcChildPath).isDirectory();
+
+    if (isDir) {
+      // Nested folders like cart, search, login, register, etc. go under /app/
+      copyRecursiveSync(srcChildPath, path.join(webCustomerNestedDir, child));
+    } else {
+      // Files: layout.tsx, providers.tsx, globals.css, error.tsx, not-found.tsx, favicon.ico, version.json
+      if (child === 'page.tsx') {
+        // page.tsx (customer dashboard) goes to /app/page.tsx
+        copyRecursiveSync(srcChildPath, path.join(webCustomerNestedDir, 'page.tsx'));
+      } else {
+        // Root files (layout, providers, etc.) go to root /
+        copyRecursiveSync(srcChildPath, path.join(webAppDir, child));
+      }
+    }
+  });
+
+  // 4. Inject unified landing page at webSrc/app/page.tsx
+  console.log(`Copying unified marketplace home page...`);
+  const unifiedPageSource = path.join(webSrc, '../app_page_unified.tsx');
+  if (fs.existsSync(unifiedPageSource)) {
+    fs.copyFileSync(unifiedPageSource, path.join(webAppDir, 'page.tsx'));
+  } else {
+    console.warn(`[WARNING] Unified page source template not found at ${unifiedPageSource}`);
+  }
+
+  // 5. Clean and Copy Vendor app specific pages under /vendor/
   console.log(`Syncing vendor-app pages...`);
-  // page.tsx
-  const vendorPageDest = path.join(webSrc, 'app/vendor/page.tsx');
+  const vendorPageDest = path.join(webAppDir, 'vendor/page.tsx');
   copyRecursiveSync(path.join(vendorSrc, 'app/page.tsx'), vendorPageDest);
-  // kyc directory
-  const vendorKycDest = path.join(webSrc, 'app/kyc');
+
+  const vendorKycDest = path.join(webAppDir, 'vendor/kyc');
   removeRecursiveSync(vendorKycDest);
   copyRecursiveSync(path.join(vendorSrc, 'app/kyc'), vendorKycDest);
-  // login directory
-  const vendorLoginDest = path.join(webSrc, 'app/vendor/login');
+  // Backward compatibility for kyc route
+  copyRecursiveSync(path.join(vendorSrc, 'app/kyc'), path.join(webAppDir, 'kyc'));
+
+  const vendorLoginDest = path.join(webAppDir, 'vendor/login');
   removeRecursiveSync(vendorLoginDest);
   copyRecursiveSync(path.join(vendorSrc, 'app/login'), vendorLoginDest);
-  // register directory
-  const vendorRegisterDest = path.join(webSrc, 'app/vendor/register');
+
+  const vendorRegisterDest = path.join(webAppDir, 'vendor/register');
   removeRecursiveSync(vendorRegisterDest);
   copyRecursiveSync(path.join(vendorSrc, 'app/register'), vendorRegisterDest);
 
-  // 3. Clean and Copy Delivery app specific pages
+  // 6. Clean and Copy Delivery app specific pages under /delivery/
   console.log(`Syncing delivery-app pages...`);
-  // page.tsx
-  const deliveryPageDest = path.join(webSrc, 'app/delivery/page.tsx');
+  const deliveryPageDest = path.join(webAppDir, 'delivery/page.tsx');
   copyRecursiveSync(path.join(deliverySrc, 'app/page.tsx'), deliveryPageDest);
-  // login directory
-  const deliveryLoginDest = path.join(webSrc, 'app/delivery/login');
+
+  const deliveryLoginDest = path.join(webAppDir, 'delivery/login');
   removeRecursiveSync(deliveryLoginDest);
   copyRecursiveSync(path.join(deliverySrc, 'app/login'), deliveryLoginDest);
-  // register directory
-  const deliveryRegisterDest = path.join(webSrc, 'app/delivery/register');
+
+  const deliveryRegisterDest = path.join(webAppDir, 'delivery/register');
   removeRecursiveSync(deliveryRegisterDest);
   copyRecursiveSync(path.join(deliverySrc, 'app/register'), deliveryRegisterDest);
 
-  // 4. Clean and Copy Admin app specific pages
+  // 7. Clean and Copy Admin app specific pages under /admin/
   console.log(`Syncing admin-app pages...`);
-  // page.tsx
-  const adminPageDest = path.join(webSrc, 'app/admin/page.tsx');
+  const adminPageDest = path.join(webAppDir, 'admin/page.tsx');
   copyRecursiveSync(path.join(adminSrc, 'app/page.tsx'), adminPageDest);
-  // users directory
-  const adminUsersDest = path.join(webSrc, 'app/users');
+
+  const adminUsersDest = path.join(webAppDir, 'admin/users');
   removeRecursiveSync(adminUsersDest);
   copyRecursiveSync(path.join(adminSrc, 'app/users'), adminUsersDest);
-  // login directory
-  const adminLoginDest = path.join(webSrc, 'app/admin/login');
+  // Backward compatibility for users route
+  copyRecursiveSync(path.join(adminSrc, 'app/users'), path.join(webAppDir, 'users'));
+
+  const adminLoginDest = path.join(webAppDir, 'admin/login');
   removeRecursiveSync(adminLoginDest);
   copyRecursiveSync(path.join(adminSrc, 'app/login'), adminLoginDest);
-  // setup directory
-  const adminSetupDest = path.join(webSrc, 'app/admin/setup');
+
+  const adminSetupDest = path.join(webAppDir, 'admin/setup');
   removeRecursiveSync(adminSetupDest);
   copyRecursiveSync(path.join(adminSrc, 'app/setup'), adminSetupDest);
 
-  // 5. Sync public assets from customer-app to sbjiwala-web (for sw.js and manifest.json)
-  console.log(`Syncing public assets from customer-app...`);
+  // 8. Sync public assets from customer-app to sbjiwala-web
+  console.log(`Syncing public assets...`);
   const customerPublic = path.join(rootDir, 'apps/customer-app/public');
   const webPublic = path.join(rootDir, 'apps/sbjiwala-web/public');
   copyRecursiveSync(customerPublic, webPublic);
 
-  console.log('=== Sbjiwala Sub-Apps Synchronization Completed Successfully ===');
+  console.log('=== Sbjiwala Sub-Apps Path-Based Synchronization Completed Successfully ===');
 } catch (error) {
   console.error('Error during synchronization:', error);
   process.exit(1);

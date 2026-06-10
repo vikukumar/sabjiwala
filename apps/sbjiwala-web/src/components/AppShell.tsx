@@ -22,6 +22,24 @@ import { api } from "@sbjiwala/shared";
 // Default is false, meaning no AppShell is currently active
 const AppShellContext = createContext(false);
 // ==================== ROUTE PROTECTION helper ====================
+export const resolveLink = (href: string) => {
+  const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+  if (isUnified) {
+    if (
+      href.startsWith("/vendor") || 
+      href.startsWith("/delivery") || 
+      href.startsWith("/admin") || 
+      href.startsWith("/kyc") || 
+      href.startsWith("/users")
+    ) {
+      return href;
+    }
+    if (href === "/") return "/app";
+    return `/app${href}`;
+  }
+  return href;
+};
+
 export const isProtectedRoute = (path: string) => {
   const protectedPrefixes = [
     "/profile",
@@ -32,7 +50,16 @@ export const isProtectedRoute = (path: string) => {
     "/addresses",
     "/reviews",
     "/settings",
-    "/checkout"
+    "/checkout",
+    "/app/profile",
+    "/app/orders",
+    "/app/wishlist",
+    "/app/wallet",
+    "/app/referrals",
+    "/app/addresses",
+    "/app/reviews",
+    "/app/settings",
+    "/app/checkout"
   ];
   return protectedPrefixes.some(prefix => path === prefix || path.startsWith(prefix + "/"));
 };
@@ -179,7 +206,7 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
           >
             <Menu className="w-5 h-5" />
           </button>
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+          <Link href={resolveLink("/")} className="flex items-center gap-2 flex-shrink-0">
             <img src="/logo_horizontal.png" alt="Sbjiwala" className="h-8 w-auto object-contain" />
             <span className="hidden sm:inline-flex bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
               Express
@@ -204,7 +231,7 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
 
         {/* Center: search (md+) */}
         <Link
-          href="/search"
+          href={resolveLink("/search")}
           className="hidden md:flex flex-1 max-w-sm mx-6 items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-600 transition-colors text-slate-400 dark:text-slate-500 text-sm cursor-text"
         >
           <Search className="w-4 h-4 flex-shrink-0" />
@@ -214,11 +241,11 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
         {/* Right: actions */}
         <div className="flex items-center gap-2">
           <ThemeCycleButton />
-          <Link href="/notifications" className="relative p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <Link href={resolveLink("/notifications")} className="relative p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             <Bell className="w-5 h-5 text-slate-600 dark:text-slate-300" />
           </Link>
           <Link
-            href="/cart"
+            href={resolveLink("/cart")}
             className="relative p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             aria-label={`Cart with ${cartCount} items`}
           >
@@ -256,14 +283,16 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
     return () => window.removeEventListener("sw_location_updated", updateLoc);
   }, []);
 
-  const isActive = (href: string, exact = false) =>
-    exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
+  const isActive = (href: string, exact = false) => {
+    const resolved = resolveLink(href);
+    return exact ? pathname === resolved : pathname === resolved || pathname.startsWith(resolved + "/");
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("sw_access_token");
     localStorage.removeItem("sw_refresh_token");
     setIsLoggedIn(false);
-    window.location.href = "/login";
+    window.location.href = resolveLink("/login");
   };
 
   const content = (
@@ -310,17 +339,18 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
               {section.items.map((item) => {
                 const active = isActive(item.href, item.href === "/");
                 const Icon = item.icon;
+                const resolvedHref = resolveLink(item.href);
                 return (
                   <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={(e) => {
-                        if (isProtectedRoute(item.href) && !localStorage.getItem("sw_access_token")) {
-                          e.preventDefault();
-                          router.push(`/login?redirect=${encodeURIComponent(item.href)}`);
-                        }
-                        if (onClose) onClose();
-                      }}
+                     <Link
+                       href={resolvedHref}
+                       onClick={(e) => {
+                         if (isProtectedRoute(resolvedHref) && !localStorage.getItem("sw_access_token")) {
+                           e.preventDefault();
+                           router.push(`${resolveLink("/login")}?redirect=${encodeURIComponent(resolvedHref)}`);
+                         }
+                         if (onClose) onClose();
+                       }}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${active
                         ? "bg-emerald-600 text-white shadow-sm shadow-emerald-900/30"
                         : "text-slate-400 hover:text-white hover:bg-white/8"
@@ -349,7 +379,7 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
           </button>
         ) : (
           <Link
-            href="/login"
+            href={resolveLink("/login")}
             onClick={onClose}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-emerald-450 hover:bg-emerald-500/10 transition-all"
           >
@@ -402,16 +432,17 @@ function BottomNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 bottom-nav-safe">
       <div className="flex items-center justify-around px-1 h-16">
         {mainNavItems.map((item) => {
-          const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+          const resolvedHref = resolveLink(item.href);
+          const isActive = item.exact ? pathname === resolvedHref : pathname.startsWith(resolvedHref);
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={resolvedHref}
               onClick={(e) => {
-                if (isProtectedRoute(item.href) && !localStorage.getItem("sw_access_token")) {
+                if (isProtectedRoute(resolvedHref) && !localStorage.getItem("sw_access_token")) {
                   e.preventDefault();
-                  router.push(`/login?redirect=${encodeURIComponent(item.href)}`);
+                  router.push(`${resolveLink("/login")}?redirect=${encodeURIComponent(resolvedHref)}`);
                 }
               }}
               className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all ${isActive
@@ -1235,27 +1266,107 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     
     const isProtected = isProtectedRoute(pathname);
     const hasToken = !!localStorage.getItem("sw_access_token");
-    
-    if (isProtected && !hasToken) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
-      return;
+    const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+
+    // Auto-prepend /app for customer routes in unified mode
+    if (isUnified) {
+      const customerPaths = [
+        "/cart", "/checkout", "/orders", "/wishlist", "/profile", "/search", 
+        "/categories", "/offers", "/coupons", "/notifications", "/support", 
+        "/settings", "/about", "/faq", "/how-it-works", "/privacy", "/terms", "/refund-policy"
+      ];
+      const matchingPath = customerPaths.find(p => pathname === p || pathname.startsWith(p + "/"));
+      if (matchingPath) {
+        router.replace(`/app${pathname}`);
+        return;
+      }
     }
 
-    // Role and sub-app isolation checks
-    const isStandaloneCustomer = window.location.port === "3000" || !!(window as any).Capacitor;
     const isVendorPath = pathname.startsWith("/vendor") || pathname.startsWith("/kyc");
     const isDeliveryPath = pathname.startsWith("/delivery");
     const isAdminPath = pathname.startsWith("/admin") || pathname.startsWith("/users");
+    const isCustomerPath = pathname === "/app" || pathname.startsWith("/app/");
 
-    if (isStandaloneCustomer && (isVendorPath || isDeliveryPath || isAdminPath)) {
-      router.replace("/");
-      return;
-    }
+    const isVendorAuthPath = pathname === "/vendor/login" || pathname === "/vendor/register";
+    const isDeliveryAuthPath = pathname === "/delivery/login" || pathname === "/delivery/register";
+    const isAdminAuthPath = pathname === "/admin/login" || pathname === "/admin/setup";
+    const isCustomerAuthPath = isUnified 
+      ? (pathname === "/app/login" || pathname === "/app/register")
+      : (pathname === "/login" || pathname === "/register");
 
-    if (hasToken) {
+    // 1. Unauthenticated Route Guards
+    if (!hasToken) {
+      if (isVendorPath && !isVendorAuthPath) {
+        router.replace(`/vendor/login?redirect=${encodeURIComponent(pathname)}`);
+        return;
+      }
+      if (isDeliveryPath && !isDeliveryAuthPath) {
+        router.replace(`/delivery/login?redirect=${encodeURIComponent(pathname)}`);
+        return;
+      }
+      if (isAdminPath && !isAdminAuthPath) {
+        router.replace(`/admin/login?redirect=${encodeURIComponent(pathname)}`);
+        return;
+      }
+      if (isProtected) {
+        const loginDest = isUnified ? "/app/login" : "/login";
+        router.replace(`${loginDest}?redirect=${encodeURIComponent(pathname)}`);
+        return;
+      }
+    } else {
+      // 2. Authenticated Route Guards
       const role = getStoredUserType();
-      if (role === "customer" && (isVendorPath || isDeliveryPath || isAdminPath)) {
-        router.replace("/");
+
+      // If already logged in, redirect away from auth routes
+      if (isVendorAuthPath && (role === "vendor" || role === "vendor_manager")) {
+        router.replace("/vendor");
+        return;
+      }
+      if (isDeliveryAuthPath && role === "delivery_boy") {
+        router.replace("/delivery");
+        return;
+      }
+      if (isAdminAuthPath && (role === "admin" || role === "super_admin")) {
+        router.replace("/admin");
+        return;
+      }
+      if (isCustomerAuthPath && role === "customer") {
+        router.replace(isUnified ? "/app" : "/");
+        return;
+      }
+
+      // Role isolation paths
+      if (isUnified) {
+        if (isVendorPath && !isVendorAuthPath && role !== "vendor" && role !== "vendor_manager") {
+          router.replace("/vendor/login?error=unauthorized");
+          return;
+        }
+        if (isDeliveryPath && !isDeliveryAuthPath && role !== "delivery_boy") {
+          router.replace("/delivery/login?error=unauthorized");
+          return;
+        }
+        if (isAdminPath && !isAdminAuthPath && role !== "admin" && role !== "super_admin") {
+          router.replace("/admin/login?error=unauthorized");
+          return;
+        }
+        if (isCustomerPath && !isCustomerAuthPath && role !== "customer") {
+          if (role === "vendor" || role === "vendor_manager") router.replace("/vendor");
+          else if (role === "delivery_boy") router.replace("/delivery");
+          else if (role === "admin" || role === "super_admin") router.replace("/admin");
+          return;
+        }
+      } else {
+        // Standalone customer app - reject non-customer roles
+        if (role !== "customer") {
+          localStorage.removeItem("sw_access_token");
+          localStorage.removeItem("sw_refresh_token");
+          router.replace("/login?error=unauthorized_role");
+          return;
+        }
+        if (isVendorPath || isDeliveryPath || isAdminPath) {
+          router.replace("/");
+          return;
+        }
       }
     }
   }, [pathname, router]);
@@ -1348,8 +1459,46 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Click interceptor for unified app mode links
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+    if (!isUnified) return;
+
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest("a");
+      if (!target) return;
+      
+      const href = target.getAttribute("href");
+      if (
+        href && 
+        href.startsWith("/") && 
+        !href.startsWith("/app") && 
+        !href.startsWith("/vendor") && 
+        !href.startsWith("/delivery") && 
+        !href.startsWith("/admin") && 
+        !href.startsWith("/kyc") && 
+        !href.startsWith("/users")
+      ) {
+        const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
+        if (isCustomerAppPath) {
+          e.preventDefault();
+          const targetPath = href === "/" ? "/app" : `/app${href}`;
+          router.push(targetPath);
+        }
+      }
+    };
+
+    document.addEventListener("click", handleGlobalClick, { capture: true });
+    return () => document.removeEventListener("click", handleGlobalClick, { capture: true });
+  }, [pathname, router]);
+
   // Public routes or sub-portals that don't need customer app shell (full screen / own layout)
-  const isBypassRoute = ["/login", "/register", "/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r));
+  const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+  const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
+  const isBypassRoute = isUnified
+    ? (!isCustomerAppPath || pathname === "/app/login" || pathname === "/app/register")
+    : ["/login", "/register", "/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r));
   if (isBypassRoute) return <>{children}</>;
 
   if (showSplash) {

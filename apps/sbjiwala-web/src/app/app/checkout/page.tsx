@@ -370,10 +370,15 @@ export default function CheckoutPage() {
   const [cashfreeLoading, setCashfreeLoading] = useState(false);
   const queryClient = useQueryClient();
 
+  const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+  const resolveLink = (path: string) => isUnified ? `/app${path}` : path;
+
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
-    if (!token) router.replace("/login?redirect=/checkout");
-  }, [router]);
+    if (!token) {
+      router.replace(resolveLink(`/login?redirect=${isUnified ? "/app/checkout" : "/checkout"}`));
+    }
+  }, [router, isUnified]);
 
   // Load Cashfree SDK if enabled
   useEffect(() => {
@@ -445,11 +450,11 @@ export default function CheckoutPage() {
       const cashfree = new (window as any).Cashfree({ mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === "production" ? "production" : "sandbox" });
       const checkoutOptions = {
         paymentSessionId: payment_session_id,
-        returnUrl: `${window.location.origin}/orders/${orderData.id}?payment=success`,
+        returnUrl: `${window.location.origin}${resolveLink(`/orders/${orderData.id}?payment=success`)}`,
       };
       await cashfree.checkout(checkoutOptions);
       success("Payment Successful! 🎉", "Your order has been confirmed.");
-      router.push(`/orders/${orderData.id}?new=1`);
+      router.push(resolveLink(`/orders/${orderData.id}?new=1`));
     } catch (err: any) {
       showError("Payment Failed", "Cashfree payment could not be completed. Try Cash on Delivery.");
     } finally {
@@ -475,20 +480,23 @@ export default function CheckoutPage() {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
 
-      const orderData = res.data;
+      // Retrieve nested order and payment details
+      const orderDetails = res.data?.order || res.data;
+      const paymentDetails = res.data?.payment || {};
+      const mergedOrderData = { ...orderDetails, ...paymentDetails };
 
       if (paymentMethod === "cod" || finalTotal <= 0) {
-        success("Order Placed! 🎉", `Order #${orderData?.order_number} confirmed. Pay on delivery.`);
-        router.push(`/orders/${orderData?.id}?new=1`);
+        success("Order Placed! 🎉", `Order #${mergedOrderData?.order_number} confirmed. Pay on delivery.`);
+        router.push(resolveLink(`/orders/${mergedOrderData?.id}?new=1`));
       } else if (paymentMethod === "wallet" && walletDeduction >= finalTotal) {
         success("Paid via Wallet! 🎉", `₹${walletDeduction.toFixed(2)} deducted from wallet.`);
-        router.push(`/orders/${orderData?.id}?new=1`);
+        router.push(resolveLink(`/orders/${mergedOrderData?.id}?new=1`));
       } else if (paymentMethod === "online" && CASHFREE_ENABLED) {
-        await launchCashfree(orderData);
+        await launchCashfree(mergedOrderData);
       } else {
         // Fallback: COD
-        success("Order Placed! 🎉", `Order #${orderData?.order_number} confirmed.`);
-        router.push(`/orders/${orderData?.id}?new=1`);
+        success("Order Placed! 🎉", `Order #${mergedOrderData?.order_number} confirmed.`);
+        router.push(resolveLink(`/orders/${mergedOrderData?.id}?new=1`));
       }
     },
     onError: (err: any) => showError("Order failed", err.response?.data?.detail || err.message),
@@ -551,7 +559,7 @@ export default function CheckoutPage() {
             ) : (
               <div className="space-y-2">
                 {addresses.map((addr: any) => (
-                  <button
+                  <div
                     key={addr.id}
                     onClick={() => setSelectedAddress(addr.id)}
                     className={`w-full flex items-start gap-3 p-3 rounded-xl border-2 transition-all text-left cursor-pointer ${
@@ -582,12 +590,12 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                       <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{addr.full_name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
+                      <p className="text-xs text-slate-550 dark:text-slate-400 leading-snug">
                         {addr.address_line_1}{addr.address_line_2 ? `, ${addr.address_line_2}` : ""}, {addr.city} – {addr.postal_code}
                       </p>
                       <p className="text-xs text-slate-400 mt-0.5">📞 {addr.phone}</p>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -710,7 +718,7 @@ export default function CheckoutPage() {
             </Button>
 
             <p className="text-[10px] text-center text-slate-400">
-              By placing this order you agree to our <a href="/terms" className="text-emerald-600 hover:underline">Terms</a>
+              By placing this order you agree to our <a href={resolveLink("/terms")} className="text-emerald-600 hover:underline">Terms</a>
             </p>
           </div>
         </div>

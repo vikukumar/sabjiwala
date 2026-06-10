@@ -9,7 +9,7 @@ import {
   CreditCard, Send, Package, AlertTriangle, RefreshCw
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, useWebSocket } from "@sbjiwala/shared";
+import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/index";
@@ -123,7 +123,7 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
           className={`px-3 py-1 rounded-xl font-bold transition-all border ${simulationMode
             ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
             : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-            } cursor-pointer`}>
+          } cursor-pointer`}>
           {simulationMode ? "Simulated GPS 🛰️" : "Device GPS 📍"}
         </button>
       </div>
@@ -166,10 +166,11 @@ function ActiveOrdersTab({ assignments, assignmentsLoading, isOnline, globalPos,
                       <h4 className="font-extrabold text-slate-900 dark:text-slate-50">{destAddr.full_name || "Customer"}</h4>
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
-                      <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${task.status === "assigned" || task.status === "packed"
-                        ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400"
-                        : "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-400"
-                        }`}>{task.status}</span>
+                      <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
+                        task.status === "assigned" || task.status === "packed"
+                          ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400"
+                          : "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-400"
+                      }`}>{task.status}</span>
                       {isCOD && (
                         <span className="text-[10px] font-bold bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded-full">
                           💵 COD ₹{task.total_amount}
@@ -627,7 +628,7 @@ export default function DeliveryAgentDashboard() {
   const [globalPos, setGlobalPos] = useState<[number, number]>([19.0760, 72.9977]);
   const [simulationMode, setSimulationMode] = useState(true);
   const [distanceInfo, setDistanceInfo] = useState<string>("Offline");
-  //const [distanceInfo, setDistanceInfo] = useState<string>("Offline");
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
@@ -714,19 +715,46 @@ export default function DeliveryAgentDashboard() {
     }
   }, [simulationMode, isOnline, assignments]);
 
-  // WebSocket & Location Broadcasting
-  const { sendMessage } = useWebSocket(undefined, isOnline);
-
+  // WebSocket
   useEffect(() => {
-    if (!isOnline) return;
+    const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
+    if (!isOnline || !token || typeof window === "undefined") {
+      if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
+      return;
+    }
+    let ws: WebSocket; let reconnectTimeout: any;
+    const connectWS = () => {
+      const apiBase = api.client.defaults.baseURL || "/api/v1";
+      let baseHost = ""; let protocol = "ws:";
+      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
+        const url = new URL(apiBase);
+        baseHost = url.host; protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      } else {
+        baseHost = window.location.host;
+        protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      }
+      ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
+      wsRef.current = ws;
+      ws.onclose = () => { reconnectTimeout = setTimeout(connectWS, 5000); };
+      ws.onerror = () => ws.close();
+    };
+    connectWS();
+    return () => { if (ws) ws.close(); if (reconnectTimeout) clearTimeout(reconnectTimeout); wsRef.current = null; };
+  }, [isOnline]);
+
+  // Send location via WS
+  useEffect(() => {
+    if (!isOnline || !wsRef.current) return;
     const interval = setInterval(() => {
-      sendMessage({
-        type: "location_update",
-        data: { latitude: globalPos[0], longitude: globalPos[1], accuracy: 10, speed: 5, heading: 0 }
-      });
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: "location_update",
+          data: { latitude: globalPos[0], longitude: globalPos[1], accuracy: 10, speed: 5, heading: 0 }
+        }));
+      }
     }, 4000);
     return () => clearInterval(interval);
-  }, [globalPos, isOnline, sendMessage]);
+  }, [globalPos, isOnline]);
 
   const toggleOnlineMutation = useMutation({
     mutationFn: async (online: boolean) => api.patch("/delivery/availability", { is_available: online }),
@@ -802,10 +830,11 @@ export default function DeliveryAgentDashboard() {
             {/* Online toggle */}
             <button onClick={() => toggleOnlineMutation.mutate(!isOnline)}
               disabled={toggleOnlineMutation.isPending}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${isOnline
-                ? "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
-                } disabled:opacity-50`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                isOnline
+                  ? "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+              } disabled:opacity-50`}>
               {isOnline
                 ? <><ToggleRight className="w-4 h-4" /> ONLINE</>
                 : <><ToggleLeft className="w-4 h-4" /> OFFLINE</>
@@ -836,28 +865,29 @@ export default function DeliveryAgentDashboard() {
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 safe-area-pb">
         <div className="max-w-md mx-auto flex">
           {TABS.map((tab) => {
-            const { id, icon: Icon, label } = tab;
-            const badge = (tab as any).badge as number | undefined;
-            return (
-              <button key={id} onClick={() => setActiveTab(id as any)}
-                className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 relative transition-colors ${activeTab === id
+          const { id, icon: Icon, label } = tab;
+          const badge = (tab as any).badge as number | undefined;
+          return (
+            <button key={id} onClick={() => setActiveTab(id as any)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 relative transition-colors ${
+                activeTab === id
                   ? "text-emerald-600 dark:text-emerald-400"
                   : "text-slate-400 dark:text-slate-500"
-                  }`}>
-                <div className="relative">
-                  <Icon className={`w-5 h-5 ${activeTab === id ? "stroke-[2.5]" : ""}`} />
-                  {badge && badge > 0 ? (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                      {badge > 9 ? "9+" : badge}
-                    </span>
-                  ) : null}
-                </div>
-                <span className={`text-[9px] font-bold ${activeTab === id ? "" : ""}`}>{label}</span>
-                {activeTab === id && (
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
-                )}
-              </button>
-            );
+              }`}>
+              <div className="relative">
+                <Icon className={`w-5 h-5 ${activeTab === id ? "stroke-[2.5]" : ""}`} />
+                {badge && badge > 0 ? (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                ) : null}
+              </div>
+              <span className={`text-[9px] font-bold ${activeTab === id ? "" : ""}`}>{label}</span>
+              {activeTab === id && (
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+              )}
+            </button>
+          );
           })}
         </div>
       </nav>

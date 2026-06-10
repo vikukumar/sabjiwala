@@ -148,6 +148,7 @@ function LoginPageContent() {
 
   const redirectBasedOnRole = (role: string) => {
     let dest = "/";
+    const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
     if (role === "vendor" || role === "vendor_manager") {
       dest = "/vendor";
     } else if (role === "delivery_boy") {
@@ -155,7 +156,10 @@ function LoginPageContent() {
     } else if (role === "admin" || role === "super_admin") {
       dest = "/admin";
     } else {
-      dest = searchParams.get("redirect") || "/";
+      dest = searchParams.get("redirect") || (isUnified ? "/app" : "/");
+    }
+    if (isUnified && dest === "/") {
+      dest = "/app";
     }
     router.replace(dest);
   };
