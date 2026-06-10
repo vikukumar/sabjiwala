@@ -42,7 +42,7 @@ async def get_cart(
     """Get all active carts (one per vendor) for the current user."""
     result = await db.execute(
         select(Cart)
-        .options(selectinload(Cart.items))
+        .options(selectinload(Cart.items).selectinload(CartItem.product))
         .where(Cart.user_id == current_user["user_id"], Cart.is_deleted == False)
     )
     carts = result.scalars().all()
@@ -56,6 +56,12 @@ async def get_cart(
                 continue
             item_total = float(item.unit_price) * item.quantity
             subtotal += item_total
+            
+            product = item.product
+            product_attributes = dict(product.attributes) if product and product.attributes else {}
+            if product and "image_emoji" not in product_attributes:
+                product_attributes["image_emoji"] = product.primary_image_url or "🥬"
+                
             items.append({
                 "id": str(item.id),
                 "product_id": str(item.product_id),
@@ -64,6 +70,11 @@ async def get_cart(
                 "quantity": item.quantity,
                 "unit_price": float(item.unit_price),
                 "total": item_total,
+                "product_name": product.name if product else "Unknown Product",
+                "name": product.name if product else "Unknown Product",
+                "unit": str(product.unit.value) if product and hasattr(product.unit, 'value') else (str(product.unit) if product else "kg"),
+                "price": float(item.unit_price),
+                "attributes": product_attributes,
             })
 
         cart_data.append({

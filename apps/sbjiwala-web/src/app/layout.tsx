@@ -18,12 +18,12 @@ export const metadata: Metadata = {
   description:
     "Order fresh farm vegetables & fruits online. Get hygienic, cleaned produce delivered at your doorstep in 10 minutes. Direct from local farms.",
   keywords: ["vegetables", "fruits", "grocery", "fresh produce", "online vegetables", "home delivery", "Sbjiwala"],
-  authors: [{ name: "Sbjiwala", url: "https://sbjiwala.in" }],
-  metadataBase: new URL("https://sbjiwala.in"),
+  authors: [{ name: "Sbjiwala", url: "https://sbjiwala.qzz.io" }],
+  metadataBase: new URL("https://sbjiwala.qzz.io"),
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://sbjiwala.in",
+    url: "https://sbjiwala.qzz.io",
     siteName: "Sbjiwala.in",
     title: "Sbjiwala.in — Fresh Vegetables & Fruits in 10 Minutes",
     description: "Get fresh farm produce delivered at your doorstep in 10 minutes.",

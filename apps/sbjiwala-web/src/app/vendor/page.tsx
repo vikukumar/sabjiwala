@@ -1648,7 +1648,7 @@ export default function VendorDashboard() {
       </aside>
 
       {/* Main Layout */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+      <div className="flex-1 flex flex-col min-h-screen">
         {/* Header */}
         <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 flex items-center justify-between shadow-sm transition-colors duration-200 sticky top-0 z-40">
           <div className="flex items-center gap-3">
@@ -1693,7 +1693,7 @@ export default function VendorDashboard() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-8 space-y-8 max-w-6xl w-full mx-auto">
+        <main className="flex-1 p-8 space-y-8 max-w-6xl w-full mx-auto overflow-x-hidden">
           {vendorStatus !== "approved" && (
             <div className="bg-gradient-to-r from-amber-500/10 via-amber-600/10 to-amber-500/10 dark:from-amber-955/20 dark:to-amber-955/20 border border-amber-300 dark:border-amber-900/60 rounded-3xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm backdrop-blur-sm">
               <div className="space-y-1">

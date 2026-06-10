@@ -226,6 +226,7 @@ class AddressResponse(BaseModel):
     longitude: Optional[float] = None
     is_default: bool
     formatted_address: Optional[str] = None
+    place_id: Optional[str] = None
 
     class Config:
         from_attributes = True

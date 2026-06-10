@@ -310,7 +310,7 @@ class OrderService:
 
         # 8. Increment coupon uses if applied
         if coupon_id:
-            from app.models.coupon import CouponUsage
+            from app.models.coupon import Coupon, CouponUsage
             usage = CouponUsage(
                 coupon_id=coupon_id,
                 user_id=user_id,

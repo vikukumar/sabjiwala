@@ -18,4 +18,4 @@ Disallow: /addresses
 Disallow: /support
 Disallow: /wishlist
 
-Sitemap: https://sbjiwala.in/sitemap.xml
+Sitemap: https://sbjiwala.qzz.io/sitemap.xml

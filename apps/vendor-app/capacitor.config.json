@@ -21,8 +21,11 @@
     },
     "Geolocation": {
       "permissions": {
-        "location": ["coarse", "fine"]
+        "location": [
+          "coarse",
+          "fine"
+        ]
       }
     }
   }
-}
+}

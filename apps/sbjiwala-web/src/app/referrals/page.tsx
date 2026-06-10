@@ -23,7 +23,7 @@ export default function ReferralsPage() {
   });
 
   const referralCode = profile?.referral_code || "SABJI" + (profile?.id || "").slice(-6).toUpperCase();
-  const referralLink = `https://sbjiwala.in/register?ref=${referralCode}`;
+  const referralLink = `https://sbjiwala.qzz.io/register?ref=${referralCode}`;
 
   const copyCode = () => {
     navigator.clipboard.writeText(referralCode);

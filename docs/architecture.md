@@ -8,7 +8,7 @@ This document details the system architecture, infrastructure scaling patterns, 
 The platform is organized in a single monorepo to maximize code reuse, sharing assets, types, schemas, and configurations across services:
 
 ```
-sabjiwala/
+sbjiwala/
 ├── apps/
 │   ├── customer-app/    # Customer PWA Next.js Webapp
 │   ├── vendor-app/      # Store Manager Next.js Webapp

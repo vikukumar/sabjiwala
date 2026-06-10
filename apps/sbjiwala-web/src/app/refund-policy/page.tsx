@@ -45,7 +45,7 @@ export default function RefundPolicyPage() {
           <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-450" />
           How to Request a Refund
         </h3>
-        
+
         <div className="grid md:grid-cols-3 gap-4">
           <Card className="p-4 space-y-2 border-dashed">
             <span className="inline-block bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white text-xs font-black px-2.5 py-1 rounded-lg">
@@ -102,7 +102,7 @@ export default function RefundPolicyPage() {
       <div className="bg-slate-55 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-850 rounded-2xl p-5 text-center">
         <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-450 font-semibold flex items-center justify-center gap-2">
           <HelpCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-          <span>Need direct assistance? You can chat with our support team or mail <span className="text-emerald-600 dark:text-emerald-400">refunds@sbjiwala.in</span>.</span>
+          <span>Need direct assistance? You can chat with our support team or mail <span className="text-emerald-600 dark:text-emerald-400">refunds@sbjiwala.qzz.io</span>.</span>
         </p>
       </div>
     </div>

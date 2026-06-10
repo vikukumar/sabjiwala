@@ -972,7 +972,7 @@ async def facebook_callback(
 
     # If Facebook did not return an email, use placeholder
     if not email:
-        email = f"{fb_id}@facebook.sbjiwala.in"
+        email = f"{fb_id}@facebook.sbjiwala.qzz.io"
 
     # Find existing user
     result = await db.execute(

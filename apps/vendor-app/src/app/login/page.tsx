@@ -31,8 +31,8 @@ export default function LoginPage() {
     try {
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
       }).join(''));
       return JSON.parse(jsonPayload).user_type;
     } catch (e) {
@@ -219,30 +219,6 @@ export default function LoginPage() {
     }, 1000);
   };
 
-  const handleDeveloperBypass = async (role: "customer" | "vendor" | "delivery" | "admin") => {
-    setErrorMsg("");
-    setSuccessMsg("");
-    setOtpLoading(true);
-
-    let credentials = { email: "", password: "" };
-    if (role === "customer") credentials = { email: "customer@sbjiwala.in", password: "customer123" };
-    if (role === "vendor") credentials = { email: "vendor@sbjiwala.in", password: "vendor123" };
-    if (role === "delivery") credentials = { email: "delivery@sbjiwala.in", password: "delivery123" };
-    if (role === "admin") credentials = { email: "admin@sbjiwala.in", password: "admin123" };
-
-    try {
-      const res = await api.post("/auth/login", credentials);
-      if (res.success && res.meta) {
-        api.setTokens(res.meta.access_token, res.meta.refresh_token);
-        setSuccessMsg(`Bypassed as ${role.toUpperCase()} successfully!`);
-        handleSuccessfulLoginRedirect(role);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || err.message || "Bypass failed.");
-    } finally {
-      setOtpLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 flex flex-col justify-between transition-colors duration-200 antialiased font-sans">

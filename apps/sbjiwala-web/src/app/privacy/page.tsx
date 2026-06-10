@@ -75,7 +75,7 @@ export default function PrivacyPage() {
       {/* Consent Notice */}
       <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-850 rounded-2xl p-5 text-center">
         <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-450 font-semibold">
-          For any data deletion requests, profile access queries, or specific privacy feedback, please submit a support ticket via the help center or email our data protection officer directly at <span className="text-emerald-600 dark:text-emerald-400">privacy@sbjiwala.in</span>.
+          For any data deletion requests, profile access queries, or specific privacy feedback, please submit a support ticket via the help center or email our data protection officer directly at <span className="text-emerald-600 dark:text-emerald-400">privacy@sbjiwala.qzz.io</span>.
         </p>
       </div>
     </div>
