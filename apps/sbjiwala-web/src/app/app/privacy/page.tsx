@@ -3,18 +3,29 @@
 import React, { useEffect } from "react";
 import { ShieldCheck, Lock, Eye, Key } from "lucide-react";
 import { Card } from "@/components/ui/index";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@sbjiwala/shared";
 
 export default function PrivacyPage() {
+  const { data: publicSettings } = useQuery<any>({
+    queryKey: ["publicSettings"],
+    queryFn: async () => {
+      const res = await api.get("/installation/public-settings");
+      return res.data || {};
+    }
+  });
+
   useEffect(() => {
-    document.title = "Privacy Policy — Geolocation & Data | Sbjiwala - Kisan ke Ghar Se Apke Ghar tak";
+    const brandName = publicSettings?.app_name || "Sbjiwala";
+    document.title = `Privacy Policy — Geolocation & Data | ${brandName}`;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        "Read Sbjiwala's user data policy. Learn about precise GPS coordinate encryption, secure tokenized checkouts, and your personal data rights."
+        publicSettings?.seo_description || "Read Sbjiwala's user data policy. Learn about precise GPS coordinate encryption, secure tokenized checkouts, and your personal data rights."
       );
     }
-  }, []);
+  }, [publicSettings]);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
@@ -23,19 +34,19 @@ export default function PrivacyPage() {
         <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
           Privacy Policy
         </h1>
-        <p className="text-xs text-slate-550 dark:text-slate-400 font-semibold uppercase tracking-wider">
-          Last Updated: May 30, 2026
+        <p className="text-xs text-slate-555 dark:text-slate-400 font-semibold uppercase tracking-wider">
+          Last Updated: June 10, 2026
         </p>
       </div>
 
       {/* Intro Card */}
       <Card className="p-6 space-y-4">
-        <div className="flex items-center gap-3 text-emerald-650 dark:text-emerald-400">
+        <div className="flex items-center gap-3 text-emerald-655 dark:text-emerald-400">
           <ShieldCheck className="w-6 h-6" />
           <h2 className="text-lg font-black text-slate-900 dark:text-white">Your Privacy Matters</h2>
         </div>
         <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-medium">
-          At Sbjiwala, we prioritize the protection of your personal information. This Privacy Policy details how we collect, process, and secure your geolocation details, registration credentials, and purchase history. By using our applications, you consent to the practices described below.
+          {publicSettings?.policy_privacy || "At Sbjiwala, we prioritize the protection of your personal information. This Privacy Policy details how we collect, process, and secure your geolocation details, registration credentials, and purchase history. By using our applications, you consent to the practices described below."}
         </p>
       </Card>
 

@@ -107,7 +107,7 @@ async def preview_order(
     rule = rules_result.scalars().first()
     
     base_packaging = 0.0
-    if rule and getattr(rule, "packaging_fee", None) is not None:
+    if rule and rule.packaging_fee is not None:
         base_packaging = float(rule.packaging_fee)
         
     if base_packaging == 0.0:
@@ -129,7 +129,7 @@ async def preview_order(
             
     # Apply platform fee exemptions
     exempt_packaging = False
-    if rule and getattr(rule, "free_platform_fee_above", None) is not None:
+    if rule and rule.free_platform_fee_above is not None:
         if subtotal >= float(rule.free_platform_fee_above):
             exempt_packaging = True
     else:
@@ -202,13 +202,16 @@ async def place_order(
     vendor_id: UUID = Query(...),
     db: AsyncSession = Depends(get_db),
 ):
-    """Place a new order from active cart."""
+    address_id = body.address_id
+    if not address_id:
+        raise HTTPException(status_code=400, detail="Delivery address is required to place an order.")
+        
     service = OrderService(db)
     try:
         order, pay_info = await service.place_order(
             user_id=current_user["user_id"],
             vendor_id=vendor_id,
-            address_id=body.address_id,
+            address_id=address_id,
             payment_method=body.payment_method,
             coupon_code=body.coupon_code,
             use_wallet=body.use_wallet,

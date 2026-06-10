@@ -167,7 +167,7 @@ class OrderService:
         rule = rules_result.scalars().first()
         
         base_packaging = 0.0
-        if rule and getattr(rule, "packaging_fee", None) is not None:
+        if rule and rule.packaging_fee is not None:
             base_packaging = float(rule.packaging_fee)
             
         if base_packaging == 0.0:
@@ -194,7 +194,7 @@ class OrderService:
                 
         # Apply platform fee exemptions
         exempt_packaging = False
-        if rule and getattr(rule, "free_platform_fee_above", None) is not None:
+        if rule and rule.free_platform_fee_above is not None:
             if subtotal >= float(rule.free_platform_fee_above):
                 exempt_packaging = True
         else:

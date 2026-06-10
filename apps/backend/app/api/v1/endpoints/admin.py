@@ -503,13 +503,13 @@ async def list_vendors(
             "longitude": v.store.longitude if v.store else None,
             "created_at": v.created_at.isoformat() if v.created_at else "",
             # Include individual delivery rules so admin can configure them
-            "min_order_amount": float(rule.min_order_amount) if rule and getattr(rule, "min_order_amount", None) is not None else 0.0,
-            "free_delivery_above": float(rule.free_delivery_above) if rule and getattr(rule, "free_delivery_above", None) is not None else None,
-            "base_delivery_charge": float(rule.base_delivery_charge) if rule and getattr(rule, "base_delivery_charge", None) is not None else 0.0,
-            "per_km_charge": float(rule.per_km_charge) if rule and getattr(rule, "per_km_charge", None) is not None else 0.0,
-            "max_delivery_distance_km": float(rule.max_delivery_distance_km) if rule and getattr(rule, "max_delivery_distance_km", None) is not None else 10.0,
-            "packaging_fee": float(rule.packaging_fee) if rule and getattr(rule, "packaging_fee", None) is not None else 0.0,
-            "free_platform_fee_above": float(rule.free_platform_fee_above) if rule and getattr(rule, "free_platform_fee_above", None) is not None else None,
+            "min_order_amount": float(rule.min_order_amount) if rule and rule.min_order_amount is not None else 0.0,
+            "free_delivery_above": float(rule.free_delivery_above) if rule and rule.free_delivery_above is not None else None,
+            "base_delivery_charge": float(rule.base_delivery_charge) if rule and rule.base_delivery_charge is not None else 0.0,
+            "per_km_charge": float(rule.per_km_charge) if rule and rule.per_km_charge is not None else 0.0,
+            "max_delivery_distance_km": float(rule.max_delivery_distance_km) if rule and rule.max_delivery_distance_km is not None else 10.0,
+            "packaging_fee": float(rule.packaging_fee) if rule and rule.packaging_fee is not None else 0.0,
+            "free_platform_fee_above": float(rule.free_platform_fee_above) if rule and rule.free_platform_fee_above is not None else None,
         })
         
     return APIResponse(success=True, data=vendor_list)
@@ -845,3 +845,143 @@ async def delete_admin_banner(
     await db.delete(banner)
     await db.commit()
     return APIResponse(success=True, message="Banner deleted successfully")
+
+
+@router.get("/notification-templates", response_model=APIResponse)
+async def list_notification_templates(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all notification and email templates."""
+    await _verify_admin(current_user)
+    
+    from app.models.notification import NotificationTemplate
+    from app.services.notification_service import NotificationService
+    service = NotificationService(db)
+    await service.seed_default_templates()
+    await db.commit()
+    
+    result = await db.execute(select(NotificationTemplate).order_by(NotificationTemplate.event_key.asc()))
+    templates = result.scalars().all()
+    
+    data = [
+        {
+            "id": str(t.id),
+            "name": t.name,
+            "event_key": t.event_key,
+            "in_app_title": t.in_app_title,
+            "in_app_body": t.in_app_body,
+            "email_subject": t.email_subject,
+            "email_body": t.email_body,
+            "sms_body": t.sms_body,
+            "push_title": t.push_title,
+            "push_body": t.push_body,
+            "channels": t.channels or [],
+            "is_active": t.is_active,
+        }
+        for t in templates
+    ]
+    return APIResponse(success=True, data=data)
+
+
+from pydantic import BaseModel
+class AdminTemplateUpdateSchema(BaseModel):
+    name: str
+    in_app_title: Optional[str] = None
+    in_app_body: Optional[str] = None
+    email_subject: Optional[str] = None
+    email_body: Optional[str] = None
+    sms_body: Optional[str] = None
+    push_title: Optional[str] = None
+    push_body: Optional[str] = None
+    channels: List[str] = []
+    is_active: bool = True
+
+
+@router.put("/notification-templates/{template_id}", response_model=APIResponse)
+async def update_notification_template(
+    template_id: UUID,
+    body: AdminTemplateUpdateSchema,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a notification/email template details."""
+    await _verify_admin(current_user)
+    
+    from app.models.notification import NotificationTemplate
+    res = await db.execute(select(NotificationTemplate).where(NotificationTemplate.id == template_id))
+    template = res.scalars().first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+        
+    template.name = body.name
+    template.in_app_title = body.in_app_title
+    template.in_app_body = body.in_app_body
+    template.email_subject = body.email_subject
+    template.email_body = body.email_body
+    template.sms_body = body.sms_body
+    template.push_title = body.push_title
+    template.push_body = body.push_body
+    template.channels = body.channels
+    template.is_active = body.is_active
+    
+    await db.commit()
+    return APIResponse(success=True, message="Template updated successfully")
+
+
+@router.get("/settings", response_model=APIResponse)
+async def list_system_settings(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all system settings for admin dashboard."""
+    await _verify_admin(current_user)
+    
+    from app.api.v1.endpoints.installation import seed_system_settings
+    await seed_system_settings(db)
+    await db.commit()
+
+    res = await db.execute(select(SystemSetting).order_by(SystemSetting.key.asc()))
+    settings = res.scalars().all()
+    
+    data = [
+        {
+            "key": s.key,
+            "value": s.value,
+            "value_json": s.value_json,
+            "value_type": s.value_type,
+            "group": s.group,
+            "description": s.description,
+            "is_public": s.is_public,
+            "is_editable": s.is_editable,
+        }
+        for s in settings
+    ]
+    return APIResponse(success=True, data=data)
+
+
+@router.put("/settings/{key}", response_model=APIResponse)
+@router.patch("/settings/{key}", response_model=APIResponse)
+async def update_system_setting(
+    key: str,
+    body: SystemSettingUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a system setting value/json."""
+    await _verify_admin(current_user)
+    
+    res = await db.execute(select(SystemSetting).where(SystemSetting.key == key))
+    setting = res.scalars().first()
+    if not setting:
+        raise HTTPException(status_code=404, detail="System setting not found")
+        
+    if not setting.is_editable:
+        raise HTTPException(status_code=400, detail="This setting is not editable")
+        
+    setting.value = body.value
+    setting.value_json = body.value_json
+    
+    await db.commit()
+    return APIResponse(success=True, message=f"Setting '{key}' updated successfully")
+

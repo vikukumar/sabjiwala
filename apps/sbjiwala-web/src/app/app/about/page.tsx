@@ -3,25 +3,36 @@
 import React, { useEffect } from "react";
 import { Leaf, Users, ShieldCheck, Heart, Award, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { Button, Card, SectionHeader } from "@/components/ui/index";
+import { Button, Card } from "@/components/ui/index";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@sbjiwala/shared";
 
 export default function AboutPage() {
+  const { data: publicSettings } = useQuery<any>({
+    queryKey: ["publicSettings"],
+    queryFn: async () => {
+      const res = await api.get("/installation/public-settings");
+      return res.data || {};
+    }
+  });
+
   useEffect(() => {
-    document.title = "Our Story — Procurement & Farms | Sbjiwala - Kisan ke Ghar Se Apke Ghar tak";
+    const brandName = publicSettings?.app_name || "Sbjiwala";
+    document.title = `Our Story — Procurement & Farms | ${brandName}`;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        "Learn how Sbjiwala cuts out middlemen to procure certified organic produce directly from local farms in under 16 hours. Our mission is fresh eating."
+        publicSettings?.seo_description || "Learn how Sbjiwala cuts out middlemen to procure certified organic produce directly from local farms in under 16 hours. Our mission is fresh eating."
       );
     }
-  }, []);
+  }, [publicSettings]);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-12">
       {/* Hero Header */}
       <div className="text-center space-y-4">
-        <div className="inline-flex items-center gap-2 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-xs font-black px-3.5 py-1 rounded-full uppercase tracking-wider">
+        <div className="inline-flex items-center gap-2 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-850 dark:text-emerald-300 text-xs font-black px-3.5 py-1 rounded-full uppercase tracking-wider">
           <Leaf className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           Direct Farm Sourced
         </div>
@@ -30,7 +41,7 @@ export default function AboutPage() {
           <span className="text-emerald-600 dark:text-emerald-400">In 10 Minutes</span>
         </h1>
         <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 max-w-xl mx-auto leading-relaxed font-medium">
-          Procuring organic produce directly from village growers, cleaned in 3-stage ozone washes, and delivered at your doorstep in under 16 hours from harvest.
+          {publicSettings?.about_us || "Procuring organic produce directly from village growers, cleaned in 3-stage ozone washes, and delivered at your doorstep in under 16 hours from harvest."}
         </p>
       </div>
 

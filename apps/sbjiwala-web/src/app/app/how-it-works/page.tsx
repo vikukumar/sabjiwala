@@ -4,18 +4,29 @@ import React, { useEffect } from "react";
 import { Clock, Truck, ShieldAlert, Award, Compass, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Button, Card } from "@/components/ui/index";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@sbjiwala/shared";
 
 export default function HowItWorksPage() {
+  const { data: publicSettings } = useQuery<any>({
+    queryKey: ["publicSettings"],
+    queryFn: async () => {
+      const res = await api.get("/installation/public-settings");
+      return res.data || {};
+    }
+  });
+
   useEffect(() => {
-    document.title = "How It Works — Sourcing & Delivery | Sbjiwala - Kisan ke Ghar Se Apke Ghar tak";
+    const brandName = publicSettings?.app_name || "Sbjiwala";
+    document.title = `How It Works — Sourcing & Delivery | ${brandName}`;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        "Step-by-step walkthrough of Sbjiwala's express fulfillment cycle. From field harvesting at 4 AM to multi-stage ozone cleaning and 10-minute drop-offs."
+        publicSettings?.seo_description || "Step-by-step walkthrough of Sbjiwala's express fulfillment cycle. From field harvesting at 4 AM to multi-stage ozone cleaning and 10-minute drop-offs."
       );
     }
-  }, []);
+  }, [publicSettings]);
 
   const timelineSteps = [
     {
@@ -56,7 +67,7 @@ export default function HowItWorksPage() {
           How <span className="text-emerald-600 dark:text-emerald-450">Sbjiwala</span> Works
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold tracking-wide max-w-md mx-auto leading-relaxed">
-          We have engineered a zero-middlemen farm-to-fork logistics pipeline that cuts down traditional transit times from 72 hours to just 16 hours.
+          {publicSettings?.how_it_works || "We have engineered a zero-middlemen farm-to-fork logistics pipeline that cuts down traditional transit times from 72 hours to just 16 hours."}
         </p>
       </div>
 

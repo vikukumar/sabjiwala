@@ -3,18 +3,29 @@
 import React, { useEffect } from "react";
 import { RotateCcw, AlertTriangle, CheckCircle, HelpCircle } from "lucide-react";
 import { Card } from "@/components/ui/index";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@sbjiwala/shared";
 
 export default function RefundPolicyPage() {
+  const { data: publicSettings } = useQuery<any>({
+    queryKey: ["publicSettings"],
+    queryFn: async () => {
+      const res = await api.get("/installation/public-settings");
+      return res.data || {};
+    }
+  });
+
   useEffect(() => {
-    document.title = "Refund & Replacement Policy | Sbjiwala - Kisan ke Ghar Se Apke Ghar tak";
+    const brandName = publicSettings?.app_name || "Sbjiwala";
+    document.title = `Refund & Replacement Policy | ${brandName}`;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        "Learn about Sbjiwala's 100% replacement guarantee. Instant wallet refunds or direct produce replacement within 24 hours of delivery."
+        publicSettings?.seo_description || "Learn about Sbjiwala's 100% replacement guarantee. Instant wallet refunds or direct produce replacement within 24 hours of delivery."
       );
     }
-  }, []);
+  }, [publicSettings]);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
@@ -23,19 +34,19 @@ export default function RefundPolicyPage() {
         <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
           Refund & Replacement
         </h1>
-        <p className="text-xs text-slate-550 dark:text-slate-400 font-semibold uppercase tracking-wider">
-          Last Updated: May 30, 2026
+        <p className="text-xs text-slate-555 dark:text-slate-400 font-semibold uppercase tracking-wider">
+          Last Updated: June 10, 2026
         </p>
       </div>
 
       {/* Intro Card */}
       <Card className="p-6 space-y-4">
-        <div className="flex items-center gap-3 text-emerald-650 dark:text-emerald-400">
+        <div className="flex items-center gap-3 text-emerald-655 dark:text-emerald-400">
           <RotateCcw className="w-6 h-6" />
           <h2 className="text-lg font-black text-slate-900 dark:text-white">100% No-Questions-Asked Policy</h2>
         </div>
         <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-medium">
-          Since vegetables and fruits are perishable, we stand behind their quality. If you receive any produce that is bruised, damaged, under-ripe, or missing from your bag, we offer a hassle-free, no-questions-asked replacement or an instant wallet refund.
+          {publicSettings?.policy_refund || "Since vegetables and fruits are perishable, we stand behind their quality. If you receive any produce that is bruised, damaged, under-ripe, or missing from your bag, we offer a hassle-free, no-questions-asked replacement or an instant wallet refund."}
         </p>
       </Card>
 

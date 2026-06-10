@@ -13,7 +13,7 @@ import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 import { useToast } from "@/components/ui/Toast";
 
-type AdminTab = "overview" | "users" | "vendors" | "delivery" | "pricing" | "config" | "categories" | "coupons" | "banners" | "orders" | "liveops";
+type AdminTab = "overview" | "users" | "vendors" | "delivery" | "pricing" | "config" | "categories" | "coupons" | "banners" | "orders" | "liveops" | "cms" | "templates";
 
 function AdminOrdersPanel() {
   const { success, error: showError } = useToast();
@@ -1159,6 +1159,495 @@ function AdminLiveOpsPanel() {
   );
 }
 
+// ==================== ADMIN CMS PANEL ====================
+function AdminCmsPanel() {
+  const { success, error: showError } = useToast();
+  const queryClient = useQueryClient();
+  const [formData, setFormData] = useState<Record<string, string>>({
+    app_name: "",
+    app_logo_url: "",
+    app_primary_color: "",
+    seo_title: "",
+    seo_description: "",
+    seo_keywords: "",
+    policy_privacy: "",
+    policy_terms: "",
+    policy_refund: "",
+    about_us: "",
+    how_it_works: ""
+  });
+
+  const { data: settings = [], isLoading } = useQuery<any[]>({
+    queryKey: ["adminAllSettings"],
+    queryFn: async () => {
+      const res = await api.get("/admin/settings");
+      return res.data || [];
+    }
+  });
+
+  useEffect(() => {
+    if (settings.length > 0) {
+      const data: Record<string, string> = {};
+      settings.forEach((s: any) => {
+        data[s.key] = s.value || "";
+      });
+      setFormData(prev => ({ ...prev, ...data }));
+    }
+  }, [settings]);
+
+  const updateSettingMutation = useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: string }) => {
+      return api.patch(`/admin/settings/${key}`, { value });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminAllSettings"] });
+    }
+  });
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      for (const [key, value] of Object.entries(formData)) {
+        await updateSettingMutation.mutateAsync({ key, value });
+      }
+      success("CMS and branding settings saved successfully!");
+    } catch (err: any) {
+      showError("Save Failed", err.message || "Failed to update branding settings");
+    }
+  };
+
+  if (isLoading) {
+    return <div className="py-12 text-center text-slate-400 font-bold animate-pulse text-xs">Loading CMS configuration...</div>;
+  }
+
+  return (
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-6 text-slate-800 dark:text-slate-100 font-sans">
+      <div>
+        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Branding & Policies (CMS)</h3>
+        <p className="text-xs text-slate-500 mt-1">Manage public branding assets, SEO headers, and legal policy pages dynamically.</p>
+      </div>
+
+      <form onSubmit={handleSave} className="space-y-6 text-xs">
+        {/* Branding Section */}
+        <div className="space-y-4">
+          <h4 className="font-bold text-xs text-emerald-605 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 pb-2">Visual Branding</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">App Name</label>
+              <input
+                type="text"
+                value={formData.app_name}
+                onChange={e => setFormData(p => ({ ...p, app_name: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">Logo URL</label>
+              <input
+                type="text"
+                value={formData.app_logo_url}
+                onChange={e => setFormData(p => ({ ...p, app_logo_url: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">Primary Brand Color (Hex)</label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={formData.app_primary_color.startsWith("#") && formData.app_primary_color.length === 7 ? formData.app_primary_color : "#059669"}
+                  onChange={e => setFormData(p => ({ ...p, app_primary_color: e.target.value }))}
+                  className="w-10 h-10 border border-slate-200 dark:border-slate-800 rounded-xl cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={formData.app_primary_color}
+                  onChange={e => setFormData(p => ({ ...p, app_primary_color: e.target.value }))}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm font-mono focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SEO Metadata */}
+        <div className="space-y-4">
+          <h4 className="font-bold text-xs text-blue-600 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 pb-2">Global SEO Configuration</h4>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">Meta Title</label>
+              <input
+                type="text"
+                value={formData.seo_title}
+                onChange={e => setFormData(p => ({ ...p, seo_title: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">Meta Description</label>
+              <textarea
+                value={formData.seo_description}
+                onChange={e => setFormData(p => ({ ...p, seo_description: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white h-20"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">Meta Keywords (Comma separated)</label>
+              <input
+                type="text"
+                value={formData.seo_keywords}
+                onChange={e => setFormData(p => ({ ...p, seo_keywords: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Policies */}
+        <div className="space-y-4">
+          <h4 className="font-bold text-xs text-amber-600 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 pb-2">User Policies & Legal Clauses</h4>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">About Us Content</label>
+              <textarea
+                value={formData.about_us}
+                onChange={e => setFormData(p => ({ ...p, about_us: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white h-24"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">How It Works Content</label>
+              <textarea
+                value={formData.how_it_works}
+                onChange={e => setFormData(p => ({ ...p, how_it_works: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white h-24"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">Privacy Policy</label>
+              <textarea
+                value={formData.policy_privacy}
+                onChange={e => setFormData(p => ({ ...p, policy_privacy: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white h-32"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">Terms & Conditions</label>
+              <textarea
+                value={formData.policy_terms}
+                onChange={e => setFormData(p => ({ ...p, policy_terms: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white h-32"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">Refund & Cancellation Policy</label>
+              <textarea
+                value={formData.policy_refund}
+                onChange={e => setFormData(p => ({ ...p, policy_refund: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white h-32"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-4">
+          <button
+            type="submit"
+            disabled={updateSettingMutation.isPending}
+            className="bg-emerald-600 hover:bg-emerald-550 text-white font-bold text-xs px-6 py-3 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
+          >
+            <Save className="w-4 h-4" /> Save CMS Configurations
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ==================== ADMIN TEMPLATES PANEL ====================
+function AdminTemplatesPanel() {
+  const { success, error: showError } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  
+  const [templateForm, setTemplateForm] = useState({
+    name: "",
+    in_app_title: "",
+    in_app_body: "",
+    email_subject: "",
+    email_body: "",
+    sms_body: "",
+    push_title: "",
+    push_body: "",
+    channels: [] as string[],
+    is_active: true
+  });
+
+  const { data: templates = [], isLoading } = useQuery<any[]>({
+    queryKey: ["adminNotificationTemplates"],
+    queryFn: async () => {
+      const res = await api.get("/admin/notification-templates");
+      return res.data || [];
+    }
+  });
+
+  const selectedTemplate = templates.find((t: any) => t.id === selectedTemplateId);
+
+  useEffect(() => {
+    if (selectedTemplate) {
+      setTemplateForm({
+        name: selectedTemplate.name || "",
+        in_app_title: selectedTemplate.in_app_title || "",
+        in_app_body: selectedTemplate.in_app_body || "",
+        email_subject: selectedTemplate.email_subject || "",
+        email_body: selectedTemplate.email_body || "",
+        sms_body: selectedTemplate.sms_body || "",
+        push_title: selectedTemplate.push_title || "",
+        push_body: selectedTemplate.push_body || "",
+        channels: selectedTemplate.channels || [],
+        is_active: selectedTemplate.is_active ?? true
+      });
+    } else if (templates.length > 0 && !selectedTemplateId) {
+      setSelectedTemplateId(templates[0].id);
+    }
+  }, [selectedTemplate, templates, selectedTemplateId]);
+
+  const updateTemplateMutation = useMutation({
+    mutationFn: async ({ id, body }: { id: string; body: typeof templateForm }) => {
+      return api.put(`/admin/notification-templates/${id}`, body);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminNotificationTemplates"] });
+      success("Notification template updated successfully!");
+    },
+    onError: (err: any) => {
+      showError("Update Failed", err.response?.data?.detail || err.message);
+    }
+  });
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTemplateId) return;
+    updateTemplateMutation.mutate({ id: selectedTemplateId, body: templateForm });
+  };
+
+  const handleChannelToggle = (channel: string) => {
+    setTemplateForm(prev => {
+      const channels = prev.channels.includes(channel)
+        ? prev.channels.filter(c => c !== channel)
+        : [...prev.channels, channel];
+      return { ...prev, channels };
+    });
+  };
+
+  if (isLoading) {
+    return <div className="py-12 text-center text-slate-400 font-bold animate-pulse text-xs">Loading templates...</div>;
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start text-slate-800 dark:text-slate-100 font-sans">
+      {/* Sidebar - List of Templates */}
+      <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
+        <div>
+          <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Templates Registry</h3>
+          <p className="text-xs text-slate-500 mt-1">Select a notification or transactional email script to edit.</p>
+        </div>
+
+        <div className="space-y-2">
+          {templates.map((t: any) => (
+            <button
+              key={t.id}
+              onClick={() => setSelectedTemplateId(t.id)}
+              className={`w-full text-left p-3.5 rounded-xl border transition-all text-xs font-bold flex flex-col gap-1.5 cursor-pointer ${
+                selectedTemplateId === t.id
+                  ? "bg-slate-900 dark:bg-slate-850 text-white border-transparent"
+                  : "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:bg-slate-100 hover:dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+              }`}
+            >
+              <div className="flex justify-between items-center w-full">
+                <span className="truncate">{t.name}</span>
+                <span className={`px-1.5 py-0.5 rounded text-[8px] uppercase font-black ${
+                  t.is_active ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-500/20 text-slate-500"
+                }`}>
+                  {t.is_active ? "Active" : "Disabled"}
+                </span>
+              </div>
+              <span className="font-mono text-[9px] text-slate-400 font-normal">Key: {t.event_key}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Editor Form */}
+      <div className="lg:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+        {selectedTemplate ? (
+          <form onSubmit={handleSave} className="space-y-6 text-xs">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Edit: {templateForm.name}</h3>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">Event Code: {selectedTemplate.event_key}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-500 uppercase">Active Status</span>
+                <button
+                  type="button"
+                  onClick={() => setTemplateForm(p => ({ ...p, is_active: !p.is_active }))}
+                  className={`px-3 py-1.5 rounded-xl font-black text-[10px] uppercase border transition-all ${
+                    templateForm.is_active
+                      ? "bg-emerald-650 text-white border-transparent"
+                      : "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                  }`}
+                >
+                  {templateForm.is_active ? "Active" : "Disabled"}
+                </button>
+              </div>
+            </div>
+
+            {/* Template Name */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-500 uppercase">Template Name *</label>
+              <input
+                type="text"
+                required
+                value={templateForm.name}
+                onChange={e => setTemplateForm(p => ({ ...p, name: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white font-bold"
+              />
+            </div>
+
+            {/* Channels Checklist */}
+            <div className="space-y-2">
+              <label className="font-bold text-slate-500 uppercase">Active dispatch channels</label>
+              <div className="flex flex-wrap gap-3">
+                {["email", "sms", "push", "in_app"].map(ch => (
+                  <button
+                    key={ch}
+                    type="button"
+                    onClick={() => handleChannelToggle(ch)}
+                    className={`px-3 py-2 rounded-xl font-bold uppercase text-[9px] tracking-wider border cursor-pointer transition-all ${
+                      templateForm.channels.includes(ch)
+                        ? "bg-slate-900 dark:bg-slate-850 text-white border-transparent shadow-sm"
+                        : "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-450 hover:bg-slate-100"
+                    }`}
+                  >
+                    {ch.replace("_", " ")}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Content Fields based on selected channels */}
+            <div className="space-y-5">
+              {templateForm.channels.includes("email") && (
+                <div className="space-y-4 bg-slate-50/55 dark:bg-slate-950/20 p-5 rounded-2xl border border-slate-100 dark:border-slate-850">
+                  <h4 className="font-black text-[10px] text-slate-400 uppercase tracking-wider">Email template settings</h4>
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-500 uppercase">Email Subject</label>
+                      <input
+                        type="text"
+                        value={templateForm.email_subject}
+                        onChange={e => setTemplateForm(p => ({ ...p, email_subject: e.target.value }))}
+                        placeholder="e.g. Order #{{order_id}} confirmed!"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-500 uppercase">Email HTML/Plain Body</label>
+                      <textarea
+                        value={templateForm.email_body}
+                        onChange={e => setTemplateForm(p => ({ ...p, email_body: e.target.value }))}
+                        placeholder="Write email contents. You can use variables like {{first_name}}, {{order_id}}, {{total_amount}}."
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white h-44 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {templateForm.channels.includes("push") && (
+                <div className="space-y-4 bg-slate-50/55 dark:bg-slate-950/20 p-5 rounded-2xl border border-slate-100 dark:border-slate-850">
+                  <h4 className="font-black text-[10px] text-slate-400 uppercase tracking-wider">Mobile push settings</h4>
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-500 uppercase">Push Title</label>
+                      <input
+                        type="text"
+                        value={templateForm.push_title}
+                        onChange={e => setTemplateForm(p => ({ ...p, push_title: e.target.value }))}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-500 uppercase">Push message body</label>
+                      <textarea
+                        value={templateForm.push_body}
+                        onChange={e => setTemplateForm(p => ({ ...p, push_body: e.target.value }))}
+                        className="w-full px-4 py-2 text-xs border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white h-20"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {templateForm.channels.includes("sms") && (
+                <div className="space-y-4 bg-slate-50/55 dark:bg-slate-950/20 p-5 rounded-2xl border border-slate-100 dark:border-slate-850">
+                  <h4 className="font-black text-[10px] text-slate-400 uppercase tracking-wider">SMS text message settings</h4>
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-500 uppercase">SMS Text Content</label>
+                    <textarea
+                      value={templateForm.sms_body}
+                      onChange={e => setTemplateForm(p => ({ ...p, sms_body: e.target.value }))}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white h-24"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {templateForm.channels.includes("in_app") && (
+                <div className="space-y-4 bg-slate-50/55 dark:bg-slate-950/20 p-5 rounded-2xl border border-slate-100 dark:border-slate-850">
+                  <h4 className="font-black text-[10px] text-slate-400 uppercase tracking-wider">In-App notifications panel settings</h4>
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-500 uppercase">Panel notification title</label>
+                      <input
+                        type="text"
+                        value={templateForm.in_app_title}
+                        onChange={e => setTemplateForm(p => ({ ...p, in_app_title: e.target.value }))}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-500 uppercase">Panel notification body</label>
+                      <textarea
+                        value={templateForm.in_app_body}
+                        onChange={e => setTemplateForm(p => ({ ...p, in_app_body: e.target.value }))}
+                        className="w-full px-4 py-2 text-xs border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white h-20"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <button
+                type="submit"
+                disabled={updateTemplateMutation.isPending}
+                className="bg-emerald-600 hover:bg-emerald-555 text-white font-bold text-xs px-6 py-3 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
+              >
+                <Save className="w-4 h-4" /> {updateTemplateMutation.isPending ? "Saving Template..." : "Save Template Updates"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="py-24 text-center text-slate-400 text-xs font-semibold">Select a notification template from the list.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
@@ -1508,6 +1997,8 @@ export default function AdminDashboard() {
                   { id: "delivery", label: "Delivery Squad", icon: Truck },
                   { id: "pricing", label: "Fees & Pricing", icon: Coins },
                   { id: "config", label: "Global Settings", icon: Settings },
+                  { id: "cms", label: "Branding & Policies (CMS)", icon: Globe },
+                  { id: "templates", label: "Notification Templates", icon: Sparkles },
                   { id: "categories", label: "Product Categories", icon: Database },
                   { id: "coupons", label: "Discounts & Coupons", icon: Receipt },
                   { id: "banners", label: "Promotions & Banners", icon: Sparkles }
@@ -1565,6 +2056,8 @@ export default function AdminDashboard() {
               { id: "delivery", label: "Delivery Squad", icon: Truck },
               { id: "pricing", label: "Fees & Pricing", icon: Coins },
               { id: "config", label: "Global Settings", icon: Settings },
+              { id: "cms", label: "Branding & Policies (CMS)", icon: Globe },
+              { id: "templates", label: "Notification Templates", icon: Sparkles },
               { id: "categories", label: "Product Categories", icon: Database },
               { id: "coupons", label: "Discounts & Coupons", icon: Receipt },
               { id: "banners", label: "Promotions & Banners", icon: Sparkles }
@@ -1626,6 +2119,8 @@ export default function AdminDashboard() {
               {activeTab === "delivery" && "Delivery Partner Registrations"}
               {activeTab === "pricing" && "Platform Fees & Commission Rules"}
               {activeTab === "config" && "Application-wide Global Settings"}
+              {activeTab === "cms" && "Branding, Policies & SEO (CMS)"}
+              {activeTab === "templates" && "Notification & Email Templates"}
               {activeTab === "categories" && "Product Catalog Categories"}
               {activeTab === "coupons" && "Platform Discount Coupons"}
               {activeTab === "banners" && "Layout Promotional Banners"}
@@ -2400,6 +2895,12 @@ export default function AdminDashboard() {
           )}
           {activeTab === "liveops" && (
             <AdminLiveOpsPanel />
+          )}
+          {activeTab === "cms" && (
+            <AdminCmsPanel />
+          )}
+          {activeTab === "templates" && (
+            <AdminTemplatesPanel />
           )}
         </main>
       </div>

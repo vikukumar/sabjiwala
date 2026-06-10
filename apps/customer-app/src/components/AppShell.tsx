@@ -169,6 +169,7 @@ function ThemeCycleButton() {
 
 // ==================== HEADER ====================
 function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpenLocation: () => void }) {
+  const { data: publicSettings } = useQuery<any>({ queryKey: ["publicSettings"] });
   const queryClient = useQueryClient();
   const [locationName, setLocationName] = useState("Loading...");
 
@@ -207,9 +208,9 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
             <Menu className="w-5 h-5" />
           </button>
           <Link href={resolveLink("/")} className="flex items-center gap-2 flex-shrink-0">
-            <img src="/logo_horizontal.png" alt="Sbjiwala" className="h-8 w-auto object-contain" />
+            <img src={publicSettings?.app_logo_url || "/logo_horizontal.png"} alt={publicSettings?.app_name || "Sbjiwala"} className="h-8 w-auto object-contain" />
             <span className="hidden sm:inline-flex bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
-              Express
+              {publicSettings?.app_name || "Sbjiwala"} Express
             </span>
           </Link>
 
@@ -264,6 +265,7 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
 
 // ==================== SIDEBAR ====================
 function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isOpen?: boolean; onOpenLocation: () => void }) {
+  const { data: publicSettings } = useQuery<any>({ queryKey: ["publicSettings"] });
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -300,7 +302,8 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
       {/* Logo */}
       <div className="flex items-center justify-between p-6 border-b border-white/10">
         <div className="flex items-center gap-2">
-          <img src="/logo_horizontal.png" alt="Sbjiwala" className="h-7 w-auto object-contain brightness-0 invert" />
+          <img src={publicSettings?.app_logo_url || "/logo_horizontal.png"} alt={publicSettings?.app_name || "Sbjiwala"} className="h-7 w-auto object-contain brightness-0 invert" />
+          <span className="text-white font-black text-sm">{publicSettings?.app_name || "Sbjiwala"}</span>
         </div>
         {onClose && (
           <button
@@ -1230,6 +1233,76 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const { data: publicSettings } = useQuery<any>({
+    queryKey: ["publicSettings"],
+    queryFn: async () => {
+      const res = await api.get("/installation/public-settings");
+      return res.data || {};
+    }
+  });
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const brandName = publicSettings?.app_name || "Sbjiwala";
+    const title = publicSettings?.seo_title || `${brandName} - Kisan ke Ghar Se Apke Ghar tak`;
+    const desc = publicSettings?.seo_description || "direct-to-home hyper-local quick commerce platform delivering fresh farm vegetables and fruits straight from local farms to your home in 10 minutes.";
+    const keywords = publicSettings?.seo_keywords || "vegetables, fruits, organic, quick commerce, delivery";
+
+    document.title = title;
+    
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.setAttribute('name', 'description');
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute('content', desc);
+
+    let metaKey = document.querySelector('meta[name="keywords"]');
+    if (!metaKey) {
+      metaKey = document.createElement('meta');
+      metaKey.setAttribute('name', 'keywords');
+      document.head.appendChild(metaKey);
+    }
+    metaKey.setAttribute('content', keywords);
+
+  }, [publicSettings, pathname]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const primaryColor = publicSettings?.app_primary_color || "#059669";
+    
+    let styleTag = document.getElementById("dynamic-brand-styles");
+    if (!styleTag) {
+      styleTag = document.createElement("style");
+      styleTag.id = "dynamic-brand-styles";
+      document.head.appendChild(styleTag);
+    }
+    styleTag.innerHTML = `
+      :root {
+        --primary-brand-color: ${primaryColor};
+        --emerald-600: ${primaryColor};
+        --emerald-500: ${primaryColor};
+        --emerald-705: ${primaryColor};
+        --emerald-700: ${primaryColor};
+      }
+      .bg-emerald-600 { background-color: var(--primary-brand-color) !important; }
+      .text-emerald-600 { color: var(--primary-brand-color) !important; }
+      .hover\\:bg-emerald-600:hover { background-color: var(--primary-brand-color) !important; }
+      .hover\\:text-emerald-600:hover { color: var(--primary-brand-color) !important; }
+      .bg-emerald-500 { background-color: var(--primary-brand-color) !important; }
+      .text-emerald-505 { color: var(--primary-brand-color) !important; }
+      .text-emerald-500 { color: var(--primary-brand-color) !important; }
+      .border-emerald-500 { border-color: var(--primary-brand-color) !important; }
+      .focus\\:border-emerald-500:focus { border-color: var(--primary-brand-color) !important; }
+      .bg-emerald-100 { background-color: var(--primary-brand-color)1a !important; }
+      .text-emerald-700 { color: var(--primary-brand-color) !important; }
+    `;
+  }, [publicSettings]);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -1275,8 +1348,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isOnline, setIsOnline] = useState(true);
   const [serverAvailable, setServerAvailable] = useState(true);
 
-  const pathname = usePathname();
-  const router = useRouter();
+  // pathname and router moved to top of component
 
   // Helper to get stored user type from token
   const getStoredUserType = () => {
