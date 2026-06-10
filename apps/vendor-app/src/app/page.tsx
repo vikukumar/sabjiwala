@@ -1436,32 +1436,46 @@ export default function VendorDashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // Fast auth check — don't wait for anything else
+    const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
+    if (!token) {
+      // Use replace so native back button doesn't loop
+      window.location.replace("/vendor/login");
+      return;
+    }
+    setIsAuthed(true);
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
+    if (!isMounted) return;
     const isDark = document.documentElement.classList.contains("dark");
     setTheme(isDark ? "dark" : "light");
-  }, []);
+  }, [isMounted]);
 
-  // Check location permission on start
+  // Check location permission on start — only for web browsers, skip native
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    
-    // Check if running on native mobile platform
+    if (!isMounted || typeof window === "undefined") return;
+
+    // Skip if running on native mobile platform (Capacitor handles permissions natively)
     const isNative = !!(window as any).Capacitor;
     if (isNative) return;
 
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: "geolocation" as any }).then((result) => {
-        if (result.state !== "granted") {
-          setShowPermissionModal(true);
-        }
-      }).catch(() => {});
-    }
-  }, []);
+    // Small delay so it doesn't block initial render
+    const timer = setTimeout(() => {
+      if (navigator.permissions) {
+        navigator.permissions.query({ name: "geolocation" as any }).then((result) => {
+          if (result.state !== "granted") {
+            setShowPermissionModal(true);
+          }
+        }).catch(() => {});
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [isMounted]);
 
   const toggleTheme = () => {
     const nextTheme = theme === "light" ? "dark" : "light";
@@ -1474,12 +1488,6 @@ export default function VendorDashboard() {
     }
   };
 
-  // 1. Route Protection check
-  useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem("sw_access_token")) {
-      window.location.href = "/vendor/login";
-    }
-  }, []);
 
   // 2. Fetch metrics
   const { data: metricsData } = useQuery<any>({

@@ -3,6 +3,26 @@
   "appName": "Sbjiwala Delivery",
   "webDir": "out",
   "server": {
-    "androidScheme": "https"
+    "url": "https://delivery.sbjiwala.in",
+    "cleartext": false,
+    "androidScheme": "https",
+    "allowNavigation": [
+      "*.sbjiwala.in",
+      "sbjiwala.in"
+    ]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#090d10",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false
+    },
+    "Geolocation": {
+      "permissions": {
+        "location": ["coarse", "fine"]
+      }
+    }
   }
-}
+}
