@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, createContext, useContext } from "react";
+import React, { useState, useEffect, useRef, createContext, useContext, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -26,10 +26,10 @@ export const resolveLink = (href: string) => {
   const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
   if (isUnified) {
     if (
-      href.startsWith("/vendor") || 
-      href.startsWith("/delivery") || 
-      href.startsWith("/admin") || 
-      href.startsWith("/kyc") || 
+      href.startsWith("/vendor") ||
+      href.startsWith("/delivery") ||
+      href.startsWith("/admin") ||
+      href.startsWith("/kyc") ||
       href.startsWith("/users")
     ) {
       return href;
@@ -168,7 +168,7 @@ function ThemeCycleButton() {
 }
 
 // ==================== HEADER ====================
-function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpenLocation: () => void }) {
+function Header({ onMenuOpen, onOpenLocation, onOpenSearch }: { onMenuOpen: () => void; onOpenLocation: () => void; onOpenSearch: () => void }) {
   const { data: publicSettings } = useQuery<any>({
     queryKey: ["publicSettings"],
     queryFn: async () => {
@@ -237,13 +237,13 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
         </div>
 
         {/* Center: search (md+) */}
-        <Link
-          href={resolveLink("/search")}
-          className="hidden md:flex flex-1 max-w-sm mx-6 items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-600 transition-colors text-slate-400 dark:text-slate-500 text-sm cursor-text"
+        <button
+          onClick={onOpenSearch}
+          className="hidden md:flex flex-1 max-w-sm mx-6 items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2.5 border border-slate-205 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-600 transition-colors text-slate-400 dark:text-slate-500 text-sm cursor-text text-left focus:outline-none"
         >
           <Search className="w-4 h-4 flex-shrink-0" />
           <span>Search fresh vegetables & fruits...</span>
-        </Link>
+        </button>
 
         {/* Right: actions */}
         <div className="flex items-center gap-2">
@@ -357,15 +357,15 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
                 const resolvedHref = resolveLink(item.href);
                 return (
                   <li key={item.href}>
-                     <Link
-                       href={resolvedHref}
-                       onClick={(e) => {
-                         if (isProtectedRoute(resolvedHref) && !localStorage.getItem("sw_access_token")) {
-                           e.preventDefault();
-                           router.push(`${resolveLink("/login")}?redirect=${encodeURIComponent(resolvedHref)}`);
-                         }
-                         if (onClose) onClose();
-                       }}
+                    <Link
+                      href={resolvedHref}
+                      onClick={(e) => {
+                        if (isProtectedRoute(resolvedHref) && !localStorage.getItem("sw_access_token")) {
+                          e.preventDefault();
+                          router.push(`${resolveLink("/login")}?redirect=${encodeURIComponent(resolvedHref)}`);
+                        }
+                        if (onClose) onClose();
+                      }}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${active
                         ? "bg-emerald-600 text-white shadow-sm shadow-emerald-900/30"
                         : "text-slate-400 hover:text-white hover:bg-white/8"
@@ -427,7 +427,7 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
 }
 
 // ==================== BOTTOM NAV (Mobile) ====================
-function BottomNav() {
+function BottomNav({ onOpenSearch }: { onOpenSearch: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -455,6 +455,11 @@ function BottomNav() {
               key={item.href}
               href={resolvedHref}
               onClick={(e) => {
+                if (item.label === "Search") {
+                  e.preventDefault();
+                  onOpenSearch();
+                  return;
+                }
                 if (isProtectedRoute(resolvedHref) && !localStorage.getItem("sw_access_token")) {
                   e.preventDefault();
                   router.push(`${resolveLink("/login")}?redirect=${encodeURIComponent(resolvedHref)}`);
@@ -562,7 +567,7 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
         const lon = pos.coords.longitude;
         localStorage.setItem("sw_latitude", String(lat));
         localStorage.setItem("sw_longitude", String(lon));
-        
+
         let addressName = `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
         try {
           const res = await api.get("/maps/reverse-geocode", {
@@ -716,19 +721,8 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
         {slide < 4 ? (
           <div className="flex gap-3">
             <button
-              onClick={() => {
-                const isNative = typeof window !== "undefined" && !!(window as any).Capacitor;
-                if (isNative) {
-                  localStorage.setItem("sw_splash_onboarding", "completed");
-                  localStorage.setItem("sw_latitude", "19.0760");
-                  localStorage.setItem("sw_longitude", "72.8777");
-                  localStorage.setItem("sw_location_name", "Mumbai Center (Default)");
-                  onComplete();
-                } else {
-                  setSlide(4);
-                }
-              }}
-              className="flex-1 text-center text-xs font-black text-slate-500 hover:text-slate-400 tracking-wider uppercase py-3.5"
+              onClick={requestLocation}
+              className="flex-1 text-center text-xs font-black text-slate-550 hover:text-slate-400 tracking-wider uppercase py-3.5"
             >
               Skip
             </button>
@@ -751,15 +745,11 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
           <div className="space-y-3">
             <button
               onClick={() => {
-                localStorage.setItem("sw_splash_onboarding", "completed");
-                localStorage.setItem("sw_latitude", "19.0760");
-                localStorage.setItem("sw_longitude", "72.8777");
-                localStorage.setItem("sw_location_name", "Mumbai Center (Default)");
-                onComplete();
+                setShowManualPicker(true);
               }}
-              className="w-full text-center text-xs font-black text-slate-550 hover:text-slate-400 tracking-wider uppercase py-2"
+              className="w-full text-center text-xs font-black text-emerald-500 hover:text-emerald-450 tracking-wider uppercase py-2"
             >
-              Skip for now
+              Choose Neighborhood
             </button>
           </div>
         )}
@@ -821,6 +811,127 @@ function NotificationBenefitModal({ onClose, onGrant }: NotificationModalProps) 
   );
 }
 
+// ==================== INLINE SEARCH MODAL ====================
+interface InlineSearchModalProps {
+  onClose: () => void;
+}
+
+function InlineSearchModal({ onClose }: InlineSearchModalProps) {
+  const [query, setQuery] = useState(() => {
+    if (typeof window !== "undefined" && (window as any).__initial_search_query) {
+      const q = (window as any).__initial_search_query;
+      (window as any).__initial_search_query = "";
+      return q;
+    }
+    return "";
+  });
+
+  useEffect(() => {
+    const handleOpen = (e: any) => {
+      if (e.detail?.query) setQuery(e.detail.query);
+    };
+    window.addEventListener("sw_open_search_modal", handleOpen as any);
+    return () => window.removeEventListener("sw_open_search_modal", handleOpen as any);
+  }, []);
+
+  const router = useRouter();
+
+  const { data: results = [], isLoading } = useQuery<any[]>({
+    queryKey: ["inlineSearch", query],
+    queryFn: async () => {
+      if (query.trim().length < 2) return [];
+      const res = await api.get("/catalog/products", { params: { limit: 50, search: query.trim() } });
+      return res.data || [];
+    },
+    enabled: query.trim().length >= 2,
+  });
+
+  const filtered = useMemo(() => {
+    if (!results.length) return [];
+    const q = query.toLowerCase();
+
+    let list = results.filter((p: any) =>
+      p.name.toLowerCase().includes(q) ||
+      (p.description && p.description.toLowerCase().includes(q))
+    );
+
+    if (typeof window !== "undefined") {
+      const nearestVendor = localStorage.getItem("sw_nearest_vendor_id");
+      if (nearestVendor && nearestVendor !== "null") {
+        list = list.filter((p: any) => {
+          const vId = p.attributes?.vendor_id || p.vendor_id || p.vendor?.id;
+          return String(vId) === String(nearestVendor);
+        });
+      }
+    }
+
+    return list.slice(0, 8);
+  }, [results, query]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={onClose} />
+      <div className="relative bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 max-w-xl w-full shadow-2xl animate-scale-in flex flex-col max-h-[70vh]">
+        <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <Search className="w-5 h-5 text-emerald-500 animate-pulse flex-shrink-0" />
+          <input
+            autoFocus
+            type="text"
+            placeholder="Type to search fresh vegetables & fruits..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="flex-1 bg-transparent text-sm font-semibold focus:outline-none text-slate-850 dark:text-white"
+          />
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-605 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto mt-4 pr-1 space-y-3 scrollbar-hide">
+          {query.trim().length < 2 ? (
+            <p className="text-xs text-slate-400 text-center py-8">Type at least 2 characters to search...</p>
+          ) : isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="w-5 h-5 animate-spin text-emerald-600" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-xs text-slate-450 text-center py-8">No items match your search.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-1.5">
+              {filtered.map((prod: any) => {
+                const price = Math.round((prod.attributes?.price ?? prod.price ?? 30) * 1.045 * 100) / 100;
+                return (
+                  <div key={prod.id} className="flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-900/40 rounded-2xl transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-800/50">
+                    <Link href={resolveLink(`/products/${prod.id}`)} onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-3xl p-1 bg-slate-55 dark:bg-slate-900 rounded-xl select-none">{prod.attributes?.image_emoji || "🥬"}</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-900 dark:text-white truncate">{prod.name}</p>
+                        <p className="text-[10px] text-slate-550 dark:text-slate-450">{prod.unit || "1 kg"}</p>
+                      </div>
+                    </Link>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black text-slate-900 dark:text-white">₹{price.toFixed(2)}</span>
+                      <button
+                        onClick={() => {
+                          router.push(resolveLink(`/products/${prod.id}`));
+                          onClose();
+                        }}
+                        className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white dark:bg-emerald-950/30 dark:hover:bg-emerald-600 dark:text-emerald-400 dark:hover:text-white text-[10px] font-black px-3 py-1.5 rounded-xl border border-emerald-250 dark:border-emerald-900/40 transition-all uppercase tracking-wider"
+                      >
+                        View
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ==================== APP SHELL ====================
 // ==================== STARTUP PERMISSIONS MODAL ====================
 interface UnifiedPermissionsModalProps {
@@ -872,7 +983,7 @@ function UnifiedPermissionsModal({ onClose, onPermissionGranted }: UnifiedPermis
         const lon = pos.coords.longitude;
         localStorage.setItem("sw_latitude", String(lat));
         localStorage.setItem("sw_longitude", String(lon));
-        
+
         let addressName = `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
         try {
           const res = await api.get("/maps/reverse-geocode", {
@@ -1264,7 +1375,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const keywords = publicSettings?.seo_keywords || "vegetables, fruits, organic, quick commerce, delivery";
 
     document.title = title;
-    
+
     let metaDesc = document.querySelector('meta[name="description"]');
     if (!metaDesc) {
       metaDesc = document.createElement('meta');
@@ -1286,7 +1397,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof document === "undefined") return;
     const primaryColor = publicSettings?.app_primary_color || "#059669";
-    
+
     let styleTag = document.getElementById("dynamic-brand-styles");
     if (!styleTag) {
       styleTag = document.createElement("style");
@@ -1320,6 +1431,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [inlineSearchOpen, setInlineSearchOpen] = useState(false);
 
   // Load saved default address and set as active location on login
   const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
@@ -1332,28 +1444,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     enabled: typeof window !== "undefined" && !!token,
   });
 
+  // Removed default address override to ensure it takes real-time user end coordinates
   useEffect(() => {
-    if (typeof window !== "undefined" && appAddresses && appAddresses.length > 0) {
-      const defaultAddress = appAddresses.find((a: any) => a.is_default) || appAddresses[0];
-      if (defaultAddress && defaultAddress.latitude && defaultAddress.longitude) {
-        const currentLat = localStorage.getItem("sw_latitude");
-        // Only override if the current latitude is empty or is the default dummy latitude
-        if (!currentLat || currentLat === "19.0760" || currentLat === "19.076") {
-          localStorage.setItem("sw_latitude", String(defaultAddress.latitude));
-          localStorage.setItem("sw_longitude", String(defaultAddress.longitude));
-          const addressLabel = defaultAddress.formatted_address || `${defaultAddress.address_line_1}, ${defaultAddress.city}`;
-          localStorage.setItem("sw_location_name", addressLabel);
-          window.dispatchEvent(new Event("sw_location_updated"));
-        }
-      }
-    }
-  }, [appAddresses]);
+    // Geolocation is fetched real-time from user end
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleOpen = () => setShowLocationModal(true);
+    const handleSearchOpen = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && customEvent.detail.query) {
+        (window as any).__initial_search_query = customEvent.detail.query;
+      }
+      setInlineSearchOpen(true);
+    };
     window.addEventListener("sw_open_location_modal", handleOpen);
-    return () => window.removeEventListener("sw_open_location_modal", handleOpen);
+    window.addEventListener("sw_open_search_modal", handleSearchOpen);
+    return () => {
+      window.removeEventListener("sw_open_location_modal", handleOpen);
+      window.removeEventListener("sw_open_search_modal", handleSearchOpen);
+    };
   }, []);
 
   // Network State
@@ -1382,7 +1493,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Guard check for unauthenticated users & role restrictions
   useEffect(() => {
     if (typeof window === "undefined") return;
-    
+
     const isProtected = isProtectedRoute(pathname);
     const hasToken = !!localStorage.getItem("sw_access_token");
     const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
@@ -1390,8 +1501,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     // Auto-prepend /app for customer routes in unified mode
     if (isUnified) {
       const customerPaths = [
-        "/cart", "/checkout", "/orders", "/wishlist", "/profile", "/search", 
-        "/categories", "/offers", "/coupons", "/notifications", "/support", 
+        "/cart", "/checkout", "/orders", "/wishlist", "/profile", "/search",
+        "/categories", "/offers", "/coupons", "/notifications", "/support",
         "/settings", "/about", "/faq", "/how-it-works", "/privacy", "/terms", "/refund-policy"
       ];
       const matchingPath = customerPaths.find(p => pathname === p || pathname.startsWith(p + "/"));
@@ -1409,7 +1520,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const isVendorAuthPath = pathname === "/vendor/login" || pathname === "/vendor/register";
     const isDeliveryAuthPath = pathname === "/delivery/login" || pathname === "/delivery/register";
     const isAdminAuthPath = pathname === "/admin/login" || pathname === "/admin/setup";
-    const isCustomerAuthPath = isUnified 
+    const isCustomerAuthPath = isUnified
       ? (pathname === "/app/login" || pathname === "/app/register")
       : (pathname === "/login" || pathname === "/register");
 
@@ -1546,11 +1657,40 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // On mount, if geolocation permission is granted, immediately call navigator.geolocation.getCurrentPosition
+  useEffect(() => {
+    if (typeof window === "undefined" || !navigator.geolocation) return;
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: "geolocation" }).then((result) => {
+        if (result.state === "granted") {
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              const lat = pos.coords.latitude;
+              const lon = pos.coords.longitude;
+              localStorage.setItem("sw_latitude", String(lat));
+              localStorage.setItem("sw_longitude", String(lon));
+
+              let addressName = `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+              try {
+                const res = await api.get("/maps/reverse-geocode", { params: { lat, lon } });
+                if (res.success && res.data?.formatted_address) {
+                  addressName = res.data.formatted_address;
+                }
+              } catch { }
+              localStorage.setItem("sw_location_name", addressName);
+              window.dispatchEvent(new Event("sw_location_updated"));
+            },
+            () => { }
+          );
+        }
+      });
+    }
+  }, []);
+
   // Check permissions on app start if onboarding is completed
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Check if running on native mobile platform
     const isNative = !!(window as any).Capacitor;
     if (isNative) return;
 
@@ -1587,16 +1727,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const handleGlobalClick = (e: MouseEvent) => {
       const target = (e.target as HTMLElement).closest("a");
       if (!target) return;
-      
+
       const href = target.getAttribute("href");
       if (
-        href && 
-        href.startsWith("/") && 
-        !href.startsWith("/app") && 
-        !href.startsWith("/vendor") && 
-        !href.startsWith("/delivery") && 
-        !href.startsWith("/admin") && 
-        !href.startsWith("/kyc") && 
+        href &&
+        href.startsWith("/") &&
+        !href.startsWith("/app") &&
+        !href.startsWith("/vendor") &&
+        !href.startsWith("/delivery") &&
+        !href.startsWith("/admin") &&
+        !href.startsWith("/kyc") &&
         !href.startsWith("/users")
       ) {
         const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
@@ -1681,7 +1821,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col h-full md:ml-64 min-w-0 max-w-full pt-[env(safe-area-inset-top)]">
 
           {/* Header sits naturally at the top, no absolute/fixed/sticky needed */}
-          <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} />
+          <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} onOpenSearch={() => setInlineSearchOpen(true)} />
 
           {/* 2. THE MAGIC IS HERE: Only this container is allowed to scroll */}
           <main className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0 page-enter max-w-full">
@@ -1690,7 +1830,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         </div>
 
-        <BottomNav />
+        <BottomNav onOpenSearch={() => setInlineSearchOpen(true)} />
 
         {/* Location Selection Modal */}
         {showLocationModal && (
@@ -1723,6 +1863,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             onClose={() => setShowNotifModal(false)}
             onGrant={handleRequestNotif}
           />
+        )}
+
+        {inlineSearchOpen && (
+          <InlineSearchModal onClose={() => setInlineSearchOpen(false)} />
         )}
       </div>
     </AppShellContext.Provider>

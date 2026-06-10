@@ -125,7 +125,11 @@ async def browse_products(
             area = area_res.scalars().first()
             vendor_radius = float(area.radius_km) if (area and area.radius_km is not None) else 10.0
             
-            if store and store.latitude is not None and store.longitude is not None:
+            if area and area.center_latitude is not None and area.center_longitude is not None:
+                p_attrs["vendor_latitude"] = area.center_latitude
+                p_attrs["vendor_longitude"] = area.center_longitude
+                p_attrs["vendor_radius_km"] = vendor_radius
+            elif store and store.latitude is not None and store.longitude is not None:
                 p_attrs["vendor_latitude"] = store.latitude
                 p_attrs["vendor_longitude"] = store.longitude
                 p_attrs["vendor_radius_km"] = vendor_radius

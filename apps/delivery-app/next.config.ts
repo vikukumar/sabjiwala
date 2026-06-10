@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: process.env.NODE_ENV === "production" ? 'standalone' : process.env.NODE_ENV === "development" ? undefined : "export",
+  output: process.env.NODE_ENV === "development" ? undefined : "export",
   trailingSlash: true,
   experimental: {
     externalDir: true,
@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   transpilePackages: ["@sbjiwala/shared"],
+  env: {
+    NEXT_PUBLIC_APP_MODE: "delivery",
+  },
 };
 
 export default nextConfig;

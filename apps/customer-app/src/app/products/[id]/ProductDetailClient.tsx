@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
+import { resolveLink } from "@/components/AppShell";
 import { Star, Plus, Minus, Heart, Share2, ChevronLeft, ShoppingCart, Truck, Leaf, ShieldCheck, ArrowRight, Tag } from "lucide-react";
 import { Button, Badge, Skeleton, EmptyState } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
@@ -37,6 +38,41 @@ export default function ProductDetailClient() {
   const { data: product, isLoading } = useQuery<any>({
     queryKey: ["product", id],
     queryFn: async () => { const r = await api.get(`/catalog/products/${id}`); return r.data; },
+  });
+
+  const pathname = usePathname();
+
+  // Fetch wishlist
+  const { data: wishlist = [] } = useQuery<any[]>({
+    queryKey: ["wishlist"],
+    queryFn: async () => {
+      const res = await api.get("/wishlist");
+      return res.data || [];
+    },
+    enabled: typeof window !== "undefined" && !isGuest,
+  });
+
+  const wishlistItem = wishlist.find((w: any) => w.product_id === id);
+  const isWishlisted = !!wishlistItem;
+
+  // Toggle wishlist item
+  const toggleWishlist = useMutation({
+    mutationFn: async () => {
+      if (isGuest) {
+        router.push(`${resolveLink("/login")}?redirect=${encodeURIComponent(pathname)}`);
+        return;
+      }
+      if (isWishlisted) {
+        await api.delete(`/wishlist/${wishlistItem.id}`);
+      } else {
+        await api.post("/wishlist", { product_id: id });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+      success(isWishlisted ? "Removed from wishlist" : "Added to wishlist");
+    },
+    onError: (err: any) => showError("Failed to update wishlist", err.response?.data?.detail || err.message),
   });
 
   // Read backend cart
@@ -192,8 +228,13 @@ export default function ProductDetailClient() {
             </span>
           )}
           <span className="text-[110px] leading-none drop-shadow-lg">{emoji}</span>
-          <button className="absolute top-4 right-4 p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 transition-transform">
-            <Heart className="w-4 h-4 text-slate-400 hover:text-rose-500 transition-colors" />
+          <button
+            onClick={() => toggleWishlist.mutate()}
+            disabled={toggleWishlist.isPending}
+            className="absolute top-4 right-4 p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 active:scale-95 transition-all text-slate-455 hover:text-rose-550 cursor-pointer"
+            aria-label={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+          >
+            <Heart className={`w-4 h-4 transition-colors ${isWishlisted ? "fill-rose-500 text-rose-500" : "text-slate-400"}`} />
           </button>
           <button className="absolute top-14 right-4 p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 transition-transform">
             <Share2 className="w-4 h-4 text-slate-400" />
@@ -208,8 +249,8 @@ export default function ProductDetailClient() {
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{product.unit || "500g"}</p>
             </div>
             <div className="text-right flex-shrink-0">
-              <p className="text-2xl font-black text-slate-900 dark:text-white">₹{price}</p>
-              {hasDiscount && <p className="text-sm text-slate-400 line-through">₹{mrp}</p>}
+              <p className="text-2xl font-black text-slate-900 dark:text-white">₹{price.toFixed(2)}</p>
+              {hasDiscount && <p className="text-sm text-slate-400 line-through">₹{mrp?.toFixed(2)}</p>}
             </div>
           </div>
 
@@ -279,8 +320,8 @@ export default function ProductDetailClient() {
       <div className="fixed bottom-16 md:bottom-0 left-0 right-0 md:left-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 z-30">
         <div className="max-w-2xl mx-auto flex items-center gap-4">
           <div>
-            <p className="text-xl font-black text-slate-900 dark:text-white">₹{price}</p>
-            {hasDiscount && <p className="text-xs text-slate-400 line-through">₹{mrp}</p>}
+            <p className="text-xl font-black text-slate-900 dark:text-white">₹{price.toFixed(2)}</p>
+            {hasDiscount && <p className="text-xs text-slate-400 line-through">₹{mrp?.toFixed(2)}</p>}
           </div>
           <div className="flex-1">
             {cartItem ? (

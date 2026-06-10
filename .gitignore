@@ -152,3 +152,5 @@ apps/backend/Storage
 apps/backend/storage
 # tmp/copy_shared.py
 # tmp/fix_node_modules.py
+scratch
+scratch/
