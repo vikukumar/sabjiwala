@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, createContext, useContext } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -19,6 +19,8 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 
+// Default is false, meaning no AppShell is currently active
+const AppShellContext = createContext(false);
 // ==================== ROUTE PROTECTION helper ====================
 export const isProtectedRoute = (path: string) => {
   const protectedPrefixes = [
@@ -131,7 +133,7 @@ function ThemeCycleButton() {
     <button
       onClick={cycle}
       title={`Current: ${cfg.label} — Click to cycle theme`}
-      className="p-2 sm:p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all border border-slate-200 dark:border-slate-700 text-sm"
+      className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all border border-slate-200 dark:border-slate-700 text-sm"
     >
       {cfg.emoji}
     </button>
@@ -166,19 +168,19 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
   const cartCount = cartData?.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0;
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+    <header className="sticky fixed fixed-top top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
       <div className="flex items-center justify-between h-16 px-4 md:px-6 max-w-7xl mx-auto">
         {/* Left: menu (mobile) + logo + location selector */}
-        <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1 md:flex-initial">
+        <div className="flex items-center gap-2 min-w-0 flex-1 md:flex-initial">
           <button
             onClick={onMenuOpen}
-            className="md:hidden p-1.5 sm:p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors flex-shrink-0"
+            className="md:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors flex-shrink-0"
             aria-label="Open menu"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <Link href="/" className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-            <img src="/logo_horizontal.png" alt="Sbjiwala" className="h-7 sm:h-8 w-auto object-contain" />
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+            <img src="/logo_horizontal.png" alt="Sbjiwala" className="h-8 w-auto object-contain" />
             <span className="hidden sm:inline-flex bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
               Express
             </span>
@@ -187,14 +189,14 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
           {/* Location dropdown display */}
           <div
             onClick={onOpenLocation}
-            className="flex items-center gap-0.5 sm:gap-1 cursor-pointer max-w-[90px] xs:max-w-[120px] sm:max-w-[180px] md:max-w-[220px] ml-1 sm:ml-2 text-left hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex-shrink min-w-0"
+            className="flex items-center gap-1 cursor-pointer max-w-[130px] sm:max-w-[180px] md:max-w-[220px] ml-2 text-left hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex-shrink min-w-0"
           >
-            <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 flex-shrink-0 animate-bounce" />
+            <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0 animate-bounce" />
             <div className="min-w-0 leading-none">
-              <span className="text-[7px] sm:text-[8px] text-slate-400 font-extrabold uppercase tracking-wider block">Deliver to</span>
-              <span className="text-[10px] sm:text-xs font-black text-slate-700 dark:text-slate-200 truncate flex items-center gap-0.5 block">
+              <span className="text-[8px] text-slate-400 font-extrabold uppercase tracking-wider block">Deliver to</span>
+              <span className="text-xs font-black text-slate-700 dark:text-slate-200 truncate flex items-center gap-0.5 block">
                 {locationName}
-                <span className="text-emerald-500 text-[8px] sm:text-[9px]">▼</span>
+                <span className="text-emerald-500 text-[9px]">▼</span>
               </span>
             </div>
           </div>
@@ -210,14 +212,14 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
         </Link>
 
         {/* Right: actions */}
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-2">
           <ThemeCycleButton />
-          <Link href="/notifications" className="relative p-1.5 sm:p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <Link href="/notifications" className="relative p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             <Bell className="w-5 h-5 text-slate-600 dark:text-slate-300" />
           </Link>
           <Link
             href="/cart"
-            className="relative p-1.5 sm:p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="relative p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             aria-label={`Cart with ${cartCount} items`}
           >
             <ShoppingCart className="w-5 h-5 text-slate-600 dark:text-slate-300" />
@@ -1004,7 +1006,7 @@ function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalPro
           const addressName = res.success && res.data?.formatted_address
             ? res.data.formatted_address
             : `Coordinates: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-          
+
           onSelect(latitude, longitude, addressName);
         } catch (err) {
           console.error("Reverse geocoding failed, using coordinates as name:", err);
@@ -1026,7 +1028,7 @@ function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalPro
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      
+
       {/* Card */}
       <div className="relative bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full animate-scale-in text-slate-800 dark:text-white space-y-4 shadow-2xl flex flex-col max-h-[85vh]">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -1057,7 +1059,7 @@ function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalPro
             </>
           )}
         </button>
-        
+
         {gpsError && (
           <p className="text-[10px] text-rose-500 font-bold text-center -mt-2">{gpsError}</p>
         )}
@@ -1158,6 +1160,14 @@ function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalPro
 
 // ==================== APP SHELL ====================
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  // Check if we are already inside an AppShell
+  const isInsideAppShell = useContext(AppShellContext);
+
+  // If yes, ignore the shell and just render the children
+  if (isInsideAppShell) {
+    return <>{children}</>;
+  }
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -1324,53 +1334,56 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex max-w-full">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenLocation={() => setShowLocationModal(true)} />
+    <AppShellContext.Provider value={true}>
+      <div className="min-h-screen flex max-w-full">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenLocation={() => setShowLocationModal(true)} />
 
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col md:ml-64 min-w-0 max-w-full pt-[env(safe-area-inset-top)]">
-        <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} />
+        {/* Main content area */}
+        <div className="flex-1 flex flex-col md:ml-64 min-w-0 max-w-full pt-[env(safe-area-inset-top)]">
+          <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} />
 
-        {/* Page content */}
-        <main className="flex-1 pb-20 md:pb-0 page-enter max-w-full overflow-x-hidden">
-          {children}
-        </main>
+          {/* Page content */}
+          <main className="flex-1 pb-20 md:pb-0 page-enter max-w-full overflow-x-hidden">
+            {children}
+          </main>
+        </div>
+
+        <BottomNav />
+
+        {/* Location Selection Modal */}
+        {showLocationModal && (
+          <LocationSelectionModal
+            onClose={() => setShowLocationModal(false)}
+            onSelect={(lat, lon, name) => {
+              localStorage.setItem("sw_latitude", String(lat));
+              localStorage.setItem("sw_longitude", String(lon));
+              localStorage.setItem("sw_location_name", name);
+              window.dispatchEvent(new Event("sw_location_updated"));
+              setShowLocationModal(false);
+            }}
+          />
+        )}
+
+        {/* Startup Permissions Modal */}
+        {showPermissionsModal && (
+          <UnifiedPermissionsModal
+            onClose={() => setShowPermissionsModal(false)}
+            onPermissionGranted={() => {
+              // refresh page state/items
+              window.location.reload();
+            }}
+          />
+        )}
+
+        {/* Contextual Notification Modal Overlay */}
+        {showNotifModal && (
+          <NotificationBenefitModal
+            onClose={() => setShowNotifModal(false)}
+            onGrant={handleRequestNotif}
+          />
+        )}
       </div>
+    </AppShellContext.Provider>
 
-      <BottomNav />
-
-      {/* Location Selection Modal */}
-      {showLocationModal && (
-        <LocationSelectionModal
-          onClose={() => setShowLocationModal(false)}
-          onSelect={(lat, lon, name) => {
-            localStorage.setItem("sw_latitude", String(lat));
-            localStorage.setItem("sw_longitude", String(lon));
-            localStorage.setItem("sw_location_name", name);
-            window.dispatchEvent(new Event("sw_location_updated"));
-            setShowLocationModal(false);
-          }}
-        />
-      )}
-
-      {/* Startup Permissions Modal */}
-      {showPermissionsModal && (
-        <UnifiedPermissionsModal
-          onClose={() => setShowPermissionsModal(false)}
-          onPermissionGranted={() => {
-            // refresh page state/items
-            window.location.reload();
-          }}
-        />
-      )}
-
-      {/* Contextual Notification Modal Overlay */}
-      {showNotifModal && (
-        <NotificationBenefitModal
-          onClose={() => setShowNotifModal(false)}
-          onGrant={handleRequestNotif}
-        />
-      )}
-    </div>
   );
 }

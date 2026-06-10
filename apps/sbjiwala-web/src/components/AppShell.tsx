@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, createContext, useContext } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -19,6 +19,8 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 
+// Default is false, meaning no AppShell is currently active
+const AppShellContext = createContext(false);
 // ==================== ROUTE PROTECTION helper ====================
 export const isProtectedRoute = (path: string) => {
   const protectedPrefixes = [
@@ -166,7 +168,7 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
   const cartCount = cartData?.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0;
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+    <header className="sticky fixed fixed-top top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
       <div className="flex items-center justify-between h-16 px-4 md:px-6 max-w-7xl mx-auto">
         {/* Left: menu (mobile) + logo + location selector */}
         <div className="flex items-center gap-2 min-w-0 flex-1 md:flex-initial">
@@ -1004,7 +1006,7 @@ function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalPro
           const addressName = res.success && res.data?.formatted_address
             ? res.data.formatted_address
             : `Coordinates: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-          
+
           onSelect(latitude, longitude, addressName);
         } catch (err) {
           console.error("Reverse geocoding failed, using coordinates as name:", err);
@@ -1026,7 +1028,7 @@ function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalPro
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      
+
       {/* Card */}
       <div className="relative bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full animate-scale-in text-slate-800 dark:text-white space-y-4 shadow-2xl flex flex-col max-h-[85vh]">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -1057,7 +1059,7 @@ function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalPro
             </>
           )}
         </button>
-        
+
         {gpsError && (
           <p className="text-[10px] text-rose-500 font-bold text-center -mt-2">{gpsError}</p>
         )}
@@ -1158,6 +1160,14 @@ function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalPro
 
 // ==================== APP SHELL ====================
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  // Check if we are already inside an AppShell
+  const isInsideAppShell = useContext(AppShellContext);
+
+  // If yes, ignore the shell and just render the children
+  if (isInsideAppShell) {
+    return <>{children}</>;
+  }
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -1324,53 +1334,56 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex max-w-full">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenLocation={() => setShowLocationModal(true)} />
+    <AppShellContext.Provider value={true}>
+      <div className="min-h-screen flex max-w-full">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenLocation={() => setShowLocationModal(true)} />
 
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col md:ml-64 min-w-0 max-w-full pt-[env(safe-area-inset-top)]">
-        <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} />
+        {/* Main content area */}
+        <div className="flex-1 flex flex-col md:ml-64 min-w-0 max-w-full pt-[env(safe-area-inset-top)]">
+          <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} />
 
-        {/* Page content */}
-        <main className="flex-1 pb-20 md:pb-0 page-enter max-w-full overflow-x-hidden">
-          {children}
-        </main>
+          {/* Page content */}
+          <main className="flex-1 pb-20 md:pb-0 page-enter max-w-full overflow-x-hidden">
+            {children}
+          </main>
+        </div>
+
+        <BottomNav />
+
+        {/* Location Selection Modal */}
+        {showLocationModal && (
+          <LocationSelectionModal
+            onClose={() => setShowLocationModal(false)}
+            onSelect={(lat, lon, name) => {
+              localStorage.setItem("sw_latitude", String(lat));
+              localStorage.setItem("sw_longitude", String(lon));
+              localStorage.setItem("sw_location_name", name);
+              window.dispatchEvent(new Event("sw_location_updated"));
+              setShowLocationModal(false);
+            }}
+          />
+        )}
+
+        {/* Startup Permissions Modal */}
+        {showPermissionsModal && (
+          <UnifiedPermissionsModal
+            onClose={() => setShowPermissionsModal(false)}
+            onPermissionGranted={() => {
+              // refresh page state/items
+              window.location.reload();
+            }}
+          />
+        )}
+
+        {/* Contextual Notification Modal Overlay */}
+        {showNotifModal && (
+          <NotificationBenefitModal
+            onClose={() => setShowNotifModal(false)}
+            onGrant={handleRequestNotif}
+          />
+        )}
       </div>
+    </AppShellContext.Provider>
 
-      <BottomNav />
-
-      {/* Location Selection Modal */}
-      {showLocationModal && (
-        <LocationSelectionModal
-          onClose={() => setShowLocationModal(false)}
-          onSelect={(lat, lon, name) => {
-            localStorage.setItem("sw_latitude", String(lat));
-            localStorage.setItem("sw_longitude", String(lon));
-            localStorage.setItem("sw_location_name", name);
-            window.dispatchEvent(new Event("sw_location_updated"));
-            setShowLocationModal(false);
-          }}
-        />
-      )}
-
-      {/* Startup Permissions Modal */}
-      {showPermissionsModal && (
-        <UnifiedPermissionsModal
-          onClose={() => setShowPermissionsModal(false)}
-          onPermissionGranted={() => {
-            // refresh page state/items
-            window.location.reload();
-          }}
-        />
-      )}
-
-      {/* Contextual Notification Modal Overlay */}
-      {showNotifModal && (
-        <NotificationBenefitModal
-          onClose={() => setShowNotifModal(false)}
-          onGrant={handleRequestNotif}
-        />
-      )}
-    </div>
   );
 }
