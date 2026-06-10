@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
-  output: "export",
+  output: process.env.NODE_ENV === "production" ? 'standalone' : "export",
   experimental: {
     externalDir: true,
   },
