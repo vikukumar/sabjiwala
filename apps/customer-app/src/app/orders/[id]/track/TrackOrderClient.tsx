@@ -89,8 +89,8 @@ export default function TrackOrderClient() {
 
       const customerLat = order.delivery_address?.latitude || 19.0735;
       const customerLng = order.delivery_address?.longitude || 72.9985;
-      const storeLat = 19.0760; // Seeded store lat
-      const storeLng = 72.9977; // Seeded store lng
+      const storeLat = order.vendor_store?.latitude || 19.0760;
+      const storeLng = order.vendor_store?.longitude || 72.9977;
 
       const initDriverLat = driverLocation?.latitude || storeLat;
       const initDriverLng = driverLocation?.longitude || storeLng;

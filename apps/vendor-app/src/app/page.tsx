@@ -1454,7 +1454,7 @@ export default function VendorDashboard() {
     if (message.type === "order_status_update") {
       queryClient.invalidateQueries({ queryKey: ["vendorOrders"] });
       queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
-      if (message.data?.status === "confirmed") {
+      if (message.data?.status === "confirmed" || message.data?.status === "assigned") {
         success("New Order! 🔔", `Order #${message.data?.order_number || ""} received. Click to Accept.`);
       }
     }
@@ -1924,7 +1924,6 @@ export default function VendorDashboard() {
                             }`}>
                               {order.status}
                             </span>
-                          </div>
  
                           {order.status === "pending" && (
                             <button
@@ -1934,7 +1933,7 @@ export default function VendorDashboard() {
                               Awaiting Payment
                             </button>
                           )}
-                          {order.status === "confirmed" && (
+                          {(order.status === "confirmed" || order.status === "assigned") && (
                             <button
                               onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: "accepted", notes: "Order accepted by vendor" })}
                               disabled={updateStatusMutation.isPending}

@@ -1,6 +1,7 @@
 """
 Wishlist API endpoints.
 """
+from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
@@ -119,16 +120,20 @@ async def add_to_wishlist(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # Check if already in wishlist
+    # Check if already in wishlist (including soft-deleted ones)
     stmt = select(Wishlist).where(
         Wishlist.user_id == current_user["user_id"],
         Wishlist.product_id == body.product_id,
-        Wishlist.is_deleted == False
     )
     res = await db.execute(stmt)
     existing = res.scalars().first()
     if existing:
-        return APIResponse(success=True, message="Product already in wishlist", data={"id": str(existing.id)})
+        if existing.is_deleted:
+            existing.is_deleted = False
+            existing.updated_at = datetime.now(timezone.utc)
+            existing.updated_by = current_user["user_id"]
+            await db.flush()
+        return APIResponse(success=True, message="Product added to wishlist", data={"id": str(existing.id)})
 
     # Create wishlist entry
     wishlist_item = Wishlist(

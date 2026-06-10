@@ -201,7 +201,7 @@ async def list_orders(
 
     if status_filter:
         if role in ["vendor", "vendor_manager"] and status_filter == "pending":
-            query = query.where(Order.status.in_([OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.ACCEPTED]))
+            query = query.where(Order.status.in_([OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.ACCEPTED, OrderStatus.ASSIGNED]))
         else:
             query = query.where(Order.status == status_filter)
 
@@ -248,6 +248,18 @@ async def get_order_details(
 
     # Construct the response model with delivery boy details
     res_data = OrderResponse.model_validate(order)
+    
+    # Fetch vendor store details
+    from app.models.vendor import VendorStore
+    store_res = await db.execute(select(VendorStore).where(VendorStore.vendor_id == order.vendor_id))
+    store = store_res.scalars().first()
+    if store:
+        res_data.vendor_store = {
+            "name": store.store_name,
+            "latitude": store.latitude,
+            "longitude": store.longitude,
+            "address": store.address_line_1,
+        }
     
     if order.delivery_boy_id:
         from app.models.user import User

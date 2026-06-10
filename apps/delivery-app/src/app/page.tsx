@@ -768,14 +768,22 @@ export default function DeliveryAgentDashboard() {
     if (!isOnline || !wsRef.current) return;
     const interval = setInterval(() => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        const activeDelivery = assignments?.find((a: any) => a.status === "out_for_delivery");
         wsRef.current.send(JSON.stringify({
           type: "location_update",
-          data: { latitude: globalPos[0], longitude: globalPos[1], accuracy: 10, speed: 5, heading: 0 }
+          data: {
+            latitude: globalPos[0],
+            longitude: globalPos[1],
+            accuracy: 10,
+            speed: 5,
+            heading: 0,
+            order_id: activeDelivery ? activeDelivery.id : null
+          }
         }));
       }
     }, 4000);
     return () => clearInterval(interval);
-  }, [globalPos, isOnline]);
+  }, [globalPos, isOnline, assignments]);
 
   const toggleOnlineMutation = useMutation({
     mutationFn: async (online: boolean) => api.patch("/delivery/availability", { is_available: online }),

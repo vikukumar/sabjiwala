@@ -158,20 +158,23 @@ async def add_to_cart(
     # Get or create cart
     cart = await _get_or_create_cart(current_user["user_id"], vendor_id, db)
 
-    # Check if item already in cart
+    # Check if item already in cart (including soft-deleted ones)
     existing = await db.execute(
         select(CartItem).where(
             CartItem.cart_id == cart.id,
             CartItem.product_id == body.product_id,
             CartItem.variant_id == body.variant_id,
             CartItem.vendor_id == vendor_id,
-            CartItem.is_deleted == False,
         )
     )
     cart_item = existing.scalars().first()
 
     if cart_item:
-        cart_item.quantity += body.quantity
+        if cart_item.is_deleted:
+            cart_item.is_deleted = False
+            cart_item.quantity = body.quantity
+        else:
+            cart_item.quantity += body.quantity
         cart_item.unit_price = float(price.price)
     else:
         cart_item = CartItem(

@@ -277,20 +277,32 @@ export default function OrderDetailClient() {
         </h2>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between text-slate-600 dark:text-slate-400">
-            <span>Item Total</span><span>₹{(order.total_amount - (order.delivery_fee || 0)).toFixed(2)}</span>
+            <span>Item Total</span><span>₹{Number(order.subtotal || 0).toFixed(2)}</span>
           </div>
+          {Number(order.packaging_charge || 0) > 0 && (
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
+              <span>Packaging & Handling</span><span>₹{Number(order.packaging_charge).toFixed(2)}</span>
+            </div>
+          )}
+          {Number(order.tax_amount || 0) > 0 && (
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
+              <span>Taxes (5%)</span><span>₹{Number(order.tax_amount).toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-slate-600 dark:text-slate-400">
-            <span>Delivery Fee</span>
-            <span className={order.delivery_fee === 0 ? "text-emerald-600 font-bold" : ""}>{order.delivery_fee === 0 ? "FREE" : `₹${order.delivery_fee}`}</span>
+            <span>Delivery Partner Fee</span>
+            <span className={Number(order.delivery_charge || 0) === 0 ? "text-emerald-600 font-bold" : ""}>
+              {Number(order.delivery_charge || 0) === 0 ? "FREE" : `₹${Number(order.delivery_charge).toFixed(2)}`}
+            </span>
           </div>
-          {order.discount_amount > 0 && (
+          {Number(order.discount_amount || 0) > 0 && (
             <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-              <span>Discount</span><span>-₹{order.discount_amount}</span>
+              <span>Discount</span><span>-₹{Number(order.discount_amount).toFixed(2)}</span>
             </div>
           )}
           <hr className="border-slate-200 dark:border-slate-800" />
           <div className="flex justify-between font-black text-slate-900 dark:text-white text-base">
-            <span>Total Paid</span><span>₹{order.total_amount}</span>
+            <span>Total Paid</span><span>₹{Number(order.total_amount || 0).toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>Payment</span><span className="uppercase">{order.payment_method} · {order.payment_status}</span>

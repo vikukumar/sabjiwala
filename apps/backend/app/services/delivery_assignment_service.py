@@ -110,29 +110,45 @@ class DeliveryAssignmentService:
         if not boy:
             return False
 
+        # Fetch order details
+        order_res = await self.db.execute(select(Order).where(Order.id == order_id))
+        order = order_res.scalars().first()
+        if not order:
+            logger.warning("Order not found for delivery assignment", order_id=str(order_id))
+            return False
+
+        old_status = order.status
+        new_status = old_status
+        if old_status in [OrderStatus.PENDING, OrderStatus.CONFIRMED]:
+            new_status = OrderStatus.ASSIGNED
+
         # Assign
-        await self.db.execute(
-            update(Order)
-            .where(Order.id == order_id)
-            .values(
-                delivery_boy_id=boy.user_id,
-                status=OrderStatus.ASSIGNED,
-            )
-        )
+        order.delivery_boy_id = boy.user_id
+        order.status = new_status
 
         # Update delivery boy load
         boy.current_order_count += 1
         boy.availability = AvailabilityStatus.ON_DELIVERY
 
         # Record history
-        history = OrderStatusHistory(
-            order_id=order_id,
-            from_status=OrderStatus.PENDING.value,
-            to_status=OrderStatus.ASSIGNED.value,
-            changed_by=None,
-            changed_by_type="system",
-            notes=f"Automatically assigned delivery personnel (ID: {boy.user_id})",
-        )
+        if old_status != new_status:
+            history = OrderStatusHistory(
+                order_id=order_id,
+                from_status=old_status.value if old_status else None,
+                to_status=new_status.value,
+                changed_by=None,
+                changed_by_type="system",
+                notes=f"Automatically assigned delivery personnel (ID: {boy.user_id})",
+            )
+        else:
+            history = OrderStatusHistory(
+                order_id=order_id,
+                from_status=old_status.value,
+                to_status=old_status.value,
+                changed_by=None,
+                changed_by_type="system",
+                notes=f"Automatically assigned delivery personnel (ID: {boy.user_id}) without changing preparation status",
+            )
         self.db.add(history)
         await self.db.flush()
 
@@ -140,10 +156,6 @@ class DeliveryAssignmentService:
         try:
             from app.websocket.manager import ws_manager
             from datetime import datetime, timezone
-            
-            # Fetch order details
-            order_res = await self.db.execute(select(Order).where(Order.id == order_id))
-            order = order_res.scalars().first()
             
             vendor_res = await self.db.execute(select(Vendor).where(Vendor.id == order.vendor_id))
             vendor = vendor_res.scalars().first()
@@ -153,14 +165,13 @@ class DeliveryAssignmentService:
                 "type": "order_status_update",
                 "data": {
                     "order_id": str(order_id),
-                    "order_number": order.order_number if order else "",
-                    "status": OrderStatus.ASSIGNED.value,
+                    "order_number": order.order_number,
+                    "status": order.status.value,
                     "delivery_boy_id": str(boy.user_id),
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }
             }
-            if order:
-                await ws_manager.send_to_user(order.user_id, ws_payload)
+            await ws_manager.send_to_user(order.user_id, ws_payload)
             if vendor_user_id:
                 await ws_manager.send_to_user(vendor_user_id, ws_payload)
             await ws_manager.send_to_user(boy.user_id, ws_payload)

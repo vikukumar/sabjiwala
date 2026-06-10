@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Generic, List, Optional, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 T = TypeVar("T")
 
@@ -382,6 +382,28 @@ class CheckoutRequest(BaseModel):
     use_wallet: bool = False
     wallet_amount: Optional[float] = None
 
+class OrderItemResponse(BaseModel):
+    id: UUID
+    product_id: UUID
+    variant_id: Optional[UUID] = None
+    vendor_id: UUID
+    product_name: str
+    name: str = Field(validation_alias="product_name")
+    variant_name: Optional[str] = None
+    product_image_url: Optional[str] = None
+    unit: str
+    quantity: float
+    unit_price: float
+    total_price: float
+
+    @computed_field
+    @property
+    def attributes(self) -> dict:
+        return {"image_emoji": self.product_image_url or "🥬"}
+
+    class Config:
+        from_attributes = True
+
 class OrderResponse(BaseModel):
     id: UUID
     order_number: str
@@ -400,6 +422,8 @@ class OrderResponse(BaseModel):
     created_at: datetime
     delivery_otp: Optional[str] = None
     delivery_agent: Optional[dict] = None
+    items: Optional[List[OrderItemResponse]] = None
+    vendor_store: Optional[dict] = None
 
     class Config:
         from_attributes = True
