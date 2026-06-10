@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail, Phone, ArrowRight, ShieldCheck, Loader2, Sparkles, User, Lock } from "lucide-react";
 import { api } from "@sbjiwala/shared";
+import { encryptPayload } from "@/components/ui/crypto";
 
 export default function LoginPage() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -143,12 +144,13 @@ export default function LoginPage() {
 
     setSubmitLoading(true);
     try {
-      const res = await api.post("/auth/otp/verify", {
+      const encrypted = await encryptPayload({
         email,
         otp,
         purpose: "login",
         role: "delivery_boy"
       });
+      const res = await api.post("/auth/otp/verify", encrypted);
 
       if (res.success && res.meta) {
         api.setTokens(res.meta.access_token, res.meta.refresh_token);
@@ -176,7 +178,8 @@ export default function LoginPage() {
 
     setSubmitLoading(true);
     try {
-      const res = await api.post("/auth/login", { email, password, role: "delivery_boy" });
+      const encrypted = await encryptPayload({ email, password, role: "delivery_boy" });
+      const res = await api.post("/auth/login", encrypted);
       if (res.success && res.meta) {
         api.setTokens(res.meta.access_token, res.meta.refresh_token);
         setSuccessMsg("Logged in successfully! Redirecting...");

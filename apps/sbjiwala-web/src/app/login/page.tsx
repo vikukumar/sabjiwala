@@ -10,6 +10,7 @@ import {
 import { api } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import { Button, Input, Divider } from "@/components/ui/index";
+import { encryptPayload } from "@/components/ui/crypto";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -216,12 +217,13 @@ function LoginPageContent() {
     }
     setLoading(true);
     try {
-      const res = await api.post("/auth/otp/verify", {
+      const encrypted = await encryptPayload({
         identifier: otpIdentifier,
         otp: code,
         purpose: "login",
         role: "customer"
       });
+      const res = await api.post("/auth/otp/verify", encrypted);
       
       const userType = res.data?.user_type;
       validateUserRole(userType);
@@ -266,11 +268,12 @@ function LoginPageContent() {
     }
     setLoading(true);
     try {
-      const res = await api.post("/auth/login", {
+      const encrypted = await encryptPayload({
         identifier: passwordState.identifier,
         password: passwordState.password,
         role: "customer"
       });
+      const res = await api.post("/auth/login", encrypted);
 
       const userType = res.data?.user_type;
       validateUserRole(userType);

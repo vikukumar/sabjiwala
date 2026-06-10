@@ -42,6 +42,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     await logger.ainfo("Starting Sbjiwala Backend", version="1.0.0", env=settings.APP_ENV)
 
+    # Generate E2EE RSA keypair dynamically for this startup session
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048
+    )
+    app.state.rsa_private_key = private_key
+    app.state.rsa_public_key = private_key.public_key()
+    await logger.ainfo("E2EE Dynamic RSA Keypair generated successfully")
+
     # Run auto schema evolution
     await schema_evolution_engine.evolve(db_engine)
     await logger.ainfo("Schema evolution completed")
@@ -124,17 +134,20 @@ def create_app() -> FastAPI:
     if os.path.exists(ui_dir):
         class SPAStaticFiles(StaticFiles):
             async def get_response(self, path: str, scope) -> Response:
+                directory = self.directory
+                if not directory:
+                    raise RuntimeError("StaticFiles directory is not configured")
                 # If path has no extension, check if path + ".html" exists
                 if path and not os.path.splitext(path)[1]:
                     html_path = f"{path}.html"
-                    full_html_path = os.path.join(self.directory, html_path)
+                    full_html_path = os.path.join(directory, html_path)
                     if os.path.isfile(full_html_path):
                         path = html_path
                 try:
                     return await super().get_response(path, scope)
                 except Exception:
                     # Fallback to index.html for SPA client-side routing
-                    index_path = os.path.join(self.directory, "index.html")
+                    index_path = os.path.join(directory, "index.html")
                     if os.path.isfile(index_path):
                         return FileResponse(index_path)
                     raise

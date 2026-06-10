@@ -159,6 +159,8 @@ async def register(
 
             # Send registration OTP to existing user
             verification_identifier = existing_user.email if (existing_user.email and existing_user.phone) else (existing_user.email or existing_user.phone)
+            if not verification_identifier:
+                raise HTTPException(status_code=400, detail="User email or phone is required")
             redis = await _get_redis(request)
             otp_res = await send_otp(redis, verification_identifier, purpose="register")
             if not otp_res["success"]:
@@ -196,7 +198,7 @@ async def register(
         "delivery_boy": UserType.DELIVERY_BOY,
         "admin": UserType.ADMIN,
     }
-    user_type = role_to_type.get(body.role, UserType.CUSTOMER)
+    user_type = role_to_type.get(body.role, UserType.CUSTOMER) if body.role is not None else UserType.CUSTOMER
 
     # Create user - set as unverified and inactive until OTP is verified
     user = User(
@@ -298,6 +300,9 @@ async def register(
 
     # Send registration OTP (prioritize email if both provided, else whichever is available)
     verification_identifier = body.email if (body.email and body.phone) else (body.email or body.phone)
+    if not verification_identifier:
+        raise HTTPException(status_code=400, detail="Email or phone number is required")
+
     redis = await _get_redis(request)
     otp_res = await send_otp(redis, verification_identifier, purpose="register")
     if not otp_res["success"]:
@@ -374,6 +379,66 @@ async def verify_and_resolve_user_role(db: AsyncSession, user_id: UUID, requeste
     raise HTTPException(status_code=403, detail=f"User does not have the {requested_role_name} role")
 
 
+def _decrypt_payload_if_needed(request: Request, body) -> Optional[dict]:
+    """Decrypt the body using E2EE RSA/AES if E2EE fields are present."""
+    if not (hasattr(body, "encrypted_key") and body.encrypted_key and body.encrypted_payload and body.iv and body.tag):
+        return None
+        
+    private_key = getattr(request.app.state, "rsa_private_key", None)
+    if not private_key:
+        raise HTTPException(status_code=400, detail="E2EE key not configured on server")
+        
+    import base64
+    import json
+    from cryptography.hazmat.primitives.asymmetric import padding
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    try:
+        # 1. Decrypt the AES session key using server's RSA private key (OAEP with SHA-256)
+        encrypted_key = base64.b64decode(body.encrypted_key)
+        aes_key = private_key.decrypt(
+            encrypted_key,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+        
+        # 2. Decrypt the actual payload using the decrypted AES session key (AES-256-GCM)
+        iv = base64.b64decode(body.iv)
+        tag = base64.b64decode(body.tag)
+        ciphertext = base64.b64decode(body.encrypted_payload)
+        
+        aesgcm = AESGCM(aes_key)
+        decrypted_bytes = aesgcm.decrypt(iv, ciphertext + tag, None)
+        
+        return json.loads(decrypted_bytes.decode("utf-8"))
+    except Exception as e:
+        logger.error("E2EE Payload decryption failed", error=str(e))
+        raise HTTPException(status_code=400, detail="E2EE payload decryption failed")
+
+
+@router.get("/e2ee/key", response_model=APIResponse)
+async def get_e2ee_public_key(request: Request):
+    """Retrieve the server's public key for E2EE payload encryption."""
+    public_key = getattr(request.app.state, "rsa_public_key", None)
+    if not public_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="E2EE public key not generated or server starting up"
+        )
+    
+    from cryptography.hazmat.primitives import serialization
+    pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    ).decode("utf-8")
+    
+    return APIResponse(success=True, data={"public_key": pem})
+
+
 @router.post("/login", response_model=APIResponse[UserResponse])
 async def login(
     body: LoginRequest,
@@ -381,6 +446,16 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ):
     """Login with email/phone/username and password."""
+    # Check for E2EE payload
+    decrypted = _decrypt_payload_if_needed(request, body)
+    if decrypted:
+        body.identifier = decrypted.get("identifier")
+        body.email = decrypted.get("email")
+        body.phone = decrypted.get("phone")
+        body.password = decrypted.get("password")
+        body.device_id = decrypted.get("device_id")
+        body.role = decrypted.get("role")
+
     identifier = body.identifier or body.email or body.phone
     if not identifier:
         raise HTTPException(status_code=400, detail="Identifier (email, phone, or username) is required")
@@ -524,6 +599,17 @@ async def verify_login_otp(
     db: AsyncSession = Depends(get_db),
 ):
     """Verify OTP and log in / activate user."""
+    # Check for E2EE payload
+    decrypted = _decrypt_payload_if_needed(request, body)
+    if decrypted:
+        body.identifier = decrypted.get("identifier")
+        body.email = decrypted.get("email")
+        body.phone = decrypted.get("phone")
+        body.otp = decrypted.get("otp")
+        body.purpose = decrypted.get("purpose", "login")
+        body.device_id = decrypted.get("device_id")
+        body.role = decrypted.get("role")
+
     identifier = body.identifier or body.phone or body.email
     if not identifier:
         raise HTTPException(status_code=400, detail="Identifier (phone, email, or username) is required")
@@ -541,6 +627,12 @@ async def verify_login_otp(
         target_identifier = user.email
     else:
         target_identifier = user.email or user.phone
+
+    if not target_identifier:
+        raise HTTPException(status_code=400, detail="User email or phone is missing")
+
+    if not body.otp:
+        raise HTTPException(status_code=400, detail="OTP is required")
 
     result = await verify_otp(redis, target_identifier, body.otp, body.purpose)
 
@@ -1096,10 +1188,12 @@ async def passkey_register_verify(
         db.add(profile)
         await db.flush()
 
-    if not profile.preferences:
-        profile.preferences = {}
+    preferences = profile.preferences
+    if preferences is None:
+        preferences = {}
+        profile.preferences = preferences
     
-    passkeys = profile.preferences.get("passkeys", [])
+    passkeys = preferences.get("passkeys", [])
     
     # Check if credential already exists
     for pk in passkeys:
@@ -1114,7 +1208,8 @@ async def passkey_register_verify(
     })
 
     from sqlalchemy.orm.attributes import flag_modified
-    profile.preferences["passkeys"] = passkeys
+    preferences["passkeys"] = passkeys
+    profile.preferences = preferences
     flag_modified(profile, "preferences")
     
     # Also mark user as having verification done if register purpose was used

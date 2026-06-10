@@ -510,11 +510,26 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         setLocPermission("granted");
-        localStorage.setItem("sw_latitude", String(pos.coords.latitude));
-        localStorage.setItem("sw_longitude", String(pos.coords.longitude));
-        localStorage.setItem("sw_location_name", "My Precise Location");
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        localStorage.setItem("sw_latitude", String(lat));
+        localStorage.setItem("sw_longitude", String(lon));
+        
+        let addressName = `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+        try {
+          const res = await api.get("/maps/reverse-geocode", {
+            params: { lat, lon }
+          });
+          if (res.success && res.data?.formatted_address) {
+            addressName = res.data.formatted_address;
+          }
+        } catch (err) {
+          console.error("Splash screen reverse geocoding failed:", err);
+        }
+
+        localStorage.setItem("sw_location_name", addressName);
         localStorage.setItem("sw_perm_location", "granted");
         localStorage.setItem("sw_splash_onboarding", "completed");
         onComplete();
@@ -805,11 +820,27 @@ function UnifiedPermissionsModal({ onClose, onPermissionGranted }: UnifiedPermis
   const requestGeo = () => {
     if (typeof window === "undefined" || !("geolocation" in navigator)) return;
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         setGeoState("granted");
-        localStorage.setItem("sw_latitude", String(pos.coords.latitude));
-        localStorage.setItem("sw_longitude", String(pos.coords.longitude));
-        localStorage.setItem("sw_location_name", "My Precise Location");
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        localStorage.setItem("sw_latitude", String(lat));
+        localStorage.setItem("sw_longitude", String(lon));
+        
+        let addressName = `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+        try {
+          const res = await api.get("/maps/reverse-geocode", {
+            params: { lat, lon }
+          });
+          if (res.success && res.data?.formatted_address) {
+            addressName = res.data.formatted_address;
+          }
+        } catch (err) {
+          console.error("Unified permissions reverse geocoding failed:", err);
+        }
+
+        localStorage.setItem("sw_location_name", addressName);
+        window.dispatchEvent(new Event("sw_location_updated"));
       },
       () => setGeoState("denied")
     );
@@ -1181,13 +1212,51 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Guard check for unauthenticated users
+  // Helper to get stored user type from token
+  const getStoredUserType = () => {
+    if (typeof window === "undefined") return null;
+    const token = localStorage.getItem("sw_access_token");
+    if (!token) return null;
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload).user_type;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // Guard check for unauthenticated users & role restrictions
   useEffect(() => {
     if (typeof window === "undefined") return;
+    
     const isProtected = isProtectedRoute(pathname);
     const hasToken = !!localStorage.getItem("sw_access_token");
+    
     if (isProtected && !hasToken) {
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+      return;
+    }
+
+    // Role and sub-app isolation checks
+    const isStandaloneCustomer = window.location.port === "3000" || !!(window as any).Capacitor;
+    const isVendorPath = pathname.startsWith("/vendor") || pathname.startsWith("/kyc");
+    const isDeliveryPath = pathname.startsWith("/delivery");
+    const isAdminPath = pathname.startsWith("/admin") || pathname.startsWith("/users");
+
+    if (isStandaloneCustomer && (isVendorPath || isDeliveryPath || isAdminPath)) {
+      router.replace("/");
+      return;
+    }
+
+    if (hasToken) {
+      const role = getStoredUserType();
+      if (role === "customer" && (isVendorPath || isDeliveryPath || isAdminPath)) {
+        router.replace("/");
+      }
     }
   }, [pathname, router]);
 

@@ -345,3 +345,523 @@ export function Tabs({ tabs, active, onChange, className = "" }: TabsProps) {
     </div>
   );
 }
+
+// ==================== CHECKBOX ====================
+interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
+  label?: React.ReactNode;
+  error?: string;
+}
+
+export function Checkbox({ label, error, className = "", id, ...props }: CheckboxProps) {
+  const defaultId = React.useId();
+  const checkboxId = id || defaultId;
+  return (
+    <div className="space-y-1">
+      <label htmlFor={checkboxId} className="inline-flex items-center gap-2.5 cursor-pointer select-none text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <input
+          type="checkbox"
+          id={checkboxId}
+          className={`
+            w-4 h-4 rounded border-slate-350 text-emerald-650 focus:ring-emerald-500
+            dark:border-slate-700 dark:bg-slate-900 transition-colors
+            cursor-pointer ${className}
+          `}
+          {...props}
+        />
+        {label && <span>{label}</span>}
+      </label>
+      {error && <p className="text-xs text-rose-500 dark:text-rose-400 font-medium">{error}</p>}
+    </div>
+  );
+}
+
+// ==================== RADIO & RADIO GROUP ====================
+interface RadioGroupProps {
+  children: React.ReactNode;
+  value?: string;
+  onChange?: (val: string) => void;
+  name?: string;
+  className?: string;
+}
+
+interface RadioProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "onChange"> {
+  label?: React.ReactNode;
+  value: string;
+}
+
+const RadioGroupContext = React.createContext<{
+  value?: string;
+  onChange?: (val: string) => void;
+  name?: string;
+}>({});
+
+export function RadioGroup({ children, value, onChange, name, className = "" }: RadioGroupProps) {
+  return (
+    <RadioGroupContext.Provider value={{ value, onChange, name }}>
+      <div className={`space-y-2 ${className}`} role="radiogroup">
+        {children}
+      </div>
+    </RadioGroupContext.Provider>
+  );
+}
+
+export function Radio({ label, value, className = "", id, ...props }: RadioProps) {
+  const context = React.useContext(RadioGroupContext);
+  const defaultId = React.useId();
+  const radioId = id || defaultId;
+  const isChecked = context.value !== undefined ? context.value === value : props.checked;
+
+  return (
+    <label htmlFor={radioId} className="inline-flex items-center gap-2.5 cursor-pointer select-none text-sm font-semibold text-slate-700 dark:text-slate-300">
+      <input
+        type="radio"
+        id={radioId}
+        name={context.name || props.name}
+        value={value}
+        checked={isChecked}
+        onChange={(e) => context.onChange?.(e.target.value)}
+        className={`
+          w-4 h-4 border-slate-350 text-emerald-650 focus:ring-emerald-500
+          dark:border-slate-700 dark:bg-slate-900 transition-colors
+          cursor-pointer ${className}
+        `}
+        {...props}
+      />
+      {label && <span>{label}</span>}
+    </label>
+  );
+}
+
+// ==================== SELECT ====================
+interface SelectProps {
+  label?: string;
+  value?: string;
+  onChange?: (val: string) => void;
+  placeholder?: string;
+  options: { value: string; label: string }[];
+  error?: string;
+  className?: string;
+}
+
+export function Select({ label, value, onChange, placeholder = "Select option", options, error, className = "" }: SelectProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  
+  React.useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value);
+
+  return (
+    <div className="space-y-1.5 relative w-full" ref={containerRef}>
+      {label && (
+        <label className="block text-sm font-semibold text-slate-705 dark:text-slate-300">
+          {label}
+        </label>
+      )}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`
+          flex items-center justify-between input-base px-4 py-3 text-sm text-left w-full
+          ${error ? "border-rose-450 dark:border-rose-500" : ""}
+          ${className}
+        `}
+      >
+        <span className={selectedOption ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500"}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <span className="text-slate-400 dark:text-slate-500 text-xs">▼</span>
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto dropdown-enter py-1">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange?.(opt.value);
+                setIsOpen(false);
+              }}
+              className={`
+                w-full text-left px-4 py-2.5 text-xs font-bold transition-all
+                ${opt.value === value 
+                  ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400" 
+                  : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                }
+              `}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {error && <p className="text-xs text-rose-550 dark:text-rose-400 font-medium">{error}</p>}
+    </div>
+  );
+}
+
+// ==================== DROPDOWN ====================
+interface DropdownProps {
+  trigger: React.ReactNode;
+  children: React.ReactNode;
+  align?: "left" | "right";
+  className?: string;
+}
+
+export function Dropdown({ trigger, children, align = "right", className = "" }: DropdownProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  return (
+    <div className="relative inline-block text-left" ref={containerRef}>
+      <div onClick={() => setIsOpen(!isOpen)} className="cursor-pointer">{trigger}</div>
+      {isOpen && (
+        <div
+          className={`
+            absolute mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg z-50 py-2 min-w-[160px] dropdown-enter
+            ${align === "right" ? "right-0" : "left-0"}
+            ${className}
+          `}
+          onClick={() => setIsOpen(false)}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== TABLE ====================
+interface TableColumn<T> {
+  key: string;
+  header: React.ReactNode;
+  render?: (row: T) => React.ReactNode;
+}
+
+interface TableProps<T> {
+  columns: TableColumn<T>[];
+  data: T[];
+  searchKey?: keyof T;
+  filterComponent?: React.ReactNode;
+  pageSize?: number;
+  onRowClick?: (row: T) => void;
+  className?: string;
+}
+
+export function Table<T extends { id: string | number }>({
+  columns,
+  data,
+  searchKey,
+  filterComponent,
+  pageSize = 5,
+  onRowClick,
+  className = "",
+}: TableProps<T>) {
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [currentPage, setCurrentPage] = React.useState(1);
+
+  // Filter logic
+  const filteredData = React.useMemo(() => {
+    if (!searchKey || !searchQuery) return data;
+    return data.filter((row) => {
+      const val = row[searchKey];
+      return String(val).toLowerCase().includes(searchQuery.toLowerCase());
+    });
+  }, [data, searchKey, searchQuery]);
+
+  // Pagination logic
+  const paginatedData = React.useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredData.slice(start, start + pageSize);
+  }, [filteredData, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredData.length / pageSize) || 1;
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  return (
+    <div className={`space-y-4 ${className}`}>
+      {/* Search & Filter Header */}
+      {(searchKey || filterComponent) && (
+        <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+          {searchKey && (
+            <div className="relative w-full sm:max-w-xs">
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="input-base pl-10 pr-4 py-2 text-xs font-semibold"
+              />
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-xs">🔍</span>
+            </div>
+          )}
+          {filterComponent && <div className="w-full sm:w-auto">{filterComponent}</div>}
+        </div>
+      )}
+
+      {/* Table Structure */}
+      <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm bg-white dark:bg-slate-900">
+        <table className="w-full border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850/50">
+              {columns.map((col, idx) => (
+                <th key={idx} className="px-6 py-4 text-xs font-extrabold uppercase tracking-wider text-slate-450 dark:text-slate-400">
+                  {col.header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+            {paginatedData.length > 0 ? (
+              paginatedData.map((row) => (
+                <tr
+                  key={row.id}
+                  onClick={() => onRowClick?.(row)}
+                  className={`
+                    transition-colors
+                    ${onRowClick ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30" : ""}
+                  `}
+                >
+                  {columns.map((col, idx) => (
+                    <td key={idx} className="px-6 py-4 text-slate-700 dark:text-slate-200 align-middle font-medium">
+                      {col.render ? col.render(row) : (row[col.key as keyof T] as any)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={columns.length} className="px-6 py-12 text-center text-sm font-semibold text-slate-400">
+                  No records found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination Footer */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-2">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(currentPage + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== DIALOG (MODAL) ====================
+interface DialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function Dialog({ isOpen, onClose, title, children, className = "" }: DialogProps) {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm overlay-enter" onClick={onClose} />
+      
+      {/* Content */}
+      <div className={`relative bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full animate-scale-in text-slate-800 dark:text-white space-y-4 shadow-2xl z-10 ${className}`}>
+        {title && (
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+            <h3 className="text-base font-black tracking-tight">{title}</h3>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-650 transition-colors">
+              ✕
+            </button>
+          </div>
+        )}
+        <div>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== CONFIRM / ALERT / INPUT DIALOGS ====================
+interface ConfirmDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: "danger" | "primary";
+}
+
+export function ConfirmDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  variant = "primary",
+}: ConfirmDialogProps) {
+  return (
+    <Dialog isOpen={isOpen} onClose={onClose}>
+      <div className="space-y-4">
+        <h3 className="text-lg font-black text-slate-900 dark:text-white">{title}</h3>
+        <p className="text-sm text-slate-550 dark:text-slate-400 leading-relaxed">{message}</p>
+        <div className="flex gap-3 pt-2">
+          <Button variant="outline" fullWidth onClick={onClose}>
+            {cancelLabel}
+          </Button>
+          <Button
+            variant={variant === "danger" ? "danger" : "primary"}
+            fullWidth
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+          >
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
+interface AlertDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  message: string;
+  buttonLabel?: string;
+}
+
+export function AlertDialog({
+  isOpen,
+  onClose,
+  title,
+  message,
+  buttonLabel = "OK",
+}: AlertDialogProps) {
+  return (
+    <Dialog isOpen={isOpen} onClose={onClose}>
+      <div className="space-y-4">
+        <h3 className="text-lg font-black text-slate-900 dark:text-white">{title}</h3>
+        <p className="text-sm text-slate-550 dark:text-slate-400 leading-relaxed">{message}</p>
+        <div className="pt-2">
+          <Button variant="primary" fullWidth onClick={onClose}>
+            {buttonLabel}
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
+interface InputDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (val: string) => void;
+  title: string;
+  placeholder?: string;
+  defaultValue?: string;
+  submitLabel?: string;
+}
+
+export function InputDialog({
+  isOpen,
+  onClose,
+  onSubmit,
+  title,
+  placeholder = "Enter value...",
+  defaultValue = "",
+  submitLabel = "Submit",
+}: InputDialogProps) {
+  const [val, setVal] = React.useState(defaultValue);
+
+  React.useEffect(() => {
+    if (isOpen) setVal(defaultValue);
+  }, [isOpen, defaultValue]);
+
+  return (
+    <Dialog isOpen={isOpen} onClose={onClose}>
+      <div className="space-y-4">
+        <h3 className="text-lg font-black text-slate-900 dark:text-white">{title}</h3>
+        <Input
+          placeholder={placeholder}
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+        />
+        <div className="flex gap-3 pt-2">
+          <Button variant="outline" fullWidth onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={() => {
+              onSubmit(val);
+              onClose();
+            }}
+          >
+            {submitLabel}
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+

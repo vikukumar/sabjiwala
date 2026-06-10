@@ -82,6 +82,11 @@ class LoginRequest(BaseModel):
     password: Optional[str] = None
     device_id: Optional[str] = None
     role: Optional[str] = None
+    # E2EE payload fields
+    encrypted_key: Optional[str] = None
+    encrypted_payload: Optional[str] = None
+    iv: Optional[str] = None
+    tag: Optional[str] = None
 
 class OTPLoginRequest(BaseModel):
     identifier: Optional[str] = None
@@ -93,10 +98,15 @@ class OTPVerifyRequest(BaseModel):
     identifier: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
-    otp: str = Field(..., min_length=6, max_length=6)
+    otp: Optional[str] = Field(None, min_length=6, max_length=6)
     purpose: str = "login"
     device_id: Optional[str] = None
     role: Optional[str] = None
+    # E2EE payload fields
+    encrypted_key: Optional[str] = None
+    encrypted_payload: Optional[str] = None
+    iv: Optional[str] = None
+    tag: Optional[str] = None
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
