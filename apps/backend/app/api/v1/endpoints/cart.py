@@ -34,12 +34,12 @@ async def _get_or_create_cart(user_id: UUID, vendor_id: UUID, db: AsyncSession) 
     return cart
 
 
-@router.get("/", response_model=APIResponse)
+@router.get("", response_model=APIResponse)
 async def get_cart(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get all active carts (one per vendor) for the current user."""
+    """Get all active carts consolidated into a single cart object."""
     result = await db.execute(
         select(Cart)
         .options(selectinload(Cart.items).selectinload(CartItem.product))
@@ -47,22 +47,30 @@ async def get_cart(
     )
     carts = result.scalars().all()
 
-    cart_data = []
+    all_items = []
+    total_subtotal = 0.0
+    first_cart_id = None
+    first_vendor_id = None
+    coupon_code = None
+
     for cart in carts:
-        items = []
-        subtotal = 0.0
+        if not first_cart_id:
+            first_cart_id = str(cart.id)
+            first_vendor_id = str(cart.vendor_id) if cart.vendor_id else None
+            coupon_code = cart.coupon_code
+            
         for item in cart.items:
             if item.is_deleted:
                 continue
             item_total = float(item.unit_price) * item.quantity
-            subtotal += item_total
+            total_subtotal += item_total
             
             product = item.product
             product_attributes = dict(product.attributes) if product and product.attributes else {}
             if product and "image_emoji" not in product_attributes:
                 product_attributes["image_emoji"] = product.primary_image_url or "🥬"
                 
-            items.append({
+            all_items.append({
                 "id": str(item.id),
                 "product_id": str(item.product_id),
                 "variant_id": str(item.variant_id) if item.variant_id else None,
@@ -77,14 +85,14 @@ async def get_cart(
                 "attributes": product_attributes,
             })
 
-        cart_data.append({
-            "id": str(cart.id),
-            "vendor_id": str(cart.vendor_id) if cart.vendor_id else None,
-            "coupon_code": cart.coupon_code,
-            "items": items,
-            "subtotal": subtotal,
-            "item_count": len(items),
-        })
+    cart_data = {
+        "id": first_cart_id,
+        "vendor_id": first_vendor_id,
+        "coupon_code": coupon_code,
+        "items": all_items,
+        "subtotal": total_subtotal,
+        "item_count": len(all_items),
+    }
 
     return APIResponse(success=True, data=cart_data)
 
@@ -102,10 +110,29 @@ async def add_to_cart(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
+    # Resolve vendor_id dynamically if not provided
+    vendor_id = body.vendor_id
+    if not vendor_id:
+        price_result = await db.execute(
+            select(ProductPrice.vendor_id)
+            .where(ProductPrice.product_id == body.product_id, ProductPrice.is_active == True)
+            .limit(1)
+        )
+        vendor_id = price_result.scalar()
+        if not vendor_id:
+            inv_result = await db.execute(
+                select(Inventory.vendor_id)
+                .where(Inventory.product_id == body.product_id)
+                .limit(1)
+            )
+            vendor_id = inv_result.scalar()
+        if not vendor_id:
+            raise HTTPException(status_code=400, detail="No vendor offering this product")
+
     # Get price
     price_query = select(ProductPrice).where(
         ProductPrice.product_id == body.product_id,
-        ProductPrice.vendor_id == body.vendor_id,
+        ProductPrice.vendor_id == vendor_id,
         ProductPrice.is_active == True,
         ProductPrice.is_deleted == False,
     )
@@ -120,7 +147,7 @@ async def add_to_cart(
     # Check stock
     inv_query = select(Inventory).where(
         Inventory.product_id == body.product_id,
-        Inventory.vendor_id == body.vendor_id,
+        Inventory.vendor_id == vendor_id,
         Inventory.is_deleted == False,
     )
     inv_result = await db.execute(inv_query)
@@ -129,7 +156,7 @@ async def add_to_cart(
         raise HTTPException(status_code=400, detail="Insufficient stock")
 
     # Get or create cart
-    cart = await _get_or_create_cart(current_user["user_id"], body.vendor_id, db)
+    cart = await _get_or_create_cart(current_user["user_id"], vendor_id, db)
 
     # Check if item already in cart
     existing = await db.execute(
@@ -137,7 +164,7 @@ async def add_to_cart(
             CartItem.cart_id == cart.id,
             CartItem.product_id == body.product_id,
             CartItem.variant_id == body.variant_id,
-            CartItem.vendor_id == body.vendor_id,
+            CartItem.vendor_id == vendor_id,
             CartItem.is_deleted == False,
         )
     )
@@ -151,7 +178,7 @@ async def add_to_cart(
             cart_id=cart.id,
             product_id=body.product_id,
             variant_id=body.variant_id,
-            vendor_id=body.vendor_id,
+            vendor_id=vendor_id,
             quantity=body.quantity,
             unit_price=float(price.price),
         )
@@ -208,7 +235,7 @@ async def remove_from_cart(
     return APIResponse(success=True, message="Item removed from cart")
 
 
-@router.delete("/")
+@router.delete("")
 async def clear_cart(
     vendor_id: Optional[UUID] = None,
     current_user: dict = Depends(get_current_user),

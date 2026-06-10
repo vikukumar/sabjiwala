@@ -274,7 +274,7 @@ async def get_my_delivery_rules(
 
 # ===== Admin vendor management =====
 
-@router.get("/", response_model=PaginatedResponse[VendorResponse])
+@router.get("", response_model=PaginatedResponse[VendorResponse])
 async def list_vendors(
     page: int = 1,
     page_size: int = 20,

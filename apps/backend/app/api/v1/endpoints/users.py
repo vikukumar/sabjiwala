@@ -166,7 +166,7 @@ async def delete_address(
 
 # ===== Admin user management =====
 
-@router.get("/", response_model=PaginatedResponse[UserResponse])
+@router.get("", response_model=PaginatedResponse[UserResponse])
 async def list_users(
     page: int = 1,
     page_size: int = 20,

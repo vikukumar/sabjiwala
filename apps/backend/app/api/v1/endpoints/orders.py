@@ -138,7 +138,7 @@ async def preview_order(
     )
 
 
-@router.post("/", response_model=APIResponse, status_code=201)
+@router.post("", response_model=APIResponse, status_code=201)
 async def place_order(
     body: CheckoutRequest,
     current_user: dict = Depends(get_current_user),
@@ -174,7 +174,7 @@ async def place_order(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=PaginatedResponse[OrderResponse])
+@router.get("", response_model=PaginatedResponse[OrderResponse])
 async def list_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),

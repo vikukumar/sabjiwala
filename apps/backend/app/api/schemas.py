@@ -358,7 +358,7 @@ class ProductResponse(BaseModel):
 class CartItemAdd(BaseModel):
     product_id: UUID
     variant_id: Optional[UUID] = None
-    vendor_id: UUID
+    vendor_id: Optional[UUID] = None
     quantity: float = 1.0
 
 class CartItemUpdate(BaseModel):

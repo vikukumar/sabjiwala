@@ -17,7 +17,7 @@ from app.services.payment_service import PaymentService
 router = APIRouter()
 
 
-@router.get("/", response_model=APIResponse)
+@router.get("", response_model=APIResponse)
 async def get_wallet_details(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

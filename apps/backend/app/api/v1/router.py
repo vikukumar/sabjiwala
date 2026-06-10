@@ -9,6 +9,7 @@ from app.api.v1.endpoints.vendors import router as vendors_router
 from app.api.v1.endpoints.products import router as products_router
 from app.api.v1.endpoints.catalog import router as catalog_router
 from app.api.v1.endpoints.cart import router as cart_router
+from app.api.v1.endpoints.wishlist import router as wishlist_router
 from app.api.v1.endpoints.orders import router as orders_router
 from app.api.v1.endpoints.payments import router as payments_router
 from app.api.v1.endpoints.coupons import router as coupons_router
@@ -34,6 +35,7 @@ api_router.include_router(vendors_router, prefix="/vendors", tags=["Vendors"])
 api_router.include_router(products_router, prefix="/products", tags=["Products"])
 api_router.include_router(catalog_router, prefix="/catalog", tags=["Catalog"])
 api_router.include_router(cart_router, prefix="/cart", tags=["Cart"])
+api_router.include_router(wishlist_router, prefix="/wishlist", tags=["Wishlist"])
 api_router.include_router(orders_router, prefix="/orders", tags=["Orders"])
 api_router.include_router(payments_router, prefix="/payments", tags=["Payments"])
 api_router.include_router(coupons_router, prefix="/coupons", tags=["Coupons"])

@@ -258,6 +258,8 @@ class Wishlist(BaseEntity):
         nullable=False, index=True,
     )
 
+    product: Mapped["Product"] = relationship(lazy="selectin")
+
     __table_args__ = (
         UniqueConstraint("user_id", "product_id", name="uq_wishlist_user_product"),
     )

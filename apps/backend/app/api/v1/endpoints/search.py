@@ -15,7 +15,7 @@ from app.services.search_service import SearchService
 router = APIRouter()
 
 
-@router.post("/", response_model=APIResponse)
+@router.post("", response_model=APIResponse)
 async def run_search(
     body: SearchQuery,
     db: AsyncSession = Depends(get_db),

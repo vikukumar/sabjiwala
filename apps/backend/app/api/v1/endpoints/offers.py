@@ -16,7 +16,7 @@ from app.models.coupon import Offer, OfferType, OfferProduct
 router = APIRouter()
 
 
-@router.get("/", response_model=APIResponse)
+@router.get("", response_model=APIResponse)
 async def list_active_offers(
     vendor_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
