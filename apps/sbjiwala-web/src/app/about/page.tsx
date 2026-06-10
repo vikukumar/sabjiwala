@@ -7,7 +7,7 @@ import { Button, Card, SectionHeader } from "@/components/ui/index";
 
 export default function AboutPage() {
   useEffect(() => {
-    document.title = "Our Story — Procurement & Farms | Sbjiwala.in";
+    document.title = "Our Story — Procurement & Farms | Sbjiwala - Kisan ke Ghar Se Apke Ghar tak";
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(

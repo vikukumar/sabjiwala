@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/index";
 
 export default function TermsPage() {
   useEffect(() => {
-    document.title = "Terms of Service — User Agreement | Sbjiwala.in";
+    document.title = "Terms of Service — User Agreement | Sbjiwala - Kisan ke Ghar Se Apke Ghar tak";
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
@@ -35,7 +35,7 @@ export default function TermsPage() {
           <h2 className="text-lg font-black text-slate-900 dark:text-white">Acceptance of Terms</h2>
         </div>
         <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-medium">
-          Welcome to Sbjiwala.in. These Terms of Service govern your use of the Sbjiwala web portals, mobile applications, and local 10-minute fresh delivery services. By accessing, browsing, or placing an order, you agree to comply with and be bound by these Terms. If you do not agree, please discontinue use immediately.
+          Welcome to Sbjiwala - Kisan ke Ghar Se Apke Ghar tak. These Terms of Service govern your use of the Sbjiwala web portals, mobile applications, and local 10-minute fresh delivery services. By accessing, browsing, or placing an order, you agree to comply with and be bound by these Terms. If you do not agree, please discontinue use immediately.
         </p>
       </Card>
 

@@ -7,7 +7,7 @@ import { Button, Card } from "@/components/ui/index";
 
 export default function HowItWorksPage() {
   useEffect(() => {
-    document.title = "How It Works — Sourcing & Delivery | Sbjiwala.in";
+    document.title = "How It Works — Sourcing & Delivery | Sbjiwala - Kisan ke Ghar Se Apke Ghar tak";
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(

@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/index";
 
 export default function RefundPolicyPage() {
   useEffect(() => {
-    document.title = "Refund & Replacement Policy | Sbjiwala.in";
+    document.title = "Refund & Replacement Policy | Sbjiwala - Kisan ke Ghar Se Apke Ghar tak";
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(

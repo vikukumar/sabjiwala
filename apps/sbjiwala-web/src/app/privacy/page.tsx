@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/index";
 
 export default function PrivacyPage() {
   useEffect(() => {
-    document.title = "Privacy Policy — Geolocation & Data | Sbjiwala.in";
+    document.title = "Privacy Policy — Geolocation & Data | Sbjiwala - Kisan ke Ghar Se Apke Ghar tak";
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
