@@ -101,6 +101,9 @@ class Settings(BaseSettings):
     MSG91_AUTH_KEY: str = ""
     MSG91_SENDER_ID: str = "SABJWL"
     MSG91_TEMPLATE_ID: str = ""
+    SMS_GATEWAY_URL: Optional[str] = None
+    SMS_GATEWAY_KEY: Optional[str] = None
+    SMS_SENDER_ID: str = "SABJWL"
 
     # ---- Push Notifications ----
     VAPID_PUBLIC_KEY: str = ""

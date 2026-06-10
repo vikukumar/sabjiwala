@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { useRouter } from "next/navigation";
 import {
   MapPin, Plus, CheckCircle2, CreditCard, Wallet, Banknote, ArrowRight,
-  Loader2, Home, Briefcase, Star, Package, Truck, Shield, X, ChevronDown
+  Loader2, Home, Briefcase, Star, Package, Truck, Shield, X, ChevronDown, Navigation
 } from "lucide-react";
 import { Button, Badge, Spinner, EmptyState } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
@@ -21,20 +21,175 @@ const CASHFREE_ENABLED = Boolean(CASHFREE_APP_ID);
 function AddressForm({ onSave, onCancel, existing }: {
   onSave: (data: any) => void; onCancel: () => void; existing?: any;
 }) {
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: existing || { label: "Home", full_name: "", phone: "", address_line_1: "", address_line_2: "", city: "", state: "Maharashtra", postal_code: "", is_default: false },
+  const [step, setStep] = useState<"map" | "details">(existing ? "details" : "map");
+  const [coords, setCoords] = useState<{ lat: number; lng: number }>({
+    lat: existing?.latitude || 19.076,
+    lng: existing?.longitude || 72.877
+  });
+  const [isLocating, setIsLocating] = useState(false);
+  const [resolvedAddressText, setResolvedAddressText] = useState("");
+
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [mapObj, setMapObj] = useState<any>(null);
+  const markerRef = useRef<any>(null);
+
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm({
+    defaultValues: existing || {
+      label: "Home",
+      full_name: "",
+      phone: "",
+      address_line_1: "",
+      address_line_2: "",
+      city: "",
+      state: "Maharashtra",
+      postal_code: "",
+      is_default: false
+    },
   });
   const [loading, setLoading] = useState(false);
   const { error: showError } = useToast();
 
+  const reverseGeocode = (latitude: number, longitude: number) => {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setResolvedAddressText(data.display_name || "Custom Pin Location");
+          if (data.address) {
+            const road = data.address.road || data.address.suburb || data.address.neighbourhood || "";
+            const city = data.address.city || data.address.town || data.address.suburb || "";
+            const postcode = data.address.postcode || "";
+            const state = data.address.state || "";
+
+            setValue("address_line_1", data.display_name || "");
+            setValue("city", city);
+            setValue("state", state);
+            setValue("postal_code", postcode);
+          }
+        }
+      })
+      .catch((err) => console.error("Reverse geocoding error:", err));
+  };
+
+  useEffect(() => {
+    if (step !== "map" || typeof window === "undefined" || !mapRef.current) return;
+
+    let map: any = null;
+    let active = true;
+
+    import("leaflet").then((L) => {
+      if (!active || !mapRef.current) return;
+
+      if ((mapRef.current as any)._leaflet_id) {
+        return;
+      }
+
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
+
+      map = L.map(mapRef.current!).setView([coords.lat, coords.lng], 14);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors"
+      }).addTo(map);
+
+      const pinIcon = L.divIcon({
+        html: '<div style="background:#10b981;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">📍</div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+
+      const marker = L.marker([coords.lat, coords.lng], { draggable: true, icon: pinIcon }).addTo(map);
+      markerRef.current = marker;
+
+      marker.on("dragend", () => {
+        const position = marker.getLatLng();
+        setCoords({ lat: position.lat, lng: position.lng });
+        reverseGeocode(position.lat, position.lng);
+      });
+
+      map.on("click", (e: any) => {
+        marker.setLatLng(e.latlng);
+        setCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
+        reverseGeocode(e.latlng.lat, e.latlng.lng);
+      });
+
+      setMapObj(map);
+
+      // Auto locate immediately on mount
+      if (navigator.geolocation && !existing) {
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            if (!active) return;
+            const { latitude, longitude } = pos.coords;
+            setCoords({ lat: latitude, lng: longitude });
+            map.setView([latitude, longitude], 16);
+            marker.setLatLng([latitude, longitude]);
+            reverseGeocode(latitude, longitude);
+            setIsLocating(false);
+          },
+          (err) => {
+            console.warn("Geolocation permission error", err);
+            reverseGeocode(coords.lat, coords.lng);
+            setIsLocating(false);
+          },
+          { enableHighAccuracy: true, timeout: 5000 }
+        );
+      } else {
+        reverseGeocode(coords.lat, coords.lng);
+      }
+    });
+
+    return () => {
+      active = false;
+      if (map) {
+        map.remove();
+      }
+    };
+  }, [step]);
+
+  const handleLocateMe = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) return;
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setCoords({ lat: latitude, lng: longitude });
+        if (mapObj) {
+          mapObj.setView([latitude, longitude], 16);
+        }
+        if (markerRef.current) {
+          markerRef.current.setLatLng([latitude, longitude]);
+        }
+        reverseGeocode(latitude, longitude);
+        setIsLocating(false);
+      },
+      (err) => {
+        console.warn("Geolocation locate error", err);
+        showError("Location Access Failed", "Please enable GPS/Location services or pin manually.");
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  };
+
   const onSubmit = async (data: any) => {
     setLoading(true);
     try {
+      const payload = {
+        ...data,
+        latitude: coords.lat,
+        longitude: coords.lng
+      };
       let res;
       if (existing?.id) {
-        res = await api.put(`/users/me/addresses/${existing.id}`, data);
+        res = await api.put(`/users/me/addresses/${existing.id}`, payload);
       } else {
-        res = await api.post("/users/me/addresses", { ...data, latitude: 19.076, longitude: 72.877 });
+        res = await api.post("/users/me/addresses", payload);
       }
       onSave(res.data);
     } catch (err: any) {
@@ -43,59 +198,138 @@ function AddressForm({ onSave, onCancel, existing }: {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 animate-slide-down">
-      <h3 className="font-black text-slate-900 dark:text-white text-sm">{existing ? "Edit Address" : "Add New Address"}</h3>
-      <div className="flex gap-2">
-        {["Home", "Work", "Other"].map(l => (
-          <label key={l} className="flex-1">
-            <input type="radio" value={l} {...register("label")} className="sr-only peer" />
-            <div className="text-center py-2 rounded-xl border-2 text-xs font-bold cursor-pointer transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50 dark:peer-checked:bg-emerald-950/30 peer-checked:text-emerald-700 dark:peer-checked:text-emerald-400 border-slate-200 dark:border-slate-700 text-slate-500">
-              {l === "Home" ? "🏠" : l === "Work" ? "💼" : "📍"} {l}
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center px-4 pb-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onCancel} />
+      
+      {/* Leaflet CSS */}
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+
+      <form onSubmit={handleSubmit(onSubmit)} className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-lg space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <h3 className="text-base font-black text-slate-900 dark:text-white">
+            {existing ? "Edit Address" : "Add Delivery Address"}
+          </h3>
+          <button type="button" onClick={onCancel} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {step === "map" ? (
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400">
+                <span>Pin exact location on map</span>
+                <button
+                  type="button"
+                  onClick={handleLocateMe}
+                  className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                >
+                  <Navigation className="w-3.5 h-3.5" /> Locate Me
+                </button>
+              </div>
+              
+              <div className="relative h-60 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800" style={{ zIndex: 1 }}>
+                <div ref={mapRef} className="w-full h-full" />
+                {isLocating && (
+                  <div className="absolute inset-0 bg-slate-900/20 dark:bg-slate-950/40 backdrop-blur-[2px] flex items-center justify-center z-[1000]">
+                    <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl flex items-center gap-2 shadow-lg border border-slate-100 dark:border-slate-800">
+                      <Loader2 className="w-4 h-4 text-emerald-600 animate-spin" />
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Locating...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </label>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-bold text-slate-500 mb-1">Full Name *</label>
-          <input {...register("full_name", { required: true })} className="input-base px-3 py-2 text-sm" placeholder="Rahul Sharma" />
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 mb-1">Phone *</label>
-          <input {...register("phone", { required: true })} className="input-base px-3 py-2 text-sm" placeholder="9876543210" type="tel" />
-        </div>
-      </div>
-      <div>
-        <label className="block text-xs font-bold text-slate-500 mb-1">Address Line 1 *</label>
-        <input {...register("address_line_1", { required: true })} className="input-base px-3 py-2 text-sm" placeholder="Flat/House No, Street Name" />
-      </div>
-      <div>
-        <label className="block text-xs font-bold text-slate-500 mb-1">Landmark (Optional)</label>
-        <input {...register("address_line_2")} className="input-base px-3 py-2 text-sm" placeholder="Near landmark..." />
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        <div>
-          <label className="block text-xs font-bold text-slate-500 mb-1">City *</label>
-          <input {...register("city", { required: true })} className="input-base px-3 py-2 text-sm" placeholder="Mumbai" />
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 mb-1">State</label>
-          <input {...register("state")} className="input-base px-3 py-2 text-sm" defaultValue="Maharashtra" />
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 mb-1">PIN *</label>
-          <input {...register("postal_code", { required: true })} className="input-base px-3 py-2 text-sm" placeholder="400001" maxLength={6} />
-        </div>
-      </div>
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" {...register("is_default")} className="w-4 h-4 rounded accent-emerald-500" />
-        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Set as default address</span>
-      </label>
-      <div className="flex gap-3">
-        <Button type="submit" loading={loading} className="flex-1 text-sm">Save Address</Button>
-        <Button type="button" variant="outline" onClick={onCancel} className="text-sm">Cancel</Button>
-      </div>
-    </form>
+
+            {resolvedAddressText && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/50 rounded-2xl flex gap-2.5 items-start">
+                <MapPin className="w-5 h-5 text-emerald-600 dark:text-emerald-450 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Pin Location Address</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold leading-relaxed mt-0.5 break-words line-clamp-2">{resolvedAddressText}</p>
+                </div>
+              </div>
+            )}
+
+            <Button
+              type="button"
+              fullWidth
+              onClick={() => setStep("details")}
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+            >
+              Confirm Location & Proceed
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4 animate-fade-in">
+            <button
+              type="button"
+              onClick={() => setStep("map")}
+              className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-450 transition-colors cursor-pointer"
+            >
+              ← Back to map location
+            </button>
+
+            <div className="flex gap-2">
+              {["Home", "Work", "Other"].map(l => (
+                <label key={l} className="flex-1">
+                  <input type="radio" value={l} {...register("label")} className="sr-only peer" />
+                  <div className="text-center py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50 dark:peer-checked:bg-emerald-950/20 peer-checked:text-emerald-700 dark:peer-checked:text-emerald-400 border-slate-200 dark:border-slate-800 text-slate-500">
+                    {l === "Home" ? "🏠" : l === "Work" ? "💼" : "📍"} {l}
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Full Name *</label>
+                <input {...register("full_name", { required: true })} className="input-base px-3 py-2.5 text-sm" placeholder="e.g. Rahul Sharma" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Phone Number *</label>
+                <input {...register("phone", { required: true })} className="input-base px-3 py-2.5 text-sm" placeholder="e.g. 9876543210" type="tel" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Flat / House / House No. *</label>
+              <input {...register("address_line_1", { required: true })} className="input-base px-3 py-2.5 text-sm" placeholder="Flat/House No, Floor, Building Name" />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Street / Area / Landmark (Optional)</label>
+              <input {...register("address_line_2")} className="input-base px-3 py-2.5 text-sm" placeholder="Nearby landmark or area name" />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">City *</label>
+                <input {...register("city", { required: true })} className="input-base px-3 py-2.5 text-sm" placeholder="Mumbai" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">State *</label>
+                <input {...register("state", { required: true })} className="input-base px-3 py-2.5 text-sm" placeholder="Maharashtra" />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">PIN Code *</label>
+                <input {...register("postal_code", { required: true })} className="input-base px-3 py-2.5 text-sm" placeholder="400001" maxLength={6} />
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer py-1">
+              <input type="checkbox" {...register("is_default")} className="w-4 h-4 rounded accent-emerald-500" />
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Set as default delivery address</span>
+            </label>
+
+            <div className="flex gap-3 pt-2">
+              <Button type="submit" loading={loading} className="flex-1">Save & Select Address</Button>
+              <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+            </div>
+          </div>
+        )}
+      </form>
+    </div>
   );
 }
 
@@ -194,7 +428,7 @@ export default function CheckoutPage() {
     }
   }, [addresses, selectedAddress]);
 
-  const subtotal = previewData ? previewData.subtotal : (cartData?.subtotal || 0);
+  const subtotal = previewData ? previewData.subtotal : ((cartData?.subtotal || 0) * 1.045);
   const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= 199 ? 0 : 20);
   const taxAmount = previewData ? previewData.tax_amount : (subtotal * 0.05);
   const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
@@ -291,7 +525,15 @@ export default function CheckoutPage() {
             {showAddForm && (
               <AddressForm
                 existing={editingAddress}
-                onSave={() => { refetchAddr(); setShowAddForm(false); setEditingAddress(null); }}
+                onSave={(newAddr) => {
+                  refetchAddr().then(() => {
+                    if (newAddr?.id) {
+                      setSelectedAddress(newAddr.id);
+                    }
+                  });
+                  setShowAddForm(false);
+                  setEditingAddress(null);
+                }}
                 onCancel={() => { setShowAddForm(false); setEditingAddress(null); }}
               />
             )}
@@ -320,11 +562,24 @@ export default function CheckoutPage() {
                       {selectedAddress === addr.id && <div className="w-full h-full flex items-center justify-center"><div className="w-2.5 h-2.5 bg-white rounded-full" /></div>}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex items-center justify-between mb-0.5">
                         <span className="text-xs font-black text-slate-800 dark:text-white">
                           {addr.label === "Home" ? "🏠" : addr.label === "Work" ? "💼" : "📍"} {addr.label}
                         </span>
-                        {addr.is_default && <span className="text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">Default</span>}
+                        <div className="flex items-center gap-2">
+                          {addr.is_default && <span className="text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">Default</span>}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingAddress(addr);
+                              setShowAddForm(true);
+                            }}
+                            className="text-[10px] font-black text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 px-1.5 py-0.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                        </div>
                       </div>
                       <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{addr.full_name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
@@ -400,18 +655,23 @@ export default function CheckoutPage() {
 
             {/* Cart Items */}
             <div className="space-y-2 max-h-40 overflow-y-auto scrollbar-hide">
-              {(cartData?.items || []).map((item: any) => (
-                <div key={item.id} className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">{item.attributes?.image_emoji || "🥬"}</span>
-                    <div>
-                      <p className="text-xs font-bold text-slate-800 dark:text-white line-clamp-1">{item.product_name || item.name}</p>
-                      <p className="text-[10px] text-slate-400">×{item.quantity}</p>
+              {(cartData?.items || []).map((item: any) => {
+                const rawPrice = item.price || item.product?.attributes?.price || 30;
+                const markedUpPrice = Math.round(rawPrice * 1.045 * 100) / 100;
+                const emoji = item.attributes?.image_emoji || item.product?.attributes?.image_emoji || "🥬";
+                return (
+                  <div key={item.id} className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{emoji}</span>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-white line-clamp-1">{item.product_name || item.name}</p>
+                        <p className="text-[10px] text-slate-400">×{item.quantity}</p>
+                      </div>
                     </div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-white flex-shrink-0">₹{(markedUpPrice * item.quantity).toFixed(2)}</span>
                   </div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-white flex-shrink-0">₹{((item.price || 30) * item.quantity).toFixed(2)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <hr className="border-slate-200 dark:border-slate-800" />

@@ -76,7 +76,7 @@ class NotificationService:
         user_result = await self.db.execute(select(User).where(User.id == user_id, User.is_deleted == False))
         user = user_result.scalars().first()
         if not user:
-            logger.warning("Recipient user not found for dispatch", user_id=str(user_id), event=event_key)
+            logger.warning("Recipient user not found for dispatch", user_id=str(user_id), event_key=event_key)
             return
 
         # Fetch template
@@ -85,7 +85,7 @@ class NotificationService:
         )
         template = template_result.scalars().first()
         if not template:
-            logger.warning("Active notification template not found", event=event_key)
+            logger.warning("Active notification template not found", event_key=event_key)
             return
 
         channels = template.channels or []
@@ -195,7 +195,7 @@ class NotificationService:
 async def any_webpush_send(sub_info: Dict[str, Any], title: str, body: str, data: Dict[str, Any]) -> None:
     """Send web push payload using VAPID private key."""
     import anyio
-    if not settings.VAPID_PRIVATE_KEY or not settings.VAPID_CLAIMS_EMAIL:
+    if not settings.VAPID_PRIVATE_KEY or not settings.VAPID_SUBJECT:
         logger.warning("VAPID credentials not set, skipping webpush dispatch")
         return
 
@@ -214,7 +214,7 @@ async def any_webpush_send(sub_info: Dict[str, Any], title: str, body: str, data
             subscription_info=sub_info,
             data=payload,
             vapid_private_key=settings.VAPID_PRIVATE_KEY,
-            vapid_claims={"sub": f"mailto:{settings.VAPID_CLAIMS_EMAIL}"}
+            vapid_claims={"sub": settings.VAPID_SUBJECT}
         )
 
     await anyio.to_thread.run_sync(sync_send)
