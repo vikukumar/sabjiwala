@@ -95,6 +95,6 @@ Open `http://localhost:3000` in your browser. Navigating to the following paths 
 ## 📦 Deployment & Releases
 
 Releases are fully automated via GitHub Actions:
-1. Increment the version string in `version.json` (e.g. `"version": "1.0.0"`).
+1. Increment the version string in `version.json` (e.g. `"version": "0.1.0"`).
 2. Create and push a git tag matching the version (e.g. `git tag v1.0.0 && git push origin v1.0.0`).
 3. The workflow compiles the backend Docker image tarball, static web assets, signed Android APKs, and simulator-ready iOS payloads, then uploads them to a newly drafted GitHub Release.

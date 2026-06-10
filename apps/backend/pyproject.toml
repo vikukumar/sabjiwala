@@ -1,6 +1,6 @@
 [project]
 name = "sbjiwala-backend"
-version = "1.0.0"
+version = "0.1.0"
 description = "Sbjiwala - Production Grade Multi-Tenant Vegetable Commerce Platform"
 requires-python = ">=3.12"
 dependencies = [

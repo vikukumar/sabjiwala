@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             logging.getLevelName(settings.LOG_LEVEL)
         ),
     )
-    await logger.ainfo("Starting Sbjiwala Backend", version="1.0.0", env=settings.APP_ENV)
+    await logger.ainfo("Starting Sbjiwala Backend", version="0.1.0", env=settings.APP_ENV)
 
     # Generate E2EE RSA keypair dynamically for this startup session
     from cryptography.hazmat.primitives.asymmetric import rsa
@@ -93,7 +93,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
         description="Production-grade multi-tenant vegetable commerce platform",
-        version="1.0.0",
+        version="0.1.0",
         docs_url="/api/docs" if settings.APP_DEBUG else None,
         redoc_url="/api/redoc" if settings.APP_DEBUG else None,
         openapi_url="/api/openapi.json" if settings.APP_DEBUG else None,

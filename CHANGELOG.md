@@ -6,7 +6,7 @@ This project and its version records are copyrighted by **Vikash kumar (@vikukum
 
 ---
 
-## [1.0.0] - 2026-05-29
+## [0.1.0] - 2026-05-29
 
 First stable production-grade release of the Sbjiwala eCommerce Platform.
 
