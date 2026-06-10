@@ -371,6 +371,7 @@ class CartItemAdd(BaseModel):
     variant_id: Optional[UUID] = None
     vendor_id: Optional[UUID] = None
     quantity: float = 1.0
+    clear_other_carts: Optional[bool] = False
 
 class CartItemUpdate(BaseModel):
     quantity: float
@@ -425,6 +426,8 @@ class OrderResponse(BaseModel):
     delivery_agent: Optional[dict] = None
     items: Optional[List[OrderItemResponse]] = None
     vendor_store: Optional[dict] = None
+    delivery_latitude: Optional[float] = None
+    delivery_longitude: Optional[float] = None
 
     class Config:
         from_attributes = True

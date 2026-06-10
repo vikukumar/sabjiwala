@@ -138,9 +138,18 @@ export default function VendorDashboard() {
       });
 
       map = L.map(mapContainerRef.current!).setView([centerLat, centerLng], 13);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors"
+      const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+      const tileUrl = isDark
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+      const tiles = L.tileLayer(tileUrl, {
+        attribution: "&copy; OpenStreetMap &copy; CARTO",
+        subdomains: "abcd",
+        maxZoom: 20
       }).addTo(map);
+      tiles.on("tileerror", () => {
+        tiles.setUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+      });
 
       const storeIcon = L.divIcon({
         html: '<div style="background:#3b82f6;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3)">🏪</div>',

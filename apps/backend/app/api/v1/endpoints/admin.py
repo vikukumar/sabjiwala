@@ -465,7 +465,8 @@ async def list_vendors(
     """List all vendors with business details, ratings, orders, commissions, and KYC stats."""
     await _verify_admin(current_user)
     
-    stmt = select(Vendor).where(Vendor.is_deleted == False)
+    from sqlalchemy.orm import selectinload
+    stmt = select(Vendor).options(selectinload(Vendor.store)).where(Vendor.is_deleted == False)
     if search:
         search_filter = f"%{search}%"
         stmt = stmt.where(Vendor.business_name.ilike(search_filter))
@@ -498,6 +499,8 @@ async def list_vendors(
             "contact_phone": user.phone if user else v.contact_phone,
             "average_rating": v.average_rating,
             "total_orders": v.total_orders,
+            "latitude": v.store.latitude if v.store else None,
+            "longitude": v.store.longitude if v.store else None,
             "created_at": v.created_at.isoformat() if v.created_at else "",
             # Include individual delivery rules so admin can configure them
             "min_order_amount": float(rule.min_order_amount) if rule and getattr(rule, "min_order_amount", None) is not None else 0.0,
@@ -640,6 +643,8 @@ async def list_delivery_boys(
             "license_number": b.license_number,
             "total_deliveries": b.total_deliveries,
             "average_rating": b.average_rating,
+            "latitude": b.current_latitude,
+            "longitude": b.current_longitude,
             "created_at": b.created_at.isoformat() if b.created_at else ""
         })
         

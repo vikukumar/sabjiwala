@@ -104,7 +104,18 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
       const destLng = isPicked ? customerLng : storeLng;
 
       map = L.map(mapContainerRef.current!).setView([destLat, destLng], 14);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
+      const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+      const tileUrl = isDark
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+      const tiles = L.tileLayer(tileUrl, {
+        attribution: "&copy; OpenStreetMap &copy; CARTO",
+        subdomains: "abcd",
+        maxZoom: 20
+      }).addTo(map);
+      tiles.on("tileerror", () => {
+        tiles.setUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+      });
       
       const homeIcon = L.divIcon({ html: '<div style="background:#ef4444;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏠</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
       L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
@@ -705,7 +716,18 @@ function VendorLocatorMap({ stores, currentPos, isOnline }: {
 
       // Default center is current position
       map = L.map(mapContainerRef.current!).setView(currentPos, 13);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
+      const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+      const tileUrl = isDark
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+      const tiles = L.tileLayer(tileUrl, {
+        attribution: "&copy; OpenStreetMap &copy; CARTO",
+        subdomains: "abcd",
+        maxZoom: 20
+      }).addTo(map);
+      tiles.on("tileerror", () => {
+        tiles.setUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+      });
 
       // Rider Marker (🛵)
       const driverIcon = L.divIcon({

@@ -197,7 +197,8 @@ export default function CartPage() {
   });
 
   const subtotal = previewData ? previewData.subtotal : (isGuest ? localCart?.subtotal || 0 : (serverCart?.subtotal || 0) * 1.045);
-  const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= 199 ? 0 : 20);
+  const freeDeliveryAbove = previewData?.free_delivery_above ?? 199;
+  const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= freeDeliveryAbove ? 0 : 20);
   const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
   const taxAmount = previewData ? previewData.tax_amount : (subtotal * 0.05);
   const discount = previewData ? previewData.coupon_discount : (appliedCoupon?.discount || 0);
@@ -277,14 +278,14 @@ export default function CartPage() {
               <Truck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <div>
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                  {deliveryFee === 0 ? "🎉 Free Delivery!" : `Add ₹${(199 - subtotal).toFixed(0)} more for free delivery`}
+                  {deliveryFee === 0 ? "🎉 Free Delivery!" : `Add ₹${Math.max(0, freeDeliveryAbove - subtotal).toFixed(0)} more for free delivery`}
                 </p>
                 <p className="text-xs text-slate-550 dark:text-slate-400">Estimated delivery in 10–15 minutes</p>
               </div>
             </div>
             {deliveryFee > 0 && (
               <div className="mt-3 bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${Math.min(100, (subtotal / 199) * 100)}%` }} />
+                <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${Math.min(100, (subtotal / freeDeliveryAbove) * 100)}%` }} />
               </div>
             )}
           </div>

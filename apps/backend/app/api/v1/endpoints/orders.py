@@ -189,7 +189,8 @@ async def preview_order(
             "wallet_balance": wallet_balance,
             "wallet_deduction": wallet_amount,
             "total_amount": total_amount,
-            "distance_km": distance_km
+            "distance_km": distance_km,
+            "free_delivery_above": float(rule.free_delivery_above) if (rule and rule.free_delivery_above is not None) else None,
         }
     )
 

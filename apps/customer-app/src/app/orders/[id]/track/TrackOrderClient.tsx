@@ -96,9 +96,18 @@ export default function TrackOrderClient() {
       const initDriverLng = driverLocation?.longitude || storeLng;
 
       map = L.map(mapRef.current!).setView([customerLat, customerLng], 14);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors",
+      const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+      const tileUrl = isDark
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+      const tiles = L.tileLayer(tileUrl, {
+        attribution: "&copy; OpenStreetMap &copy; CARTO",
+        subdomains: "abcd",
+        maxZoom: 20
       }).addTo(map);
+      tiles.on("tileerror", () => {
+        tiles.setUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+      });
 
       // Delivery address marker
       const homeIcon = L.divIcon({

@@ -1236,6 +1236,34 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 
+  // Load saved default address and set as active location on login
+  const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
+  const { data: appAddresses } = useQuery<any[]>({
+    queryKey: ["appAddresses"],
+    queryFn: async () => {
+      const r = await api.get("/users/me/addresses");
+      return r.data || [];
+    },
+    enabled: typeof window !== "undefined" && !!token,
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && appAddresses && appAddresses.length > 0) {
+      const defaultAddress = appAddresses.find((a: any) => a.is_default) || appAddresses[0];
+      if (defaultAddress && defaultAddress.latitude && defaultAddress.longitude) {
+        const currentLat = localStorage.getItem("sw_latitude");
+        // Only override if the current latitude is empty or is the default dummy latitude
+        if (!currentLat || currentLat === "19.0760" || currentLat === "19.076") {
+          localStorage.setItem("sw_latitude", String(defaultAddress.latitude));
+          localStorage.setItem("sw_longitude", String(defaultAddress.longitude));
+          const addressLabel = defaultAddress.formatted_address || `${defaultAddress.address_line_1}, ${defaultAddress.city}`;
+          localStorage.setItem("sw_location_name", addressLabel);
+          window.dispatchEvent(new Event("sw_location_updated"));
+        }
+      }
+    }
+  }, [appAddresses]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleOpen = () => setShowLocationModal(true);

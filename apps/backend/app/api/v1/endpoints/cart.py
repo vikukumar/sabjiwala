@@ -155,6 +155,36 @@ async def add_to_cart(
     if inventory and not inventory.is_unlimited and inventory.quantity < body.quantity:
         raise HTTPException(status_code=400, detail="Insufficient stock")
 
+    # Enforce single-vendor cart: Check if there are other active carts with items
+    other_carts_res = await db.execute(
+        select(Cart)
+        .options(selectinload(Cart.items))
+        .where(
+            Cart.user_id == current_user["user_id"],
+            Cart.vendor_id != vendor_id,
+            Cart.is_deleted == False
+        )
+    )
+    other_carts = other_carts_res.scalars().all()
+    has_other_items = False
+    for oc in other_carts:
+        if any(not item.is_deleted for item in oc.items):
+            has_other_items = True
+            break
+
+    if has_other_items:
+        if body.clear_other_carts:
+            for oc in other_carts:
+                for item in oc.items:
+                    item.soft_delete(current_user["user_id"])
+                oc.soft_delete(current_user["user_id"])
+            await db.flush()
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Your cart contains items from another vendor. Please clear your cart first."
+            )
+
     # Get or create cart
     cart = await _get_or_create_cart(current_user["user_id"], vendor_id, db)
 

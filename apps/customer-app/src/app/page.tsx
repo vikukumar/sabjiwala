@@ -342,6 +342,7 @@ function ProductCard({ product }: { product: any }) {
 
   // Track guest cart local state
   const [localCart, setLocalCart] = useState<any>(getLocalGuestCart());
+  const [showClearCartModal, setShowClearCartModal] = useState(false);
 
   useEffect(() => {
     const handleUpdate = () => setLocalCart(getLocalGuestCart());
@@ -362,11 +363,13 @@ function ProductCard({ product }: { product: any }) {
   const discountPct = hasDiscount ? Math.round(((mrp - price) / mrp) * 100) : 0;
   const rating = product.attributes?.rating ?? (4 + Math.random() * 0.9).toFixed(1);
 
+  const targetVendorId = product.attributes?.vendor_id || product.vendor_id || product.vendor?.id;
+
   // Guest Add to Cart
   const handleGuestAdd = () => {
     const current = getLocalGuestCart();
     const existing = current.items.find((i: any) => i.product_id === product.id);
-    const vendorId = product.attributes?.vendor_id || product.vendor_id;
+    const vendorId = targetVendorId;
 
     if (existing) {
       existing.quantity += 1;
@@ -411,14 +414,7 @@ function ProductCard({ product }: { product: any }) {
   // Backend mutations
   const addToCart = useMutation({
     mutationFn: async () => {
-      // Try all possible vendor_id fields in order
-      const vendorId =
-        product.attributes?.vendor_id
-        || product.vendor_id
-        || product.vendor?.id
-        || product.store?.vendor_id
-        || product.attributes?.store_id
-        || null;
+      const vendorId = targetVendorId;
       return api.post("/cart/items", {
         product_id: product.id,
         ...(vendorId ? { vendor_id: vendorId } : {}),
@@ -435,6 +431,49 @@ function ProductCard({ product }: { product: any }) {
     },
     onError: (err: any) => showError("Failed to add", err.response?.data?.detail || err.message),
   });
+
+  const addToCartWithClear = useMutation({
+    mutationFn: async () => {
+      const vendorId = targetVendorId;
+      return api.post("/cart/items", {
+        product_id: product.id,
+        ...(vendorId ? { vendor_id: vendorId } : {}),
+        quantity: 1,
+        clear_other_carts: true,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      setShowClearCartModal(false);
+    },
+    onError: (err: any) => showError("Failed to add", err.response?.data?.detail || err.message),
+  });
+
+  const handleAddToCartAttempt = () => {
+    const currentItems = isGuest ? localCart?.items : serverCart?.items;
+    const differentVendor = currentItems?.length > 0 && currentItems.some((i: any) => i.vendor_id && String(i.vendor_id) !== String(targetVendorId));
+
+    if (differentVendor) {
+      setShowClearCartModal(true);
+    } else {
+      if (isGuest) {
+        handleGuestAdd();
+      } else {
+        addToCart.mutate();
+      }
+    }
+  };
+
+  const handleConfirmClearCart = () => {
+    if (isGuest) {
+      const emptyCart = { items: [], subtotal: 0 };
+      saveLocalGuestCart(emptyCart);
+      handleGuestAdd();
+      setShowClearCartModal(false);
+    } else {
+      addToCartWithClear.mutate();
+    }
+  };
 
   const updateQty = useMutation({
     mutationFn: async ({ itemId, qty }: { itemId: string; qty: number }) => {
@@ -499,7 +538,7 @@ function ProductCard({ product }: { product: any }) {
             </div>
           ) : (
             <button
-              onClick={() => isGuest ? handleGuestAdd() : addToCart.mutate()}
+              onClick={handleAddToCartAttempt}
               disabled={!isGuest && addToCart.isPending}
               className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white dark:bg-emerald-950/30 dark:hover:bg-emerald-600 dark:text-emerald-400 dark:hover:text-white text-xs font-black px-3.5 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-900/40 transition-all disabled:opacity-50 active:scale-95 cursor-pointer"
             >
@@ -508,6 +547,35 @@ function ProductCard({ product }: { product: any }) {
           )}
         </div>
       </div>
+
+      {showClearCartModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowClearCartModal(false)} />
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl text-slate-800 dark:text-white" style={{ zIndex: 1000 }}>
+            <h3 className="text-base font-black uppercase tracking-wider">Replace cart items?</h3>
+            <p className="text-xs text-slate-550 dark:text-slate-400 leading-normal">
+              Your cart has items from another store. Do you want to discard them and add this item instead?
+            </p>
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="danger"
+                onClick={handleConfirmClearCart}
+                loading={!isGuest && addToCartWithClear.isPending}
+                className="flex-1 py-3 text-xs font-bold cursor-pointer"
+              >
+                Yes, Replace
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowClearCartModal(false)}
+                className="flex-1 py-3 text-xs font-bold cursor-pointer"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -555,14 +623,13 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
     staleTime: 60_000,
   });
 
-  // Calculate distances and filter within vendor's radius_km setup, nearest first
+  // Calculate distances and filter to the NEAREST VENDOR only
   const products = React.useMemo(() => {
     if (!rawProducts.length) return [];
     if (!coords) return rawProducts.slice(0, 20);
 
-    return rawProducts
+    const mapped = rawProducts
       .map((p: any) => {
-        // Try multiple fields for vendor coordinates
         const vLat = p.attributes?.vendor_latitude
           || p.attributes?.store_latitude
           || p.vendor?.store?.latitude
@@ -575,14 +642,38 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
           || null;
         const vRad = p.attributes?.vendor_radius_km || 10.0;
         
-        // If vendor has no coordinates, treat as nearby (distance = 0) so product always shows
         const distance = (vLat && vLon)
           ? getHaversineDistance(coords.lat, coords.lon, parseFloat(vLat), parseFloat(vLon))
           : 0;
         return { ...p, distance, vendor_radius: vRad };
       })
-      .filter((p: any) => p.distance <= p.vendor_radius) // Radius-based filter
-      .sort((a: any, b: any) => a.distance - b.distance) // Nearest first
+      .filter((p: any) => p.distance <= p.vendor_radius);
+
+    if (mapped.length === 0) return [];
+
+    // Find the closest vendor among the nearby products
+    let minDistance = Infinity;
+    let nearestVendor: any = null;
+    mapped.forEach((p: any) => {
+      const vId = p.attributes?.vendor_id || p.vendor_id || p.vendor?.id;
+      if (vId && p.distance < minDistance) {
+        minDistance = p.distance;
+        nearestVendor = vId;
+      }
+    });
+
+    if (!nearestVendor) return mapped.slice(0, 30);
+
+    // Save nearest vendor ID in localStorage for search page restriction
+    localStorage.setItem("sw_nearest_vendor_id", String(nearestVendor));
+
+    // Filter to ONLY show products from this single nearest vendor
+    return mapped
+      .filter((p: any) => {
+        const vId = p.attributes?.vendor_id || p.vendor_id || p.vendor?.id;
+        return vId === nearestVendor;
+      })
+      .sort((a: any, b: any) => a.distance - b.distance)
       .slice(0, 30);
   }, [rawProducts, coords]);
 

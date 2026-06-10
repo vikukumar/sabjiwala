@@ -13,7 +13,7 @@ import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 import { useToast } from "@/components/ui/Toast";
 
-type AdminTab = "overview" | "users" | "vendors" | "delivery" | "pricing" | "config" | "categories" | "coupons" | "banners" | "orders";
+type AdminTab = "overview" | "users" | "vendors" | "delivery" | "pricing" | "config" | "categories" | "coupons" | "banners" | "orders" | "liveops";
 
 function AdminOrdersPanel() {
   const { success, error: showError } = useToast();
@@ -861,6 +861,304 @@ function AdminBannersPanel() {
   );
 }
 
+function AdminLiveOpsPanel() {
+  const { error: showError } = useToast();
+  const mapContainerRef = React.useRef<HTMLDivElement>(null);
+  const [mapObj, setMapObj] = React.useState<any>(null);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // 1. Fetch Vendors
+  const { data: vendors = [], refetch: refetchVendors } = useQuery<any[]>({
+    queryKey: ["adminLiveOpsVendors"],
+    queryFn: async () => {
+      const res = await api.get("/admin/vendors");
+      return res.data || [];
+    },
+    refetchInterval: 15000,
+  });
+
+  // 2. Fetch Delivery Boys
+  const { data: deliveryBoys = [], refetch: refetchDeliveryBoys } = useQuery<any[]>({
+    queryKey: ["adminLiveOpsDeliveryBoys"],
+    queryFn: async () => {
+      const res = await api.get("/admin/delivery-boys");
+      return res.data || [];
+    },
+    refetchInterval: 15000,
+  });
+
+  // 3. Fetch Orders
+  const { data: ordersRes, refetch: refetchOrders } = useQuery<any>({
+    queryKey: ["adminLiveOpsOrders"],
+    queryFn: async () => {
+      return api.get("/orders", { params: { page_size: 100 } });
+    },
+    refetchInterval: 15000,
+  });
+
+  const orders = ordersRes?.data || [];
+  const activeOrders = orders.filter((o: any) =>
+    ["pending", "confirmed", "accepted", "assigned", "picked", "out_for_delivery"].includes(o.status)
+  );
+
+  React.useEffect(() => {
+    if (!isMounted || typeof window === "undefined" || !mapContainerRef.current) return;
+
+    let map: any = null;
+    let active = true;
+
+    import("leaflet").then((L) => {
+      if (!active || !mapContainerRef.current) return;
+
+      if ((mapContainerRef.current as any)._leaflet_id) {
+        return;
+      }
+
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
+
+      map = L.map(mapContainerRef.current!).setView([19.0760, 72.9977], 12);
+      
+      const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+      const tileUrl = isDark
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+      const tiles = L.tileLayer(tileUrl, {
+        attribution: "&copy; OpenStreetMap &copy; CARTO",
+        subdomains: "abcd",
+        maxZoom: 20
+      }).addTo(map);
+      tiles.on("tileerror", () => {
+        tiles.setUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+      });
+
+      setMapObj(map);
+    });
+
+    return () => {
+      active = false;
+      if (map) map.remove();
+    };
+  }, [isMounted]);
+
+  React.useEffect(() => {
+    if (!mapObj || typeof window === "undefined") return;
+
+    import("leaflet").then((L) => {
+      mapObj.eachLayer((layer: any) => {
+        if (layer instanceof L.Marker || layer instanceof L.Polyline || layer instanceof L.Circle) {
+          mapObj.removeLayer(layer);
+        }
+      });
+
+      const bounds: any[] = [];
+
+      vendors.forEach((v: any) => {
+        if (v.latitude && v.longitude) {
+          const lat = parseFloat(v.latitude);
+          const lng = parseFloat(v.longitude);
+          bounds.push([lat, lng]);
+
+          const storeIcon = L.divIcon({
+            html: `<div style="background:#3b82f6;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏪</div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+          });
+
+          L.marker([lat, lng], { icon: storeIcon })
+            .addTo(mapObj)
+            .bindPopup(`
+              <div class="text-xs p-1 space-y-1 text-slate-800">
+                <p class="font-bold text-slate-900">${v.business_name}</p>
+                <p class="text-[10px] text-slate-500">${v.contact_phone || ""}</p>
+                <p class="font-semibold text-emerald-600">Commission: ${(v.commission_rate * 100).toFixed(1)}%</p>
+                <p class="font-semibold">Rating: ⭐ ${v.average_rating.toFixed(1)}</p>
+              </div>
+            `);
+            
+          if (v.max_delivery_distance_km) {
+            L.circle([lat, lng], {
+              color: "#3b82f6",
+              fillColor: "#3b82f6",
+              fillOpacity: 0.05,
+              radius: v.max_delivery_distance_km * 1000,
+              weight: 1,
+              dashArray: "3 3"
+            }).addTo(mapObj);
+          }
+        }
+      });
+
+      activeOrders.forEach((o: any) => {
+        if (o.delivery_latitude && o.delivery_longitude) {
+          const lat = parseFloat(o.delivery_latitude);
+          const lng = parseFloat(o.delivery_longitude);
+          bounds.push([lat, lng]);
+
+          const orderIcon = L.divIcon({
+            html: `<div style="background:#f43f5e;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">📦</div>`,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+          });
+
+          L.marker([lat, lng], { icon: orderIcon })
+            .addTo(mapObj)
+            .bindPopup(`
+              <div class="text-xs p-1 space-y-1 text-slate-800">
+                <p class="font-bold text-slate-900">Order #${o.order_number}</p>
+                <p class="font-semibold text-rose-500 uppercase tracking-wider text-[9px]">Status: ${o.status}</p>
+                <p>Value: ₹${o.total_amount}</p>
+                <p class="text-[10px] text-slate-500">${o.payment_method.toUpperCase()} • ${o.payment_status}</p>
+              </div>
+            `);
+
+          const vendor = vendors.find((v: any) => v.id === o.vendor_id || String(v.id) === String(o.vendor_id));
+          if (vendor && vendor.latitude && vendor.longitude) {
+            L.polyline([[parseFloat(vendor.latitude), parseFloat(vendor.longitude)], [lat, lng]], {
+              color: "#f43f5e",
+              weight: 1.5,
+              dashArray: "5 5",
+              opacity: 0.7
+            }).addTo(mapObj);
+          }
+        }
+      });
+
+      deliveryBoys.forEach((b: any) => {
+        if (b.latitude && b.longitude) {
+          const lat = parseFloat(b.latitude);
+          const lng = parseFloat(b.longitude);
+          bounds.push([lat, lng]);
+
+          const emoji = b.vehicle_type === "bicycle" ? "🚲" : "🛵";
+          const color = b.availability === "available" ? "#10b981" : b.availability === "busy" ? "#f59e0b" : "#ef4444";
+
+          const driverIcon = L.divIcon({
+            html: `<div style="background:${color};width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${emoji}</div>`,
+            iconSize: [34, 34],
+            iconAnchor: [17, 17]
+          });
+
+          L.marker([lat, lng], { icon: driverIcon })
+            .addTo(mapObj)
+            .bindPopup(`
+              <div class="text-xs p-1 space-y-1 text-slate-800">
+                <p class="font-bold text-slate-900">${b.name}</p>
+                <p class="text-[10px] text-slate-500">${b.phone || ""}</p>
+                <p class="font-semibold uppercase tracking-wider text-[9px]" style="color: ${color}">
+                  ${b.availability.replace("_", " ")} (${b.status})
+                </p>
+                <p class="text-[10px]">Deliveries: ${b.total_deliveries} • Rating: ⭐ ${b.average_rating.toFixed(1)}</p>
+              </div>
+            `);
+        }
+      });
+
+      if (bounds.length > 0) {
+        mapObj.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+      }
+    });
+  }, [mapObj, vendors, deliveryBoys, orders]);
+
+  const handleRefreshAll = () => {
+    refetchVendors();
+    refetchDeliveryBoys();
+    refetchOrders();
+  };
+
+  const activeRiders = deliveryBoys.filter((b: any) => b.status === "active");
+  const onlineRiders = activeRiders.filter((b: any) => b.availability !== "offline");
+
+  return (
+    <div className="space-y-6 text-slate-800 dark:text-slate-100 font-sans">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Live Operational Control Map</h3>
+          <p className="text-xs text-slate-550 mt-1">Visualize and trace all partners, stores, and active shipping orders in real time.</p>
+        </div>
+        <button
+          onClick={handleRefreshAll}
+          className="bg-emerald-600 hover:bg-emerald-550 text-white font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow flex items-center justify-center gap-1.5 cursor-pointer self-start md:self-auto"
+        >
+          <span>🔄 Sync Live Status</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden relative shadow-sm h-[500px]">
+          <div ref={mapContainerRef} className="w-full h-full" style={{ zIndex: 1 }} />
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3">
+            <h4 className="text-xs font-black uppercase text-slate-450 tracking-wider">Active Shipping Orders</h4>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-550">Live active orders:</span>
+                <span className="font-black text-rose-500">{activeOrders.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-555 font-semibold">Pending confirmation:</span>
+                <span className="font-bold">{orders.filter((o: any) => o.status === "pending").length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-555 font-semibold">Assigned / Out:</span>
+                <span className="font-bold">{orders.filter((o: any) => ["assigned", "picked", "out_for_delivery"].includes(o.status)).length}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3">
+            <h4 className="text-xs font-black uppercase text-slate-450 tracking-wider">Delivery Squad Status</h4>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-550">Total active riders:</span>
+                <span className="font-black text-emerald-600">{activeRiders.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-555 font-semibold">Online & ready:</span>
+                <span className="font-bold text-emerald-555">{onlineRiders.filter((b: any) => b.availability === "available").length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-555 font-semibold">Busy on dispatch:</span>
+                <span className="font-bold text-amber-500">{onlineRiders.filter((b: any) => ["busy", "on_delivery"].includes(b.availability)).length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-555 font-semibold">Offline:</span>
+                <span className="font-bold text-slate-400">{activeRiders.filter((b: any) => b.availability === "offline").length}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3">
+            <h4 className="text-xs font-black uppercase text-slate-450 tracking-wider">Vendor Stores</h4>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-550">Approved stores:</span>
+                <span className="font-black text-blue-600">{vendors.filter((v: any) => v.status === "approved").length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-555 font-semibold">Pending KYC check:</span>
+                <span className="font-bold text-amber-500">{vendors.filter((v: any) => v.status === "pending").length}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
@@ -1204,6 +1502,7 @@ export default function AdminDashboard() {
                 {[
                   { id: "overview", label: "Overview", icon: Sliders },
                   { id: "orders", label: "Orders Board", icon: ShoppingBag },
+                  { id: "liveops", label: "Live Operations Map", icon: Globe },
                   { id: "users", label: "User Accounts", icon: Users },
                   { id: "vendors", label: "Vendor Partners", icon: Building2 },
                   { id: "delivery", label: "Delivery Squad", icon: Truck },
@@ -1260,6 +1559,7 @@ export default function AdminDashboard() {
             {[
               { id: "overview", label: "Overview Dashboard", icon: Sliders },
               { id: "orders", label: "Orders Board", icon: ShoppingBag },
+              { id: "liveops", label: "Live Operations Map", icon: Globe },
               { id: "users", label: "User Accounts", icon: Users },
               { id: "vendors", label: "Vendor Partners", icon: Building2 },
               { id: "delivery", label: "Delivery Squad", icon: Truck },
@@ -1320,6 +1620,7 @@ export default function AdminDashboard() {
             <h2 className="text-base md:text-lg font-black text-slate-900 dark:text-white uppercase tracking-wider">
               {activeTab === "overview" && "Platform Metrics & Overview"}
               {activeTab === "orders" && "Order Management Board"}
+              {activeTab === "liveops" && "Live Operations Control Map"}
               {activeTab === "users" && "User Accounts Database"}
               {activeTab === "vendors" && "Vendor Partners Directory"}
               {activeTab === "delivery" && "Delivery Partner Registrations"}
@@ -2096,6 +2397,9 @@ export default function AdminDashboard() {
           )}
           {activeTab === "banners" && (
             <AdminBannersPanel />
+          )}
+          {activeTab === "liveops" && (
+            <AdminLiveOpsPanel />
           )}
         </main>
       </div>
