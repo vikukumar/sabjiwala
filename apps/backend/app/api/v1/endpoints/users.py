@@ -33,6 +33,7 @@ async def get_current_user_profile(
 
 
 @router.patch("/me", response_model=APIResponse[UserResponse])
+@router.put("/me", response_model=APIResponse[UserResponse])
 async def update_profile(
     body: UserProfileUpdate,
     current_user: dict = Depends(get_current_user),

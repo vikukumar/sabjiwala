@@ -417,14 +417,14 @@ export default function CheckoutPage() {
   const { data: previewData } = useQuery<any>({
     queryKey: ["orderPreview", selectedAddress, paymentMethod, useWallet, cartData?.items],
     queryFn: async () => {
-      if (!selectedAddress || !cartData?.items?.length) return null;
+      if (!cartData?.items?.length) return null;
       const vendorId = cartData.items[0]?.vendor_id;
       const res = await api.post("/orders/preview", {
-        address_id: selectedAddress, payment_method: paymentMethod, use_wallet: useWallet,
+        address_id: selectedAddress || null, payment_method: paymentMethod, use_wallet: useWallet,
       }, { params: { vendor_id: vendorId } });
       return res.data;
     },
-    enabled: typeof window !== "undefined" && !!selectedAddress && !!cartData?.items?.length,
+    enabled: typeof window !== "undefined" && !!cartData?.items?.length,
   });
 
   useEffect(() => {
@@ -690,9 +690,34 @@ export default function CheckoutPage() {
               <div className="flex justify-between text-slate-600 dark:text-slate-400"><span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Delivery</span>
-                <span className={deliveryFee === 0 ? "text-emerald-600 font-bold" : ""}>{deliveryFee === 0 ? "FREE 🎉" : `₹${deliveryFee}`}</span>
+                <span className={deliveryFee === 0 ? "text-emerald-600 font-bold" : ""}>
+                  {deliveryFee === 0 ? (
+                    <>
+                      {previewData?.original_delivery_charge && previewData.original_delivery_charge > 0 && (
+                        <span className="line-through text-slate-400 mr-1.5 font-normal">
+                          ₹{parseFloat(previewData.original_delivery_charge).toFixed(2)}
+                        </span>
+                      )}
+                      FREE 🎉
+                    </>
+                  ) : `₹${deliveryFee}`}
+                </span>
               </div>
-              <div className="flex justify-between text-slate-600 dark:text-slate-400"><span>Packaging</span><span>₹{packagingCharge.toFixed(2)}</span></div>
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                <span>Packaging</span>
+                <span className={packagingCharge === 0 ? "text-emerald-600 font-bold" : ""}>
+                  {packagingCharge === 0 ? (
+                    <>
+                      {previewData?.original_packaging_charge && previewData.original_packaging_charge > 0 && (
+                        <span className="line-through text-slate-400 mr-1.5 font-normal">
+                          ₹{parseFloat(previewData.original_packaging_charge).toFixed(2)}
+                        </span>
+                      )}
+                      FREE 🎉
+                    </>
+                  ) : `₹${packagingCharge.toFixed(2)}`}
+                </span>
+              </div>
               <div className="flex justify-between text-slate-600 dark:text-slate-400"><span>Taxes (5%)</span><span>₹{taxAmount.toFixed(2)}</span></div>
               {couponDiscount > 0 && <div className="flex justify-between text-emerald-600"><span className="font-semibold">Coupon</span><span className="font-bold">-₹{couponDiscount.toFixed(2)}</span></div>}
               {walletDeduction > 0 && <div className="flex justify-between text-emerald-600 dark:text-emerald-400"><span className="font-bold">Wallet</span><span className="font-bold">-₹{walletDeduction.toFixed(2)}</span></div>}

@@ -6,14 +6,214 @@ import {
   CheckCircle2, XCircle, Database, ShieldAlert, Sparkles,
   ChevronRight, Loader2, Menu, X, Truck, UserCheck, Sliders,
   Globe, Coins, LogOut, DollarSign, AlertTriangle, ShieldCheck,
-  Search, Edit, Save, Lock, Unlock, Eye, HelpCircle
+  Search, Edit, Save, Lock, Unlock, Eye, HelpCircle, ShoppingBag
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 import { useToast } from "@/components/ui/Toast";
 
-type AdminTab = "overview" | "users" | "vendors" | "delivery" | "pricing" | "config" | "categories" | "coupons" | "banners";
+type AdminTab = "overview" | "users" | "vendors" | "delivery" | "pricing" | "config" | "categories" | "coupons" | "banners" | "orders";
+
+function AdminOrdersPanel() {
+  const { success, error: showError } = useToast();
+  const queryClient = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
+
+  const { data: ordersRes, isLoading } = useQuery<any>({
+    queryKey: ["adminOrders", statusFilter, page],
+    queryFn: async () => {
+      return api.get("/orders", {
+        params: {
+          page,
+          page_size: 20,
+          status: statusFilter || undefined
+        }
+      });
+    }
+  });
+
+  const confirmOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      return api.patch(`/orders/${orderId}/status`, {
+        status: "confirmed",
+        notes: "Confirmed by system administrator"
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminOrders"] });
+      queryClient.invalidateQueries({ queryKey: ["adminMetrics"] });
+      success("Order confirmed successfully!");
+    },
+    onError: (err: any) => {
+      showError("Confirmation Failed", err.response?.data?.detail || err.message);
+    }
+  });
+
+  const orders = ordersRes?.data || [];
+  const pagination = ordersRes?.pagination || { page: 1, total_pages: 1, has_next: false, has_previous: false };
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse";
+      case "confirmed":
+        return "bg-blue-500/10 text-blue-500 border border-blue-500/20";
+      case "accepted":
+      case "packed":
+      case "assigned":
+        return "bg-indigo-500/10 text-indigo-555 border border-indigo-500/20";
+      case "picked":
+      case "out_for_delivery":
+        return "bg-cyan-500/10 text-cyan-600 border border-cyan-500/20";
+      case "delivered":
+        return "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20";
+      case "cancelled":
+      case "failed":
+        return "bg-rose-500/10 text-rose-500 border border-rose-500/20";
+      default:
+        return "bg-slate-500/10 text-slate-500 border border-slate-500/20";
+    }
+  };
+
+  return (
+    <div className="space-y-6 text-slate-800 dark:text-slate-100 font-sans">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
+        <div className="flex justify-between items-center flex-wrap gap-4">
+          <div>
+            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">All System Orders</h3>
+            <p className="text-xs text-slate-500 mt-1">Review orders and confirm pending ones to initiate vendor fulfillment.</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+          {[
+            { id: "", label: "All Orders" },
+            { id: "pending", label: "Pending Confirmation" },
+            { id: "confirmed", label: "Confirmed" },
+            { id: "assigned", label: "Assigned" },
+            { id: "out_for_delivery", label: "Out for Delivery" },
+            { id: "delivered", label: "Delivered" },
+            { id: "cancelled", label: "Cancelled" }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => { setStatusFilter(tab.id); setPage(1); }}
+              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer transition-all border ${
+                statusFilter === tab.id
+                  ? "bg-slate-900 dark:bg-slate-850 text-white border-transparent"
+                  : "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:bg-slate-100"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+        {isLoading ? (
+          <div className="py-12 text-center text-slate-400 font-semibold text-xs animate-pulse">Loading orders...</div>
+        ) : orders.length > 0 ? (
+          <div className="space-y-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-850 font-black text-slate-450 uppercase tracking-wider">
+                    <th className="py-3 px-2">Order ID</th>
+                    <th className="py-3 px-2">Date / Time</th>
+                    <th className="py-3 px-2">Customer info</th>
+                    <th className="py-3 px-2">Vendor / Store</th>
+                    <th className="py-3 px-2 text-right">Order Value</th>
+                    <th className="py-3 px-2">Status</th>
+                    <th className="py-3 px-2">Payment</th>
+                    <th className="py-3 px-2 text-center">Admin Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+                  {orders.map((order: any) => (
+                    <tr key={order.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
+                      <td className="py-4 px-2 font-mono font-bold text-slate-900 dark:text-white">
+                        #{order.id.slice(0, 8)}
+                      </td>
+                      <td className="py-4 px-2 text-slate-500">
+                        {new Date(order.created_at).toLocaleString()}
+                      </td>
+                      <td className="py-4 px-2">
+                        <div className="font-bold text-slate-950 dark:text-white">User #{order.user_id.slice(0, 6)}</div>
+                        <div className="text-[10px] text-slate-400">{order.phone || "No Phone"}</div>
+                      </td>
+                      <td className="py-4 px-2 font-semibold">
+                        {order.vendor_store?.name || "N/A"}
+                      </td>
+                      <td className="py-4 px-2 text-right font-black text-slate-900 dark:text-white">
+                        ₹{parseFloat(order.total_amount || 0).toFixed(2)}
+                      </td>
+                      <td className="py-4 px-2">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider text-[9px] ${getStatusBadgeClass(order.status)}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="py-4 px-2">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider text-[9px] ${
+                          order.payment_status === "paid"
+                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                            : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                        }`}>
+                          {order.payment_method === "cod" ? `COD (${order.payment_status})` : `Online (${order.payment_status})`}
+                        </span>
+                      </td>
+                      <td className="py-4 px-2 text-center">
+                        {order.status === "pending" ? (
+                          <button
+                            onClick={() => confirmOrderMutation.mutate(order.id)}
+                            disabled={confirmOrderMutation.isPending}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                          >
+                            {confirmOrderMutation.isPending ? "Confirming..." : "Confirm Order"}
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 italic">Confirmed</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {pagination.total_pages > 1 && (
+              <div className="flex justify-between items-center pt-4 border-t border-slate-100 dark:border-slate-850">
+                <span className="text-xs text-slate-500">
+                  Page {pagination.page} of {pagination.total_pages}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={!pagination.has_previous}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-bold disabled:opacity-50 cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.min(pagination.total_pages, p + 1))}
+                    disabled={!pagination.has_next}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-bold disabled:opacity-50 cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="py-12 text-center text-slate-400 text-xs">No orders found.</div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function AdminCategoriesPanel() {
   const { success, error: showError } = useToast();
@@ -1000,6 +1200,7 @@ export default function AdminDashboard() {
               <nav className="space-y-1">
                 {[
                   { id: "overview", label: "Overview", icon: Sliders },
+                  { id: "orders", label: "Orders Board", icon: ShoppingBag },
                   { id: "users", label: "User Accounts", icon: Users },
                   { id: "vendors", label: "Vendor Partners", icon: Building2 },
                   { id: "delivery", label: "Delivery Squad", icon: Truck },
@@ -1055,6 +1256,7 @@ export default function AdminDashboard() {
           <nav className="space-y-1">
             {[
               { id: "overview", label: "Overview Dashboard", icon: Sliders },
+              { id: "orders", label: "Orders Board", icon: ShoppingBag },
               { id: "users", label: "User Accounts", icon: Users },
               { id: "vendors", label: "Vendor Partners", icon: Building2 },
               { id: "delivery", label: "Delivery Squad", icon: Truck },
@@ -1114,6 +1316,7 @@ export default function AdminDashboard() {
             </button>
             <h2 className="text-base md:text-lg font-black text-slate-900 dark:text-white uppercase tracking-wider">
               {activeTab === "overview" && "Platform Metrics & Overview"}
+              {activeTab === "orders" && "Order Management Board"}
               {activeTab === "users" && "User Accounts Database"}
               {activeTab === "vendors" && "Vendor Partners Directory"}
               {activeTab === "delivery" && "Delivery Partner Registrations"}
@@ -1857,6 +2060,9 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {activeTab === "orders" && (
+            <AdminOrdersPanel />
+          )}
           {activeTab === "categories" && (
             <AdminCategoriesPanel />
           )}

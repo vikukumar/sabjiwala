@@ -287,6 +287,7 @@ class DeliveryRuleCreate(BaseModel):
     per_km_charge: float = 0.0
     max_delivery_distance_km: float = 10.0
     packaging_fee: float = 0.0
+    free_platform_fee_above: Optional[float] = None
     distance_slabs: Optional[list] = None
 
 
@@ -375,7 +376,7 @@ class CartItemUpdate(BaseModel):
     quantity: float
 
 class CheckoutRequest(BaseModel):
-    address_id: UUID
+    address_id: Optional[UUID] = None
     payment_method: str = "cod"  # cod, razorpay, phonepe, wallet
     coupon_code: Optional[str] = None
     customer_notes: Optional[str] = None
@@ -579,6 +580,7 @@ class UpdateVendorCommissionRequest(BaseModel):
     per_km_charge: Optional[float] = None
     max_delivery_distance_km: Optional[float] = None
     packaging_fee: Optional[float] = None
+    free_platform_fee_above: Optional[float] = None
 
 class UpdateDeliveryBoyStatusRequest(BaseModel):
     status: str

@@ -31,12 +31,39 @@ async def preview_order(
     """Preview order totals (delivery charge, tax, packaging, coupon, wallet deduction)."""
     # 1. Fetch Address
     from app.models.user import UserAddress
-    addr_result = await db.execute(
-        select(UserAddress).where(UserAddress.id == body.address_id, UserAddress.user_id == current_user["user_id"], UserAddress.is_deleted == False)
-    )
-    address = addr_result.scalars().first()
+    address = None
+    if body.address_id:
+        addr_result = await db.execute(
+            select(UserAddress).where(
+                UserAddress.id == body.address_id,
+                UserAddress.user_id == current_user["user_id"],
+                UserAddress.is_deleted == False
+            )
+        )
+        address = addr_result.scalars().first()
+        
     if not address:
-        raise HTTPException(status_code=400, detail="Delivery address not found")
+        addr_result = await db.execute(
+            select(UserAddress).where(
+                UserAddress.user_id == current_user["user_id"],
+                UserAddress.is_deleted == False
+            )
+        )
+        address = addr_result.scalars().first()
+        
+    if not address:
+        address = UserAddress(
+            latitude=None,
+            longitude=None,
+            label="Mock",
+            full_name="Guest",
+            phone="",
+            address_line_1="No address",
+            city="",
+            state="",
+            country="",
+            postal_code=""
+        )
 
     # 2. Fetch Cart
     from app.models.order import Cart
@@ -71,28 +98,55 @@ async def preview_order(
     # 4. Calculate delivery and packaging charges
     service = OrderService(db)
     delivery_charge, distance_km = await service.calculate_delivery_charges(vendor_id, address)
+    original_delivery_charge = delivery_charge
 
     from app.models.vendor import VendorDeliveryRule
     rules_result = await db.execute(
         select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == vendor_id)
     )
     rule = rules_result.scalars().first()
-    packaging_charge = 0.0
-    if rule:
-        if subtotal < float(rule.min_order_amount):
-            raise HTTPException(status_code=400, detail=f"Minimum order amount for this vendor is Rs. {rule.min_order_amount}")
-        if rule.free_delivery_above is not None and subtotal >= float(rule.free_delivery_above):
-            delivery_charge = 0.0
-        if hasattr(rule, "packaging_fee") and rule.packaging_fee is not None:
-            packaging_charge = float(rule.packaging_fee)
-
-    if packaging_charge == 0.0:
+    
+    base_packaging = 0.0
+    if rule and getattr(rule, "packaging_fee", None) is not None:
+        base_packaging = float(rule.packaging_fee)
+        
+    if base_packaging == 0.0:
         from app.models.system import SystemSetting
         setting_res = await db.execute(
             select(SystemSetting).where(SystemSetting.key == "platform_handling_fee")
         )
         setting = setting_res.scalars().first()
-        packaging_charge = float(setting.value) if (setting and setting.value) else 5.0
+        base_packaging = float(setting.value) if (setting and setting.value) else 5.0
+        
+    original_packaging_charge = base_packaging
+    packaging_charge = base_packaging
+
+    if rule:
+        if subtotal < float(rule.min_order_amount):
+            raise HTTPException(status_code=400, detail=f"Minimum order amount for this vendor is Rs. {rule.min_order_amount}")
+        if rule.free_delivery_above is not None and subtotal >= float(rule.free_delivery_above):
+            delivery_charge = 0.0
+            
+    # Apply platform fee exemptions
+    exempt_packaging = False
+    if rule and getattr(rule, "free_platform_fee_above", None) is not None:
+        if subtotal >= float(rule.free_platform_fee_above):
+            exempt_packaging = True
+    else:
+        from app.models.system import SystemSetting
+        admin_setting_res = await db.execute(
+            select(SystemSetting).where(SystemSetting.key == "free_platform_fee_above")
+        )
+        admin_setting = admin_setting_res.scalars().first()
+        if admin_setting and admin_setting.value:
+            try:
+                if subtotal >= float(admin_setting.value):
+                    exempt_packaging = True
+            except ValueError:
+                pass
+                
+    if exempt_packaging:
+        packaging_charge = 0.0
 
     # Tax calculation (standard 5%)
     tax_amount = subtotal * 0.05
@@ -127,8 +181,10 @@ async def preview_order(
         data={
             "subtotal": subtotal,
             "delivery_charge": delivery_charge,
+            "original_delivery_charge": original_delivery_charge,
             "tax_amount": tax_amount,
             "packaging_charge": packaging_charge,
+            "original_packaging_charge": original_packaging_charge,
             "coupon_discount": coupon_discount,
             "wallet_balance": wallet_balance,
             "wallet_deduction": wallet_amount,

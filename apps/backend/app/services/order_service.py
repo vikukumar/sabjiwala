@@ -165,17 +165,12 @@ class OrderService:
             select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == vendor_id)
         )
         rule = rules_result.scalars().first()
-        packaging_charge = 0.0
-        if rule:
-            if subtotal < float(rule.min_order_amount):
-                raise ValueError(f"Minimum order amount for this vendor is Rs. {rule.min_order_amount}")
-            if rule.free_delivery_above is not None and subtotal >= float(rule.free_delivery_above):
-                delivery_charge = 0.0
-            if hasattr(rule, "packaging_fee") and rule.packaging_fee is not None:
-                packaging_charge = float(rule.packaging_fee)
-
-        # If packaging_charge is 0.0, fallback to global platform handling fee
-        if packaging_charge == 0.0:
+        
+        base_packaging = 0.0
+        if rule and getattr(rule, "packaging_fee", None) is not None:
+            base_packaging = float(rule.packaging_fee)
+            
+        if base_packaging == 0.0:
             from app.models.system import SystemSetting
             setting_res = await self.db.execute(
                 select(SystemSetting).where(SystemSetting.key == "platform_handling_fee")
@@ -183,11 +178,40 @@ class OrderService:
             setting = setting_res.scalars().first()
             if setting and setting.value:
                 try:
-                    packaging_charge = float(setting.value)
+                    base_packaging = float(setting.value)
                 except ValueError:
-                    packaging_charge = 5.0
+                    base_packaging = 5.0
             else:
-                packaging_charge = 5.0
+                base_packaging = 5.0
+                
+        packaging_charge = base_packaging
+        
+        if rule:
+            if subtotal < float(rule.min_order_amount):
+                raise ValueError(f"Minimum order amount for this vendor is Rs. {rule.min_order_amount}")
+            if rule.free_delivery_above is not None and subtotal >= float(rule.free_delivery_above):
+                delivery_charge = 0.0
+                
+        # Apply platform fee exemptions
+        exempt_packaging = False
+        if rule and getattr(rule, "free_platform_fee_above", None) is not None:
+            if subtotal >= float(rule.free_platform_fee_above):
+                exempt_packaging = True
+        else:
+            from app.models.system import SystemSetting
+            admin_setting_res = await self.db.execute(
+                select(SystemSetting).where(SystemSetting.key == "free_platform_fee_above")
+            )
+            admin_setting = admin_setting_res.scalars().first()
+            if admin_setting and admin_setting.value:
+                try:
+                    if subtotal >= float(admin_setting.value):
+                        exempt_packaging = True
+                except ValueError:
+                    pass
+                    
+        if exempt_packaging:
+            packaging_charge = 0.0
 
         # Tax calculation (standard 5%)
         tax_amount = subtotal * 0.05
@@ -348,25 +372,13 @@ class OrderService:
             pay_info = await self.payment_service.initiate_payment(
                 order.id, user_id, total_amount, payment_gateway
             )
-            # Cash on Delivery orders are confirmed immediately
+            # Cash on Delivery orders remain in pending status
             if payment_method == "cod":
-                order.status = OrderStatus.CONFIRMED
-                try:
-                    from app.services.delivery_assignment_service import DeliveryAssignmentService
-                    das = DeliveryAssignmentService(self.db)
-                    await das.assign_delivery(order.id)
-                except Exception as e:
-                    logger.error("Failed to automatically assign delivery boy on COD place_order", order_id=str(order.id), error=str(e))
+                order.status = OrderStatus.PENDING
         else:
-            # Order is fully paid by wallet/coupon
+            # Order is fully paid by wallet/coupon, status remains pending for admin to confirm
             order.payment_status = "paid"
-            order.status = OrderStatus.CONFIRMED
-            try:
-                from app.services.delivery_assignment_service import DeliveryAssignmentService
-                das = DeliveryAssignmentService(self.db)
-                await das.assign_delivery(order.id)
-            except Exception as e:
-                logger.error("Failed to automatically assign delivery boy on place_order", order_id=str(order.id), error=str(e))
+            order.status = OrderStatus.PENDING
             # Create dummy completed payment transaction for tracking
             from app.models.payment import Payment
             pay = Payment(
@@ -443,6 +455,10 @@ class OrderService:
         # e.g., cannot cancel a delivered order
         if old_status in [OrderStatus.DELIVERED, OrderStatus.CANCELLED]:
             raise ValueError(f"Cannot change status of {old_status.value} order")
+
+        if status == OrderStatus.CANCELLED:
+            if old_status in [OrderStatus.PICKED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED]:
+                raise ValueError("Order has already been shipped and cannot be cancelled.")
 
         # Update order status
         order.status = status

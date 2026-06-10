@@ -266,6 +266,8 @@ async def get_my_delivery_rules(
             "base_delivery_charge": float(rule.base_delivery_charge),
             "per_km_charge": float(rule.per_km_charge),
             "max_delivery_distance_km": rule.max_delivery_distance_km,
+            "packaging_fee": float(rule.packaging_fee) if getattr(rule, "packaging_fee", None) is not None else 0.0,
+            "free_platform_fee_above": float(rule.free_platform_fee_above) if getattr(rule, "free_platform_fee_above", None) is not None else None,
             "distance_slabs": rule.distance_slabs,
         }
         for rule in rules

@@ -61,6 +61,109 @@ class NotificationService:
             await self.db.flush()
         return template
 
+    async def seed_default_templates(self) -> None:
+        """Seed all default bilingual Hinglish notification templates."""
+        templates = [
+            {
+                "name": "Order Placed",
+                "event_key": "order_placed",
+                "in_app_title": "Aapka Order Place Ho Gaya Hai! 🎉",
+                "in_app_body": "Aapka order {{ order_number }} safaltapurvak place ho chuka hai. Total amount Rs. {{ total_amount }} hai. Hum jald hi isse confirm karenge.",
+                "push_title": "Aapka Order Place Ho Gaya Hai! 🎉",
+                "push_body": "Aapka order {{ order_number }} safaltapurvak place ho chuka hai.",
+            },
+            {
+                "name": "Order Confirmed",
+                "event_key": "order_confirmed",
+                "in_app_title": "Order Confirm Ho Gaya! 👍",
+                "in_app_body": "Aapka order {{ order_number }} confirm ho gaya hai. Ab vendor aapka order pack kar raha hai.",
+                "push_title": "Order Confirm Ho Gaya! 👍",
+                "push_body": "Aapka order {{ order_number }} confirm ho gaya hai.",
+            },
+            {
+                "name": "Order Accepted",
+                "event_key": "order_accepted",
+                "in_app_title": "Vendor Ne Order Accept Kiya 🛒",
+                "in_app_body": "Aapka order {{ order_number }} vendor ne accept kar liya hai aur ab taiyari shuru ho chuki hai.",
+                "push_title": "Vendor Ne Order Accept Kiya 🛒",
+                "push_body": "Aapka order {{ order_number }} vendor ne accept kar liya hai.",
+            },
+            {
+                "name": "Order Packed",
+                "event_key": "order_packed",
+                "in_app_title": "Order Pack Ho Gaya! 📦",
+                "in_app_body": "Aapka order {{ order_number }} pack ho chuka hai aur delivery boy ka wait kar raha hai.",
+                "push_title": "Order Pack Ho Gaya! 📦",
+                "push_body": "Aapka order {{ order_number }} pack ho chuka hai.",
+            },
+            {
+                "name": "Order Assigned",
+                "event_key": "order_assigned",
+                "in_app_title": "Delivery Agent Assigned 🚲",
+                "in_app_body": "Aapka order {{ order_number }} ek delivery partner ko saump diya gaya hai.",
+                "push_title": "Delivery Agent Assigned 🚲",
+                "push_body": "Aapka order {{ order_number }} ek delivery partner ko saump diya gaya hai.",
+            },
+            {
+                "name": "Order Picked",
+                "event_key": "order_picked",
+                "in_app_title": "Order Pick Up Ho Gaya! 🚀",
+                "in_app_body": "Aapka order {{ order_number }} pick ho chuka hai aur jald hi aapke paas pahunchega.",
+                "push_title": "Order Pick Up Ho Gaya! 🚀",
+                "push_body": "Aapka order {{ order_number }} pick ho chuka.",
+            },
+            {
+                "name": "Order Out For Delivery",
+                "event_key": "order_out_for_delivery",
+                "in_app_title": "Order Out For Delivery! 🛵",
+                "in_app_body": "Khushkhabri! Aapka order {{ order_number }} out for delivery hai. Taiyar rahiye!",
+                "push_title": "Order Out For Delivery! 🛵",
+                "push_body": "Khushkhabri! Aapka order {{ order_number }} out for delivery hai.",
+            },
+            {
+                "name": "Order Delivered",
+                "event_key": "order_delivered",
+                "in_app_title": "Order Deliver Ho Gaya! 🏁",
+                "in_app_body": "Aapka order {{ order_number }} safaltapurvak deliver ho gaya hai. Sabjiwala se kharidari ke liye dhanyawad!",
+                "push_title": "Order Deliver Ho Gaya! 🏁",
+                "push_body": "Aapka order {{ order_number }} safaltapurvak deliver ho gaya hai.",
+            },
+            {
+                "name": "Order Cancelled",
+                "event_key": "order_cancelled",
+                "in_app_title": "Order Cancel Ho Gaya! ❌",
+                "in_app_body": "Aapka order {{ order_number }} cancel kar diya gaya hai. Agar koi refund banta hai toh wo aapke wallet mein credit ho jayega.",
+                "push_title": "Order Cancel Ho Gaya! ❌",
+                "push_body": "Aapka order {{ order_number }} cancel kar diya gaya hai.",
+            },
+            {
+                "name": "Order Refunded",
+                "event_key": "order_refunded",
+                "in_app_title": "Refund Credit Ho Gaya! 💰",
+                "in_app_body": "Aapka refund order {{ order_number }} ke liye credit kar diya gaya hai.",
+                "push_title": "Refund Credit Ho Gaya! 💰",
+                "push_body": "Aapka refund order {{ order_number }} ke liye credit kar diya gaya hai.",
+            },
+            {
+                "name": "Delivery Assigned",
+                "event_key": "delivery_assigned",
+                "in_app_title": "Naya Delivery Task! 🚲",
+                "in_app_body": "Aapko naya order {{ order_number }} assign kiya gaya hai. Kripya vendor ke paas jaakar pick up karein.",
+                "push_title": "Naya Delivery Task! 🚲",
+                "push_body": "Aapko naya order {{ order_number }} assign kiya gaya hai.",
+            }
+        ]
+        for t in templates:
+            await self.create_template_if_not_exists(
+                name=t["name"],
+                event_key=t["event_key"],
+                in_app_title=t["in_app_title"],
+                in_app_body=t["in_app_body"],
+                push_title=t.get("push_title"),
+                push_body=t.get("push_body"),
+                channels=["in_app", "push"],
+            )
+
     async def dispatch(
         self,
         event_key: str,

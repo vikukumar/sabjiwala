@@ -506,6 +506,7 @@ async def list_vendors(
             "per_km_charge": float(rule.per_km_charge) if rule and getattr(rule, "per_km_charge", None) is not None else 0.0,
             "max_delivery_distance_km": float(rule.max_delivery_distance_km) if rule and getattr(rule, "max_delivery_distance_km", None) is not None else 10.0,
             "packaging_fee": float(rule.packaging_fee) if rule and getattr(rule, "packaging_fee", None) is not None else 0.0,
+            "free_platform_fee_above": float(rule.free_platform_fee_above) if rule and getattr(rule, "free_platform_fee_above", None) is not None else None,
         })
         
     return APIResponse(success=True, data=vendor_list)
@@ -563,7 +564,8 @@ async def update_vendor_settings(
             body.base_delivery_charge,
             body.per_km_charge,
             body.max_delivery_distance_km,
-            body.packaging_fee
+            body.packaging_fee,
+            body.free_platform_fee_above
         ]
     )
     
@@ -584,6 +586,8 @@ async def update_vendor_settings(
             rule.max_delivery_distance_km = body.max_delivery_distance_km
         if body.packaging_fee is not None:
             rule.packaging_fee = body.packaging_fee
+        if body.free_platform_fee_above is not None:
+            rule.free_platform_fee_above = body.free_platform_fee_above
             
     await db.commit()
     return APIResponse(success=True, message="Vendor settings updated successfully")

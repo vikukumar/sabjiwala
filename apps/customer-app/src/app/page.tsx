@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Badge, Skeleton, EmptyState, SectionHeader } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
+import { resolveLink } from "@/components/AppShell";
 
 // ==================== HERO ====================
 function Hero() {
@@ -15,7 +16,7 @@ function Hero() {
   const [query, setQuery] = useState("");
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim()) router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    if (query.trim()) router.push(resolveLink(`/search?q=${encodeURIComponent(query.trim())}`));
   };
 
   return (
@@ -652,7 +653,7 @@ function CartFooter() {
           <p className="text-lg font-black text-white">₹{total.toFixed(2)}</p>
         </div>
         <button
-          onClick={() => router.push("/cart")}
+          onClick={() => router.push(resolveLink("/cart"))}
           className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3 rounded-xl transition-all text-sm flex items-center gap-2 shadow-lg shadow-emerald-900/30 cursor-pointer"
         >
           View Cart <ArrowRight className="w-4 h-4" />

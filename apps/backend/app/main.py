@@ -70,8 +70,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await seed_default_roles_and_permissions(session)
         from app.db.seed import seed_database
         await seed_database(session)
+        from app.services.notification_service import NotificationService
+        ns = NotificationService(session)
+        await ns.seed_default_templates()
         await session.commit()
-    await logger.ainfo("RBAC and catalog database seed completed")
+    await logger.ainfo("RBAC, notification templates, and catalog database seed completed")
 
     # Connect WebSocket manager to Redis
     await ws_manager.connect_redis()

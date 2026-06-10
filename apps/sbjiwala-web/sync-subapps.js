@@ -109,6 +109,25 @@ try {
   removeRecursiveSync(vendorRegisterDest);
   copyRecursiveSync(path.join(vendorSrc, 'app/register'), vendorRegisterDest);
 
+  // Sync new orders, inventory, and profile routes
+  const vendorOrdersDest = path.join(webAppDir, 'vendor/orders');
+  removeRecursiveSync(vendorOrdersDest);
+  if (fs.existsSync(path.join(vendorSrc, 'app/orders'))) {
+    copyRecursiveSync(path.join(vendorSrc, 'app/orders'), vendorOrdersDest);
+  }
+
+  const vendorInventoryDest = path.join(webAppDir, 'vendor/inventory');
+  removeRecursiveSync(vendorInventoryDest);
+  if (fs.existsSync(path.join(vendorSrc, 'app/inventory'))) {
+    copyRecursiveSync(path.join(vendorSrc, 'app/inventory'), vendorInventoryDest);
+  }
+
+  const vendorProfileDest = path.join(webAppDir, 'vendor/profile');
+  removeRecursiveSync(vendorProfileDest);
+  if (fs.existsSync(path.join(vendorSrc, 'app/profile'))) {
+    copyRecursiveSync(path.join(vendorSrc, 'app/profile'), vendorProfileDest);
+  }
+
   // 6. Clean and Copy Delivery app specific pages under /delivery/
   console.log(`Syncing delivery-app pages...`);
   const deliveryPageDest = path.join(webAppDir, 'delivery/page.tsx');
@@ -121,6 +140,13 @@ try {
   const deliveryRegisterDest = path.join(webAppDir, 'delivery/register');
   removeRecursiveSync(deliveryRegisterDest);
   copyRecursiveSync(path.join(deliverySrc, 'app/register'), deliveryRegisterDest);
+
+  // Sync new delivery profile route
+  const deliveryProfileDest = path.join(webAppDir, 'delivery/profile');
+  removeRecursiveSync(deliveryProfileDest);
+  if (fs.existsSync(path.join(deliverySrc, 'app/profile'))) {
+    copyRecursiveSync(path.join(deliverySrc, 'app/profile'), deliveryProfileDest);
+  }
 
   // 7. Clean and Copy Admin app specific pages under /admin/
   console.log(`Syncing admin-app pages...`);
@@ -140,6 +166,13 @@ try {
   const adminSetupDest = path.join(webAppDir, 'admin/setup');
   removeRecursiveSync(adminSetupDest);
   copyRecursiveSync(path.join(adminSrc, 'app/setup'), adminSetupDest);
+
+  // Sync new admin profile route
+  const adminProfileDest = path.join(webAppDir, 'admin/profile');
+  removeRecursiveSync(adminProfileDest);
+  if (fs.existsSync(path.join(adminSrc, 'app/profile'))) {
+    copyRecursiveSync(path.join(adminSrc, 'app/profile'), adminProfileDest);
+  }
 
   // 8. Sync public assets from customer-app to sbjiwala-web
   console.log(`Syncing public assets...`);
