@@ -181,8 +181,10 @@ export default function CartPage() {
   const subtotal = isGuest ? localCart?.subtotal || 0 : (serverCart?.subtotal || 0) * 1.045; // Apply the markup subtotal
 
   const deliveryFee = subtotal >= 199 ? 0 : 20;
+  const packagingCharge = 5.0; // standard platform handling/packaging fee
+  const taxAmount = subtotal * 0.05; // standard 5% GST
   const discount = appliedCoupon?.discount || 0;
-  const total = Math.max(0, subtotal + deliveryFee - discount);
+  const total = Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - discount);
 
   const handleUpdateGuestQty = (productId: string, newQty: number) => {
     const current = getLocalGuestCart();
@@ -258,7 +260,7 @@ export default function CartPage() {
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
                   {deliveryFee === 0 ? "🎉 Free Delivery!" : `Add ₹${(199 - subtotal).toFixed(0)} more for free delivery`}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Estimated delivery in 10–15 minutes</p>
+                <p className="text-xs text-slate-550 dark:text-slate-400">Estimated delivery in 10–15 minutes</p>
               </div>
             </div>
             {deliveryFee > 0 && (
@@ -292,25 +294,33 @@ export default function CartPage() {
         <div className="lg:col-span-2">
           <div className="card p-6 space-y-4 lg:sticky lg:top-24">
             <h2 className="font-black text-slate-900 dark:text-white">Bill Summary</h2>
-            <div className="space-y-2.5">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-400">Subtotal</span>
-                <span className="font-semibold">₹{subtotal.toFixed(2)}</span>
+            <div className="space-y-2.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-650 dark:text-slate-400">Subtotal</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">₹{subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-400">Delivery fee</span>
-                <span className={`font-semibold ${deliveryFee === 0 ? "text-emerald-600 dark:text-emerald-400" : ""}`}>
+              <div className="flex justify-between">
+                <span className="text-slate-655 dark:text-slate-400">Delivery fee</span>
+                <span className={`font-semibold ${deliveryFee === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
                   {deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}
                 </span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-slate-655 dark:text-slate-400">Packaging fee</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">₹{packagingCharge.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-655 dark:text-slate-400">Taxes (5%)</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">₹{taxAmount.toFixed(2)}</span>
+              </div>
               {discount > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-emerald-600 dark:text-emerald-400">Coupon discount</span>
+                <div className="flex justify-between">
+                  <span className="text-emerald-650 dark:text-emerald-400">Coupon discount</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">-₹{discount.toFixed(2)}</span>
                 </div>
               )}
               <hr className="border-slate-200 dark:border-slate-800" />
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm">
                 <span className="font-black text-slate-900 dark:text-white">Total</span>
                 <span className="font-black text-xl text-slate-900 dark:text-white">₹{total.toFixed(2)}</span>
               </div>
