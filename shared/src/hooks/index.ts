@@ -89,3 +89,5 @@ export function useAuth() {
 
   return { user, loading, logout, isAuthenticated: !!user };
 }
+
+export * from "./useWebSocket";

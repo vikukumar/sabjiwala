@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, useWebSocket } from "@sbjiwala/shared";
 import Link from "next/link";
 import { ChevronLeft, Phone, MessageSquare, MapPin, Truck, Clock, CheckCircle2 } from "lucide-react";
 import { Badge, Button, Spinner } from "@/components/ui/index";
@@ -50,65 +50,16 @@ export default function TrackOrderClient() {
   }, [order]);
 
   // Connect to WebSocket backplane
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const token = localStorage.getItem("sw_access_token");
-    if (!token) return;
-
-    let ws: WebSocket;
-    let reconnectTimeout: any;
-
-    const connectWS = () => {
-      const apiBase = api.client.defaults.baseURL || "/api/v1";
-      let baseHost = "";
-      let protocol = "ws:";
-
-      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
-        const url = new URL(apiBase);
-        baseHost = url.host;
-        protocol = url.protocol === "https:" ? "wss:" : "ws:";
-      } else {
-        baseHost = window.location.host;
-        protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      }
-      
-      ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
-
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          const { type, data } = message;
-
-          if (type === "live_location" && data.order_id === id) {
-            setDriverLocation({
-              latitude: data.latitude,
-              longitude: data.longitude,
-              speed: data.speed,
-              heading: data.heading,
-            });
-          }
-        } catch (err) {
-          console.error("Error parsing WS message:", err);
-        }
-      };
-
-      ws.onclose = () => {
-        reconnectTimeout = setTimeout(connectWS, 5000);
-      };
-
-      ws.onerror = (err) => {
-        console.error("WS error:", err);
-        ws.close();
-      };
-    };
-
-    connectWS();
-
-    return () => {
-      if (ws) ws.close();
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-    };
-  }, [id]);
+  useWebSocket((message) => {
+    if (message.type === "live_location" && message.data.order_id === id) {
+      setDriverLocation({
+        latitude: message.data.latitude,
+        longitude: message.data.longitude,
+        speed: message.data.speed,
+        heading: message.data.heading,
+      });
+    }
+  });
 
   // Initialize Leaflet map
   useEffect(() => {

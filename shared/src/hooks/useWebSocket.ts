@@ -1,0 +1,99 @@
+import { useState, useEffect, useRef } from "react";
+import { api } from "../api-client";
+
+export function useWebSocket(onMessage?: (msg: any) => void, enabled: boolean = true) {
+  const [isConnected, setIsConnected] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+        setIsConnected(false);
+      }
+      return;
+    }
+
+    const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
+    if (!token) return;
+
+    let reconnectTimeout: any;
+    let pingInterval: any;
+
+    const connectWS = () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
+        return;
+      }
+
+      const apiBase = api.client.defaults.baseURL || "/api/v1";
+      let baseHost = window.location.host;
+      let protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
+        try {
+          const url = new URL(apiBase);
+          baseHost = url.host;
+          protocol = url.protocol === "https:" ? "wss:" : "ws:";
+        } catch (e) {
+          console.error("Invalid API URL", e);
+        }
+      }
+      
+      const ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setIsConnected(true);
+        // Start ping interval to keep connection alive
+        pingInterval = setInterval(() => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: "ping" }));
+          }
+        }, 15000);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === "pong") return; // Ignore pongs
+          if (onMessage) onMessage(message);
+        } catch (err) {
+          console.error("Error parsing WS message:", err);
+        }
+      };
+
+      ws.onclose = () => {
+        setIsConnected(false);
+        wsRef.current = null;
+        if (pingInterval) clearInterval(pingInterval);
+        reconnectTimeout = setTimeout(connectWS, 5000); // Reconnect in 5s
+      };
+
+      ws.onerror = (err) => {
+        console.warn("WS connection error:", err);
+        ws.close();
+      };
+    };
+
+    connectWS();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.onclose = null; // Prevent reconnect logic on unmount
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (pingInterval) clearInterval(pingInterval);
+    };
+  }, [onMessage, enabled]);
+
+  const sendMessage = (msg: any) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(msg));
+    }
+  };
+
+  return { isConnected, sendMessage };
+}

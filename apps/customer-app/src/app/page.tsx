@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, ArrowRight, Star, Plus, Minus, ChevronRight, Zap, Truck, Leaf, ShieldCheck, Clock, TrendingUp, Loader2, Bell, X, Navigation } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, useWebSocket } from "@sbjiwala/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Badge, Skeleton, EmptyState, SectionHeader } from "@/components/ui/index";
@@ -674,66 +674,17 @@ export default function HomePage() {
   const [notificationBanner, setNotificationBanner] = useState<{ title: string; body: string } | null>(null);
 
   // WebSocket for real-time notifications on the customer homepage
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const token = localStorage.getItem("sw_access_token");
-    if (!token) return;
-
-    let ws: WebSocket;
-    let reconnectTimeout: any;
-
-    const connectWS = () => {
-      const apiBase = api.client.defaults.baseURL || "/api/v1";
-      let baseHost = "";
-      let protocol = "ws:";
-
-      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
-        const url = new URL(apiBase);
-        baseHost = url.host;
-        protocol = url.protocol === "https:" ? "wss:" : "ws:";
-      } else {
-        baseHost = window.location.host;
-        protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  useWebSocket((message) => {
+    if (message.type === "notification") {
+      setNotificationBanner({ title: message.data.title, body: message.data.body });
+      if (document.visibilityState === "hidden" && "Notification" in window && Notification.permission === "granted") {
+        new Notification(message.data.title, { body: message.data.body, icon: "/icon.png" });
       }
-      
-      ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
-
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          const { type, data } = message;
-
-          if (type === "notification") {
-            setNotificationBanner({ title: data.title, body: data.body });
-            if (document.visibilityState === "hidden" && "Notification" in window && Notification.permission === "granted") {
-              new Notification(data.title, { body: data.body, icon: "/icon.png" });
-            }
-            setTimeout(() => {
-              setNotificationBanner(null);
-            }, 6000);
-          }
-        } catch (err) {
-          console.error("Error parsing WS message:", err);
-        }
-      };
-
-      ws.onclose = () => {
-        reconnectTimeout = setTimeout(connectWS, 5000);
-      };
-
-      ws.onerror = (err) => {
-        console.warn("WS connection offline or closed:", err);
-        ws.close();
-      };
-    };
-
-    connectWS();
-
-    return () => {
-      if (ws) ws.close();
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-    };
-  }, []);
+      setTimeout(() => {
+        setNotificationBanner(null);
+      }, 6000);
+    }
+  });
 
   return (
     <div className="space-y-8 pb-4 relative">
