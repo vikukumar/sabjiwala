@@ -169,7 +169,13 @@ function ThemeCycleButton() {
 
 // ==================== HEADER ====================
 function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpenLocation: () => void }) {
-  const { data: publicSettings } = useQuery<any>({ queryKey: ["publicSettings"] });
+  const { data: publicSettings } = useQuery<any>({
+    queryKey: ["publicSettings"],
+    queryFn: async () => {
+      const res = await api.get("/installation/public-settings");
+      return res.data || {};
+    }
+  });
   const queryClient = useQueryClient();
   const [locationName, setLocationName] = useState("Loading...");
 
@@ -265,7 +271,13 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
 
 // ==================== SIDEBAR ====================
 function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isOpen?: boolean; onOpenLocation: () => void }) {
-  const { data: publicSettings } = useQuery<any>({ queryKey: ["publicSettings"] });
+  const { data: publicSettings } = useQuery<any>({
+    queryKey: ["publicSettings"],
+    queryFn: async () => {
+      const res = await api.get("/installation/public-settings");
+      return res.data || {};
+    }
+  });
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
