@@ -136,6 +136,37 @@ class DeliveryAssignmentService:
         self.db.add(history)
         await self.db.flush()
 
+        # Broadcast WebSocket event to Customer, Vendor, and Delivery Boy
+        try:
+            from app.websocket.manager import ws_manager
+            from datetime import datetime, timezone
+            
+            # Fetch order details
+            order_res = await self.db.execute(select(Order).where(Order.id == order_id))
+            order = order_res.scalars().first()
+            
+            vendor_res = await self.db.execute(select(Vendor).where(Vendor.id == order.vendor_id))
+            vendor = vendor_res.scalars().first()
+            vendor_user_id = vendor.user_id if vendor else None
+
+            ws_payload = {
+                "type": "order_status_update",
+                "data": {
+                    "order_id": str(order_id),
+                    "order_number": order.order_number if order else "",
+                    "status": OrderStatus.ASSIGNED.value,
+                    "delivery_boy_id": str(boy.user_id),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+            if order:
+                await ws_manager.send_to_user(order.user_id, ws_payload)
+            if vendor_user_id:
+                await ws_manager.send_to_user(vendor_user_id, ws_payload)
+            await ws_manager.send_to_user(boy.user_id, ws_payload)
+        except Exception as ws_err:
+            logger.error("Failed to broadcast WebSocket assignment status", order_id=str(order_id), error=str(ws_err))
+
         logger.info("Order successfully assigned to delivery boy", order_id=str(order_id), delivery_boy=str(boy.user_id))
 
         # Dispatch push notification to delivery boy

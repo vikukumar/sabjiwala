@@ -200,7 +200,10 @@ async def list_orders(
         query = query.where(Order.delivery_boy_id == current_user["user_id"])
 
     if status_filter:
-        query = query.where(Order.status == status_filter)
+        if role in ["vendor", "vendor_manager"] and status_filter == "pending":
+            query = query.where(Order.status.in_([OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.ACCEPTED]))
+        else:
+            query = query.where(Order.status == status_filter)
 
     # Count
     count_query = select(func.count()).select_from(query.subquery())

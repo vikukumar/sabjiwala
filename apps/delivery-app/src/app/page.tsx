@@ -209,12 +209,18 @@ function ActiveOrdersTab({ assignments, assignmentsLoading, isOnline, globalPos,
                     </div>
                     <button
                       onClick={() => handleUpdateStatus(task.id, task.status)}
-                      disabled={pickupOrderMutation.isPending || deliverOrderMutation.isPending}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+                      disabled={
+                        pickupOrderMutation.isPending ||
+                        deliverOrderMutation.isPending ||
+                        (task.status === "assigned" || task.status === "accepted" || task.status === "confirmed")
+                      }
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:text-slate-500 flex items-center gap-1.5"
                     >
-                      {task.status === "assigned" || task.status === "packed" || task.status === "accepted"
-                        ? <><Package className="w-3.5 h-3.5" /> Confirm Pickup</>
-                        : <><CheckCircle2 className="w-3.5 h-3.5" /> Verify OTP & Deliver</>}
+                      {task.status === "assigned" || task.status === "accepted" || task.status === "confirmed"
+                        ? "Waiting for store to pack"
+                        : task.status === "packed"
+                          ? <><Package className="w-3.5 h-3.5" /> Confirm Pickup</>
+                          : <><CheckCircle2 className="w-3.5 h-3.5" /> Verify OTP & Deliver</>}
                     </button>
                   </div>
                 </div>
@@ -735,6 +741,21 @@ export default function DeliveryAgentDashboard() {
       }
       ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
       wsRef.current = ws;
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === "order_status_update") {
+            queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] });
+            if (message.data?.status === "assigned") {
+              success("New Delivery Assigned! 🛵", `Order #${message.data?.order_number || ""} has been assigned to you.`);
+            } else if (message.data?.status === "packed") {
+              success("Order Packed! 📦", `Order #${message.data?.order_number || ""} is now ready for pickup.`);
+            }
+          }
+        } catch (err) {
+          console.error("Error parsing delivery WS message:", err);
+        }
+      };
       ws.onclose = () => { reconnectTimeout = setTimeout(connectWS, 5000); };
       ws.onerror = () => ws.close();
     };

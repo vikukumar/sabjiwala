@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, useWebSocket } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/index";
@@ -1450,6 +1450,16 @@ export default function VendorDashboard() {
     setIsMounted(true);
   }, []);
 
+  useWebSocket((message) => {
+    if (message.type === "order_status_update") {
+      queryClient.invalidateQueries({ queryKey: ["vendorOrders"] });
+      queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
+      if (message.data?.status === "confirmed") {
+        success("New Order! 🔔", `Order #${message.data?.order_number || ""} received. Click to Accept.`);
+      }
+    }
+  }, !!isAuthed);
+
   useEffect(() => {
     if (!isMounted) return;
     const isDark = document.documentElement.classList.contains("dark");
@@ -1523,18 +1533,18 @@ export default function VendorDashboard() {
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token")
   });
 
-  // 4. Mutation to accept and pack order
-  const acceptOrderMutation = useMutation({
-    mutationFn: async (orderId: string) => {
+  // 4. Mutation to update order status
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ orderId, status, notes }: { orderId: string; status: string; notes: string }) => {
       return api.patch(`/orders/${orderId}/status`, {
-        status: "packed",
-        notes: "Order accepted and packed by vendor"
+        status,
+        notes
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendorOrders"] });
       queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
-      success("Order accepted and marked as packed successfully!");
+      success("Order status updated successfully!");
     },
     onError: (err: any) => {
       showError("Update Failed", "Failed to update order: " + (err.response?.data?.detail || err.message));
@@ -1899,26 +1909,54 @@ export default function VendorDashboard() {
                         </div>
 
                         <div className="flex items-center gap-6 self-stretch md:self-auto justify-between">
-                          <div className="space-y-1 text-right">
-                            <span className="block font-black text-slate-950 dark:text-slate-50">₹{order.total_amount}</span>
-                            <span className={`inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${order.status === "pending"
-                              ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
-                              : order.status === "packed"
-                                ? "bg-blue-100 dark:bg-blue-955/40 text-blue-800 dark:text-blue-400"
-                                : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
-                              }`}>
+                                                    <span className={`inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                              order.status === "pending"
+                                ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
+                                : order.status === "confirmed"
+                                  ? "bg-purple-100 dark:bg-purple-955/40 text-purple-800 dark:text-purple-400"
+                                  : order.status === "accepted"
+                                    ? "bg-teal-100 dark:bg-teal-955/40 text-teal-800 dark:text-teal-400"
+                                    : order.status === "packed"
+                                      ? "bg-blue-100 dark:bg-blue-955/40 text-blue-800 dark:text-blue-400"
+                                      : order.status === "assigned"
+                                        ? "bg-indigo-100 dark:bg-indigo-955/40 text-indigo-800 dark:text-indigo-400"
+                                        : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
+                            }`}>
                               {order.status}
                             </span>
                           </div>
-
+ 
                           {order.status === "pending" && (
                             <button
-                              onClick={() => acceptOrderMutation.mutate(order.id)}
-                              disabled={acceptOrderMutation.isPending}
+                              disabled
+                              className="bg-slate-100 dark:bg-slate-800 text-slate-405 text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm"
+                            >
+                              Awaiting Payment
+                            </button>
+                          )}
+                          {order.status === "confirmed" && (
+                            <button
+                              onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: "accepted", notes: "Order accepted by vendor" })}
+                              disabled={updateStatusMutation.isPending}
                               className="bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm disabled:opacity-50"
                             >
-                              {acceptOrderMutation.isPending ? "Updating..." : "Accept & Pack"}
+                              {updateStatusMutation.isPending ? "Accepting..." : "Accept Order"}
                             </button>
+                          )}
+                          {order.status === "accepted" && (
+                            <button
+                              onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: "packed", notes: "Order packed by vendor" })}
+                              disabled={updateStatusMutation.isPending}
+                              className="bg-blue-600 hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm disabled:opacity-50"
+                            >
+                              {updateStatusMutation.isPending ? "Packing..." : "Mark as Packed"}
+                            </button>
+                          )}
+                          {order.status === "packed" && (
+                            <span className="text-xs font-bold text-slate-500">Ready for Pickup</span>
+                          )}
+                          {order.status === "assigned" && (
+                            <span className="text-xs font-bold text-indigo-500">Driver Assigned</span>
                           )}
                         </div>
                       </div>

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useWebSocket } from "@sbjiwala/shared";
 import Link from "next/link";
 import { ChevronLeft, Phone, MessageSquare, MapPin, Truck, Clock, CheckCircle2 } from "lucide-react";
@@ -27,6 +27,7 @@ const getVehicleDetails = (orderId: string, agentVehicleType?: string) => {
 
 export default function TrackOrderClient() {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [driverLocation, setDriverLocation] = useState<any>(null);
@@ -58,6 +59,9 @@ export default function TrackOrderClient() {
         speed: message.data.speed,
         heading: message.data.heading,
       });
+    } else if (message.type === "order_status_update" && message.data.order_id === id) {
+      queryClient.invalidateQueries({ queryKey: ["order", id] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
     }
   });
 

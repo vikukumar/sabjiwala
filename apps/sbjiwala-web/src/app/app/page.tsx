@@ -337,7 +337,7 @@ function ProductCard({ product }: { product: any }) {
       return res.data || { items: [], item_count: 0 };
     },
     enabled: typeof window !== "undefined" && !isGuest,
-    staleTime: 30_000,
+    staleTime: 0,
   });
 
   // Track guest cart local state
@@ -624,7 +624,7 @@ function CartFooter() {
       return res.data || { items: [], item_count: 0 };
     },
     enabled: typeof window !== "undefined" && !isGuest,
-    staleTime: 30_000,
+    staleTime: 0,
   });
 
   // Guest cart state

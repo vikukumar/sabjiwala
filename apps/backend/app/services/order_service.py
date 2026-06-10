@@ -1,7 +1,7 @@
-"""
-Order placement and lifecycle management service.
-"""
+import structlog
 import random
+
+logger = structlog.get_logger()
 import secrets
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional, Tuple
@@ -348,6 +348,15 @@ class OrderService:
             pay_info = await self.payment_service.initiate_payment(
                 order.id, user_id, total_amount, payment_gateway
             )
+            # Cash on Delivery orders are confirmed immediately
+            if payment_method == "cod":
+                order.status = OrderStatus.CONFIRMED
+                try:
+                    from app.services.delivery_assignment_service import DeliveryAssignmentService
+                    das = DeliveryAssignmentService(self.db)
+                    await das.assign_delivery(order.id)
+                except Exception as e:
+                    logger.error("Failed to automatically assign delivery boy on COD place_order", order_id=str(order.id), error=str(e))
         else:
             # Order is fully paid by wallet/coupon
             order.payment_status = "paid"
@@ -373,6 +382,29 @@ class OrderService:
             pay_info = {"success": True, "message": "Fully paid via wallet/coupon"}
 
         await self.db.flush()
+
+        # Broadcast WebSocket event to Customer and Vendor
+        try:
+            from app.websocket.manager import ws_manager
+            vendor_res = await self.db.execute(select(Vendor).where(Vendor.id == order.vendor_id))
+            vendor = vendor_res.scalars().first()
+            vendor_user_id = vendor.user_id if vendor else None
+
+            ws_payload = {
+                "type": "order_status_update",
+                "data": {
+                    "order_id": str(order.id),
+                    "order_number": order.order_number,
+                    "status": order.status.value,
+                    "delivery_boy_id": str(order.delivery_boy_id) if order.delivery_boy_id else None,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+            await ws_manager.send_to_user(order.user_id, ws_payload)
+            if vendor_user_id:
+                await ws_manager.send_to_user(vendor_user_id, ws_payload)
+        except Exception as ws_err:
+            logger.error("Failed to broadcast WebSocket placement status", order_id=str(order.id), error=str(ws_err))
 
         # Trigger notification
         await self.notification_service.dispatch(
@@ -551,6 +583,35 @@ class OrderService:
             vw.total_earned = float(vw.total_earned) + net_earnings
 
         await self.db.flush()
+
+        # Broadcast WebSocket event to Customer, Vendor, and Delivery Boy
+        try:
+            from app.websocket.manager import ws_manager
+            vendor_res = await self.db.execute(select(Vendor).where(Vendor.id == order.vendor_id))
+            vendor = vendor_res.scalars().first()
+            vendor_user_id = vendor.user_id if vendor else None
+
+            ws_payload = {
+                "type": "order_status_update",
+                "data": {
+                    "order_id": str(order.id),
+                    "order_number": order.order_number,
+                    "status": status.value,
+                    "old_status": old_status.value if old_status else None,
+                    "delivery_boy_id": str(order.delivery_boy_id) if order.delivery_boy_id else None,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+            # Send to customer
+            await ws_manager.send_to_user(order.user_id, ws_payload)
+            # Send to vendor
+            if vendor_user_id:
+                await ws_manager.send_to_user(vendor_user_id, ws_payload)
+            # Send to delivery boy if assigned
+            if order.delivery_boy_id:
+                await ws_manager.send_to_user(order.delivery_boy_id, ws_payload)
+        except Exception as ws_err:
+            logger.error("Failed to broadcast WebSocket status update", order_id=str(order.id), error=str(ws_err))
 
         # Send notifications
         await self.notification_service.dispatch(

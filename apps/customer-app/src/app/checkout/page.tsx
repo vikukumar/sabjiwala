@@ -405,6 +405,7 @@ export default function CheckoutPage() {
       return r.data || { items: [], subtotal: 0, item_count: 0 };
     },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
+    staleTime: 0,
   });
 
   const { data: walletData } = useQuery<any>({

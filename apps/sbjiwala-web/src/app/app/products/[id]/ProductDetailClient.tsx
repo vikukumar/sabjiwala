@@ -44,6 +44,7 @@ export default function ProductDetailClient() {
     queryKey: ["cart"],
     queryFn: async () => { const r = await api.get("/cart"); return r.data; },
     enabled: typeof window !== "undefined" && !isGuest,
+    staleTime: 0,
   });
 
   // Track guest cart local state

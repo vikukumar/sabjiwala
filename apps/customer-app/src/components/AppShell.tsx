@@ -189,7 +189,7 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
       return res.data || { items: [], item_count: 0 };
     },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
-    staleTime: 30_000,
+    staleTime: 0,
   });
 
   const cartCount = cartData?.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0;
@@ -423,7 +423,7 @@ function BottomNav() {
       return res.data || { items: [] };
     },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
-    staleTime: 30_000,
+    staleTime: 0,
   });
 
   const cartCount = cartData?.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0;

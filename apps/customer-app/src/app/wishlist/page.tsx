@@ -17,7 +17,7 @@ function WishlistItem({ item }: { item: any }) {
       const res = await api.get("/cart");
       return res.data || { items: [], item_count: 0 };
     },
-    staleTime: 30_000,
+    staleTime: 0,
   });
   const cartItem = cartData?.items?.find((i: any) => i.product_id === item.product_id);
 

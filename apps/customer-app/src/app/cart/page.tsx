@@ -166,6 +166,7 @@ export default function CartPage() {
       return res.data || { items: [], subtotal: 0, item_count: 0 };
     },
     enabled: typeof window !== "undefined" && !isGuest,
+    staleTime: 0,
   });
 
   // Guest cart state
