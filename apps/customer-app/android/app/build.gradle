@@ -32,10 +32,10 @@ android {
                 storeFile file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
             } else if (System.getenv('KEYSTORE_PATH')) {
-                keyAlias System.getenv('KEY_ALIAS') ?: 'sbjiwala-customer'
-                keyPassword System.getenv('KEY_PASSWORD') ?: ''
-                storeFile file(System.getenv('KEYSTORE_PATH') ?: 'sbjiwala-customer.keystore')
-                storePassword System.getenv('STORE_PASSWORD') ?: ''
+                keyAlias System.getenv('KEY_ALIAS') ?: 'sbjiwala'
+                keyPassword System.getenv('KEY_PASSWORD') ?: 'sbjiwala@2026'
+                storeFile file(System.getenv('KEYSTORE_PATH') ?: 'sbjiwala.keystore')
+                storePassword System.getenv('STORE_PASSWORD') ?: 'sbjiwala@2026'
             }
         }
     }

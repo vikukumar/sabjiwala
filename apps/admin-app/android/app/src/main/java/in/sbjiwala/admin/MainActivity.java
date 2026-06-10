@@ -1,4 +1,4 @@
-package com.sbjiwala.admin;
+package in.sbjiwala.admin;
 
 import com.getcapacitor.BridgeActivity;
 
