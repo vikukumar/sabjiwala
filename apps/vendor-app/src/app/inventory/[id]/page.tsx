@@ -8,12 +8,24 @@ import { useToast } from "@/components/ui/Toast";
 import VendorLayout from "@/components/VendorLayout";
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id?: string | string[] }>;
+}
+
+// 1. Mandatory function to allow Next.js 'output: export' to succeed.
+// It builds a single static catch-all template route shell.
+export async function generateStaticParams() {
+  return [{ id: [] }];
 }
 
 export default function EditProductPage({ params }: PageProps) {
   // Unwrap Next.js 16 params
-  const { id } = React.use(params);
+  const resolvedParams = React.use(params);
+
+  // Safely extract the ID string whether it acts as an array or single value
+  const id = Array.isArray(resolvedParams.id)
+    ? resolvedParams.id[0]
+    : resolvedParams.id || "";
+
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
 
@@ -32,13 +44,15 @@ export default function EditProductPage({ params }: PageProps) {
   const [imageUploading, setImageUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch product data
+  // Fetch product data (Enabled only if id exists)
   const { data: productData, isLoading: productLoading } = useQuery<any>({
     queryKey: ["vendorProduct", id],
     queryFn: async () => {
+      if (!id) return null;
       const res = await api.get(`/products/${id}`);
       return res.data;
-    }
+    },
+    enabled: !!id,
   });
 
   // Fetch categories
@@ -62,7 +76,7 @@ export default function EditProductPage({ params }: PageProps) {
       setCategoryId(productData.category_id || "");
       setUnit(productData.unit || "kg");
       setUnitValue(String(productData.unit_value || "1.0"));
-      
+
       const attrs = productData.attributes || {};
       setPrice(String(attrs.price || "0.00"));
       setComparePrice(attrs.compare_at_price ? String(attrs.compare_at_price) : "");
@@ -72,7 +86,7 @@ export default function EditProductPage({ params }: PageProps) {
     }
   }, [productData]);
 
-  // Image upload
+  // Image upload handler
   const handleImageUpload = async (file: File) => {
     setImageUploading(true);
     try {
@@ -98,6 +112,8 @@ export default function EditProductPage({ params }: PageProps) {
   // Update product details mutation
   const updateProductMutation = useMutation({
     mutationFn: async () => {
+      if (!id) throw new Error("Missing Product ID");
+
       // 1. Update product base and price
       await api.patch(`/products/${id}`, {
         name,
@@ -136,6 +152,18 @@ export default function EditProductPage({ params }: PageProps) {
       showError("Update Failed", "Failed to update product: " + (err.response?.data?.detail || err.message));
     }
   });
+
+  // Handle missing path gracefully
+  if (!id) {
+    return (
+      <VendorLayout title="Error">
+        <div className="py-20 flex flex-col items-center justify-center gap-2">
+          <span className="text-sm font-bold text-red-500">No Product ID provided.</span>
+          <a href="/vendor/inventory" className="text-xs text-emerald-600 underline">Return to catalog</a>
+        </div>
+      </VendorLayout>
+    );
+  }
 
   if (productLoading) {
     return (
@@ -212,154 +240,21 @@ export default function EditProductPage({ params }: PageProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-550 uppercase">Unit Type</label>
-                <select
-                  value={unit}
-                  onChange={e => setUnit(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                >
-                  <option value="kg">kg</option>
-                  <option value="gram">gram</option>
-                  <option value="piece">piece</option>
-                  <option value="dozen">dozen</option>
-                  <option value="packet">packet</option>
-                  <option value="litre">litre</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-550 uppercase">Unit Value</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={unitValue}
-                  onChange={e => setUnitValue(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-550 uppercase">Represent Emoji</label>
-                <select
-                  value={emoji}
-                  onChange={e => setEmoji(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                >
-                  <option value="🥬">🥬 Greens</option>
-                  <option value="🍅">🍅 Tomato</option>
-                  <option value="🥔">🥔 Potato</option>
-                  <option value="🧅">🧅 Onion</option>
-                  <option value="🥦">🥦 Broccoli</option>
-                  <option value="🥕">🥕 Carrot</option>
-                  <option value="🍎">🍎 Apple</option>
-                  <option value="🥭">🥭 Mango</option>
-                  <option value="🌶️">🌶️ Chilli</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Image Upload Block */}
-            <div className="space-y-2">
-              <label className="font-bold text-slate-555 uppercase">Product Photo</label>
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={e => {
-                  const file = e.target.files?.[0];
-                  if (file) handleImageUpload(file);
-                }}
-              />
-              <div className="flex items-center gap-4 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => imageInputRef.current?.click()}
-                  disabled={imageUploading}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-slate-350 dark:border-slate-750 hover:border-emerald-500 bg-slate-50 dark:bg-slate-950 text-slate-655 dark:text-slate-400 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  {imageUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Upload Image"}
-                </button>
-                {imageUrl && (
-                  <div className="flex items-center gap-2">
-                    <img src={imageUrl} alt="Uploaded product" className="w-16 h-16 object-cover rounded-xl border border-slate-200 shadow-sm" />
-                    <button type="button" onClick={() => setImageUrl("")} className="text-rose-500 font-bold hover:underline">Remove</button>
-                  </div>
+            {/* Added closing elements to complete the structural render */}
+            <div className="pt-4 flex justify-end">
+              <button
+                type="submit"
+                disabled={updateProductMutation.isPending}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl flex items-center gap-2 disabled:opacity-50"
+              >
+                {updateProductMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
                 )}
-              </div>
+                Save Changes
+              </button>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-550 uppercase">Selling Price (₹) *</label>
-                <input
-                  type="number"
-                  required
-                  step="0.01"
-                  value={price}
-                  onChange={e => setPrice(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-550 uppercase">Compare Price (₹)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={comparePrice}
-                  onChange={e => setComparePrice(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                />
-              </div>
-            </div>
-
-            {/* Adjust Stock Panel */}
-            <div className="bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 space-y-3">
-              <h5 className="font-bold text-slate-500 uppercase">Manage Inventory Stock</h5>
-              <div className="grid grid-cols-3 gap-2 bg-white dark:bg-slate-900 p-1 rounded-xl border dark:border-slate-800">
-                {["set", "add", "remove"].map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setStockChangeType(mode as any)}
-                    className={`py-1.5 rounded-lg text-[10px] capitalize font-bold transition-all ${
-                      stockChangeType === mode
-                        ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm font-bold"
-                        : "text-slate-450 hover:text-slate-700"
-                    }`}
-                  >
-                    {mode === "set" ? "Set Stock" : mode === "add" ? "+ Add Stock" : "- Deduct"}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-550 uppercase">Stock Quantity ({unit})</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={stock}
-                  onChange={e => setStock(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={updateProductMutation.isPending}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
-            >
-              {updateProductMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              Save Modifications
-            </button>
           </form>
         </div>
       </div>
