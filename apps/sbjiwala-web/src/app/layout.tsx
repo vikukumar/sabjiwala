@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import Providers from "./providers";
+import AppShell from "@/components/AppShell";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -91,7 +92,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col antialiased" style={{ fontFamily: "var(--font-inter, Inter, system-ui, sans-serif)" }}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <AppShell>{children}</AppShell>
+        </Providers>
         <Script
           id="sw-register"
           strategy="afterInteractive"

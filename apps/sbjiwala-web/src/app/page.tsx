@@ -411,10 +411,17 @@ function ProductCard({ product }: { product: any }) {
   // Backend mutations
   const addToCart = useMutation({
     mutationFn: async () => {
-      const vendorId = product.attributes?.vendor_id || product.vendor_id;
+      // Try all possible vendor_id fields in order
+      const vendorId =
+        product.attributes?.vendor_id
+        || product.vendor_id
+        || product.vendor?.id
+        || product.store?.vendor_id
+        || product.attributes?.store_id
+        || null;
       return api.post("/cart/items", {
         product_id: product.id,
-        vendor_id: vendorId,
+        ...(vendorId ? { vendor_id: vendorId } : {}),
         quantity: 1,
       });
     },
@@ -555,13 +562,25 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
 
     return rawProducts
       .map((p: any) => {
-        const vLat = p.attributes?.vendor_latitude || p.vendor?.store?.latitude || 19.0760;
-        const vLon = p.attributes?.vendor_longitude || p.vendor?.store?.longitude || 72.8777;
-        const distance = getHaversineDistance(coords.lat, coords.lon, vLat, vLon);
+        // Try multiple fields for vendor coordinates
+        const vLat = p.attributes?.vendor_latitude
+          || p.attributes?.store_latitude
+          || p.vendor?.store?.latitude
+          || p.vendor_latitude
+          || null;
+        const vLon = p.attributes?.vendor_longitude
+          || p.attributes?.store_longitude
+          || p.vendor?.store?.longitude
+          || p.vendor_longitude
+          || null;
+        // If vendor has no coordinates, treat as nearby (distance = 0) so product always shows
+        const distance = (vLat && vLon)
+          ? getHaversineDistance(coords.lat, coords.lon, parseFloat(vLat), parseFloat(vLon))
+          : 0;
         return { ...p, distance };
       })
-      .filter((p: any) => p.distance <= 10.0) // 10 km radius filter!
-      .sort((a: any, b: any) => a.distance - b.distance) // Nearest first!
+      .filter((p: any) => p.distance <= 10.0) // 10 km radius filter
+      .sort((a: any, b: any) => a.distance - b.distance) // Nearest first
       .slice(0, 30);
   }, [rawProducts, coords]);
 

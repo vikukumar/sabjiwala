@@ -4,8 +4,9 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   TrendingUp, Users, ShoppingBag, DollarSign,
   Settings, Award, RefreshCw, Clock, MapPin, Loader2, Menu, X,
-  Plus, Trash2, ArrowLeft, Save, Search, Navigation
+  Plus, Trash2, ArrowLeft, Save, Search, Navigation, Upload, Star, Image
 } from "lucide-react";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
@@ -416,6 +417,28 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
   const [newProdComparePrice, setNewProdComparePrice] = useState("");
   const [newProdEmoji, setNewProdEmoji] = useState("🥬");
   const [newProdInitialStock, setNewProdInitialStock] = useState("50.0");
+  const [newProdImageUrl, setNewProdImageUrl] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (file: File) => {
+    setImageUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await api.post("/storage/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const url = res.data?.url || res.data?.file_url || "";
+      if (url) setNewProdImageUrl(url);
+      else showError("Upload Failed", "No URL returned from server");
+    } catch (err: any) {
+      showError("Upload Failed", err.response?.data?.detail || err.message);
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
 
   // Form states for adding category/subcategory
   const [newCatName, setNewCatName] = useState("");
@@ -495,9 +518,11 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
         price: parseFloat(newProdPrice) || 0.0,
         compare_at_price: newProdComparePrice ? parseFloat(newProdComparePrice) : null,
         attributes: {
-          image_emoji: newProdEmoji
+          image_emoji: newProdEmoji,
+          image_url: newProdImageUrl || undefined,
         }
       });
+
       
       const createdProd = res.data;
       // Set initial stock if specified and > 0
@@ -525,7 +550,9 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
       setNewProdComparePrice("");
       setNewProdInitialStock("50.0");
       setNewProdEmoji("🥬");
+      setNewProdImageUrl("");
       setActiveSubTab("list");
+
     },
     onError: (err: any) => {
       showError("Add Failed", "Failed to add product: " + (err.response?.data?.detail || err.message));
@@ -799,6 +826,44 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
               </div>
             </div>
 
+            {/* Image Upload Field */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-550 uppercase">Product Photo (Optional)</label>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageUpload(file);
+                }}
+              />
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={imageUploading}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 bg-slate-50 dark:bg-slate-950/50 text-slate-600 dark:text-slate-400 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {imageUploading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</>
+                  ) : (
+                    <><Upload className="w-4 h-4" /> {newProdImageUrl ? "Change Image" : "Upload Product Image"}</>
+                  )}
+                </button>
+                {newProdImageUrl && (
+                  <div className="flex items-center gap-2">
+                    <img src={newProdImageUrl} alt="Product" className="w-12 h-12 object-cover rounded-xl border border-slate-200 dark:border-slate-700" />
+                    <button type="button" onClick={() => setNewProdImageUrl("")} className="text-rose-500 text-xs font-bold hover:underline">Remove</button>
+                  </div>
+                )}
+                {!newProdImageUrl && !imageUploading && (
+                  <p className="text-[10px] text-slate-400">Emoji above will be used as fallback icon.</p>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <label className="font-bold text-slate-550 uppercase">Price (₹) *</label>
@@ -890,13 +955,15 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-850/50 text-slate-400 uppercase font-black tracking-wider border-b border-slate-200 dark:border-slate-800">
-                      <th className="p-4 w-12 text-center">Emoji</th>
+                      <th className="p-4 w-16 text-center">Image</th>
                       <th className="p-4">Product Info</th>
                       <th className="p-4">Category</th>
                       <th className="p-4">Sell Price (₹)</th>
+                      <th className="p-4 text-center">Rating</th>
                       <th className="p-4 text-center">Available Stock</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
+
                   </thead>
                   <tbody className="divide-y divide-slate-150 dark:divide-slate-850">
                     {products.map((p: any) => {
@@ -904,9 +971,14 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
                       const isLowStock = parseFloat(attrs.quantity || 0) < 10;
                       return (
                         <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/10 transition-colors">
-                          <td className="p-4 text-center text-3xl font-normal">
-                            {attrs.image_emoji || "🥬"}
+                          <td className="p-4 text-center">
+                            {attrs.image_url ? (
+                              <img src={attrs.image_url} alt={p.name} className="w-10 h-10 object-cover rounded-xl border border-slate-200 dark:border-slate-700 mx-auto" />
+                            ) : (
+                              <span className="text-3xl">{attrs.image_emoji || "🥬"}</span>
+                            )}
                           </td>
+
                           <td className="p-4">
                             <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">{p.name}</h4>
                             <p className="text-slate-500 mt-0.5">{p.unit_value} {p.unit}</p>
@@ -923,6 +995,15 @@ function InventoryPanel({ vendorId }: { vendorId: string }) {
                               <span className="text-slate-400 line-through ml-1.5">₹{attrs.compare_at_price}</span>
                             )}
                           </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-1">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star key={i} className={`w-3 h-3 ${i < Math.round(parseFloat(attrs.rating || "4")) ? "text-amber-400 fill-current" : "text-slate-300 dark:text-slate-600"}`} />
+                              ))}
+                              <span className="text-[10px] text-slate-400 ml-0.5">{attrs.rating ? parseFloat(attrs.rating).toFixed(1) : "4.0"}</span>
+                            </div>
+                          </td>
+
                           <td className="p-4 text-center">
                             <span className={`inline-block px-3 py-1 rounded-full font-black text-[10px] ${
                               isLowStock
@@ -1355,32 +1436,46 @@ export default function VendorDashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // Fast auth check — don't wait for anything else
+    const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
+    if (!token) {
+      // Use replace so native back button doesn't loop
+      window.location.replace("/vendor/login");
+      return;
+    }
+    setIsAuthed(true);
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
+    if (!isMounted) return;
     const isDark = document.documentElement.classList.contains("dark");
     setTheme(isDark ? "dark" : "light");
-  }, []);
+  }, [isMounted]);
 
-  // Check location permission on start
+  // Check location permission on start — only for web browsers, skip native
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    
-    // Check if running on native mobile platform
+    if (!isMounted || typeof window === "undefined") return;
+
+    // Skip if running on native mobile platform (Capacitor handles permissions natively)
     const isNative = !!(window as any).Capacitor;
     if (isNative) return;
 
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: "geolocation" as any }).then((result) => {
-        if (result.state !== "granted") {
-          setShowPermissionModal(true);
-        }
-      }).catch(() => {});
-    }
-  }, []);
+    // Small delay so it doesn't block initial render
+    const timer = setTimeout(() => {
+      if (navigator.permissions) {
+        navigator.permissions.query({ name: "geolocation" as any }).then((result) => {
+          if (result.state !== "granted") {
+            setShowPermissionModal(true);
+          }
+        }).catch(() => {});
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [isMounted]);
 
   const toggleTheme = () => {
     const nextTheme = theme === "light" ? "dark" : "light";
@@ -1393,12 +1488,6 @@ export default function VendorDashboard() {
     }
   };
 
-  // 1. Route Protection check
-  useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem("sw_access_token")) {
-      window.location.href = "/vendor/login";
-    }
-  }, []);
 
   // 2. Fetch metrics
   const { data: metricsData } = useQuery<any>({

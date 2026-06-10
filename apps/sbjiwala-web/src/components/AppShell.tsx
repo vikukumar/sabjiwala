@@ -168,7 +168,7 @@ function Header({ onMenuOpen, onOpenLocation }: { onMenuOpen: () => void; onOpen
   const cartCount = cartData?.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0;
 
   return (
-    <header className="sticky fixed fixed-top top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
       <div className="flex items-center justify-between h-16 px-4 md:px-6 max-w-7xl mx-auto">
         {/* Left: menu (mobile) + logo + location selector */}
         <div className="flex items-center gap-2 min-w-0 flex-1 md:flex-initial">
@@ -1335,17 +1335,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShellContext.Provider value={true}>
-      <div className="min-h-screen flex max-w-full">
+      {/* 1. Force the app to match exact screen height and stop body scrolling */}
+      <div className="h-[100dvh] w-full flex overflow-hidden">
+
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenLocation={() => setShowLocationModal(true)} />
 
-        {/* Main content area */}
-        <div className="flex-1 flex flex-col md:ml-64 min-w-0 max-w-full pt-[env(safe-area-inset-top)]">
+        {/* Right Column Structure */}
+        <div className="flex-1 flex flex-col h-full md:ml-64 min-w-0 max-w-full pt-[env(safe-area-inset-top)]">
+
+          {/* Header sits naturally at the top, no absolute/fixed/sticky needed */}
           <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} />
 
-          {/* Page content */}
-          <main className="flex-1 pb-20 md:pb-0 page-enter max-w-full overflow-x-hidden">
+          {/* 2. THE MAGIC IS HERE: Only this container is allowed to scroll */}
+          <main className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0 page-enter max-w-full">
             {children}
           </main>
+
         </div>
 
         <BottomNav />
