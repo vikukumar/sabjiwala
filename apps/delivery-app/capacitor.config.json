@@ -3,7 +3,6 @@
   "appName": "Sbjiwala Delivery",
   "webDir": "out",
   "server": {
-    "url": "https://delivery.sbjiwala.qzz.io",
     "cleartext": false,
     "androidScheme": "https",
     "allowNavigation": [

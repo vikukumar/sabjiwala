@@ -3,6 +3,28 @@
   "appName": "Sbjiwala Admin",
   "webDir": "out",
   "server": {
-    "androidScheme": "https"
+    "cleartext": false,
+    "androidScheme": "https",
+    "allowNavigation": [
+      "*.sbjiwala.qzz.io",
+      "sbjiwala.qzz.io"
+    ]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#090d10",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false
+    },
+    "Geolocation": {
+      "permissions": {
+        "location": [
+          "coarse",
+          "fine"
+        ]
+      }
+    }
   }
 }

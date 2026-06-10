@@ -3,7 +3,6 @@
   "appName": "Sbjiwala Vendor",
   "webDir": "out",
   "server": {
-    "url": "https://sbjiwala.qzz.io",
     "cleartext": false,
     "androidScheme": "https",
     "allowNavigation": [

@@ -11,14 +11,32 @@ let package = Package(
             targets: ["CapApp-SPM"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.3.4")
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.3.4"),
+        .package(name: "CapacitorBackgroundRunner", path: "..\..\..\node_modules\@capacitor\background-runner"),
+        .package(name: "CapacitorCamera", path: "..\..\..\node_modules\@capacitor\camera"),
+        .package(name: "CapacitorDevice", path: "..\..\..\node_modules\@capacitor\device"),
+        .package(name: "CapacitorDialog", path: "..\..\..\node_modules\@capacitor\dialog"),
+        .package(name: "CapacitorFilesystem", path: "..\..\..\node_modules\@capacitor\filesystem"),
+        .package(name: "CapacitorInappbrowser", path: "..\..\..\node_modules\@capacitor\inappbrowser"),
+        .package(name: "CapacitorNetwork", path: "..\..\..\node_modules\@capacitor\network"),
+        .package(name: "CapacitorPushNotifications", path: "..\..\..\node_modules\@capacitor\push-notifications"),
+        .package(name: "CapacitorToast", path: "..\..\..\node_modules\@capacitor\toast")
     ],
     targets: [
         .target(
             name: "CapApp-SPM",
             dependencies: [
                 .product(name: "Capacitor", package: "capacitor-swift-pm"),
-                .product(name: "Cordova", package: "capacitor-swift-pm")
+                .product(name: "Cordova", package: "capacitor-swift-pm"),
+                .product(name: "CapacitorBackgroundRunner", package: "CapacitorBackgroundRunner"),
+                .product(name: "CapacitorCamera", package: "CapacitorCamera"),
+                .product(name: "CapacitorDevice", package: "CapacitorDevice"),
+                .product(name: "CapacitorDialog", package: "CapacitorDialog"),
+                .product(name: "CapacitorFilesystem", package: "CapacitorFilesystem"),
+                .product(name: "CapacitorInappbrowser", package: "CapacitorInappbrowser"),
+                .product(name: "CapacitorNetwork", package: "CapacitorNetwork"),
+                .product(name: "CapacitorPushNotifications", package: "CapacitorPushNotifications"),
+                .product(name: "CapacitorToast", package: "CapacitorToast")
             ]
         )
     ]
