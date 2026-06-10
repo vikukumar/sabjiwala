@@ -68,7 +68,7 @@ class NotificationService:
                 "name": "Order Placed",
                 "event_key": "order_placed",
                 "in_app_title": "Aapka Order Place Ho Gaya Hai! 🎉",
-                "in_app_body": "Aapka order {{ order_number }} safaltapurvak place ho chuka hai. Total amount Rs. {{ total_amount }} hai. Hum jald hi isse confirm karenge.",
+                "in_app_body": "Aapka order {{ order_number }} safaltapurvak place ho chuka hai. Total amount ₹{{ total_amount }} hai. Hum jald hi isse confirm karenge.",
                 "push_title": "Aapka Order Place Ho Gaya Hai! 🎉",
                 "push_body": "Aapka order {{ order_number }} safaltapurvak place ho chuka hai.",
             },

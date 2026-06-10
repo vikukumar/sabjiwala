@@ -188,7 +188,7 @@ class OrderService:
         
         if rule:
             if subtotal < float(rule.min_order_amount):
-                raise ValueError(f"Minimum order amount for this vendor is Rs. {rule.min_order_amount}")
+                raise ValueError(f"Minimum order amount for this vendor is ₹{rule.min_order_amount}")
             if rule.free_delivery_above is not None and subtotal >= float(rule.free_delivery_above):
                 delivery_charge = 0.0
                 
@@ -214,7 +214,7 @@ class OrderService:
             packaging_charge = 0.0
 
         # Tax calculation (standard 5%)
-        tax_amount = subtotal * 0.05
+        tax_amount = round(subtotal * 0.05, 2)
 
         # 3. Apply coupon if any
         coupon_discount = 0.0
@@ -240,10 +240,14 @@ class OrderService:
         if use_wallet:
             wallet = await self.payment_service.get_or_create_wallet(user_id)
             wallet_balance = float(wallet.balance)
-            total_before_wallet = subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount
-            wallet_amount = min(wallet_balance, total_before_wallet)
+            total_before_wallet = round(subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount, 2)
+            wallet_amount = round(min(wallet_balance, total_before_wallet), 2)
 
-        total_amount = subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount - wallet_amount
+        subtotal = round(subtotal, 2)
+        delivery_charge = round(delivery_charge, 2)
+        packaging_charge = round(packaging_charge, 2)
+        coupon_discount = round(coupon_discount, 2)
+        total_amount = round(subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount - wallet_amount, 2)
 
         # 5. Create Order
         delivery_address_dict = {
@@ -558,7 +562,12 @@ class OrderService:
                     select(SystemSetting).where(SystemSetting.key == "delivery_boy_rate_per_km")
                 )
                 setting = setting_res.scalars().first()
-                rate_per_km = float(setting.value) if setting else 10.0
+                rate_per_km = 10.0
+                if setting and setting.value is not None:
+                    try:
+                        rate_per_km = float(setting.value)
+                    except ValueError:
+                        pass
                 
                 distance_km = float(order.delivery_distance_km or 0.0)
                 delivery_payout = round(distance_km * rate_per_km, 2)

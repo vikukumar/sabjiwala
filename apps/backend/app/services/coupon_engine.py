@@ -94,7 +94,7 @@ class CouponEngine:
             return {
                 "valid": False,
                 "discount": 0.0,
-                "message": f"Minimum order amount of Rs. {coupon.min_order_amount} required to use this coupon"
+                "message": f"Minimum order amount of ₹{coupon.min_order_amount} required to use this coupon"
             }
 
         # Apply rules
@@ -110,7 +110,7 @@ class CouponEngine:
                     select(func.count(Order.id))
                     .where(
                         Order.user_id == user_id,
-                        Order.status.in_([OrderStatus.CONFIRMED, OrderStatus.DELIVERED, OrderStatus.COMPLETED]),
+                        Order.status.in_([OrderStatus.CONFIRMED, OrderStatus.DELIVERED]),
                         Order.is_deleted == False
                     )
                 )

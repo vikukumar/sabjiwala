@@ -123,7 +123,7 @@ async def preview_order(
 
     if rule:
         if subtotal < float(rule.min_order_amount):
-            raise HTTPException(status_code=400, detail=f"Minimum order amount for this vendor is Rs. {rule.min_order_amount}")
+            raise HTTPException(status_code=400, detail=f"Minimum order amount for this vendor is ₹{rule.min_order_amount}")
         if rule.free_delivery_above is not None and subtotal >= float(rule.free_delivery_above):
             delivery_charge = 0.0
             
@@ -179,18 +179,18 @@ async def preview_order(
     return APIResponse(
         success=True,
         data={
-            "subtotal": subtotal,
-            "delivery_charge": delivery_charge,
-            "original_delivery_charge": original_delivery_charge,
-            "tax_amount": tax_amount,
-            "packaging_charge": packaging_charge,
-            "original_packaging_charge": original_packaging_charge,
-            "coupon_discount": coupon_discount,
-            "wallet_balance": wallet_balance,
-            "wallet_deduction": wallet_amount,
-            "total_amount": total_amount,
-            "distance_km": distance_km,
-            "free_delivery_above": float(rule.free_delivery_above) if (rule and rule.free_delivery_above is not None) else None,
+            "subtotal": round(subtotal, 2),
+            "delivery_charge": round(delivery_charge, 2),
+            "original_delivery_charge": round(original_delivery_charge, 2),
+            "tax_amount": round(tax_amount, 2),
+            "packaging_charge": round(packaging_charge, 2),
+            "original_packaging_charge": round(original_packaging_charge, 2),
+            "coupon_discount": round(coupon_discount, 2),
+            "wallet_balance": round(wallet_balance, 2),
+            "wallet_deduction": round(wallet_amount, 2),
+            "total_amount": round(total_amount, 2),
+            "distance_km": round(distance_km, 2),
+            "free_delivery_above": round(float(rule.free_delivery_above), 2) if (rule and rule.free_delivery_above is not None) else None,
         }
     )
 
