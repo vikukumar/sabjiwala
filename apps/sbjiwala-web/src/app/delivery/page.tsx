@@ -397,19 +397,19 @@ function PayoutTab({ profile }: { profile: any }) {
 
   const handlePayout = async () => {
     if (!amount || parseFloat(amount) <= 0) {
-      showError("Invalid Amount", "Please enter a valid payout amount.");
+      showError("Galat Amount", "Kripya sahi payout amount enter karein.");
       return;
     }
     if (parseFloat(amount) > walletBalance) {
-      showError("Insufficient Balance", "Payout amount exceeds your wallet balance.");
+      showError("Balance Kam Hai", "Payout amount aapke wallet balance se zyada hai.");
       return;
     }
     if (payoutMethod === "upi" && !upiId) {
-      showError("UPI Required", "Please enter your UPI ID.");
+      showError("UPI ID Chahiye", "Kripya apni UPI ID enter karein.");
       return;
     }
     if (payoutMethod === "bank" && (!accountNo || !ifscCode || !accountName)) {
-      showError("Bank Details Required", "Please fill all bank details.");
+      showError("Bank Details Adhoori Hain", "Kripya saare bank details fill karein.");
       return;
     }
     setLoading(true);
@@ -423,10 +423,10 @@ function PayoutTab({ profile }: { profile: any }) {
         ifsc_code: payoutMethod === "bank" ? ifscCode : undefined,
         account_holder_name: payoutMethod === "bank" ? accountName : undefined,
       });
-      success("Payout Requested! 🎉", `₹${amount} payout request submitted. Usually processed within 24–48 hrs.`);
+      success("Payout Request Submit Ho Gayi! 🎉", `₹${amount} payout request bhej di gayi hai. 24-48 ghante mein process ho jayegi.`);
       setAmount("");
     } catch (err: any) {
-      showError("Payout Failed", err.response?.data?.detail || err.message);
+      showError("Payout Fail Ho Gaya", err.response?.data?.detail || err.message);
     } finally {
       setLoading(false);
     }
@@ -747,9 +747,9 @@ export default function DeliveryAgentDashboard() {
           if (message.type === "order_status_update") {
             queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] });
             if (message.data?.status === "assigned") {
-              success("New Delivery Assigned! 🛵", `Order #${message.data?.order_number || ""} has been assigned to you.`);
+              success("Naya Delivery Order Mila! 🛵", `Order #${message.data?.order_number || ""} aapko assign kiya gaya hai.`);
             } else if (message.data?.status === "packed") {
-              success("Order Packed! 📦", `Order #${message.data?.order_number || ""} is now ready for pickup.`);
+              success("Order Pack Ho Gaya! 📦", `Order #${message.data?.order_number || ""} pickup ke liye ready hai.`);
             }
           }
         } catch (err) {
@@ -792,8 +792,8 @@ export default function DeliveryAgentDashboard() {
 
   const pickupOrderMutation = useMutation({
     mutationFn: async (orderId: string) => api.post(`/delivery/orders/${orderId}/pickup`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] }); success("Picked up! Now out for delivery."); },
-    onError: (err: any) => showError("Pickup Failed", err.response?.data?.detail || err.message)
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] }); success("Pickup Ho Gaya! Ab delivery ke liye ready hain."); },
+    onError: (err: any) => showError("Pickup Fail Ho Gaya", err.response?.data?.detail || err.message)
   });
 
   const deliverOrderMutation = useMutation({
@@ -803,10 +803,10 @@ export default function DeliveryAgentDashboard() {
       queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] });
       queryClient.invalidateQueries({ queryKey: ["deliveryEarnings"] });
       queryClient.invalidateQueries({ queryKey: ["deliveryProfile"] });
-      success("Order delivered! Payment captured.");
+      success("Order deliver ho gaya! Payment receive ho gayi.");
       setOtpPromptConfig(null);
     },
-    onError: (err: any) => showError("Delivery Failed", err.response?.data?.detail || err.message)
+    onError: (err: any) => showError("Delivery Fail Ho Gayi", err.response?.data?.detail || err.message)
   });
 
   const handleUpdateStatus = (id: string, currentStatus: string) => {

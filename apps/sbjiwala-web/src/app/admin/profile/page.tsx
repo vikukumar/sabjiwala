@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { User, Settings, Save, Loader2, Award, Bike } from "lucide-react";
+import { User, Shield, Save, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 
-export default function DeliveryProfilePage() {
+export default function AdminProfilePage() {
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
 
@@ -25,25 +25,13 @@ export default function DeliveryProfilePage() {
     }
   });
 
-  // Fetch delivery boy details
-  const { data: deliveryProfileData, isLoading: deliveryLoading } = useQuery<any>({
-    queryKey: ["deliveryProfile"],
-    queryFn: async () => {
-      const res = await api.get("/delivery/me");
-      return res.data;
-    }
-  });
-
   const user = userProfileData || null;
-  const delivery = deliveryProfileData || null;
 
   // Sync state values
   useEffect(() => {
     if (user) {
       setFirstName(user.first_name || "");
       setLastName(user.last_name || "");
-      setDisplayName(user.display_name || "");
-      setBio(user.bio || "");
     }
   }, [user]);
 
@@ -59,16 +47,14 @@ export default function DeliveryProfilePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userProfile"] });
-      success("Profile details update ho gaye hain!");
+      success("Profile details updated successfully!");
     },
     onError: (err: any) => {
-      showError("Update Fail Ho Gaya", "Failed to update personal profile: " + (err.response?.data?.detail || err.message));
+      showError("Update Failed", "Failed to update admin profile: " + (err.response?.data?.detail || err.message));
     }
   });
 
-  const isLoading = userLoading || deliveryLoading;
-
-  if (isLoading) {
+  if (userLoading) {
     return (
       <div className="min-h-screen bg-slate-100 dark:bg-[#090d10] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
@@ -77,27 +63,27 @@ export default function DeliveryProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 font-sans p-4 md:p-8">
+    <div className="min-h-screen bg-slate-55/30 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 font-sans p-4 md:p-8">
       <div className="max-w-xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <a
-            href="/delivery"
+            href="/admin"
             className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl flex items-center gap-1 shadow-sm cursor-pointer hover:bg-slate-50"
           >
-            ← Back to Dashboard
+            ← Back to Board
           </a>
-          <h2 className="text-sm font-black uppercase tracking-wider text-slate-500">Delivery Partner Settings</h2>
+          <h2 className="text-sm font-black uppercase tracking-wider text-slate-500">Administrator settings</h2>
         </div>
 
-        {/* Personal Details Card */}
+        {/* Profile Card */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-3xl p-6 shadow-sm space-y-6">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl text-emerald-600 dark:text-emerald-400">
               <User className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">Personal Information</h3>
-              <p className="text-[10px] text-slate-500">Update your general contact profile details.</p>
+              <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">Personal Info</h3>
+              <p className="text-[10px] text-slate-500">Edit your administrator personal details.</p>
             </div>
           </div>
 
@@ -132,10 +118,10 @@ export default function DeliveryProfilePage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="font-bold text-slate-500 uppercase">Display Name / Nickname</label>
+              <label className="font-bold text-slate-500 uppercase">Display Name / Alias</label>
               <input
                 type="text"
-                placeholder="e.g. Courier Swift"
+                placeholder="e.g. Master Control"
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-900 dark:text-white"
@@ -143,9 +129,9 @@ export default function DeliveryProfilePage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="font-bold text-slate-500 uppercase">Bio / Delivery Status Notes</label>
+              <label className="font-bold text-slate-500 uppercase">Bio / Office Notes</label>
               <textarea
-                placeholder="e.g. Clocking hours, active in South Zone..."
+                placeholder="e.g. Sbjiwala Senior Operations Supervisor..."
                 value={bio}
                 onChange={e => setBio(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm h-20 text-slate-900 dark:text-white"
@@ -157,60 +143,21 @@ export default function DeliveryProfilePage() {
               disabled={updatePersonalProfileMutation.isPending}
               className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer text-xs"
             >
-              {updatePersonalProfileMutation.isPending ? "Saving..." : "Save Profile Details"}
+              {updatePersonalProfileMutation.isPending ? "Saving..." : "Save Administrator Details"}
             </button>
           </form>
         </div>
 
-        {/* Read-Only KYC & Vehicle Info */}
-        <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4">
+        {/* Security Role Info */}
+        <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 space-y-4">
           <div className="flex items-center gap-2 text-slate-500">
-            <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <h4 className="text-xs font-black uppercase tracking-wider">Locked KYC & Vehicle Details</h4>
+            <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <h4 className="text-xs font-black uppercase tracking-wider">Security Access Level</h4>
           </div>
-          <p className="text-[10px] text-slate-450 leading-relaxed">
-            Your verified background check status and vehicle registry. Contact Admin support for updates.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium">
-            <div className="space-y-1">
-              <label className="font-bold text-slate-455 uppercase">Vehicle Type</label>
-              <input
-                type="text"
-                disabled
-                value={delivery?.vehicle_type?.toUpperCase() || "SCOOTER / BIKE"}
-                className="w-full px-3 py-2 border border-slate-205 dark:border-slate-800 rounded-xl bg-slate-105/50 dark:bg-slate-950/30 text-slate-400 font-bold"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-bold text-slate-455 uppercase">License / Vehicle Number</label>
-              <input
-                type="text"
-                disabled
-                value={delivery?.vehicle_number || "MH-43-AB-1234"}
-                className="w-full px-3 py-2 border border-slate-205 dark:border-slate-800 rounded-xl bg-slate-105/50 dark:bg-slate-950/30 text-slate-400 font-bold font-mono"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-bold text-slate-455 uppercase">Registration Status</label>
-              <input
-                type="text"
-                disabled
-                value={delivery?.status?.toUpperCase() || "APPROVED"}
-                className="w-full px-3 py-2 border border-slate-205 dark:border-slate-800 rounded-xl bg-slate-105/50 dark:bg-slate-950/30 text-emerald-505 dark:text-emerald-400 font-black"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-bold text-slate-455 uppercase">Wallet Balance</label>
-              <input
-                type="text"
-                disabled
-                value={`₹${delivery?.wallet_balance || "0.00"}`}
-                className="w-full px-3 py-2 border border-slate-205 dark:border-slate-800 rounded-xl bg-slate-105/50 dark:bg-slate-950/30 text-slate-400 font-bold"
-              />
+          <div className="text-xs">
+            <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-150 dark:border-slate-800">
+              <span className="font-bold text-slate-500">Current Role</span>
+              <span className="font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">SUPER ADMIN</span>
             </div>
           </div>
         </div>

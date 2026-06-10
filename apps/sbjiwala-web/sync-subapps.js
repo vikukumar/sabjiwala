@@ -92,6 +92,12 @@ try {
 
   // 5. Clean and Copy Vendor app specific pages under /vendor/
   console.log(`Syncing vendor-app pages...`);
+  const vendorLayoutSrc = path.join(vendorSrc, 'components/VendorLayout.tsx');
+  const vendorLayoutDest = path.join(webSrc, 'components/VendorLayout.tsx');
+  if (fs.existsSync(vendorLayoutSrc)) {
+    copyRecursiveSync(vendorLayoutSrc, vendorLayoutDest);
+  }
+
   const vendorPageDest = path.join(webAppDir, 'vendor/page.tsx');
   copyRecursiveSync(path.join(vendorSrc, 'app/page.tsx'), vendorPageDest);
 

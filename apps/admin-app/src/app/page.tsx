@@ -893,7 +893,8 @@ export default function AdminDashboard() {
     base_delivery_charge: 0.0,
     per_km_charge: 0.0,
     max_delivery_distance_km: 10.0,
-    packaging_fee: 0.0
+    packaging_fee: 0.0,
+    free_platform_fee_above: 0.0
   });
 
   // Global settings state
@@ -901,6 +902,7 @@ export default function AdminDashboard() {
     app_name: "Sbjiwala",
     maintenance_mode: "false",
     platform_handling_fee: "5.00",
+    free_platform_fee_above: "199.00",
     delivery_boy_rate_per_km: "10.00",
     subscription_bronze_price: "199",
     subscription_silver_price: "499",
@@ -1042,6 +1044,7 @@ export default function AdminDashboard() {
           app_name: res.data.app_name || "Sbjiwala",
           maintenance_mode: String(res.data.maintenance_mode || "false"),
           platform_handling_fee: String(res.data.platform_handling_fee || "5.00"),
+          free_platform_fee_above: String(res.data.free_platform_fee_above || "199.00"),
           delivery_boy_rate_per_km: String(res.data.delivery_boy_rate_per_km || "10.00"),
           subscription_bronze_price: String(res.data.subscription_bronze_price || "199"),
           subscription_silver_price: String(res.data.subscription_silver_price || "499"),
@@ -1667,7 +1670,8 @@ export default function AdminDashboard() {
                                     base_delivery_charge: vendor.base_delivery_charge,
                                     per_km_charge: vendor.per_km_charge,
                                     max_delivery_distance_km: vendor.max_delivery_distance_km,
-                                    packaging_fee: vendor.packaging_fee || 0.0
+                                    packaging_fee: vendor.packaging_fee || 0.0,
+                                    free_platform_fee_above: vendor.free_platform_fee_above || 0.0
                                   });
                                 }}
                                 className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850 font-bold"
@@ -1728,7 +1732,7 @@ export default function AdminDashboard() {
                                     </div>
                                   </div>
 
-                                  <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
                                     <div className="space-y-1">
                                       <label className="text-[10px] font-bold uppercase text-slate-400">Min. Order Amount (₹)</label>
                                       <input
@@ -1780,6 +1784,15 @@ export default function AdminDashboard() {
                                         type="number"
                                         value={editVendorData.packaging_fee}
                                         onChange={e => setEditVendorData(p => ({ ...p, packaging_fee: parseFloat(e.target.value) }))}
+                                        className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold uppercase text-slate-400">Free Platform Fee Above (₹)</label>
+                                      <input
+                                        type="number"
+                                        value={editVendorData.free_platform_fee_above}
+                                        onChange={e => setEditVendorData(p => ({ ...p, free_platform_fee_above: parseFloat(e.target.value) }))}
                                         className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900"
                                       />
                                     </div>
@@ -1909,7 +1922,7 @@ export default function AdminDashboard() {
               </div>
 
               <form onSubmit={saveAllGlobalSettings} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Packaging & Handling Fee (₹)</label>
                     <input
@@ -1920,6 +1933,18 @@ export default function AdminDashboard() {
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm"
                     />
                     <p className="text-[10px] text-slate-400">Flat packaging surcharge applied on all checkout customer orders.</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Global Free Platform Fee Above (₹)</label>
+                    <input
+                      type="number"
+                      step="0.01;0.1"
+                      value={globalConfig.free_platform_fee_above}
+                      onChange={e => setGlobalConfig(p => ({ ...p, free_platform_fee_above: e.target.value }))}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm"
+                    />
+                    <p className="text-[10px] text-slate-400">Order subtotal above which packaging fee is exempted globally.</p>
                   </div>
 
                   <div className="space-y-1">

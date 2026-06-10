@@ -6,6 +6,7 @@ import { api } from "@sbjiwala/shared";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Tag, AlertCircle, ChevronRight, Truck } from "lucide-react";
+import { resolveLink } from "@/components/AppShell";
 import { Button, EmptyState, Spinner, Badge, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 
@@ -179,13 +180,28 @@ export default function CartPage() {
   }, []);
 
   const items = isGuest ? localCart?.items || [] : serverCart?.items || [];
-  const subtotal = isGuest ? localCart?.subtotal || 0 : (serverCart?.subtotal || 0) * 1.045; // Apply the markup subtotal
+  const vendorId = items[0]?.vendor_id;
 
-  const deliveryFee = subtotal >= 199 ? 0 : 20;
-  const packagingCharge = 5.0; // standard platform handling/packaging fee
-  const taxAmount = subtotal * 0.05; // standard 5% GST
-  const discount = appliedCoupon?.discount || 0;
-  const total = Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - discount);
+  const { data: previewData } = useQuery<any>({
+    queryKey: ["cartPreview", items],
+    queryFn: async () => {
+      if (isGuest || !items.length) return null;
+      const res = await api.post("/orders/preview", {
+        address_id: null,
+        payment_method: "cod",
+        use_wallet: false,
+      }, { params: { vendor_id: vendorId } });
+      return res.data;
+    },
+    enabled: typeof window !== "undefined" && !isGuest && !!items.length,
+  });
+
+  const subtotal = previewData ? previewData.subtotal : (isGuest ? localCart?.subtotal || 0 : (serverCart?.subtotal || 0) * 1.045);
+  const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= 199 ? 0 : 20);
+  const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
+  const taxAmount = previewData ? previewData.tax_amount : (subtotal * 0.05);
+  const discount = previewData ? previewData.coupon_discount : (appliedCoupon?.discount || 0);
+  const total = previewData ? previewData.total_amount : Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - discount);
 
   const handleUpdateGuestQty = (productId: string, newQty: number) => {
     const current = getLocalGuestCart();
@@ -202,11 +218,13 @@ export default function CartPage() {
     saveLocalGuestCart(current);
   };
 
+  const isUnified = typeof window !== "undefined" && process.env.NEXT_PUBLIC_APP_MODE === "unified";
+
   const handleProceedCheckout = () => {
     if (isGuest) {
-      router.push("/login?redirect=/checkout");
+      router.push(resolveLink(`/login?redirect=${isUnified ? "/app/checkout" : "/checkout"}`));
     } else {
-      router.push("/checkout");
+      router.push(resolveLink("/checkout"));
     }
   };
 
@@ -224,7 +242,7 @@ export default function CartPage() {
         emoji="🛒"
         title="Your cart is empty"
         description="Add fresh vegetables and fruits to get started!"
-        action={<Button onClick={() => router.push("/")}>Start Shopping</Button>}
+        action={<Button onClick={() => router.push(resolveLink("/"))}>Start Shopping</Button>}
       />
     );
   }
@@ -284,7 +302,7 @@ export default function CartPage() {
               disabled={isGuest}
             />
             {!isGuest && (
-              <Link href="/coupons" className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
+              <Link href={resolveLink("/coupons")} className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
                 View all coupons <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             )}
@@ -303,12 +321,32 @@ export default function CartPage() {
               <div className="flex justify-between">
                 <span className="text-slate-655 dark:text-slate-400">Delivery fee</span>
                 <span className={`font-semibold ${deliveryFee === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
-                  {deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}
+                  {deliveryFee === 0 ? (
+                    <>
+                      {previewData?.original_delivery_charge && previewData.original_delivery_charge > 0 && (
+                        <span className="line-through text-slate-400 mr-1.5 font-normal">
+                          ₹{parseFloat(previewData.original_delivery_charge).toFixed(2)}
+                        </span>
+                      )}
+                      FREE
+                    </>
+                  ) : `₹${deliveryFee}`}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-655 dark:text-slate-400">Packaging fee</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">₹{packagingCharge.toFixed(2)}</span>
+                <span className={`font-semibold ${packagingCharge === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
+                  {packagingCharge === 0 ? (
+                    <>
+                      {previewData?.original_packaging_charge && previewData.original_packaging_charge > 0 && (
+                        <span className="line-through text-slate-400 mr-1.5 font-normal">
+                          ₹{parseFloat(previewData.original_packaging_charge).toFixed(2)}
+                        </span>
+                      )}
+                      FREE
+                    </>
+                  ) : `₹${packagingCharge.toFixed(2)}`}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-655 dark:text-slate-400">Taxes (5%)</span>
@@ -340,7 +378,7 @@ export default function CartPage() {
             >
               Proceed to Checkout
             </Button>
-            <Link href="/" className="text-center text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline block">
+            <Link href={resolveLink("/")} className="text-center text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline block">
               Continue Shopping
             </Link>
           </div>
