@@ -18,6 +18,8 @@ dependencies {
     implementation project(':capacitor-network')
     implementation project(':capacitor-push-notifications')
     implementation project(':capacitor-toast')
+    implementation project(':capgo-capacitor-android-sms-retriever')
+    implementation project(':capgo-capacitor-updater')
 
 }
 

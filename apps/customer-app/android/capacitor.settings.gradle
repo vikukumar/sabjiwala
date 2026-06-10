@@ -28,3 +28,9 @@ project(':capacitor-push-notifications').projectDir = new File('../node_modules/
 
 include ':capacitor-toast'
 project(':capacitor-toast').projectDir = new File('../node_modules/@capacitor/toast/android')
+
+include ':capgo-capacitor-android-sms-retriever'
+project(':capgo-capacitor-android-sms-retriever').projectDir = new File('../node_modules/@capgo/capacitor-android-sms-retriever/android')
+
+include ':capgo-capacitor-updater'
+project(':capgo-capacitor-updater').projectDir = new File('../node_modules/@capgo/capacitor-updater/android')

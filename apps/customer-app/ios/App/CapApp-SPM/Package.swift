@@ -11,7 +11,7 @@ let package = Package(
             targets: ["CapApp-SPM"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.3.4"),
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.4.0"),
         .package(name: "CapacitorBackgroundRunner", path: "..\..\..\node_modules\@capacitor\background-runner"),
         .package(name: "CapacitorCamera", path: "..\..\..\node_modules\@capacitor\camera"),
         .package(name: "CapacitorDevice", path: "..\..\..\node_modules\@capacitor\device"),
@@ -20,7 +20,9 @@ let package = Package(
         .package(name: "CapacitorInappbrowser", path: "..\..\..\node_modules\@capacitor\inappbrowser"),
         .package(name: "CapacitorNetwork", path: "..\..\..\node_modules\@capacitor\network"),
         .package(name: "CapacitorPushNotifications", path: "..\..\..\node_modules\@capacitor\push-notifications"),
-        .package(name: "CapacitorToast", path: "..\..\..\node_modules\@capacitor\toast")
+        .package(name: "CapacitorToast", path: "..\..\..\node_modules\@capacitor\toast"),
+        .package(name: "CapgoCapacitorAndroidSmsRetriever", path: "..\..\..\node_modules\@capgo\capacitor-android-sms-retriever"),
+        .package(name: "CapgoCapacitorUpdater", path: "..\..\..\node_modules\@capgo\capacitor-updater")
     ],
     targets: [
         .target(
@@ -36,7 +38,9 @@ let package = Package(
                 .product(name: "CapacitorInappbrowser", package: "CapacitorInappbrowser"),
                 .product(name: "CapacitorNetwork", package: "CapacitorNetwork"),
                 .product(name: "CapacitorPushNotifications", package: "CapacitorPushNotifications"),
-                .product(name: "CapacitorToast", package: "CapacitorToast")
+                .product(name: "CapacitorToast", package: "CapacitorToast"),
+                .product(name: "CapgoCapacitorAndroidSmsRetriever", package: "CapgoCapacitorAndroidSmsRetriever"),
+                .product(name: "CapgoCapacitorUpdater", package: "CapgoCapacitorUpdater")
             ]
         )
     ]
