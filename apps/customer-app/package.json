@@ -21,7 +21,6 @@
     "@capacitor/device": "^7.0.5",
     "@capacitor/dialog": "^8.0.1",
     "@capacitor/filesystem": "^8.1.2",
-    "@capacitor/inappbrowser": "^4.0.0",
     "@capacitor/ios": "^8.4.0",
     "@capacitor/network": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.1",

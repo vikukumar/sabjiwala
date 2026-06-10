@@ -14,7 +14,6 @@ dependencies {
     implementation project(':capacitor-device')
     implementation project(':capacitor-dialog')
     implementation project(':capacitor-filesystem')
-    implementation project(':capacitor-inappbrowser')
     implementation project(':capacitor-network')
     implementation project(':capacitor-push-notifications')
     implementation project(':capacitor-toast')
