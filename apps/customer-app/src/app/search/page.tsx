@@ -9,6 +9,18 @@ import Link from "next/link";
 import { Button, Badge, EmptyState, Spinner, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 
+function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 function ProductCard({ product }: { product: any }) {
   const queryClient = useQueryClient();
   const { error: showError } = useToast();
@@ -109,6 +121,42 @@ function SearchContent() {
     staleTime: 30_000,
   });
 
+  // Track coordinates for search range filtering
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const latRaw = localStorage.getItem("sw_latitude");
+    const lonRaw = localStorage.getItem("sw_longitude");
+    if (latRaw && lonRaw) {
+      setCoords({ lat: parseFloat(latRaw), lon: parseFloat(lonRaw) });
+    }
+  }, []);
+
+  const filteredResults = React.useMemo(() => {
+    if (!results.length) return [];
+    if (!coords) return results;
+
+    return results.filter((p: any) => {
+      const vLat = p.attributes?.vendor_latitude
+        || p.attributes?.store_latitude
+        || p.vendor?.store?.latitude
+        || p.vendor_latitude
+        || null;
+      const vLon = p.attributes?.vendor_longitude
+        || p.attributes?.store_longitude
+        || p.vendor?.store?.longitude
+        || p.vendor_longitude
+        || null;
+      const vRad = p.attributes?.vendor_radius_km || 10.0;
+      
+      const distance = (vLat && vLon)
+        ? getHaversineDistance(coords.lat, coords.lon, parseFloat(vLat), parseFloat(vLon))
+        : 0;
+      return distance <= vRad;
+    });
+  }, [results, coords]);
+
   const popularSearches = ["Tomato", "Onion", "Potato", "Spinach", "Brinjal", "Carrot", "Capsicum", "Mango", "Banana", "Apple"];
 
   return (
@@ -188,7 +236,7 @@ function SearchContent() {
           <Spinner size="lg" />
           <p className="text-sm text-slate-500 dark:text-slate-400">Searching for &quot;{query}&quot;...</p>
         </div>
-      ) : results.length === 0 ? (
+      ) : filteredResults.length === 0 ? (
         <EmptyState
           emoji="🔍"
           title={`No results for "${query}"`}
@@ -198,10 +246,10 @@ function SearchContent() {
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-            {results.length} results
+            {filteredResults.length} results
           </p>
           <div className="grid grid-cols-1 gap-3">
-            {results.map((p: any) => <ProductCard key={p.id} product={p} />)}
+            {filteredResults.map((p: any) => <ProductCard key={p.id} product={p} />)}
           </div>
         </div>
       )}

@@ -11,6 +11,8 @@
     "predev": "node ../../tmp/fix_node_modules.js && node sync-subapps.js && node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json'); fs.copyFileSync('../../version.json', 'src/app/admin/version.json'); fs.copyFileSync('../../version.json', 'src/app/vendor/version.json'); fs.copyFileSync('../../version.json', 'src/app/delivery/version.json');\""
   },
   "dependencies": {
+    "@capacitor/local-notifications": "^8.2.0",
+    "@capacitor/push-notifications": "^8.1.1",
     "@sbjiwala/shared": "file:../../shared",
     "@tanstack/react-query": "^5.100.14",
     "axios": "^1.16.1",

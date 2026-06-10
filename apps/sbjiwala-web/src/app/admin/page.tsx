@@ -135,13 +135,13 @@ function AdminOrdersPanel() {
                   {orders.map((order: any) => (
                     <tr key={order.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
                       <td className="py-4 px-2 font-mono font-bold text-slate-900 dark:text-white">
-                        #{order.id.slice(0, 8)}
+                        #{order.id ? order.id.slice(0, 8) : "N/A"}
                       </td>
                       <td className="py-4 px-2 text-slate-500">
                         {new Date(order.created_at).toLocaleString()}
                       </td>
                       <td className="py-4 px-2">
-                        <div className="font-bold text-slate-950 dark:text-white">User #{order.user_id.slice(0, 6)}</div>
+                        <div className="font-bold text-slate-950 dark:text-white">User #{order.user_id ? order.user_id.slice(0, 6) : "N/A"}</div>
                         <div className="text-[10px] text-slate-400">{order.phone || "No Phone"}</div>
                       </td>
                       <td className="py-4 px-2 font-semibold">

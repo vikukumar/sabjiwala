@@ -1236,6 +1236,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleOpen = () => setShowLocationModal(true);
+    window.addEventListener("sw_open_location_modal", handleOpen);
+    return () => window.removeEventListener("sw_open_location_modal", handleOpen);
+  }, []);
+
   // Network State
   const [isOnline, setIsOnline] = useState(true);
   const [serverAvailable, setServerAvailable] = useState(true);

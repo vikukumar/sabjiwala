@@ -20,6 +20,7 @@ from app.models.delivery import (
     DeliveryBoy, DeliveryAttendance, DeliveryLocation, AvailabilityStatus, DeliveryBoyStatus
 )
 from app.models.order import Order, OrderStatus
+from app.models.vendor import Vendor, VendorStore, VendorStatus
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -144,18 +145,43 @@ async def get_assignments(
     )
     orders = res.scalars().all()
     
+    # Pre-fetch vendor stores to avoid N+1 queries
+    vendor_ids = [order.vendor_id for order in orders]
+    vendor_stores = {}
+    if vendor_ids:
+        store_res = await db.execute(
+            select(VendorStore).where(VendorStore.vendor_id.in_(vendor_ids))
+        )
+        for store in store_res.scalars().all():
+            vendor_stores[store.vendor_id] = store
+
     data = []
     for order in orders:
+        store = vendor_stores.get(order.vendor_id)
+        store_data = {
+            "store_name": store.store_name,
+            "address_line_1": store.address_line_1,
+            "address_line_2": store.address_line_2,
+            "city": store.city,
+            "state": store.state,
+            "postal_code": store.postal_code,
+            "latitude": store.latitude,
+            "longitude": store.longitude,
+        } if store else None
+
         data.append({
             "id": str(order.id),
             "order_number": order.order_number,
             "status": order.status.value,
             "delivery_address": order.delivery_address,
+            "delivery_latitude": order.delivery_latitude,
+            "delivery_longitude": order.delivery_longitude,
             "total_amount": float(order.total_amount),
             "payment_method": order.payment_method,
             "payment_status": order.payment_status,
             "customer_notes": order.customer_notes,
             "estimated_delivery_time": order.estimated_delivery_time.isoformat() if order.estimated_delivery_time else None,
+            "vendor_store": store_data,
         })
 
     return APIResponse(success=True, data=data)
@@ -268,4 +294,39 @@ async def get_my_delivery_profile(
         "wallet_balance": float(wallet.balance) if wallet else 0.0,
         "cash_in_hand": float(wallet.cash_in_hand) if wallet else 0.0,
     }
+    return APIResponse(success=True, data=data)
+
+
+@router.get("/vendors", response_model=APIResponse)
+async def get_active_vendors(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve all approved active vendor stores for locator map."""
+    # Authenticate rider
+    await _get_delivery_boy(current_user["user_id"], db)
+    
+    stmt = (
+        select(VendorStore)
+        .join(Vendor, Vendor.id == VendorStore.vendor_id)
+        .where(Vendor.status == VendorStatus.APPROVED, Vendor.is_deleted == False)
+    )
+    res = await db.execute(stmt)
+    stores = res.scalars().all()
+    
+    data = [
+        {
+            "id": str(store.id),
+            "vendor_id": str(store.vendor_id),
+            "store_name": store.store_name,
+            "address_line_1": store.address_line_1,
+            "address_line_2": store.address_line_2,
+            "city": store.city,
+            "latitude": store.latitude,
+            "longitude": store.longitude,
+            "is_open": store.is_open,
+        }
+        for store in stores
+        if store.latitude is not None and store.longitude is not None
+    ]
     return APIResponse(success=True, data=data)

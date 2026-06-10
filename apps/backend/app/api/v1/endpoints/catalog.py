@@ -15,7 +15,7 @@ from app.api.schemas import (
 )
 from app.db.session import get_db
 from app.models.product import Category, Inventory, Product, ProductPrice, ProductStatus
-from app.models.vendor import Vendor, VendorStatus
+from app.models.vendor import Vendor, VendorStatus, VendorStore, VendorServiceArea
 
 router = APIRouter()
 
@@ -114,20 +114,31 @@ async def browse_products(
         if inv:
             p_attrs["quantity"] = float(inv.quantity)
             p_attrs["vendor_id"] = str(inv.vendor_id)
-            from app.models.vendor import VendorStore
+            from app.models.vendor import VendorStore, VendorServiceArea
             store_res = await db.execute(select(VendorStore).where(VendorStore.vendor_id == inv.vendor_id))
             store = store_res.scalars().first()
+            
+            area_res = await db.execute(
+                select(VendorServiceArea)
+                .where(VendorServiceArea.vendor_id == inv.vendor_id, VendorServiceArea.is_active == True, VendorServiceArea.is_deleted == False)
+            )
+            area = area_res.scalars().first()
+            vendor_radius = float(area.radius_km) if (area and area.radius_km is not None) else 10.0
+            
             if store and store.latitude is not None and store.longitude is not None:
                 p_attrs["vendor_latitude"] = store.latitude
                 p_attrs["vendor_longitude"] = store.longitude
+                p_attrs["vendor_radius_km"] = vendor_radius
             else:
                 p_attrs["vendor_latitude"] = 19.0760
                 p_attrs["vendor_longitude"] = 72.8777
+                p_attrs["vendor_radius_km"] = 10.0
         else:
             p_attrs["quantity"] = 0.0
             p_attrs["vendor_id"] = ""
             p_attrs["vendor_latitude"] = 19.0760
             p_attrs["vendor_longitude"] = 72.8777
+            p_attrs["vendor_radius_km"] = 10.0
             
         if "image_emoji" not in p_attrs:
             p_attrs["image_emoji"] = "🥬"
@@ -274,3 +285,63 @@ async def get_active_banners(
         for b in banners
     ]
     return APIResponse(success=True, data=data)
+
+
+@router.get("/vendors/range-check", response_model=APIResponse)
+async def range_check(
+    latitude: float,
+    longitude: float,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Check if a given latitude and longitude is within the service area of ANY approved vendor.
+    """
+    from app.services.map_service import MapService
+    map_service = MapService()
+
+    # Get all active approved vendors
+    stmt = (
+        select(Vendor)
+        .options(selectinload(Vendor.store), selectinload(Vendor.service_areas))
+        .where(Vendor.status == VendorStatus.APPROVED, Vendor.is_deleted == False)
+    )
+    res = await db.execute(stmt)
+    vendors = res.scalars().all()
+
+    covered_vendor_ids = []
+    in_range = False
+
+    for vendor in vendors:
+        # Check service areas first
+        has_matched_service_area = False
+        service_areas = [sa for sa in vendor.service_areas if sa.is_active and not sa.is_deleted]
+        
+        if service_areas:
+            for sa in service_areas:
+                if sa.center_latitude is not None and sa.center_longitude is not None and sa.radius_km is not None:
+                    dist = map_service.calculate_haversine_distance(
+                        latitude, longitude, sa.center_latitude, sa.center_longitude
+                    )
+                    if dist <= sa.radius_km:
+                        has_matched_service_area = True
+                        break
+        else:
+            # Fallback to store coordinates and check default 10km radius
+            if vendor.store and vendor.store.latitude is not None and vendor.store.longitude is not None:
+                dist = map_service.calculate_haversine_distance(
+                    latitude, longitude, vendor.store.latitude, vendor.store.longitude
+                )
+                if dist <= 10.0:  # Default to 10km range if no service area is registered
+                    has_matched_service_area = True
+
+        if has_matched_service_area:
+            in_range = True
+            covered_vendor_ids.append(str(vendor.id))
+
+    return APIResponse(
+        success=True,
+        data={
+            "in_range": in_range,
+            "covered_vendor_ids": covered_vendor_ids
+        }
+    )

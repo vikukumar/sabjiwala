@@ -57,6 +57,19 @@ function OtpPromptModal({
   );
 }
 
+// =========== HAVERSINE DISTANCE CALCULATOR ===========
+function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 // =========== DELIVERY TRACKING MAP ===========
 function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationMode, distanceInfo }: {
   order: any; currentPos: [number, number]; simulationMode: boolean;
@@ -80,21 +93,33 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
         iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
         shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
       });
-      const customerLat = order.delivery_address?.latitude || 19.0735;
-      const customerLng = order.delivery_address?.longitude || 72.9985;
-      const storeLat = 19.0760; const storeLng = 72.9977;
-      map = L.map(mapContainerRef.current!).setView([storeLat, storeLng], 14);
+
+      const customerLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
+      const customerLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
+      const storeLat = order.vendor_store?.latitude || 19.0760;
+      const storeLng = order.vendor_store?.longitude || 72.9977;
+
+      const isPicked = ["picked", "out_for_delivery"].includes(order.status);
+      const destLat = isPicked ? customerLat : storeLat;
+      const destLng = isPicked ? customerLng : storeLng;
+
+      map = L.map(mapContainerRef.current!).setView([destLat, destLng], 14);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
+      
       const homeIcon = L.divIcon({ html: '<div style="background:#ef4444;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏠</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
       L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
+      
       const storeIcon = L.divIcon({ html: '<div style="background:#3b82f6;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏪</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
-      L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup("Store");
+      L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup(order.vendor_store?.store_name || "Store");
+      
       const driverIcon = L.divIcon({ html: '<div style="background:#10b981;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3)">🛵</div>', iconSize: [36, 36], iconAnchor: [18, 18] });
       const driverMarker = L.marker(currentPos, { icon: driverIcon }).addTo(map);
       driverMarkerRef.current = driverMarker;
+      
       L.polyline([[storeLat, storeLng], [customerLat, customerLng]], { color: "#cbd5e1", weight: 2, dashArray: "4 4" }).addTo(map);
-      pathLineRef.current = L.polyline([currentPos, [customerLat, customerLng]], { color: "#10b981", weight: 4 }).addTo(map);
-      map.fitBounds([[storeLat, storeLng], [customerLat, customerLng]], { padding: [40, 40] });
+      pathLineRef.current = L.polyline([currentPos, [destLat, destLng]], { color: isPicked ? "#10b981" : "#3b82f6", weight: 4 }).addTo(map);
+      
+      map.fitBounds([currentPos, [destLat, destLng]], { padding: [40, 40] });
       setMapObj(map);
     });
     return () => { active = false; if (map) map.remove(); };
@@ -104,9 +129,16 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
     if (mapObj && driverMarkerRef.current) {
       driverMarkerRef.current.setLatLng(currentPos);
       if (pathLineRef.current && order) {
-        const customerLat = order.delivery_address?.latitude || 19.0735;
-        const customerLng = order.delivery_address?.longitude || 72.9985;
-        pathLineRef.current.setLatLngs([currentPos, [customerLat, customerLng]]);
+        const customerLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
+        const customerLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
+        const storeLat = order.vendor_store?.latitude || 19.0760;
+        const storeLng = order.vendor_store?.longitude || 72.9977;
+
+        const isPicked = ["picked", "out_for_delivery"].includes(order.status);
+        const destLat = isPicked ? customerLat : storeLat;
+        const destLng = isPicked ? customerLng : storeLng;
+
+        pathLineRef.current.setLatLngs([currentPos, [destLat, destLng]]);
       }
     }
   }, [currentPos, mapObj, order]);
@@ -179,18 +211,45 @@ function ActiveOrdersTab({ assignments, assignmentsLoading, isOnline, globalPos,
                     </div>
                   </div>
 
-                  <div className="space-y-2 text-xs text-slate-600 dark:text-slate-350">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">{destAddr.address_line_1 || "Pickup Store"}</span>
+                  <div className="space-y-2.5 text-xs bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <div className="flex items-start gap-2.5">
+                      <Building className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-extrabold text-slate-800 dark:text-slate-200">
+                          Store: {task.vendor_store?.store_name || "Vendor Store"}
+                        </p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                          {task.vendor_store?.address_line_1 || "Store Address"}
+                        </p>
+                        {task.vendor_store?.latitude && (
+                          <span className="inline-block text-[9px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/20 px-1.5 py-0.5 rounded-full mt-1">
+                            🛵 Aap store se {getHaversineDistance(globalPos[0], globalPos[1], task.vendor_store.latitude, task.vendor_store.longitude).toFixed(2)} km door hain
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <Navigation className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-450 mt-0.5 flex-shrink-0" />
-                      <span className="text-slate-500 dark:text-slate-400">{formattedAddr}</span>
+
+                    <div className="border-t border-dashed border-slate-200 dark:border-slate-800 my-1" />
+
+                    <div className="flex items-start gap-2.5">
+                      <MapPin className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-extrabold text-slate-800 dark:text-slate-200">
+                          Deliver to: {destAddr.full_name || "Customer"}
+                        </p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                          {formattedAddr}
+                        </p>
+                        {task.delivery_latitude && task.vendor_store?.latitude && (
+                          <span className="inline-block text-[9px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/20 px-1.5 py-0.5 rounded-full mt-1">
+                            📍 Store se customer {getHaversineDistance(task.vendor_store.latitude, task.vendor_store.longitude, task.delivery_latitude, task.delivery_longitude).toFixed(2)} km door hai
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {task.status === "out_for_delivery" && (
+                  {["assigned", "confirmed", "accepted", "packed", "picked", "out_for_delivery"].includes(task.status) && (
                     <DeliveryTrackingMap
                       order={task} currentPos={globalPos}
                       simulationMode={simulationMode} setSimulationMode={setSimulationMode}
@@ -622,6 +681,136 @@ function ProfileTab({ profile, onLogout }: { profile: any; onLogout: () => void 
   );
 }
 
+// =========== VENDOR LOCATOR MAP ===========
+function VendorLocatorMap({ stores, currentPos, isOnline }: {
+  stores: any[]; currentPos: [number, number]; isOnline: boolean;
+}) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [mapObj, setMapObj] = useState<any>(null);
+  const driverMarkerRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !mapContainerRef.current) return;
+    let map: any = null;
+    let active = true;
+    import("leaflet").then((L) => {
+      if (!active || !mapContainerRef.current) return;
+      if ((mapContainerRef.current as any)._leaflet_id) return;
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
+
+      // Default center is current position
+      map = L.map(mapContainerRef.current!).setView(currentPos, 13);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
+
+      // Rider Marker (🛵)
+      const driverIcon = L.divIcon({
+        html: '<div style="background:#10b981;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3)">🛵</div>',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      });
+      const driverMarker = L.marker(currentPos, { icon: driverIcon }).addTo(map);
+      driverMarkerRef.current = driverMarker;
+
+      // Store Markers (🏪)
+      const storeIcon = L.divIcon({
+        html: '<div style="background:#3b82f6;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏪</div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+
+      const bounds: any[] = [currentPos];
+
+      stores.forEach((store) => {
+        if (store.latitude && store.longitude) {
+          const storePos: [number, number] = [store.latitude, store.longitude];
+          bounds.push(storePos);
+          L.marker(storePos, { icon: storeIcon })
+            .addTo(map)
+            .bindPopup(`<b>${store.store_name || "Vendor Store"}</b><br/>${store.address_line_1 || ""}`);
+        }
+      });
+
+      if (bounds.length > 1) {
+        map.fitBounds(bounds, { padding: [40, 40] });
+      }
+
+      setMapObj(map);
+    });
+
+    return () => {
+      active = false;
+      if (map) map.remove();
+    };
+  }, [stores]);
+
+  useEffect(() => {
+    if (mapObj && driverMarkerRef.current) {
+      driverMarkerRef.current.setLatLng(currentPos);
+    }
+  }, [currentPos, mapObj]);
+
+  const sortedStores = [...stores].map(store => {
+    const distance = store.latitude && store.longitude
+      ? getHaversineDistance(currentPos[0], currentPos[1], store.latitude, store.longitude)
+      : null;
+    return { ...store, distance };
+  }).sort((a, b) => {
+    if (a.distance === null) return 1;
+    if (b.distance === null) return -1;
+    return a.distance - b.distance;
+  });
+
+  return (
+    <div className="space-y-4">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-3">
+        <div className="flex justify-between items-center">
+          <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">Vendor Locator Map</h3>
+          <span className="text-[10px] font-bold text-slate-400">
+            {isOnline ? `${stores.length} stores nearby` : "Go Online to locate stores"}
+          </span>
+        </div>
+        
+        <div ref={mapContainerRef} className="h-64 rounded-2xl border border-slate-200 dark:border-slate-800 relative shadow-inner overflow-hidden" style={{ zIndex: 1 }} />
+      </div>
+
+      <div className="space-y-2">
+        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Nearby Vendor Stores</h4>
+        {sortedStores.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 text-center text-xs text-slate-500 font-medium">
+            {isOnline ? "No active stores found." : "Go online to see store locations."}
+          </div>
+        ) : (
+          sortedStores.map((store) => (
+            <div key={store.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center gap-3">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-950/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-lg">🏪</span>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">{store.store_name || "Vendor Store"}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1">{store.address_line_1 || "Store address"}</p>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <span className="text-xs font-black text-blue-600 dark:text-blue-400">
+                  {store.distance !== null ? `${store.distance.toFixed(2)} km` : "N/A"}
+                </span>
+                <span className="block text-[9px] text-slate-400">away</span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 // =========== MAIN DASHBOARD ===========
 export default function DeliveryAgentDashboard() {
   const { success, error: showError } = useToast();
@@ -629,12 +818,13 @@ export default function DeliveryAgentDashboard() {
   const queryClient = useQueryClient();
   const [isOnline, setIsOnline] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [activeTab, setActiveTab] = useState<"orders" | "history" | "earnings" | "payout" | "profile">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "stores" | "history" | "earnings" | "payout" | "profile">("orders");
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [globalPos, setGlobalPos] = useState<[number, number]>([19.0760, 72.9977]);
   const [simulationMode, setSimulationMode] = useState(true);
   const [distanceInfo, setDistanceInfo] = useState<string>("Offline");
   const wsRef = useRef<WebSocket | null>(null);
+  const triggeredProximityNotifs = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
@@ -677,6 +867,109 @@ export default function DeliveryAgentDashboard() {
     queryFn: async () => { const res = await api.get("/delivery/me"); return res.data; },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
   });
+
+  // Sync isOnline from profileData on load
+  useEffect(() => {
+    if (profileData) {
+      setIsOnline(profileData.availability !== "offline");
+    }
+  }, [profileData]);
+
+  // Fetch locator vendors
+  const { data: locatorVendors = [] } = useQuery<any[]>({
+    queryKey: ["locatorVendors"],
+    queryFn: async () => { const res = await api.get("/delivery/vendors"); return res.data || []; },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token") && isOnline,
+  });
+
+  // Capacitor Notification permissions and setup
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const initCapacitorNotifs = async () => {
+      try {
+        const isNative = !!(window as any).Capacitor;
+        if (!isNative) return;
+        
+        const { LocalNotifications } = await import("@capacitor/local-notifications");
+        const { PushNotifications } = await import("@capacitor/push-notifications");
+        
+        const permRes = await LocalNotifications.requestPermissions();
+        if (permRes.display === "granted") {
+          console.log("Local notifications permission granted");
+        }
+        
+        await LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
+          console.log("Local Notification Action clicked", action);
+          setActiveTab("orders");
+        });
+
+        const pushPerm = await PushNotifications.requestPermissions();
+        if (pushPerm.receive === "granted") {
+          await PushNotifications.register();
+        }
+        
+        await PushNotifications.addListener("registration", (token) => {
+          console.log("Push token registered: ", token.value);
+        });
+      } catch (err) {
+        console.warn("Capacitor notification init skipped (running in browser)", err);
+      }
+    };
+    initCapacitorNotifs();
+  }, []);
+
+  // Proximity alerts check
+  useEffect(() => {
+    if (!isOnline || !assignments || assignments.length === 0) return;
+    
+    const activeOrder = assignments.find((a: any) =>
+      ["assigned", "confirmed", "accepted", "packed", "picked", "out_for_delivery"].includes(a.status)
+    );
+    if (!activeOrder) return;
+
+    const isPicked = ["picked", "out_for_delivery"].includes(activeOrder.status);
+    let destLat = 0; let destLng = 0; let destName = ""; let typeKey = "";
+    
+    if (!isPicked && activeOrder.vendor_store) {
+      destLat = activeOrder.vendor_store.latitude;
+      destLng = activeOrder.vendor_store.longitude;
+      destName = activeOrder.vendor_store.store_name || "Vendor Store";
+      typeKey = `store-${activeOrder.id}`;
+    } else if (isPicked) {
+      destLat = activeOrder.delivery_latitude || activeOrder.delivery_address?.latitude || 19.0735;
+      destLng = activeOrder.delivery_longitude || activeOrder.delivery_address?.longitude || 72.9985;
+      destName = activeOrder.delivery_address?.full_name || "Customer";
+      typeKey = `customer-${activeOrder.id}`;
+    }
+
+    if (destLat && destLng && !triggeredProximityNotifs.current[typeKey]) {
+      const dist = getHaversineDistance(globalPos[0], globalPos[1], destLat, destLng);
+      if (dist <= 0.2) { // 200 meters
+        triggeredProximityNotifs.current[typeKey] = true;
+        const title = isPicked ? "Location ke paas hain! 📍" : "Store ke paas hain! 🏪";
+        const body = isPicked
+          ? `Aap ${destName} ke address ke paas pahunch gaye hain. Order #${activeOrder.order_number} deliver karein.`
+          : `Aap ${destName} ke paas pahunch gaye hain. Order #${activeOrder.order_number} collect karein.`;
+        
+        success(title, body);
+
+        if (typeof window !== "undefined") {
+          import("@capacitor/local-notifications").then(({ LocalNotifications }) => {
+            LocalNotifications.schedule({
+              notifications: [
+                {
+                  title,
+                  body,
+                  id: Math.floor(Math.random() * 100000),
+                  schedule: { at: new Date(Date.now() + 50) }
+                }
+              ]
+            }).catch(() => {});
+          }).catch(() => {});
+        }
+      }
+    }
+  }, [globalPos, isOnline, assignments]);
 
   // GPS / Simulation
   useEffect(() => {
@@ -746,10 +1039,30 @@ export default function DeliveryAgentDashboard() {
           const message = JSON.parse(event.data);
           if (message.type === "order_status_update") {
             queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] });
+            let title = ""; let body = "";
             if (message.data?.status === "assigned") {
-              success("Naya Delivery Order Mila! 🛵", `Order #${message.data?.order_number || ""} aapko assign kiya gaya hai.`);
+              title = "Naya Delivery Order Mila! 🛵";
+              body = `Order #${message.data?.order_number || ""} aapko assign kiya gaya hai.`;
             } else if (message.data?.status === "packed") {
-              success("Order Pack Ho Gaya! 📦", `Order #${message.data?.order_number || ""} pickup ke liye ready hai.`);
+              title = "Order Pack Ho Gaya! 📦";
+              body = `Order #${message.data?.order_number || ""} pickup ke liye ready hai.`;
+            }
+            if (title) {
+              success(title, body);
+              if (typeof window !== "undefined") {
+                import("@capacitor/local-notifications").then(({ LocalNotifications }) => {
+                  LocalNotifications.schedule({
+                    notifications: [
+                      {
+                        title,
+                        body,
+                        id: Math.floor(Math.random() * 100000),
+                        schedule: { at: new Date(Date.now() + 50) }
+                      }
+                    ]
+                  }).catch(() => {});
+                }).catch(() => {});
+              }
             }
           }
         } catch (err) {
@@ -829,6 +1142,7 @@ export default function DeliveryAgentDashboard() {
 
   const TABS = [
     { id: "orders", icon: Home, label: "Orders", badge: isOnline ? assignments.length : 0 },
+    { id: "stores", icon: MapPin, label: "Stores" },
     { id: "history", icon: History, label: "History" },
     { id: "earnings", icon: IndianRupee, label: "Earnings" },
     { id: "payout", icon: ArrowUpRight, label: "Payout" },
@@ -883,6 +1197,9 @@ export default function DeliveryAgentDashboard() {
             distanceInfo={distanceInfo} handleUpdateStatus={handleUpdateStatus}
             pickupOrderMutation={pickupOrderMutation} deliverOrderMutation={deliverOrderMutation}
           />
+        )}
+        {activeTab === "stores" && (
+          <VendorLocatorMap stores={locatorVendors} currentPos={globalPos} isOnline={isOnline} />
         )}
         {activeTab === "history" && <HistoryTab />}
         {activeTab === "earnings" && <EarningsTab profile={profile} />}

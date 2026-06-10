@@ -20,45 +20,44 @@ function Hero() {
   };
 
   return (
-    <section className="relative overflow-hidden gradient-brand py-14 md:py-20 px-4">
-      {/* Decorative circles */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/4 pointer-events-none" />
+    <section className="relative overflow-hidden bg-gradient-to-tr from-emerald-600 via-emerald-650 to-teal-700 py-16 md:py-24 px-4 shadow-xl">
+      {/* Decorative grids */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+      <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/4 blur-xl pointer-events-none" />
 
-      <div className="max-w-4xl mx-auto relative z-10 text-center space-y-6">
-        <div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-4 py-1.5 text-emerald-100 text-xs font-bold border border-white/20 backdrop-blur-sm">
-          <Zap className="w-3.5 h-3.5 text-yellow-300" />
-          Delivery in 10 minutes — Guaranteed Fresh
+      <div className="max-w-4xl mx-auto relative z-10 text-center space-y-7">
+        <div className="inline-flex items-center gap-2 bg-white/10 dark:bg-black/20 rounded-full px-4.5 py-2 text-white text-xs font-black border border-white/10 backdrop-blur-md shadow-inner animate-fade-in">
+          <Zap className="w-4 h-4 text-yellow-300 fill-current animate-bounce" />
+          <span>⚡ EXPRESS DELIVERY IN 10 MINS — FRESH GUARANTEE</span>
         </div>
 
-        <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white leading-tight tracking-tight">
-          Farm Fresh Vegetables &<br className="hidden sm:block" />
-          <span className="relative inline-block ml-2">
+        <h1 className="text-4xl sm:text-6xl font-black text-white leading-none tracking-tight">
+          Farm Fresh Vegetables &<br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-200">
             Fruits
-            <span className="absolute bottom-1 left-0 right-0 h-1.5 bg-yellow-400/70 -z-10 rounded" />
-          </span>
-          <br className="hidden sm:block" />
+          </span>{" "}
           at Your Doorstep
         </h1>
 
-        <p className="text-emerald-100 text-base md:text-lg max-w-xl mx-auto">
-          Directly from local farms — cleaned, sorted, and packed with hygienic care.
+        <p className="text-emerald-100 text-sm sm:text-base max-w-lg mx-auto font-medium leading-relaxed">
+          Cleaned, sorted, and hygienically packed with care. Direct from local farms to your home.
         </p>
 
         {/* Search */}
-        <form onSubmit={handleSearch} className="max-w-lg mx-auto">
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-2xl p-2 shadow-xl border border-white/20">
-            <Search className="w-5 h-5 text-slate-400 ml-2 flex-shrink-0" />
+        <form onSubmit={handleSearch} className="max-w-lg mx-auto transform hover:scale-[1.01] transition-all duration-300">
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-2xl p-2 shadow-2xl border border-white/20">
+            <Search className="w-5 h-5 text-slate-400 ml-2.5 flex-shrink-0" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search tomatoes, spinach, fruits..."
-              className="flex-1 bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder-slate-400 text-sm"
+              placeholder="Search tomatoes, spinach, fruits, mangoes..."
+              className="flex-1 bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs sm:text-sm font-semibold"
             />
             <button
               type="submit"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex-shrink-0"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-black text-xs sm:text-sm transition-all shadow-md cursor-pointer"
             >
               Search
             </button>
@@ -66,12 +65,12 @@ function Hero() {
         </form>
 
         {/* Quick chips */}
-        <div className="flex flex-wrap justify-center gap-2">
+        <div className="flex flex-wrap justify-center gap-2 pt-1">
           {["Tomatoes", "Onions", "Spinach", "Mangoes", "Potatoes", "Carrots"].map((item) => (
             <Link
               key={item}
               href={`/search?q=${item.toLowerCase()}`}
-              className="bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-all backdrop-blur-sm"
+              className="bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-all backdrop-blur-sm shadow-sm hover:scale-105"
             >
               {item}
             </Link>
@@ -556,7 +555,7 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
     staleTime: 60_000,
   });
 
-  // Calculate distances and filter within 10 km radius, nearest first
+  // Calculate distances and filter within vendor's radius_km setup, nearest first
   const products = React.useMemo(() => {
     if (!rawProducts.length) return [];
     if (!coords) return rawProducts.slice(0, 20);
@@ -574,13 +573,15 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
           || p.vendor?.store?.longitude
           || p.vendor_longitude
           || null;
+        const vRad = p.attributes?.vendor_radius_km || 10.0;
+        
         // If vendor has no coordinates, treat as nearby (distance = 0) so product always shows
         const distance = (vLat && vLon)
           ? getHaversineDistance(coords.lat, coords.lon, parseFloat(vLat), parseFloat(vLon))
           : 0;
-        return { ...p, distance };
+        return { ...p, distance, vendor_radius: vRad };
       })
-      .filter((p: any) => p.distance <= 10.0) // 10 km radius filter
+      .filter((p: any) => p.distance <= p.vendor_radius) // Radius-based filter
       .sort((a: any, b: any) => a.distance - b.distance) // Nearest first
       .slice(0, 30);
   }, [rawProducts, coords]);
@@ -600,7 +601,7 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
       <EmptyState
         emoji="🧺"
         title="No fresh products nearby"
-        description="We couldn't find active vendors within a 10 km radius of your location."
+        description="We couldn't find active vendors within range of your location."
       />
     );
   }
@@ -668,11 +669,129 @@ function useAuthGuard() {
   // Guard disabled for home page to support Swiggy guest browsing onboarding patterns
 }
 
+// ==================== COMING SOON AREA OVERRIDE ====================
+function ComingSoonArea({ currentAddress, onOpenLocation }: { currentAddress: string; onOpenLocation: () => void }) {
+  const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email.trim()) {
+      setSubscribed(true);
+      setEmail("");
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto px-4 py-12 text-center space-y-8 animate-fade-in">
+      <div className="relative inline-block">
+        <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full scale-125 animate-pulse" />
+        <div className="relative w-20 h-20 bg-gradient-to-tr from-emerald-500 to-teal-600 rounded-3xl flex items-center justify-center text-4xl shadow-xl border border-white/20">
+          📍
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-3xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
+          Coming Soon in<br/>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-350">
+            Your Area! 🚀
+          </span>
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+          Sbjiwala isn&apos;t delivering at <b>{currentAddress || "your location"}</b> yet. We are expanding rapidly!
+        </p>
+      </div>
+
+      <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl space-y-4">
+        {!subscribed ? (
+          <form onSubmit={handleSubscribe} className="space-y-3">
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-350">
+              Notify me when delivery starts:
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter email address"
+                className="flex-1 bg-white dark:bg-slate-950 border border-slate-250 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-emerald-505 text-slate-800 dark:text-white"
+              />
+              <button
+                type="submit"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all flex-shrink-0 cursor-pointer"
+              >
+                Notify Me
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="text-center py-2 space-y-1 animate-scale-in">
+            <span className="text-2xl">🎉</span>
+            <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Aapki request record ho gayi hai!</p>
+            <p className="text-[10px] text-slate-400">We will notify you immediately once we launch here.</p>
+          </div>
+        )}
+
+        <div className="border-t border-slate-200 dark:border-slate-800/80 my-2" />
+
+        <div className="space-y-2">
+          <p className="text-[11px] text-slate-405">Want to order somewhere else?</p>
+          <button
+            onClick={onOpenLocation}
+            className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-white font-black text-xs py-3 rounded-xl transition-all border border-slate-205 dark:border-slate-700 cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            Change Location Pin
+          </button>
+        </div>
+      </div>
+
+      <div className="text-[10px] text-slate-400/85 font-black uppercase tracking-wider flex items-center justify-center gap-4">
+        <span>⚡ 10 Min Delivery</span>
+        <span>•</span>
+        <span>🥬 Farm Fresh</span>
+      </div>
+    </div>
+  );
+}
+
 // ==================== PAGE ====================
 export default function HomePage() {
   useAuthGuard();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [notificationBanner, setNotificationBanner] = useState<{ title: string; body: string } | null>(null);
+
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [locationName, setLocationName] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateLoc = () => {
+      const latRaw = localStorage.getItem("sw_latitude");
+      const lonRaw = localStorage.getItem("sw_longitude");
+      setLocationName(localStorage.getItem("sw_location_name") || "");
+      if (latRaw && lonRaw) {
+        setCoords({ lat: parseFloat(latRaw), lon: parseFloat(lonRaw) });
+      }
+    };
+    updateLoc();
+    window.addEventListener("sw_location_updated", updateLoc);
+    return () => window.removeEventListener("sw_location_updated", updateLoc);
+  }, []);
+
+  // Range Check Query
+  const { data: rangeCheck, isLoading: checkingRange } = useQuery({
+    queryKey: ["rangeCheck", coords],
+    queryFn: async () => {
+      if (!coords) return { in_range: true, covered_vendor_ids: [] };
+      const res = await api.get("/catalog/vendors/range-check", {
+        params: { latitude: coords.lat, longitude: coords.lon }
+      });
+      return res.data;
+    },
+    enabled: !!coords,
+  });
 
   // WebSocket for real-time notifications on the customer homepage
   useWebSocket((message) => {
@@ -687,13 +806,21 @@ export default function HomePage() {
     }
   });
 
+  const handleOpenLocationModal = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("sw_open_location_modal"));
+    }
+  };
+
+  const isInRange = rangeCheck ? rangeCheck.in_range : true;
+
   return (
     <div className="space-y-8 pb-4 relative">
       {/* Push Notification Toast Banner */}
       {notificationBanner && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] w-[90%] max-w-md bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-2xl shadow-2xl p-4 flex items-start gap-3 border-l-4 border-l-emerald-500 animate-slide-down">
           <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl flex-shrink-0">
-            <Bell className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <Bell className="w-5 h-5 text-emerald-600 dark:text-emerald-450" />
           </div>
           <div className="flex-1 space-y-0.5">
             <h4 className="text-sm font-black text-slate-900 dark:text-white">
@@ -712,22 +839,33 @@ export default function HomePage() {
         </div>
       )}
 
-      <Hero />
-      <TrustBadges />
-      <OffersBanner />
-      
-      <CategoriesStrip active={selectedCategory} setActive={setSelectedCategory} />
-      
-      {/* Products Grid filtered by category selection */}
-      <div className="px-4 space-y-4">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-pulse" />
-          <h2 className="text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight">
-            {selectedCategory === "All" ? "Trending Nearby" : `Fresh ${selectedCategory}`}
-          </h2>
+      {checkingRange ? (
+        <div className="py-20 flex flex-col items-center justify-center gap-2">
+          <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
+          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Checking range availability...</p>
         </div>
-        <ProductsGrid categoryFilter={selectedCategory === "All" ? undefined : selectedCategory} />
-      </div>
+      ) : !isInRange ? (
+        <ComingSoonArea currentAddress={locationName} onOpenLocation={handleOpenLocationModal} />
+      ) : (
+        <>
+          <Hero />
+          <TrustBadges />
+          <OffersBanner />
+          
+          <CategoriesStrip active={selectedCategory} setActive={setSelectedCategory} />
+          
+          {/* Products Grid filtered by category selection */}
+          <div className="px-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-pulse" />
+              <h2 className="text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight">
+                {selectedCategory === "All" ? "Trending Nearby" : `Fresh ${selectedCategory}`}
+              </h2>
+            </div>
+            <ProductsGrid categoryFilter={selectedCategory === "All" ? undefined : selectedCategory} />
+          </div>
+        </>
+      )}
 
       <CartFooter />
     </div>
