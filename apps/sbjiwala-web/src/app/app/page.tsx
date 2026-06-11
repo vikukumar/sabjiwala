@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { Button, Badge, Skeleton, EmptyState, SectionHeader } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 import { resolveLink } from "@/components/AppShell";
+import ProductCard from "@/components/ProductCard";
 
 // ==================== HERO ====================
 function Hero() {
@@ -16,7 +17,9 @@ function Hero() {
   const [query, setQuery] = useState("");
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim()) router.push(resolveLink(`/search?q=${encodeURIComponent(query.trim())}`));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sw_open_search_modal", { detail: { query: query.trim() } }));
+    }
   };
 
   return (
@@ -52,8 +55,13 @@ function Hero() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("sw_open_search_modal", { detail: { query: query.trim() } }));
+                }
+              }}
               placeholder="Search tomatoes, spinach, fruits, mangoes..."
-              className="flex-1 bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs sm:text-sm font-semibold"
+              className="flex-1 bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs sm:text-sm font-semibold cursor-pointer"
             />
             <button
               type="submit"
@@ -67,13 +75,17 @@ function Hero() {
         {/* Quick chips */}
         <div className="flex flex-wrap justify-center gap-2 pt-1">
           {["Tomatoes", "Onions", "Spinach", "Mangoes", "Potatoes", "Carrots"].map((item) => (
-            <Link
+            <button
               key={item}
-              href={`/search?q=${item.toLowerCase()}`}
-              className="bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-all backdrop-blur-sm shadow-sm hover:scale-105"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("sw_open_search_modal", { detail: { query: item } }));
+                }
+              }}
+              className="bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-all backdrop-blur-sm shadow-sm hover:scale-105 cursor-pointer"
             >
               {item}
-            </Link>
+            </button>
           ))}
         </div>
       </div>
@@ -322,264 +334,6 @@ const saveLocalGuestCart = (cart: any) => {
   window.dispatchEvent(new Event("sw_cart_updated"));
 };
 
-// ==================== PRODUCT CARD ====================
-function ProductCard({ product }: { product: any }) {
-  const queryClient = useQueryClient();
-  const { error: showError } = useToast();
-
-  const isGuest = typeof window !== "undefined" && !localStorage.getItem("sw_access_token");
-
-  // Read backend cart
-  const { data: serverCart } = useQuery<any>({
-    queryKey: ["cart"],
-    queryFn: async () => {
-      const res = await api.get("/cart");
-      return res.data || { items: [], item_count: 0 };
-    },
-    enabled: typeof window !== "undefined" && !isGuest,
-    staleTime: 0,
-  });
-
-  // Track guest cart local state
-  const [localCart, setLocalCart] = useState<any>(getLocalGuestCart());
-  const [showClearCartModal, setShowClearCartModal] = useState(false);
-
-  useEffect(() => {
-    const handleUpdate = () => setLocalCart(getLocalGuestCart());
-    window.addEventListener("sw_cart_updated", handleUpdate);
-    return () => window.removeEventListener("sw_cart_updated", handleUpdate);
-  }, []);
-
-  const cartItem = isGuest
-    ? localCart?.items?.find((i: any) => i.product_id === product.id)
-    : serverCart?.items?.find((i: any) => i.product_id === product.id);
-
-  // Dynamic 4.5% product price customer markup
-  const price = Math.round((product.attributes?.price ?? product.price ?? 30) * 1.045 * 100) / 100;
-  const rawMrp = product.attributes?.mrp ?? product.mrp;
-  const mrp = rawMrp ? Math.round(rawMrp * 1.045 * 100) / 100 : undefined;
-  const emoji = product.attributes?.image_emoji || "🥬";
-  const hasDiscount = mrp && mrp > price;
-  const discountPct = hasDiscount ? Math.round(((mrp - price) / mrp) * 100) : 0;
-  const rating = product.attributes?.rating ?? (4 + Math.random() * 0.9).toFixed(1);
-
-  const targetVendorId = product.attributes?.vendor_id || product.vendor_id || product.vendor?.id;
-
-  // Guest Add to Cart
-  const handleGuestAdd = () => {
-    const current = getLocalGuestCart();
-    const existing = current.items.find((i: any) => i.product_id === product.id);
-    const vendorId = targetVendorId;
-
-    if (existing) {
-      existing.quantity += 1;
-    } else {
-      current.items.push({
-        id: `guest-${product.id}`,
-        product_id: product.id,
-        product_name: product.name,
-        quantity: 1,
-        unit: product.unit || "1 kg",
-        price: price,
-        vendor_id: vendorId,
-        attributes: { image_emoji: emoji }
-      });
-    }
-    
-    // Recalculate guest subtotal
-    current.subtotal = current.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-    saveLocalGuestCart(current);
-
-    // Trigger contextual notification alert benefit on first guest item added
-    if (current.items.length === 1) {
-      window.dispatchEvent(new Event("trigger-notification-benefit"));
-    }
-  };
-
-  const handleGuestUpdateQty = (newQty: number) => {
-    const current = getLocalGuestCart();
-    const idx = current.items.findIndex((i: any) => i.product_id === product.id);
-    if (idx === -1) return;
-
-    if (newQty <= 0) {
-      current.items.splice(idx, 1);
-    } else {
-      current.items[idx].quantity = newQty;
-    }
-
-    current.subtotal = current.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-    saveLocalGuestCart(current);
-  };
-
-  // Backend mutations
-  const addToCart = useMutation({
-    mutationFn: async () => {
-      const vendorId = targetVendorId;
-      return api.post("/cart/items", {
-        product_id: product.id,
-        ...(vendorId ? { vendor_id: vendorId } : {}),
-        quantity: 1,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-      // Trigger contextual notification alert benefit on first backend item added
-      const currentItems = queryClient.getQueryData<any>(["cart"])?.items || [];
-      if (currentItems.length === 0) {
-        window.dispatchEvent(new Event("trigger-notification-benefit"));
-      }
-    },
-    onError: (err: any) => showError("Failed to add", err.response?.data?.detail || err.message),
-  });
-
-  const addToCartWithClear = useMutation({
-    mutationFn: async () => {
-      const vendorId = targetVendorId;
-      return api.post("/cart/items", {
-        product_id: product.id,
-        ...(vendorId ? { vendor_id: vendorId } : {}),
-        quantity: 1,
-        clear_other_carts: true,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-      setShowClearCartModal(false);
-    },
-    onError: (err: any) => showError("Failed to add", err.response?.data?.detail || err.message),
-  });
-
-  const handleAddToCartAttempt = () => {
-    const currentItems = isGuest ? localCart?.items : serverCart?.items;
-    const differentVendor = currentItems?.length > 0 && currentItems.some((i: any) => i.vendor_id && String(i.vendor_id) !== String(targetVendorId));
-
-    if (differentVendor) {
-      setShowClearCartModal(true);
-    } else {
-      if (isGuest) {
-        handleGuestAdd();
-      } else {
-        addToCart.mutate();
-      }
-    }
-  };
-
-  const handleConfirmClearCart = () => {
-    if (isGuest) {
-      const emptyCart = { items: [], subtotal: 0 };
-      saveLocalGuestCart(emptyCart);
-      handleGuestAdd();
-      setShowClearCartModal(false);
-    } else {
-      addToCartWithClear.mutate();
-    }
-  };
-
-  const updateQty = useMutation({
-    mutationFn: async ({ itemId, qty }: { itemId: string; qty: number }) => {
-      if (qty <= 0) return api.delete(`/cart/items/${itemId}`);
-      return api.patch(`/cart/items/${itemId}`, { quantity: qty });
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
-  });
-
-  return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700/50 hover:shadow-lg transition-all group overflow-hidden product-card flex flex-col">
-      {/* Image */}
-      <Link href={`/products/${product.id}`} className="block">
-        <div className="relative bg-gradient-to-br from-slate-50 to-emerald-50/30 dark:from-slate-800/50 dark:to-slate-900 h-32 flex items-center justify-center">
-          <span className="text-5xl group-hover:scale-110 transition-transform duration-300">{emoji}</span>
-          {hasDiscount && (
-            <span className="absolute top-2 left-2 bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-              -{discountPct}%
-            </span>
-          )}
-        </div>
-      </Link>
-
-      {/* Info */}
-      <div className="p-3 flex flex-col flex-1 gap-2">
-        <div>
-          <div className="flex items-center gap-1 mb-1">
-            <Star className="w-3 h-3 text-amber-500 fill-current" />
-            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-500">{rating}</span>
-          </div>
-          <Link href={`/products/${product.id}`}>
-            <h3 className="font-black text-sm text-slate-900 dark:text-slate-50 line-clamp-1 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors">
-              {product.name}
-            </h3>
-          </Link>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">{product.unit || "1 kg"}</p>
-        </div>
-
-        <div className="flex items-center justify-between mt-auto pt-1">
-          <div>
-            <span className="text-base font-black text-slate-900 dark:text-white">₹{price}</span>
-            {hasDiscount && (
-              <span className="text-xs text-slate-400 line-through ml-1.5">₹{mrp}</span>
-            )}
-          </div>
-
-          {cartItem ? (
-            <div className="flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-1.5 py-0.5 shadow-sm">
-              <button
-                onClick={() => isGuest ? handleGuestUpdateQty(cartItem.quantity - 1) : updateQty.mutate({ itemId: cartItem.id, qty: cartItem.quantity - 1 })}
-                className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-emerald-700 transition-colors"
-              >
-                <Minus className="w-3 h-3" />
-              </button>
-              <span className="px-2 text-sm font-black min-w-[20px] text-center">{cartItem.quantity}</span>
-              <button
-                onClick={() => isGuest ? handleGuestUpdateQty(cartItem.quantity + 1) : updateQty.mutate({ itemId: cartItem.id, qty: cartItem.quantity + 1 })}
-                className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-emerald-700 transition-colors"
-              >
-                <Plus className="w-3 h-3" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={handleAddToCartAttempt}
-              disabled={!isGuest && addToCart.isPending}
-              className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white dark:bg-emerald-950/30 dark:hover:bg-emerald-600 dark:text-emerald-400 dark:hover:text-white text-xs font-black px-3.5 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-900/40 transition-all disabled:opacity-50 active:scale-95 cursor-pointer"
-            >
-              {addToCart.isPending ? "..." : "ADD"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {showClearCartModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowClearCartModal(false)} />
-          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl text-slate-800 dark:text-white" style={{ zIndex: 1000 }}>
-            <h3 className="text-base font-black uppercase tracking-wider">Replace cart items?</h3>
-            <p className="text-xs text-slate-550 dark:text-slate-400 leading-normal">
-              Your cart has items from another store. Do you want to discard them and add this item instead?
-            </p>
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="danger"
-                onClick={handleConfirmClearCart}
-                loading={!isGuest && addToCartWithClear.isPending}
-                className="flex-1 py-3 text-xs font-bold cursor-pointer"
-              >
-                Yes, Replace
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowClearCartModal(false)}
-                className="flex-1 py-3 text-xs font-bold cursor-pointer"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ==================== PRODUCTS GRID ====================
 function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
   const { data: categories = [] } = useQuery<any[]>({
@@ -624,37 +378,50 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
   });
 
   // Calculate distances and filter to the NEAREST VENDOR only
-  const products = React.useMemo(() => {
-    if (!rawProducts.length) return [];
-    if (!coords) return rawProducts.slice(0, 20);
+  const { products, nearestVendorDistance, isOutofRange } = React.useMemo(() => {
+    if (!rawProducts.length) return { products: [], nearestVendorDistance: null, isOutofRange: false };
 
-    const mapped = rawProducts
-      .map((p: any) => {
-        const vLat = p.attributes?.vendor_latitude
-          || p.attributes?.store_latitude
-          || p.vendor?.store?.latitude
-          || p.vendor_latitude
-          || null;
-        const vLon = p.attributes?.vendor_longitude
-          || p.attributes?.store_longitude
-          || p.vendor?.store?.longitude
-          || p.vendor_longitude
-          || null;
-        const vRad = p.attributes?.vendor_radius_km || 10.0;
-        
-        const distance = (vLat && vLon)
-          ? getHaversineDistance(coords.lat, coords.lon, parseFloat(vLat), parseFloat(vLon))
-          : 0;
-        return { ...p, distance, vendor_radius: vRad };
-      })
-      .filter((p: any) => p.distance <= p.vendor_radius);
+    // Map all products to their distance from the user
+    const mapped = rawProducts.map((p: any) => {
+      const vLat = p.attributes?.vendor_latitude
+        || p.attributes?.store_latitude
+        || p.vendor?.store?.latitude
+        || p.vendor_latitude
+        || null;
+      const vLon = p.attributes?.vendor_longitude
+        || p.attributes?.store_longitude
+        || p.vendor?.store?.longitude
+        || p.vendor_longitude
+        || null;
+      const vRad = p.attributes?.vendor_radius_km || 10.0;
+      
+      const distance = (coords && vLat && vLon)
+        ? getHaversineDistance(coords.lat, coords.lon, parseFloat(vLat), parseFloat(vLon))
+        : 0;
+      return { ...p, distance, vendor_radius: vRad };
+    });
 
-    if (mapped.length === 0) return [];
+    // Check products in delivery radius
+    const inRangeProducts = mapped.filter((p: any) => p.distance <= p.vendor_radius);
+    
+    let isOutofRange = false;
+    let targetProducts = inRangeProducts;
 
-    // Find the closest vendor among the nearby products
+    // If no products are in range but we have coordinates, check nearest overall
+    if (inRangeProducts.length === 0 && mapped.length > 0 && coords) {
+      isOutofRange = true;
+      targetProducts = mapped;
+    }
+
+    if (targetProducts.length === 0) {
+      // If still empty (e.g. no coords or no vendor info), just show first 30 products directly
+      return { products: mapped.slice(0, 30), nearestVendorDistance: null, isOutofRange: false };
+    }
+
+    // Find the closest vendor among target products
     let minDistance = Infinity;
     let nearestVendor: any = null;
-    mapped.forEach((p: any) => {
+    targetProducts.forEach((p: any) => {
       const vId = p.attributes?.vendor_id || p.vendor_id || p.vendor?.id;
       if (vId && p.distance < minDistance) {
         minDistance = p.distance;
@@ -662,19 +429,23 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
       }
     });
 
-    if (!nearestVendor) return mapped.slice(0, 30);
+    if (!nearestVendor) {
+      return { products: targetProducts.slice(0, 30), nearestVendorDistance: null, isOutofRange };
+    }
 
-    // Save nearest vendor ID in localStorage for search page restriction
+    // Save nearest vendor ID for restriction
     localStorage.setItem("sw_nearest_vendor_id", String(nearestVendor));
 
     // Filter to ONLY show products from this single nearest vendor
-    return mapped
+    const filtered = targetProducts
       .filter((p: any) => {
         const vId = p.attributes?.vendor_id || p.vendor_id || p.vendor?.id;
         return vId === nearestVendor;
       })
       .sort((a: any, b: any) => a.distance - b.distance)
       .slice(0, 30);
+
+    return { products: filtered, nearestVendorDistance: minDistance === Infinity ? null : minDistance, isOutofRange };
   }, [rawProducts, coords]);
 
   if (isLoading) {
@@ -698,8 +469,16 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-      {products.map((p: any) => <ProductCard key={p.id} product={p} />)}
+    <div className="space-y-4">
+      {isOutofRange && (
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 text-amber-800 dark:text-amber-400 text-xs font-semibold flex items-center gap-2">
+          <Navigation className="w-4 h-4 text-amber-500 animate-pulse flex-shrink-0" />
+          <span>Showing preview catalog (Delivery currently unavailable to your location as nearest store is {(nearestVendorDistance ?? 0).toFixed(1)} km away).</span>
+        </div>
+      )}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+        {products.map((p: any) => <ProductCard key={p.id} product={p} />)}
+      </div>
     </div>
   );
 }
@@ -935,10 +714,19 @@ export default function HomePage() {
           <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
           <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Checking range availability...</p>
         </div>
-      ) : !isInRange ? (
-        <ComingSoonArea currentAddress={locationName} onOpenLocation={handleOpenLocationModal} />
       ) : (
         <>
+          {!isInRange && (
+            <div className="mx-4 mt-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 text-amber-800 dark:text-amber-400 text-xs font-semibold flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Navigation className="w-4 h-4 text-amber-500 animate-pulse flex-shrink-0" />
+                <span>We are not delivering to your location yet. Showing products from the nearest vendor.</span>
+              </div>
+              <button onClick={handleOpenLocationModal} className="text-xs text-emerald-600 dark:text-emerald-400 font-extrabold hover:underline flex-shrink-0">
+                Change Location
+              </button>
+            </div>
+          )}
           <Hero />
           <TrustBadges />
           <OffersBanner />

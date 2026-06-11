@@ -172,10 +172,10 @@ jobs:
           cd apps/sbjiwala-web
           
           # Create .env.production with API URL if provided
-          if [ -n "$API_URL" ]; then
-            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
-            echo "API URL configured: $API_URL"
-          fi
+          # if [ -n "$API_URL" ]; then
+          #   echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
+          #   echo "API URL configured: $API_URL"
+          # fi
           
           npm install
           
@@ -204,11 +204,12 @@ jobs:
           cd apps/sbjiwala-web
           
           # Build with NEXT_PUBLIC_API_URL if provided
-          if [ -n "$API_URL" ]; then
-            NEXT_PUBLIC_API_URL="$API_URL" npm run build
-          else
-            npm run build
-          fi
+          # if [ -n "$API_URL" ]; then
+          #   NEXT_PUBLIC_API_URL="$API_URL" npm run build
+          # else
+          #   npm run build
+          # fi
+          npm run build
 
       - name: Zip Web App Static Export
         run: |

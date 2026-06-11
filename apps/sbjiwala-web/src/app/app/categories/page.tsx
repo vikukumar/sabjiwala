@@ -4,8 +4,9 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import Link from "next/link";
-import { ChevronRight, Search, Star, ShoppingBag, Plus, Minus, Loader2 } from "lucide-react";
+import { ChevronRight, Search, Star, ShoppingBag, Plus, Minus, Loader2, Navigation } from "lucide-react";
 import { Skeleton } from "@/components/ui/index";
+import ProductCard from "@/components/ProductCard";
 import { useToast } from "@/components/ui/Toast";
 
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -127,8 +128,8 @@ export default function CategoriesPage() {
   const activeCatName = parentCategories.find((c: any) => c.id === selectedCatId)?.name || "Category";
 
   // Filter products down by distance/nearest-vendor, subcategory selection, and search query
-  const products = useMemo(() => {
-    if (!rawProducts.length) return [];
+  const { products, nearestVendorDistance, isOutofRange } = useMemo(() => {
+    if (!rawProducts.length) return { products: [], nearestVendorDistance: null, isOutofRange: false };
 
     let mapped = rawProducts.map((p: any) => {
       const vLat = p.attributes?.vendor_latitude
@@ -149,28 +150,64 @@ export default function CategoriesPage() {
       return { ...p, distance, vendor_radius: vRad };
     });
 
-    if (coords) {
-      mapped = mapped.filter((p: any) => p.distance <= p.vendor_radius);
+    const inRangeProducts = mapped.filter((p: any) => p.distance <= p.vendor_radius);
+    
+    let isOutofRange = false;
+    let targetProducts = inRangeProducts;
+
+    // Fallback if no vendors are in range
+    if (inRangeProducts.length === 0 && mapped.length > 0 && coords) {
+      isOutofRange = true;
+      targetProducts = mapped;
     }
 
-    if (mapped.length === 0) return [];
+    if (targetProducts.length === 0) {
+      targetProducts = mapped;
+    }
+
+    let storedVendorId: string | null = null;
+    if (typeof window !== "undefined") {
+      storedVendorId = localStorage.getItem("sw_nearest_vendor_id");
+      if (storedVendorId === "null" || storedVendorId === "undefined" || !storedVendorId) {
+        storedVendorId = null;
+      }
+    }
 
     let minDistance = Infinity;
-    let nearestVendor: any = null;
-    mapped.forEach((p: any) => {
-      const vId = p.attributes?.vendor_id || p.vendor_id || p.vendor?.id;
-      if (vId && p.distance < minDistance) {
-        minDistance = p.distance;
-        nearestVendor = vId;
+    let activeVendor = storedVendorId;
+
+    if (!activeVendor) {
+      // Find the closest vendor among target products
+      let nearestVendor: any = null;
+      targetProducts.forEach((p: any) => {
+        const vId = p.attributes?.vendor_id || p.vendor_id || p.vendor?.id;
+        if (vId && p.distance < minDistance) {
+          minDistance = p.distance;
+          nearestVendor = vId;
+        }
+      });
+      activeVendor = nearestVendor ? String(nearestVendor) : null;
+      if (activeVendor && typeof window !== "undefined") {
+        localStorage.setItem("sw_nearest_vendor_id", activeVendor);
       }
-    });
+    } else {
+      // Find distance of this active vendor for the banner display
+      const activeProd = targetProducts.find((p: any) => {
+        const vId = p.attributes?.vendor_id || p.vendor_id || p.vendor?.id;
+        return String(vId) === String(activeVendor);
+      });
+      if (activeProd) {
+        minDistance = activeProd.distance;
+      }
+    }
 
-    if (!nearestVendor) return [];
-
-    let finalProds = mapped.filter((p: any) => {
-      const vId = p.attributes?.vendor_id || p.vendor_id || p.vendor?.id;
-      return vId === nearestVendor;
-    });
+    let finalProds = targetProducts;
+    if (activeVendor) {
+      finalProds = targetProducts.filter((p: any) => {
+        const vId = p.attributes?.vendor_id || p.vendor_id || p.vendor?.id;
+        return String(vId) === String(activeVendor);
+      });
+    }
 
     if (activeSubcatId) {
       finalProds = finalProds.filter((p: any) => p.category_id === activeSubcatId);
@@ -184,7 +221,11 @@ export default function CategoriesPage() {
       );
     }
 
-    return finalProds;
+    return {
+      products: finalProds,
+      nearestVendorDistance: minDistance === Infinity ? null : minDistance,
+      isOutofRange
+    };
   }, [rawProducts, coords, activeSubcatId, searchQuery]);
 
   // Mutations
@@ -400,96 +441,18 @@ export default function CategoriesPage() {
               ))}
             </div>
           ) : products.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {products.map((prod: any) => {
-                const price = Math.round((prod.attributes?.price ?? prod.price ?? 30) * 1.045 * 100) / 100;
-                const rawMrp = prod.attributes?.mrp ?? prod.mrp;
-                const mrp = rawMrp ? Math.round(rawMrp * 1.045 * 100) / 100 : undefined;
-                const hasDiscount = mrp && mrp > price;
-                const discountPct = hasDiscount ? Math.round(((mrp - price) / mrp) * 100) : 0;
-                
-                const emoji = prod.attributes?.image_emoji || "🥬";
-                const rating = prod.attributes?.rating ?? "4.5";
-
-                const currentItems = isGuest ? localCart?.items : serverCart?.items;
-                const cartItem = currentItems?.find((i: any) => i.product_id === prod.id);
-                const quantity = cartItem?.quantity || 0;
-
-                return (
-                  <div
-                    key={prod.id}
-                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-2xl hover:shadow-md transition-all flex flex-col p-2.5 relative group overflow-hidden"
-                  >
-                    {/* Discount Badge */}
-                    {hasDiscount && (
-                      <span className="absolute top-2 left-2 z-10 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
-                        -{discountPct}%
-                      </span>
-                    )}
-
-                    {/* Image / Emoji display */}
-                    <Link href={`/products/${prod.id}`} className="block mx-auto my-2">
-                      <span className="text-4xl sm:text-5xl block transform group-hover:scale-105 transition-transform duration-300">
-                        {emoji}
-                      </span>
-                    </Link>
-
-                    {/* Meta */}
-                    <div className="space-y-1 mt-auto">
-                      <div className="flex items-center gap-0.5 text-[9px] font-bold text-amber-500">
-                        <Star className="w-2.5 h-2.5 fill-current" />
-                        <span>{rating}</span>
-                      </div>
-
-                      <Link href={`/products/${prod.id}`} className="block">
-                        <h4 className="font-extrabold text-[11px] sm:text-xs text-slate-900 dark:text-white line-clamp-1 leading-tight hover:text-emerald-600 transition-colors">
-                          {prod.name}
-                        </h4>
-                      </Link>
-                      
-                      <p className="text-[10px] text-slate-500">{prod.unit || "1 kg"}</p>
-
-                      <div className="flex items-center justify-between pt-1 gap-1">
-                        <div className="flex flex-col">
-                          <span className="text-xs sm:text-sm font-black text-slate-950 dark:text-white">₹{price}</span>
-                          {hasDiscount && (
-                            <span className="text-[9px] text-slate-400 line-through">₹{mrp}</span>
-                          )}
-                        </div>
-
-                        {/* Add to Cart controller */}
-                        <div className="w-16 sm:w-20">
-                          {quantity > 0 ? (
-                            <div className="flex items-center justify-between bg-emerald-600 text-white rounded-xl p-1 font-bold text-xs select-none shadow-sm">
-                              <button
-                                onClick={() => handleQtyChange(prod, quantity - 1)}
-                                className="w-5 h-5 flex items-center justify-center font-black hover:bg-white/10 rounded-lg cursor-pointer"
-                              >
-                                <Minus className="w-3 h-3" />
-                              </button>
-                              <span className="font-black text-[10px]">{quantity}</span>
-                              <button
-                                onClick={() => handleQtyChange(prod, quantity + 1)}
-                                className="w-5 h-5 flex items-center justify-center font-black hover:bg-white/10 rounded-lg cursor-pointer"
-                              >
-                                <Plus className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => handleAddToCartAttempt(prod)}
-                              disabled={addToCart.isPending}
-                              className="w-full py-1 bg-white hover:bg-emerald-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-emerald-600 border border-emerald-300 dark:border-emerald-800 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center justify-center gap-1 cursor-pointer"
-                            >
-                              Add
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="space-y-4">
+              {isOutofRange && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-3 text-amber-800 dark:text-amber-405 text-[10px] font-semibold flex items-center gap-2">
+                  <Navigation className="w-3.5 h-3.5 text-amber-500 animate-pulse flex-shrink-0" />
+                  <span>Showing preview catalog (Delivery currently unavailable to your location as nearest store is {(nearestVendorDistance ?? 0).toFixed(1)} km away).</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {products.map((prod: any) => (
+                  <ProductCard key={prod.id} product={prod} />
+                ))}
+              </div>
             </div>
           ) : (
             <div className="py-20 text-center text-slate-400 text-xs font-semibold">
