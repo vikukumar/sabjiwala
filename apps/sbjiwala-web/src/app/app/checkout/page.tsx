@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { useRouter } from "next/navigation";
+import { resolveLink } from "@/components/AppShell";
 import {
   MapPin, Plus, CheckCircle2, CreditCard, Wallet, Banknote, ArrowRight,
   Loader2, Home, Briefcase, Star, Package, Truck, Shield, X, ChevronDown, Navigation
@@ -380,7 +381,6 @@ export default function CheckoutPage() {
   const queryClient = useQueryClient();
 
   const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
-  const resolveLink = (path: string) => isUnified ? `/app${path}` : path;
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;

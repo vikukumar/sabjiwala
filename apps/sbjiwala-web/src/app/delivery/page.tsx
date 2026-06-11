@@ -13,6 +13,7 @@ import { api } from "@sbjiwala/shared";
 import versionInfo from "./version.json";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/index";
+import { useRouter } from "next/navigation";
 
 // =========== OTP MODAL ===========
 function OtpPromptModal({
@@ -835,6 +836,7 @@ function VendorLocatorMap({ stores, currentPos, isOnline }: {
 
 // =========== MAIN DASHBOARD ===========
 export default function DeliveryAgentDashboard() {
+  const router = useRouter();
   const { success, error: showError } = useToast();
   const [otpPromptConfig, setOtpPromptConfig] = useState<{ isOpen: boolean; orderId: string } | null>(null);
   const queryClient = useQueryClient();
@@ -875,9 +877,9 @@ export default function DeliveryAgentDashboard() {
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem("sw_access_token")) {
       const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
-      window.location.href = isUnified ? "/delivery/login" : "/login";
+      router.replace(isUnified ? "/delivery/login" : "/login");
     }
-  }, []);
+  }, [router]);
 
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<any[]>({
     queryKey: ["deliveryAssignments"],
@@ -1169,7 +1171,7 @@ export default function DeliveryAgentDashboard() {
     if (typeof window !== "undefined") {
       localStorage.removeItem("sw_access_token");
       localStorage.removeItem("sw_refresh_token");
-      window.location.href = "/login";
+      router.replace("/login");
     }
   };
 

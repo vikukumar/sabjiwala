@@ -9,6 +9,21 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useWebSocket } from "@sbjiwala/shared";
 import versionInfo from "../app/version.json";
 import { useToast } from "@/components/ui/Toast";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+export const resolveVendorLink = (href: string) => {
+  const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+  if (isUnified) {
+    if (href === "/") return "/vendor";
+    if (href.startsWith("/vendor")) return href;
+    return `/vendor${href}`;
+  } else {
+    if (href === "/vendor") return "/";
+    if (href.startsWith("/vendor/")) return href.substring(7);
+  }
+  return href;
+};
 
 interface VendorLayoutProps {
   children: React.ReactNode;
@@ -18,6 +33,7 @@ interface VendorLayoutProps {
 export default function VendorLayout({ children, title = "Vendor Portal" }: VendorLayoutProps) {
   const { success } = useToast();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
@@ -25,11 +41,11 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
     if (!token) {
-      window.location.replace("/vendor/login");
+      router.replace(resolveVendorLink("/login"));
       return;
     }
     setIsAuthed(true);
-  }, []);
+  }, [router]);
 
   useWebSocket((message) => {
     if (message.type === "order_status_update") {
@@ -67,7 +83,7 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
   const handleLogout = () => {
     localStorage.removeItem("sw_access_token");
     localStorage.removeItem("sw_refresh_token");
-    window.location.replace("/vendor/login");
+    router.replace(resolveVendorLink("/login"));
   };
 
   const { data: vendorProfileData } = useQuery<any>({
@@ -86,9 +102,9 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
   const getActiveTab = () => {
     if (typeof window === "undefined") return "dashboard";
     const path = window.location.pathname;
-    if (path.includes("/vendor/orders")) return "orders";
-    if (path.includes("/vendor/inventory")) return "inventory";
-    if (path.includes("/vendor/profile")) return "profile";
+    if (path.includes("/orders")) return "orders";
+    if (path.includes("/inventory")) return "inventory";
+    if (path.includes("/profile")) return "profile";
     return "dashboard";
   };
 
@@ -103,10 +119,10 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
   }
 
   const navItems = [
-    { id: "dashboard", label: "Overview", icon: ShoppingBag, href: "/vendor" },
-    { id: "orders", label: "Orders Board", icon: Clock, href: "/vendor/orders" },
-    { id: "inventory", label: "Inventory", icon: TrendingUp, href: "/vendor/inventory" },
-    { id: "profile", label: "My Profile", icon: Settings, href: "/vendor/profile" },
+    { id: "dashboard", label: "Overview", icon: ShoppingBag, href: resolveVendorLink("/") },
+    { id: "orders", label: "Orders Board", icon: Clock, href: resolveVendorLink("/orders") },
+    { id: "inventory", label: "Inventory", icon: TrendingUp, href: resolveVendorLink("/inventory") },
+    { id: "profile", label: "My Profile", icon: Settings, href: resolveVendorLink("/profile") },
   ];
 
   const sidebarContent = (
@@ -125,7 +141,7 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
-              <a
+              <Link
                 key={item.id}
                 href={item.href}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer ${
@@ -134,7 +150,7 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
               >
                 <Icon className="w-5 h-5" />
                 <span>{item.label}</span>
-              </a>
+              </Link>
             );
           })}
         </nav>
@@ -153,7 +169,7 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
                 : "bg-rose-500/10 text-rose-400 hover:underline"
             }`}
             onClick={() => {
-              if (vendorStatus !== "approved") window.location.href = "/kyc";
+              if (vendorStatus !== "approved") router.push(resolveVendorLink("/kyc"));
             }}
           >
             {vendorStatus.toUpperCase()}
@@ -267,12 +283,12 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
                 </p>
               </div>
               {vendorStatus !== "documents_submitted" && vendorStatus !== "under_review" && (
-                <a
-                  href="/kyc"
+                <Link
+                  href={resolveVendorLink("/kyc")}
                   className="bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-black px-4 py-2 rounded-xl transition-all shadow-sm flex-shrink-0"
                 >
                   Verify Documents
-                </a>
+                </Link>
               )}
             </div>
           )}

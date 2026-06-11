@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Mail, Phone, ArrowRight, ShieldCheck, Loader2, User, Lock, Gift, Building2 } from "lucide-react";
 import { api } from "@sbjiwala/shared";
 
 export default function VendorRegisterPage() {
+  const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [countdown, setCountdown] = useState(0);
   const [otpMode, setOtpMode] = useState<"register" | "verification">("register");
@@ -63,18 +65,16 @@ export default function VendorRegisterPage() {
       const isStandaloneDelivery = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "delivery" || window.location.port === "3002" || window.location.host.startsWith("delivery."));
       const isStandaloneAdmin = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "admin" || window.location.port === "3003" || window.location.host.startsWith("admin."));
 
-      if (isStandaloneCustomer) window.location.href = "/";
-      else if (isStandaloneVendor) window.location.href = "/";
-      else if (isStandaloneDelivery) window.location.href = "/";
-      else if (isStandaloneAdmin) window.location.href = "/";
-      else {
-        if (role === "vendor" || role === "vendor_manager") window.location.href = "/vendor";
-        else if (role === "delivery_boy") window.location.href = "/delivery";
-        else if (role === "admin" || role === "super_admin") window.location.href = "/admin";
-        else window.location.href = "/";
+      if (isStandaloneCustomer || isStandaloneVendor || isStandaloneDelivery || isStandaloneAdmin) {
+        router.replace("/");
+      } else {
+        if (role === "vendor" || role === "vendor_manager") router.replace("/vendor");
+        else if (role === "delivery_boy") router.replace("/delivery");
+        else if (role === "admin" || role === "super_admin") router.replace("/admin");
+        else router.replace("/");
       }
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -173,7 +173,7 @@ export default function VendorRegisterPage() {
         setSuccessMsg("Registration complete & logged in successfully! Redirecting...");
         setTimeout(() => {
           const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
-          window.location.href = isUnified ? "/vendor" : "/";
+          router.replace(isUnified ? "/vendor" : "/");
         }, 1000);
       } else {
         setErrorMsg(res.message || "Invalid OTP code.");

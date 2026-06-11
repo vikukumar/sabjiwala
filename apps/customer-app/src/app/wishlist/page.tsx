@@ -6,6 +6,7 @@ import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import { Heart, ShoppingCart, Trash2, Plus, Minus } from "lucide-react";
 import { Button, EmptyState, Skeleton, Badge } from "@/components/ui/index";
+import { resolveLink } from "@/components/AppShell";
 import { useToast } from "@/components/ui/Toast";
 
 function WishlistItem({ item }: { item: any }) {
@@ -44,11 +45,11 @@ function WishlistItem({ item }: { item: any }) {
 
   return (
     <div className="card p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
-      <Link href={`/products/${item.product_id}`} className="w-16 h-16 bg-gradient-to-br from-slate-50 to-emerald-50/20 dark:from-slate-800/50 dark:to-slate-900 rounded-xl flex items-center justify-center text-3xl flex-shrink-0">
+      <Link href={resolveLink(`/products/${item.product_id}`)} className="w-16 h-16 bg-gradient-to-br from-slate-50 to-emerald-50/20 dark:from-slate-800/50 dark:to-slate-900 rounded-xl flex items-center justify-center text-3xl flex-shrink-0">
         {emoji}
       </Link>
       <div className="flex-1 min-w-0">
-        <Link href={`/products/${item.product_id}`}>
+        <Link href={resolveLink(`/products/${item.product_id}`)}>
           <h3 className="font-black text-sm text-slate-900 dark:text-white hover:text-emerald-700 dark:hover:text-emerald-400 line-clamp-1">{product.name || item.product_name}</h3>
         </Link>
         <p className="text-xs text-slate-500 dark:text-slate-400">{product.unit || "1 kg"}</p>

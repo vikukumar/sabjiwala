@@ -24,20 +24,64 @@ const AppShellContext = createContext(false);
 // ==================== ROUTE PROTECTION helper ====================
 export const resolveLink = (href: string) => {
   const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+  
+  let formattedHref = href;
+  if (href.startsWith("/orders/detail") || href.startsWith("/orders/track")) {
+    // Already query-param formatted, do nothing
+  } else if (href.startsWith("/orders/")) {
+    const segments = href.split("/");
+    const id = segments[2];
+    const isTrack = segments[3] === "track";
+    const searchPart = id.split("?")[1] ? `&${id.split("?")[1]}` : "";
+    const cleanId = id.split("?")[0];
+    if (isTrack) {
+      formattedHref = `/orders/track?id=${cleanId}${searchPart}`;
+    } else {
+      formattedHref = `/orders/detail?id=${cleanId}${searchPart}`;
+    }
+  } else if (href.startsWith("/products/detail")) {
+    // Already formatted
+  } else if (href.startsWith("/products/")) {
+    const segments = href.split("/");
+    const id = segments[2];
+    const searchPart = id.split("?")[1] ? `&${id.split("?")[1]}` : "";
+    const cleanId = id.split("?")[0];
+    formattedHref = `/products/detail?id=${cleanId}${searchPart}`;
+  } else if (href.startsWith("/support/tickets/detail")) {
+    // Already formatted
+  } else if (href.startsWith("/support/tickets/")) {
+    const segments = href.split("/");
+    const id = segments[3];
+    if (id && id !== "detail") {
+      const searchPart = id.split("?")[1] ? `&${id.split("?")[1]}` : "";
+      const cleanId = id.split("?")[0];
+      formattedHref = `/support/tickets/detail?id=${cleanId}${searchPart}`;
+    }
+  }
+
   if (isUnified) {
     if (
-      href.startsWith("/vendor") ||
-      href.startsWith("/delivery") ||
-      href.startsWith("/admin") ||
-      href.startsWith("/kyc") ||
-      href.startsWith("/users")
+      formattedHref.startsWith("/vendor") ||
+      formattedHref.startsWith("/delivery") ||
+      formattedHref.startsWith("/admin") ||
+      formattedHref.startsWith("/kyc") ||
+      formattedHref.startsWith("/users")
     ) {
-      return href;
+      return formattedHref;
     }
-    if (href === "/") return "/app";
-    return `/app${href}`;
+    if (formattedHref === "/") return "/app";
+    return `/app${formattedHref}`;
+  } else {
+    if (
+      formattedHref.startsWith("/vendor") ||
+      formattedHref.startsWith("/delivery") ||
+      formattedHref.startsWith("/admin") ||
+      formattedHref.startsWith("/kyc")
+    ) {
+      return `https://sbjiwala.qzz.io${formattedHref}`;
+    }
+    return formattedHref;
   }
-  return href;
 };
 
 export const isProtectedRoute = (path: string) => {
@@ -306,7 +350,7 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
     localStorage.removeItem("sw_access_token");
     localStorage.removeItem("sw_refresh_token");
     setIsLoggedIn(false);
-    window.location.href = resolveLink("/login");
+    router.replace(resolveLink("/login"));
   };
 
   const content = (
@@ -1718,32 +1762,51 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Click interceptor for unified app mode links
+  // Click interceptor for unified routing and standalone portal containment
   useEffect(() => {
     if (typeof window === "undefined") return;
     const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
-    if (!isUnified) return;
 
     const handleGlobalClick = (e: MouseEvent) => {
       const target = (e.target as HTMLElement).closest("a");
       if (!target) return;
 
       const href = target.getAttribute("href");
-      if (
-        href &&
-        href.startsWith("/") &&
-        !href.startsWith("/app") &&
-        !href.startsWith("/vendor") &&
-        !href.startsWith("/delivery") &&
-        !href.startsWith("/admin") &&
-        !href.startsWith("/kyc") &&
-        !href.startsWith("/users")
-      ) {
-        const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
-        if (isCustomerAppPath) {
+      if (!href) return;
+
+      if (isUnified) {
+        if (
+          href.startsWith("/") &&
+          !href.startsWith("/app") &&
+          !href.startsWith("/vendor") &&
+          !href.startsWith("/delivery") &&
+          !href.startsWith("/admin") &&
+          !href.startsWith("/kyc") &&
+          !href.startsWith("/users")
+        ) {
+          const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
+          if (isCustomerAppPath) {
+            e.preventDefault();
+            const targetPath = href === "/" ? "/app" : `/app${href}`;
+            router.push(targetPath);
+          }
+        }
+      } else {
+        // Standalone app mode: prevent cross-portal or external URLs from hijacking active WebView
+        const isExternal = href.startsWith("http://") || href.startsWith("https://");
+        const isCrossPortal = href.startsWith("/vendor") || href.startsWith("/delivery") || href.startsWith("/admin") || href.startsWith("/kyc");
+        if (isExternal || isCrossPortal) {
           e.preventDefault();
-          const targetPath = href === "/" ? "/app" : `/app${href}`;
-          router.push(targetPath);
+          let targetUrl = href;
+          if (isCrossPortal) {
+            targetUrl = `https://sbjiwala.qzz.io${href}`;
+          }
+          const isNative = !!(window as any).Capacitor;
+          if (isNative) {
+            window.open(targetUrl, "_system");
+          } else {
+            window.open(targetUrl, "_blank");
+          }
         }
       }
     };

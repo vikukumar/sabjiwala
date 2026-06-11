@@ -7,7 +7,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
-import VendorLayout from "@/components/VendorLayout";
+import Link from "next/link";
+import VendorLayout, { resolveVendorLink } from "@/components/VendorLayout";
 
 export default function VendorDashboard() {
   const { success, error: showError } = useToast();
@@ -576,7 +577,7 @@ export default function VendorDashboard() {
         <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
           <div className="flex justify-between items-center">
             <h4 className="text-xs font-black text-slate-800 dark:text-slate-100">Last 5 Orders</h4>
-            <a href="/vendor/orders" className="text-emerald-600 dark:text-emerald-400 hover:underline text-[10px] font-bold">Go to Orders Board →</a>
+            <Link href={resolveVendorLink("/orders")} className="text-emerald-600 dark:text-emerald-400 hover:underline text-[10px] font-bold">Go to Orders Board →</Link>
           </div>
 
           <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">

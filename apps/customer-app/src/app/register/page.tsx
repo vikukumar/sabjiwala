@@ -38,23 +38,22 @@ function RegisterPageContent() {
   useEffect(() => {
     if (typeof window !== "undefined" && localStorage.getItem("sw_access_token")) {
       const role = getStoredUserType() || "customer";
-      const isStandaloneCustomer = process.env.NEXT_PUBLIC_APP_MODE !== "unified" && window.location.port === "3000";
-      const isStandaloneVendor = window.location.port === "3001" || window.location.host.startsWith("vendor.");
-      const isStandaloneDelivery = window.location.port === "3002" || window.location.host.startsWith("delivery.");
-      const isStandaloneAdmin = window.location.port === "3003" || window.location.host.startsWith("admin.");
+      const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+      const isStandaloneCustomer = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "customer" || window.location.port === "3000");
+      const isStandaloneVendor = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "vendor" || window.location.port === "3001" || window.location.host.startsWith("vendor."));
+      const isStandaloneDelivery = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "delivery" || window.location.port === "3002" || window.location.host.startsWith("delivery."));
+      const isStandaloneAdmin = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "admin" || window.location.port === "3003" || window.location.host.startsWith("admin."));
 
-      if (isStandaloneCustomer) window.location.href = "/";
-      else if (isStandaloneVendor) window.location.href = "/";
-      else if (isStandaloneDelivery) window.location.href = "/";
-      else if (isStandaloneAdmin) window.location.href = "/";
-      else {
-        if (role === "vendor" || role === "vendor_manager") window.location.href = "/vendor";
-        else if (role === "delivery_boy") window.location.href = "/delivery";
-        else if (role === "admin" || role === "super_admin") window.location.href = "/admin";
-        else window.location.href = "/";
+      if (isStandaloneCustomer || isStandaloneVendor || isStandaloneDelivery || isStandaloneAdmin) {
+        router.replace("/");
+      } else {
+        if (role === "vendor" || role === "vendor_manager") router.replace("/vendor");
+        else if (role === "delivery_boy") router.replace("/delivery");
+        else if (role === "admin" || role === "super_admin") router.replace("/admin");
+        else router.replace("/");
       }
     }
-  }, []);
+  }, [router]);
   const [otpIdentifier, setOtpIdentifier] = useState("");
   const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""]);
   const otpRefs = React.useRef<(HTMLInputElement | null)[]>([]);

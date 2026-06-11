@@ -5,8 +5,9 @@ import { Plus, Trash2, ArrowLeft, Loader2, Search, Star, Edit } from "lucide-rea
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
-import VendorLayout from "@/components/VendorLayout";
+import VendorLayout, { resolveVendorLink } from "@/components/VendorLayout";
 import { Button } from "@/components/ui/index";
+import Link from "next/link";
 
 export default function VendorInventoryPage() {
   const { success, error: showError } = useToast();
@@ -550,12 +551,12 @@ export default function VendorInventoryPage() {
                               </span>
                             </td>
                             <td className="p-4 text-right space-x-2">
-                              <a
-                                href={`/vendor/inventory/${p.id}`}
+                              <Link
+                                href={resolveVendorLink(`/inventory/edit?id=${p.id}`)}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-900 rounded-lg font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer text-slate-800 dark:text-white"
                               >
                                 <Edit className="w-3 h-3" /> Full Edit
-                              </a>
+                              </Link>
                               <button
                                 onClick={() => setProductToDelete(p)}
                                 className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-955/20 rounded-lg transition-all cursor-pointer inline-flex items-center"

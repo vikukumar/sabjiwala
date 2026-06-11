@@ -6,6 +6,7 @@ import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import { Package, ChevronRight, MapPin, Clock, CheckCircle2, Truck, XCircle, Star, RefreshCcw, Loader2 } from "lucide-react";
 import { Badge, Button, EmptyState, Skeleton, Tabs } from "@/components/ui/index";
+import { resolveLink } from "@/components/AppShell";
 import { useToast } from "@/components/ui/Toast";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
@@ -75,11 +76,11 @@ function OrderCard({ order, onCancel }: { order: any; onCancel: (id: string) => 
             </Button>
           )}
           {canTrack && (
-            <Link href={`/orders/${order.id}/track`}>
+            <Link href={resolveLink(`/orders/${order.id}/track`)}>
               <Button variant="secondary" size="sm" leftIcon={<MapPin className="w-3.5 h-3.5" />}>Track</Button>
             </Link>
           )}
-          <Link href={`/orders/${order.id}`}>
+          <Link href={resolveLink(`/orders/${order.id}`)}>
             <Button variant="outline" size="sm" rightIcon={<ChevronRight className="w-3.5 h-3.5" />}>Details</Button>
           </Link>
         </div>

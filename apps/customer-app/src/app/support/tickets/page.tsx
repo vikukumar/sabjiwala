@@ -6,6 +6,7 @@ import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import { MessageSquare, ChevronRight, Clock, CheckCircle2, XCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { Badge, EmptyState, Skeleton, Button } from "@/components/ui/index";
+import { resolveLink } from "@/components/AppShell";
 
 const STATUS_CONFIG: Record<string, { color: "success" | "warning" | "danger" | "info"; icon: any; label: string }> = {
   open: { color: "info", icon: AlertCircle, label: "Open" },
@@ -44,7 +45,7 @@ export default function TicketsPage() {
             const cfg = STATUS_CONFIG[ticket.status] || STATUS_CONFIG.open;
             const Icon = cfg.icon;
             return (
-              <Link key={ticket.id} href={`/support/tickets/${ticket.id}`}>
+              <Link key={ticket.id} href={resolveLink(`/support/tickets/${ticket.id}`)}>
                 <div className="card p-4 hover:border-emerald-400 transition-colors cursor-pointer">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">

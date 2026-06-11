@@ -7,6 +7,9 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { api } from "@sbjiwala/shared";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { resolveVendorLink } from "@/components/VendorLayout";
 import versionInfo from "../version.json";
 
 interface KYCFormData {
@@ -21,6 +24,7 @@ interface KYCFormData {
 }
 
 export default function KYCOnboarding() {
+  const router = useRouter();
   const { success, error, info } = useToast();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,7 +64,7 @@ export default function KYCOnboarding() {
     if (typeof window === "undefined") return;
     const token = localStorage.getItem("sw_access_token");
     if (!token) {
-      window.location.href = "/vendor/login";
+      router.replace(resolveVendorLink("/login"));
       return;
     }
 
@@ -205,7 +209,7 @@ export default function KYCOnboarding() {
 
         success("KYC Submitted Successfully", "Your documents are now under review by our admin team.");
         setTimeout(() => {
-          window.location.href = "/vendor";
+          router.replace(resolveVendorLink("/"));
         }, 1500);
       }
     } catch (err: any) {
@@ -250,9 +254,9 @@ export default function KYCOnboarding() {
             <div>
               <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-100">KYC Verified & Approved</h4>
               <p className="text-xs text-slate-550 dark:text-emerald-400/80 mt-0.5">Your store is approved and active. You can go ahead and manage your catalog.</p>
-              <a href="/" className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-450 mt-2 hover:underline">
+              <Link href={resolveVendorLink("/")} className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-450 mt-2 hover:underline">
                 <Home className="w-3.5 h-3.5" /> Back to Dashboard
-              </a>
+              </Link>
             </div>
           </div>
         )}
@@ -263,9 +267,9 @@ export default function KYCOnboarding() {
             <div>
               <h4 className="text-sm font-bold text-blue-900 dark:text-blue-100">Documents Under Review</h4>
               <p className="text-xs text-slate-550 dark:text-blue-400/80 mt-0.5">We have received your registration documents. Our admin team will verify details within 24 hours.</p>
-              <a href="/" className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 mt-2 hover:underline">
+              <Link href={resolveVendorLink("/")} className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 mt-2 hover:underline">
                 <Home className="w-3.5 h-3.5" /> Back to Dashboard
-              </a>
+              </Link>
             </div>
           </div>
         )}

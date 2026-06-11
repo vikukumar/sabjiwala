@@ -5,8 +5,10 @@ import Link from "next/link";
 import { Mail, Phone, ArrowRight, ShieldCheck, Loader2, Sparkles, User, Lock } from "lucide-react";
 import { api } from "@sbjiwala/shared";
 import { encryptPayload } from "@/components/ui/crypto";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [loginTab, setLoginTab] = useState<"otp" | "password">("otp");
 
@@ -53,18 +55,16 @@ export default function LoginPage() {
       const isStandaloneDelivery = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "delivery" || window.location.port === "3002" || window.location.host.startsWith("delivery."));
       const isStandaloneAdmin = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "admin" || window.location.port === "3003" || window.location.host.startsWith("admin."));
 
-      if (isStandaloneCustomer) window.location.href = "/";
-      else if (isStandaloneVendor) window.location.href = "/";
-      else if (isStandaloneDelivery) window.location.href = "/";
-      else if (isStandaloneAdmin) window.location.href = "/";
-      else {
-        if (role === "vendor" || role === "vendor_manager") window.location.href = "/vendor";
-        else if (role === "delivery_boy") window.location.href = "/delivery";
-        else if (role === "admin" || role === "super_admin") window.location.href = "/admin";
-        else window.location.href = "/";
+      if (isStandaloneCustomer || isStandaloneVendor || isStandaloneDelivery || isStandaloneAdmin) {
+        router.replace("/");
+      } else {
+        if (role === "vendor" || role === "vendor_manager") router.replace("/vendor");
+        else if (role === "delivery_boy") router.replace("/delivery");
+        else if (role === "admin" || role === "super_admin") router.replace("/admin");
+        else router.replace("/");
       }
     }
-  }, []);
+  }, [router]);
 
   // Countdown timer for OTP resend
   useEffect(() => {
@@ -209,21 +209,17 @@ export default function LoginPage() {
         const isStandaloneDelivery = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "delivery" || window.location.port === "3002" || window.location.host.startsWith("delivery."));
         const isStandaloneAdmin = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "admin" || window.location.port === "3003" || window.location.host.startsWith("admin."));
 
-        if (isStandaloneCustomer) window.location.href = "/";
-        else if (isStandaloneVendor) window.location.href = "/";
-        else if (isStandaloneDelivery) window.location.href = "/";
-        else if (isStandaloneAdmin) window.location.href = "/";
-        else {
-          // Unified web portal router redirection
-          if (role === "vendor" || role === "vendor_manager") window.location.href = "/vendor";
-          else if (role === "delivery_boy") window.location.href = "/delivery";
-          else if (role === "admin" || role === "super_admin") window.location.href = "/admin";
-          else window.location.href = "/";
+        if (isStandaloneCustomer || isStandaloneVendor || isStandaloneDelivery || isStandaloneAdmin) {
+          router.replace("/");
+        } else {
+          if (role === "vendor" || role === "vendor_manager") router.replace("/vendor");
+          else if (role === "delivery_boy") router.replace("/delivery");
+          else if (role === "admin" || role === "super_admin") router.replace("/admin");
+          else router.replace("/");
         }
       }
     }, 1000);
   };
-
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 flex flex-col justify-between transition-colors duration-200 antialiased font-sans">
