@@ -526,13 +526,8 @@ class OrderService:
                 )
 
         elif status in [OrderStatus.CONFIRMED, OrderStatus.PACKED]:
-            if not order.delivery_boy_id:
-                try:
-                    from app.services.delivery_assignment_service import DeliveryAssignmentService
-                    das = DeliveryAssignmentService(self.db)
-                    await das.assign_delivery(order.id)
-                except Exception as e:
-                    logger.error("Failed to automatically assign delivery boy on status update", order_id=str(order.id), error=str(e))
+            # Skipped automatic delivery boy assignment as direct vendor delivery flow is active
+            pass
 
         elif status == OrderStatus.DELIVERED:
             order.actual_delivery_time = datetime.now(timezone.utc)
@@ -553,6 +548,8 @@ class OrderService:
                 delivery_boy = boy_res.scalars().first()
                 if delivery_boy and delivery_boy.vendor_id is not None:
                     is_public_courier = False
+            else:
+                is_public_courier = False
 
             # 3. Credit delivery boy wallet strictly if they are a public platform agent
             if delivery_boy and is_public_courier:

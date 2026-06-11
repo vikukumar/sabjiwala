@@ -54,7 +54,7 @@ export default function VendorOrdersPage() {
 
           {/* Status Filter Tabs */}
           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-full border border-slate-205 dark:border-slate-700 text-xs font-semibold self-stretch md:self-auto justify-between sm:justify-start">
-            {["all", "pending", "confirmed", "accepted", "packed", "delivered", "cancelled"].map((tab) => (
+            {["all", "pending", "confirmed", "accepted", "packed", "out_for_delivery", "delivered", "cancelled"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -106,7 +106,9 @@ export default function VendorOrdersPage() {
                               ? "bg-blue-100 dark:bg-blue-955/40 text-blue-800 dark:text-blue-400"
                               : order.status === "assigned"
                                 ? "bg-indigo-105 dark:bg-indigo-955/40 text-indigo-800 dark:text-indigo-400"
-                                : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
+                                : order.status === "out_for_delivery"
+                                  ? "bg-cyan-105 dark:bg-cyan-955/40 text-cyan-800 dark:text-cyan-400"
+                                  : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
                     }`}>
                       {order.status}
                     </span>
@@ -138,7 +140,22 @@ export default function VendorOrdersPage() {
                       </button>
                     )}
                     {order.status === "packed" && (
-                      <span className="text-[11px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl">Ready for Courier Pickup</span>
+                      <button
+                        onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: "out_for_delivery", notes: "Order is out for delivery by vendor" })}
+                        disabled={updateStatusMutation.isPending}
+                        className="bg-indigo-650 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-[10px] sm:text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                      >
+                        {updateStatusMutation.isPending ? "Shipping..." : "Ship Order (Out for Delivery)"}
+                      </button>
+                    )}
+                    {order.status === "out_for_delivery" && (
+                      <button
+                        onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: "delivered", notes: "Order delivered by vendor" })}
+                        disabled={updateStatusMutation.isPending}
+                        className="bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white text-[10px] sm:text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                      >
+                        {updateStatusMutation.isPending ? "Delivering..." : "Mark as Delivered"}
+                      </button>
                     )}
                   </div>
                 </div>
