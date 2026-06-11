@@ -874,7 +874,8 @@ export default function DeliveryAgentDashboard() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem("sw_access_token")) {
-      window.location.href = "/delivery/login";
+      const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+      window.location.href = isUnified ? "/delivery/login" : "/login";
     }
   }, []);
 

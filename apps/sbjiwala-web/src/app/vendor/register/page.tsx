@@ -57,10 +57,11 @@ export default function VendorRegisterPage() {
 
     if (typeof window !== "undefined" && localStorage.getItem("sw_access_token")) {
       const role = getStoredUserType() || "vendor";
-      const isStandaloneCustomer = process.env.NEXT_PUBLIC_APP_MODE !== "unified" && window.location.port === "3000";
-      const isStandaloneVendor = window.location.port === "3001" || window.location.host.startsWith("vendor.");
-      const isStandaloneDelivery = window.location.port === "3002" || window.location.host.startsWith("delivery.");
-      const isStandaloneAdmin = window.location.port === "3003" || window.location.host.startsWith("admin.");
+      const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+      const isStandaloneCustomer = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "customer" || window.location.port === "3000");
+      const isStandaloneVendor = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "vendor" || window.location.port === "3001" || window.location.host.startsWith("vendor."));
+      const isStandaloneDelivery = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "delivery" || window.location.port === "3002" || window.location.host.startsWith("delivery."));
+      const isStandaloneAdmin = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "admin" || window.location.port === "3003" || window.location.host.startsWith("admin."));
 
       if (isStandaloneCustomer) window.location.href = "/";
       else if (isStandaloneVendor) window.location.href = "/";
@@ -171,7 +172,8 @@ export default function VendorRegisterPage() {
         api.setTokens(res.meta.access_token, res.meta.refresh_token);
         setSuccessMsg("Registration complete & logged in successfully! Redirecting...");
         setTimeout(() => {
-          window.location.href = "/vendor";
+          const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+          window.location.href = isUnified ? "/vendor" : "/";
         }, 1000);
       } else {
         setErrorMsg(res.message || "Invalid OTP code.");
@@ -483,19 +485,19 @@ export default function VendorRegisterPage() {
           {otpMode === "register" && (
             <div className="text-center text-xs font-semibold text-slate-550 dark:text-slate-400 mt-4">
               Already registered?{" "}
-              <Link href="/vendor/login" className="text-emerald-650 dark:text-emerald-400 hover:underline font-extrabold">
+              <Link href={process.env.NEXT_PUBLIC_APP_MODE === "unified" ? "/vendor/login" : "/login"} className="text-emerald-655 dark:text-emerald-400 hover:underline font-extrabold">
                 Login here
               </Link>
             </div>
           )}
 
           <div className="flex justify-between items-center text-[10px] font-semibold text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-slate-800 mt-4">
-            <Link href="/login" className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1">
+            <a href={process.env.NEXT_PUBLIC_APP_MODE === "unified" ? "/login" : "http://localhost:3000/login"} className="hover:text-emerald-655 dark:hover:text-emerald-400 flex items-center gap-1">
               ← Customer Portal
-            </Link>
-            <Link href="/delivery/login" className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1">
+            </a>
+            <a href={process.env.NEXT_PUBLIC_APP_MODE === "unified" ? "/delivery/login" : "http://localhost:3002/login"} className="hover:text-emerald-655 dark:hover:text-emerald-400 flex items-center gap-1">
               Deliver with Us →
-            </Link>
+            </a>
           </div>
         </div>
       </main>

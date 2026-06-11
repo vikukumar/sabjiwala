@@ -74,10 +74,11 @@ export default function LoginPage() {
 
       if (typeof window !== "undefined" && localStorage.getItem("sw_access_token")) {
         const role = getStoredUserType() || "admin";
-        const isStandaloneCustomer = window.location.port === "3000";
-        const isStandaloneVendor = window.location.port === "3001" || window.location.host.startsWith("vendor.");
-        const isStandaloneDelivery = window.location.port === "3002" || window.location.host.startsWith("delivery.");
-        const isStandaloneAdmin = window.location.port === "3003" || window.location.host.startsWith("admin.");
+        const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+        const isStandaloneCustomer = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "customer" || window.location.port === "3000");
+        const isStandaloneVendor = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "vendor" || window.location.port === "3001" || window.location.host.startsWith("vendor."));
+        const isStandaloneDelivery = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "delivery" || window.location.port === "3002" || window.location.host.startsWith("delivery."));
+        const isStandaloneAdmin = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "admin" || window.location.port === "3003" || window.location.host.startsWith("admin."));
 
         if (isStandaloneCustomer) window.location.href = "/";
         else if (isStandaloneVendor) window.location.href = "/";
@@ -296,10 +297,11 @@ export default function LoginPage() {
   const handleSuccessfulLoginRedirect = (role: string) => {
     setTimeout(() => {
       if (typeof window !== "undefined") {
-        const isStandaloneCustomer = window.location.port === "3000";
-        const isStandaloneVendor = window.location.port === "3001" || window.location.host.startsWith("vendor.");
-        const isStandaloneDelivery = window.location.port === "3002" || window.location.host.startsWith("delivery.");
-        const isStandaloneAdmin = window.location.port === "3003" || window.location.host.startsWith("admin.");
+        const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+        const isStandaloneCustomer = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "customer" || window.location.port === "3000");
+        const isStandaloneVendor = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "vendor" || window.location.port === "3001" || window.location.host.startsWith("vendor."));
+        const isStandaloneDelivery = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "delivery" || window.location.port === "3002" || window.location.host.startsWith("delivery."));
+        const isStandaloneAdmin = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "admin" || window.location.port === "3003" || window.location.host.startsWith("admin."));
 
         if (isStandaloneCustomer) window.location.href = "/";
         else if (isStandaloneVendor) window.location.href = "/";

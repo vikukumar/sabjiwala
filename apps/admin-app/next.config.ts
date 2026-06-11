@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   transpilePackages: ["@sbjiwala/shared"],
+  env: {
+    NEXT_PUBLIC_APP_MODE: "admin",
+  },
 };
 
 export default nextConfig;

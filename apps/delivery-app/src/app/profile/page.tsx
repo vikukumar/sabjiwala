@@ -81,7 +81,7 @@ export default function DeliveryProfilePage() {
       <div className="max-w-xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <a
-            href="/delivery"
+            href={typeof window !== "undefined" && process.env.NEXT_PUBLIC_APP_MODE === "unified" ? "/delivery" : "/"}
             className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl flex items-center gap-1 shadow-sm cursor-pointer hover:bg-slate-50"
           >
             ← Back to Dashboard
