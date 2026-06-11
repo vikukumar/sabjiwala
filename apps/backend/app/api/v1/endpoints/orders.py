@@ -246,7 +246,7 @@ async def list_orders(
     query = select(Order).where(Order.is_deleted == False).order_by(desc(Order.created_at))
 
     # RBAC logic
-    role = current_user.get("role", "customer")
+    role = current_user.get("role") or current_user.get("user_type", "customer")
     if role == "customer":
         query = query.where(Order.user_id == current_user["user_id"])
     elif role in ["vendor", "vendor_manager"]:

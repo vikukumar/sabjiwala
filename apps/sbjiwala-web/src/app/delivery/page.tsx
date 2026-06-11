@@ -843,7 +843,7 @@ export default function DeliveryAgentDashboard() {
   const [activeTab, setActiveTab] = useState<"orders" | "stores" | "history" | "earnings" | "payout" | "profile">("orders");
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [globalPos, setGlobalPos] = useState<[number, number]>([19.0760, 72.9977]);
-  const [simulationMode, setSimulationMode] = useState(true);
+  const [simulationMode, setSimulationMode] = useState(false);
   const [distanceInfo, setDistanceInfo] = useState<string>("Offline");
   const wsRef = useRef<WebSocket | null>(null);
   const triggeredProximityNotifs = useRef<Record<string, boolean>>({});
@@ -1099,11 +1099,23 @@ export default function DeliveryAgentDashboard() {
     return () => { if (ws) ws.close(); if (reconnectTimeout) clearTimeout(reconnectTimeout); wsRef.current = null; };
   }, [isOnline]);
 
-  // Send location via WS
+  // Send location via WS and HTTP
   useEffect(() => {
-    if (!isOnline || !wsRef.current) return;
+    const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
+    if (!token) return;
+
     const interval = setInterval(() => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      // Sync via HTTP REST endpoint
+      api.post("/delivery/location", {
+        latitude: globalPos[0],
+        longitude: globalPos[1],
+        accuracy: 10,
+        speed: 5,
+        heading: 0
+      }).catch((err) => console.warn("HTTP location sync failed:", err));
+
+      // Also sync via WebSocket if open and online
+      if (isOnline && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         const activeDelivery = assignments?.find((a: any) => a.status === "out_for_delivery");
         wsRef.current.send(JSON.stringify({
           type: "location_update",
@@ -1117,7 +1129,7 @@ export default function DeliveryAgentDashboard() {
           }
         }));
       }
-    }, 4000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [globalPos, isOnline, assignments]);
 

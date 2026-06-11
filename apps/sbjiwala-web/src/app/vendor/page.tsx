@@ -96,6 +96,19 @@ export default function VendorDashboard() {
       if (activeArea.center_latitude) setCenterLat(activeArea.center_latitude);
       if (activeArea.center_longitude) setCenterLng(activeArea.center_longitude);
       if (activeArea.radius_km) setRadius(activeArea.radius_km);
+    } else if (areasData && areasData.length === 0) {
+      if (typeof window !== "undefined" && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setCenterLat(pos.coords.latitude);
+            setCenterLng(pos.coords.longitude);
+          },
+          (err) => {
+            console.warn("Auto GPS locator failed", err);
+          },
+          { enableHighAccuracy: true, timeout: 5000 }
+        );
+      }
     }
   }, [areasData]);
 

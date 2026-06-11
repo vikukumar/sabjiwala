@@ -121,6 +121,34 @@ async def toggle_availability(
     )
 
 
+@router.post("/location", response_model=APIResponse)
+async def update_location(
+    body: DeliveryLocationUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update delivery agent's current location via REST API."""
+    boy = await _get_delivery_boy(current_user["user_id"], db)
+    
+    boy.current_latitude = body.latitude
+    boy.current_longitude = body.longitude
+    boy.last_location_update = datetime.now(timezone.utc)
+    
+    # Log location in history
+    location_log = DeliveryLocation(
+        delivery_boy_id=boy.id,
+        latitude=body.latitude,
+        longitude=body.longitude,
+        accuracy=body.accuracy,
+        speed=body.speed,
+        heading=body.heading,
+    )
+    db.add(location_log)
+    await db.flush()
+    await db.commit()
+    return APIResponse(success=True, message="Location updated successfully")
+
+
 @router.get("/assignments", response_model=APIResponse)
 async def get_assignments(
     current_user: dict = Depends(get_current_user),
