@@ -204,6 +204,28 @@ export default function CartPage() {
   const discount = previewData ? previewData.coupon_discount : (appliedCoupon?.discount || 0);
   const total = previewData ? previewData.total_amount : Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - discount);
 
+  const savings = React.useMemo(() => {
+    let itemSavings = 0;
+    items.forEach((item: any) => {
+      const p = item.product || item;
+      const rawPrice = p.attributes?.price ?? p.price ?? 30;
+      const rawMrp = p.attributes?.mrp ?? p.mrp;
+      if (rawMrp && rawMrp > rawPrice) {
+        const markedUpPrice = Math.round(rawPrice * 1.045 * 100) / 100;
+        const markedUpMrp = Math.round(rawMrp * 1.045 * 100) / 100;
+        itemSavings += (markedUpMrp - markedUpPrice) * item.quantity;
+      }
+    });
+    itemSavings += discount;
+    if (deliveryFee === 0 && subtotal >= freeDeliveryAbove) {
+      itemSavings += parseFloat(previewData?.original_delivery_charge ?? 25.0);
+    }
+    if (packagingCharge === 0) {
+      itemSavings += parseFloat(previewData?.original_packaging_charge ?? 10.0);
+    }
+    return Math.max(0, itemSavings);
+  }, [items, discount, deliveryFee, packagingCharge, previewData, subtotal, freeDeliveryAbove]);
+
   const handleUpdateGuestQty = (productId: string, newQty: number) => {
     const current = getLocalGuestCart();
     const idx = current.items.findIndex((i: any) => i.product_id === productId);
@@ -278,7 +300,7 @@ export default function CartPage() {
               <Truck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <div>
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                  {deliveryFee === 0 ? "🎉 Free Delivery!" : `Add ₹${Math.max(0, freeDeliveryAbove - subtotal).toFixed(0)} more for free delivery`}
+                  {deliveryFee === 0 ? "🎉 Free Delivery!" : `Add ₹${Math.max(0, freeDeliveryAbove - subtotal).toFixed(2)} more for free delivery`}
                 </p>
                 <p className="text-xs text-slate-550 dark:text-slate-400">Estimated delivery in 10–15 minutes</p>
               </div>
@@ -331,7 +353,7 @@ export default function CartPage() {
                       )}
                       FREE
                     </>
-                  ) : `₹${deliveryFee}`}
+                  ) : `₹${deliveryFee.toFixed(2)}`}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -365,9 +387,9 @@ export default function CartPage() {
                 <span className="font-black text-xl text-slate-900 dark:text-white">₹{total.toFixed(2)}</span>
               </div>
             </div>
-            {total >= 1 && (
+            {savings > 0 && (
               <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold text-center">
-                You save ₹{(subtotal + deliveryFee - total).toFixed(2)} on this order!
+                You save ₹{savings.toFixed(2)} on this order!
               </div>
             )}
             <Button

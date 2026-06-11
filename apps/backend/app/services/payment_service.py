@@ -404,7 +404,7 @@ class PaymentService:
         if order:
             order.payment_status = "paid"
             order.payment_id = payment.id
-            # Leave status as PENDING, awaiting Admin confirmation
+            order.status = OrderStatus.CONFIRMED
 
         await self.db.flush()
         return True

@@ -360,7 +360,8 @@ async def update_order_status(
             status=OrderStatus(body.status),
             changed_by=current_user["user_id"],
             user_type=current_user.get("user_type", "customer"),
-            notes=body.notes
+            notes=body.notes,
+            delivery_option=body.delivery_option
         )
         return APIResponse(success=True, message="Order status updated", data=OrderResponse.model_validate(order))
     except ValueError as e:

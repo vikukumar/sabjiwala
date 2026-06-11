@@ -435,6 +435,7 @@ class OrderResponse(BaseModel):
 class OrderStatusUpdate(BaseModel):
     status: str
     notes: Optional[str] = None
+    delivery_option: Optional[str] = None  # "self" or "auto"
 
 class ReturnRequestCreate(BaseModel):
     order_id: UUID

@@ -452,6 +452,30 @@ export default function CheckoutPage() {
   const walletDeduction = previewData ? previewData.wallet_deduction : (useWallet ? Math.min(walletBalance, subtotal + deliveryFee) : 0);
   const finalTotal = previewData ? previewData.total_amount : Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - couponDiscount - walletDeduction);
 
+  const savings = React.useMemo(() => {
+    let itemSavings = 0;
+    const items = cartData?.items || [];
+    items.forEach((item: any) => {
+      const p = item.product || item;
+      const rawPrice = p.attributes?.price ?? p.price ?? 30;
+      const rawMrp = p.attributes?.mrp ?? p.mrp;
+      if (rawMrp && rawMrp > rawPrice) {
+        const markedUpPrice = Math.round(rawPrice * 1.045 * 100) / 100;
+        const markedUpMrp = Math.round(rawMrp * 1.045 * 100) / 100;
+        itemSavings += (markedUpMrp - markedUpPrice) * item.quantity;
+      }
+    });
+    itemSavings += couponDiscount;
+    const freeDeliveryAbove = previewData?.free_delivery_above ?? 199;
+    if (deliveryFee === 0 && subtotal >= freeDeliveryAbove) {
+      itemSavings += parseFloat(previewData?.original_delivery_charge ?? 25.0);
+    }
+    if (packagingCharge === 0) {
+      itemSavings += parseFloat(previewData?.original_packaging_charge ?? 10.0);
+    }
+    return Math.max(0, itemSavings);
+  }, [cartData?.items, couponDiscount, deliveryFee, packagingCharge, previewData, subtotal]);
+
   const launchCashfree = async (orderData: any) => {
     const { payment_session_id, cashfree_order_id } = orderData;
     if (!payment_session_id) { showError("Payment Error", "Payment session not created. Try COD instead."); return; }
@@ -709,7 +733,7 @@ export default function CheckoutPage() {
                       )}
                       FREE 🎉
                     </>
-                  ) : `₹${deliveryFee}`}
+                  ) : `₹${deliveryFee.toFixed(2)}`}
                 </span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
@@ -735,6 +759,11 @@ export default function CheckoutPage() {
                 <span className="font-black text-slate-900 dark:text-white text-sm">Total</span>
                 <span className="font-black text-xl text-slate-900 dark:text-white">₹{finalTotal.toFixed(2)}</span>
               </div>
+              {savings > 0 && (
+                <div className="text-xs text-emerald-650 dark:text-emerald-400 font-semibold text-center py-1.5">
+                  You save ₹{savings.toFixed(2)} on this order!
+                </div>
+              )}
               {paymentMethod === "cod" && (
                 <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-xl p-2.5 text-center">
                   <p className="text-[10px] font-bold text-orange-700 dark:text-orange-400">💵 Pay ₹{finalTotal.toFixed(2)} on delivery</p>

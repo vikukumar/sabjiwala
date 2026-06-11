@@ -119,7 +119,7 @@ class DeliveryAssignmentService:
 
         old_status = order.status
         new_status = old_status
-        if old_status in [OrderStatus.PENDING, OrderStatus.CONFIRMED]:
+        if old_status in [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.ACCEPTED]:
             new_status = OrderStatus.ASSIGNED
 
         # Assign

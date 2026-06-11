@@ -267,7 +267,7 @@ class OrderService:
             order_number=self._generate_order_number(),
             user_id=user_id,
             vendor_id=vendor_id,
-            status=OrderStatus.PENDING,
+            status=OrderStatus.PENDING if payment_method != "cod" else OrderStatus.CONFIRMED,
             delivery_address=delivery_address_dict,
             delivery_latitude=address.latitude,
             delivery_longitude=address.longitude,
@@ -376,13 +376,13 @@ class OrderService:
             pay_info = await self.payment_service.initiate_payment(
                 order.id, user_id, total_amount, payment_gateway
             )
-            # Cash on Delivery orders remain in pending status
+            # Cash on Delivery orders are confirmed immediately
             if payment_method == "cod":
-                order.status = OrderStatus.PENDING
+                order.status = OrderStatus.CONFIRMED
         else:
-            # Order is fully paid by wallet/coupon, status remains pending for admin to confirm
+            # Order is fully paid by wallet/coupon, status is confirmed
             order.payment_status = "paid"
-            order.status = OrderStatus.PENDING
+            order.status = OrderStatus.CONFIRMED
             # Create dummy completed payment transaction for tracking
             from app.models.payment import Payment
             pay = Payment(
@@ -439,7 +439,8 @@ class OrderService:
         status: OrderStatus,
         changed_by: UUID,
         user_type: str,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
+        delivery_option: Optional[str] = None
     ) -> Order:
         """
         Transition order state and execute business triggers.
@@ -464,6 +465,11 @@ class OrderService:
             if old_status in [OrderStatus.PICKED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED]:
                 raise ValueError("Order has already been shipped and cannot be cancelled.")
 
+        if delivery_option:
+            meta = dict(order.metadata_json) if order.metadata_json else {}
+            meta["delivery_option"] = delivery_option
+            order.metadata_json = meta
+
         # Update order status
         order.status = status
         
@@ -477,6 +483,12 @@ class OrderService:
             notes=notes,
         )
         self.db.add(history)
+
+        # Trigger auto assignment if accepting with auto option
+        if status == OrderStatus.ACCEPTED and delivery_option == "auto":
+            from app.services.delivery_assignment_service import DeliveryAssignmentService
+            assign_service = DeliveryAssignmentService(self.db)
+            await assign_service.assign_delivery(order.id)
 
         # Trigger actions based on new status
         if status == OrderStatus.CANCELLED:

@@ -11,6 +11,7 @@ export default function VendorOrdersPage() {
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("all");
+  const [selectedOrderForDeliveryOption, setSelectedOrderForDeliveryOption] = useState<any>(null);
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery<any>({
     queryKey: ["vendorOrders", activeTab],
@@ -25,10 +26,11 @@ export default function VendorOrdersPage() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ orderId, status, notes }: { orderId: string; status: string; notes: string }) => {
+    mutationFn: async ({ orderId, status, notes, deliveryOption }: { orderId: string; status: string; notes: string; deliveryOption?: string }) => {
       return api.patch(`/orders/${orderId}/status`, {
         status,
-        notes
+        notes,
+        delivery_option: deliveryOption
       });
     },
     onSuccess: () => {
@@ -113,6 +115,16 @@ export default function VendorOrdersPage() {
                       {order.status}
                     </span>
 
+                    {order.metadata_json?.delivery_option && (
+                      <span className={`inline-block text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${
+                        order.metadata_json.delivery_option === "self"
+                          ? "bg-orange-100 dark:bg-orange-955/40 text-orange-800 dark:text-orange-400"
+                          : "bg-indigo-100 dark:bg-indigo-955/40 text-indigo-800 dark:text-indigo-400"
+                      }`}>
+                        {order.metadata_json.delivery_option === "self" ? "Self Delivery" : "Platform Rider"}
+                      </span>
+                    )}
+
                     {order.status === "pending" && (
                       <button
                         disabled
@@ -121,11 +133,20 @@ export default function VendorOrdersPage() {
                         Awaiting Payment/Confirmation
                       </button>
                     )}
-                    {(order.status === "confirmed" || order.status === "assigned") && (
+                    {order.status === "confirmed" && (
                       <button
-                        onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: "accepted", notes: "Order accepted by vendor" })}
+                        onClick={() => setSelectedOrderForDeliveryOption(order)}
                         disabled={updateStatusMutation.isPending}
                         className="bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white text-[10px] sm:text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                      >
+                        {updateStatusMutation.isPending ? "Accepting..." : "Accept Order"}
+                      </button>
+                    )}
+                    {order.status === "assigned" && (
+                      <button
+                        onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: "accepted", notes: "Order accepted by vendor (Delivery Partner Assigned)" })}
+                        disabled={updateStatusMutation.isPending}
+                        className="bg-teal-650 hover:bg-teal-500 dark:bg-teal-500 dark:hover:bg-teal-400 text-white text-[10px] sm:text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
                       >
                         {updateStatusMutation.isPending ? "Accepting..." : "Accept Order"}
                       </button>
@@ -197,6 +218,70 @@ export default function VendorOrdersPage() {
           )}
         </div>
       </div>
+
+      {/* Delivery Option Selection Modal */}
+      {selectedOrderForDeliveryOption && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedOrderForDeliveryOption(null)} />
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl animate-scale-in space-y-6 text-slate-850 dark:text-white">
+            <div className="space-y-1">
+              <h3 className="text-base font-black uppercase tracking-wider">Accept Order #{selectedOrderForDeliveryOption.order_number}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Choose how this order will be delivered before you start packing.</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <button
+                onClick={() => {
+                  updateStatusMutation.mutate({
+                    orderId: selectedOrderForDeliveryOption.id,
+                    status: "accepted",
+                    notes: "Order accepted by vendor with Platform Delivery",
+                    deliveryOption: "auto"
+                  });
+                  setSelectedOrderForDeliveryOption(null);
+                }}
+                className="flex flex-col items-start p-4 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99] text-left cursor-pointer group"
+              >
+                <span className="font-extrabold text-xs text-slate-850 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                  🚲 Platform Delivery Partner
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+                  Our system will automatically search and assign a delivery boy based on proximity to match order destination.
+                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  updateStatusMutation.mutate({
+                    orderId: selectedOrderForDeliveryOption.id,
+                    status: "accepted",
+                    notes: "Order accepted by vendor with Self Delivery",
+                    deliveryOption: "self"
+                  });
+                  setSelectedOrderForDeliveryOption(null);
+                }}
+                className="flex flex-col items-start p-4 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99] text-left cursor-pointer group"
+              >
+                <span className="font-extrabold text-xs text-slate-850 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                  🎒 Store Self Delivery
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+                  Deliver using your own store runner or personal courier. No platform delivery partner will be dispatched.
+                </span>
+              </button>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setSelectedOrderForDeliveryOption(null)}
+                className="flex-1 py-3 border border-slate-205 dark:border-slate-850 rounded-xl text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850/50 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </VendorLayout>
   );
 }

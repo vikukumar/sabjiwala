@@ -300,7 +300,7 @@ export default function CartPage() {
               <Truck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <div>
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                  {deliveryFee === 0 ? "🎉 Free Delivery!" : `Add ₹${Math.max(0, freeDeliveryAbove - subtotal).toFixed(0)} more for free delivery`}
+                  {deliveryFee === 0 ? "🎉 Free Delivery!" : `Add ₹${Math.max(0, freeDeliveryAbove - subtotal).toFixed(2)} more for free delivery`}
                 </p>
                 <p className="text-xs text-slate-550 dark:text-slate-400">Estimated delivery in 10–15 minutes</p>
               </div>
@@ -353,7 +353,7 @@ export default function CartPage() {
                       )}
                       FREE
                     </>
-                  ) : `₹${deliveryFee}`}
+                  ) : `₹${deliveryFee.toFixed(2)}`}
                 </span>
               </div>
               <div className="flex justify-between">
