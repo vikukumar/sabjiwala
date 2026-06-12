@@ -76,11 +76,11 @@ function OrderCard({ order, onCancel }: { order: any; onCancel: (id: string) => 
             </Button>
           )}
           {canTrack && (
-            <Link href={resolveLink(`/orders/${order.id}/track`)}>
+            <Link href={resolveLink(`/orders/detail?id=${order.id}&track=1`)}>
               <Button variant="secondary" size="sm" leftIcon={<MapPin className="w-3.5 h-3.5" />}>Track</Button>
             </Link>
           )}
-          <Link href={resolveLink(`/orders/${order.id}`)}>
+          <Link href={resolveLink(`/orders/detail?id=${order.id}`)}>
             <Button variant="outline" size="sm" rightIcon={<ChevronRight className="w-3.5 h-3.5" />}>Details</Button>
           </Link>
         </div>
@@ -142,7 +142,8 @@ export default function OrdersPage() {
       const res = await api.get("/orders", {
         params: activeTab !== "all" ? { status: activeTab } : {},
       });
-      return res.data || [];
+      // PaginatedResponse: { success, data: [...], pagination: {} }
+      return res.data?.data || [];
     },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
   });

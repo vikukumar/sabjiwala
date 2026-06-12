@@ -13,7 +13,7 @@ export default function VendorOrdersPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [selectedOrderForDeliveryOption, setSelectedOrderForDeliveryOption] = useState<any>(null);
 
-  const { data: ordersData, isLoading: ordersLoading } = useQuery<any>({
+  const { data: ordersData, isLoading: ordersLoading, refetch: refetchOrders } = useQuery<any>({
     queryKey: ["vendorOrders", activeTab],
     queryFn: async () => {
       const res = await api.get("/orders", {
@@ -21,7 +21,20 @@ export default function VendorOrdersPage() {
           status: activeTab !== "all" ? activeTab : undefined
         }
       });
-      return res.data || [];
+      // API returns PaginatedResponse: { success, data: [...], pagination: {} }
+      return res.data?.data || [];
+    }
+  });
+
+  // WebSocket: auto-refresh orders when new order or status update arrives
+  useWebSocket((message: any) => {
+    if (
+      message.type === "order_status_update" ||
+      message.type === "new_order" ||
+      message.type === "notification"
+    ) {
+      refetchOrders();
+      queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
     }
   });
 
@@ -43,7 +56,7 @@ export default function VendorOrdersPage() {
     }
   });
 
-  const orders = ordersData || [];
+  const orders: any[] = Array.isArray(ordersData) ? ordersData : [];
 
   return (
     <VendorLayout title="Order Management Board">

@@ -69,6 +69,14 @@ try {
     if (isDir) {
       // Nested folders like cart, search, login, register, etc. go under /app/
       copyRecursiveSync(srcChildPath, path.join(webCustomerNestedDir, child));
+      
+      // Copy specific informational pages to root level of webAppDir for clean routing
+      if (['about', 'privacy', 'terms', 'contact'].includes(child)) {
+        copyRecursiveSync(srcChildPath, path.join(webAppDir, child));
+        if (child === 'privacy') {
+          copyRecursiveSync(srcChildPath, path.join(webAppDir, 'privacy-policy'));
+        }
+      }
     } else {
       // Files: layout.tsx, providers.tsx, globals.css, error.tsx, not-found.tsx, favicon.ico, version.json
       if (child === 'page.tsx') {

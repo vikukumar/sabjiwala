@@ -51,8 +51,9 @@ function AdminOrdersPanel() {
     }
   });
 
-  const orders = ordersRes?.data || [];
-  const pagination = ordersRes?.pagination || { page: 1, total_pages: 1, has_next: false, has_previous: false };
+  // ordersRes is the Axios response; actual PaginatedResponse body is at .data
+  const orders = ordersRes?.data?.data || [];
+  const pagination = ordersRes?.data?.pagination || { page: 1, total_pages: 1, has_next: false, has_previous: false };
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -141,8 +142,12 @@ function AdminOrdersPanel() {
                         {new Date(order.created_at).toLocaleString()}
                       </td>
                       <td className="py-4 px-2">
-                        <div className="font-bold text-slate-950 dark:text-white">User #{order.user_id ? order.user_id.slice(0, 6) : "N/A"}</div>
-                        <div className="text-[10px] text-slate-400">{order.phone || "No Phone"}</div>
+                        <div className="font-bold text-slate-950 dark:text-white">
+                          {order.delivery_address?.full_name || `User #${order.user_id ? order.user_id.slice(0, 6) : "N/A"}`}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {order.delivery_address?.city || order.delivery_address?.phone || "—"}
+                        </div>
                       </td>
                       <td className="py-4 px-2 font-semibold">
                         {order.vendor_store?.name || "N/A"}
@@ -900,8 +905,9 @@ function AdminLiveOpsPanel() {
     refetchInterval: 15000,
   });
 
-  const orders = ordersRes?.data || [];
-  const activeOrders = orders.filter((o: any) =>
+  // ordersRes is the Axios response; actual PaginatedResponse body is at .data
+  const orders = ordersRes?.data?.data || [];
+  const activeOrders = (Array.isArray(orders) ? orders : []).filter((o: any) =>
     ["pending", "confirmed", "accepted", "assigned", "picked", "out_for_delivery"].includes(o.status)
   );
 
