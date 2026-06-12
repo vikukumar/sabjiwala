@@ -6,7 +6,7 @@ import { Button, Card, Input } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 
 export default function ContactPage() {
-  const { success, showError } = useToast();
+  const { success, error } = useToast();
   const [loading, setLoading] = useState(false);
   const [formState, setFormState] = useState({ name: "", email: "", phone: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
@@ -14,7 +14,7 @@ export default function ContactPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formState.name || !formState.message || (!formState.email && !formState.phone)) {
-      showError("Required Fields", "Please enter your name, message, and either email or phone.");
+      error("Required Fields", "Please enter your name, message, and either email or phone.");
       return;
     }
     setLoading(true);
@@ -24,7 +24,7 @@ export default function ContactPage() {
       success("Message Sent", "Thank you for contacting Sbjiwala! Our support team will get back to you shortly.");
       setSubmitted(true);
     } catch (err) {
-      showError("Submission Failed", "Something went wrong. Please try again later.");
+      error("Submission Failed", "Something went wrong. Please try again later.");
     } finally {
       setLoading(false);
     }
