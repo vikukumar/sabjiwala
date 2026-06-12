@@ -15,7 +15,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        List<String> permissionsNeeded = new ArrayList<>();
+        final List<String> permissionsNeeded = new ArrayList<>();
         
         // Location permissions
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -38,7 +38,23 @@ public class MainActivity extends BridgeActivity {
         }
         
         if (!permissionsNeeded.isEmpty()) {
-            ActivityCompat.requestPermissions(this, permissionsNeeded.toArray(new String[0]), 101);
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                @Override
+                public void run() {
+                    if (!isFinishing() && !isDestroyed()) {
+                        ActivityCompat.requestPermissions(MainActivity.this, permissionsNeeded.toArray(new String[0]), 101);
+                    }
+                }
+            });
         }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == 101) {
+            // Handled our startup permissions, consume it to prevent Capacitor bridge from intercepting or crashing
+            return;
+        }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 }

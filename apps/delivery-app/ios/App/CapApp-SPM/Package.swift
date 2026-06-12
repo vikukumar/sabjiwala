@@ -11,14 +11,36 @@ let package = Package(
             targets: ["CapApp-SPM"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.3.4")
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.4.0"),
+        .package(name: "CapacitorBackgroundRunner", path: "..\..\..\node_modules\@capacitor\background-runner"),
+        .package(name: "CapacitorCamera", path: "..\..\..\node_modules\@capacitor\camera"),
+        .package(name: "CapacitorDevice", path: "..\..\..\node_modules\@capacitor\device"),
+        .package(name: "CapacitorDialog", path: "..\..\..\node_modules\@capacitor\dialog"),
+        .package(name: "CapacitorFilesystem", path: "..\..\..\node_modules\@capacitor\filesystem"),
+        .package(name: "CapacitorNetwork", path: "..\..\..\node_modules\@capacitor\network"),
+        .package(name: "CapacitorLocalNotifications", path: "..\..\..\node_modules\@capacitor\local-notifications"),
+        .package(name: "CapacitorPushNotifications", path: "..\..\..\node_modules\@capacitor\push-notifications"),
+        .package(name: "CapacitorToast", path: "..\..\..\node_modules\@capacitor\toast"),
+        .package(name: "CapgoCapacitorAndroidSmsRetriever", path: "..\..\..\node_modules\@capgo\capacitor-android-sms-retriever"),
+        .package(name: "CapgoCapacitorUpdater", path: "..\..\..\node_modules\@capgo\capacitor-updater")
     ],
     targets: [
         .target(
             name: "CapApp-SPM",
             dependencies: [
                 .product(name: "Capacitor", package: "capacitor-swift-pm"),
-                .product(name: "Cordova", package: "capacitor-swift-pm")
+                .product(name: "Cordova", package: "capacitor-swift-pm"),
+                .product(name: "CapacitorBackgroundRunner", package: "CapacitorBackgroundRunner"),
+                .product(name: "CapacitorCamera", package: "CapacitorCamera"),
+                .product(name: "CapacitorDevice", package: "CapacitorDevice"),
+                .product(name: "CapacitorDialog", package: "CapacitorDialog"),
+                .product(name: "CapacitorFilesystem", package: "CapacitorFilesystem"),
+                .product(name: "CapacitorNetwork", package: "CapacitorNetwork"),
+                .product(name: "CapacitorLocalNotifications", package: "CapacitorLocalNotifications"),
+                .product(name: "CapacitorPushNotifications", package: "CapacitorPushNotifications"),
+                .product(name: "CapacitorToast", package: "CapacitorToast"),
+                .product(name: "CapgoCapacitorAndroidSmsRetriever", package: "CapgoCapacitorAndroidSmsRetriever"),
+                .product(name: "CapgoCapacitorUpdater", package: "CapgoCapacitorUpdater")
             ]
         )
     ]
