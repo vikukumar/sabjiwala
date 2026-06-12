@@ -422,7 +422,7 @@ class OrderService:
         except Exception as ws_err:
             logger.error("Failed to broadcast WebSocket placement status", order_id=str(order.id), error=str(ws_err))
 
-        # Trigger notification
+        # Trigger customer notification
         await self.notification_service.dispatch(
             event_key="order_placed",
             user_id=user_id,
@@ -430,6 +430,19 @@ class OrderService:
             reference_type="order",
             reference_id=str(order.id)
         )
+
+        # Trigger vendor in-app notification for new order
+        if vendor_user_id:
+            try:
+                await self.notification_service.dispatch(
+                    event_key="order_new_for_vendor",
+                    user_id=vendor_user_id,
+                    variables={"order_number": order.order_number, "total_amount": float(order.total_amount)},
+                    reference_type="order",
+                    reference_id=str(order.id)
+                )
+            except Exception as notif_err:
+                logger.warning("Failed to send vendor new-order notification", error=str(notif_err))
 
         return order, pay_info
 
@@ -489,6 +502,8 @@ class OrderService:
             from app.services.delivery_assignment_service import DeliveryAssignmentService
             assign_service = DeliveryAssignmentService(self.db)
             await assign_service.assign_delivery(order.id)
+            # Reload order to capture the assigned delivery_boy_id set by assign_delivery
+            await self.db.refresh(order)
 
         # Trigger actions based on new status
         if status == OrderStatus.CANCELLED:

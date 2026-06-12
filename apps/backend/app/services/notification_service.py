@@ -151,6 +151,14 @@ class NotificationService:
                 "in_app_body": "Aapko naya order {{ order_number }} assign kiya gaya hai. Kripya vendor ke paas jaakar pick up karein.",
                 "push_title": "Naya Delivery Task! 🚲",
                 "push_body": "Aapko naya order {{ order_number }} assign kiya gaya hai.",
+            },
+            {
+                "name": "New Order For Vendor",
+                "event_key": "order_new_for_vendor",
+                "in_app_title": "Naya Customer Order Aaya! 🛒",
+                "in_app_body": "Aapke store mein order {{ order_number }} aaya hai. Total amount ₹{{ total_amount }}. Order accept karein!",
+                "push_title": "Naya Customer Order Aaya! 🛒",
+                "push_body": "Order {{ order_number }} — ₹{{ total_amount }}. Abhi accept karein!",
             }
         ]
         for t in templates:

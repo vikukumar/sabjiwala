@@ -484,11 +484,11 @@ export default function CheckoutPage() {
       const cashfree = new (window as any).Cashfree({ mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === "production" ? "production" : "sandbox" });
       const checkoutOptions = {
         paymentSessionId: payment_session_id,
-        returnUrl: `${window.location.origin}${resolveLink(`/orders/${orderData.id}?payment=success`)}`,
+        returnUrl: `${window.location.origin}${resolveLink(`/orders/detail?id=${orderData.id}&payment=success`)}`,
       };
       await cashfree.checkout(checkoutOptions);
       success("Payment Successful! 🎉", "Your order has been confirmed.");
-      router.push(resolveLink(`/orders/${orderData.id}?new=1`));
+      router.push(resolveLink(`/orders/detail?id=${orderData.id}&new=1`));
     } catch (err: any) {
       showError("Payment Failed", "Cashfree payment could not be completed. Try Cash on Delivery.");
     } finally {
@@ -521,16 +521,16 @@ export default function CheckoutPage() {
 
       if (paymentMethod === "cod" || finalTotal <= 0) {
         success("Order Placed! 🎉", `Order #${mergedOrderData?.order_number} confirmed. Pay on delivery.`);
-        router.push(resolveLink(`/orders/${mergedOrderData?.id}?new=1`));
+        router.push(resolveLink(`/orders/detail?id=${mergedOrderData?.id}&new=1`));
       } else if (paymentMethod === "wallet" && walletDeduction >= finalTotal) {
         success("Paid via Wallet! 🎉", `₹${walletDeduction.toFixed(2)} deducted from wallet.`);
-        router.push(resolveLink(`/orders/${mergedOrderData?.id}?new=1`));
+        router.push(resolveLink(`/orders/detail?id=${mergedOrderData?.id}&new=1`));
       } else if (paymentMethod === "online" && CASHFREE_ENABLED) {
         await launchCashfree(mergedOrderData);
       } else {
         // Fallback: COD
         success("Order Placed! 🎉", `Order #${mergedOrderData?.order_number} confirmed.`);
-        router.push(resolveLink(`/orders/${mergedOrderData?.id}?new=1`));
+        router.push(resolveLink(`/orders/detail?id=${mergedOrderData?.id}&new=1`));
       }
     },
     onError: (err: any) => showError("Order failed", err.response?.data?.detail || err.message),

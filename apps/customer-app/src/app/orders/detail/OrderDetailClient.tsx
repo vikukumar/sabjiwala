@@ -135,7 +135,11 @@ export default function OrderDetailClient() {
 
   const { data: order, isLoading } = useQuery<any>({
     queryKey: ["order", id],
-    queryFn: async () => { const r = await api.get(`/orders/${id}`); return r.data; },
+    queryFn: async () => {
+      const r = await api.get(`/orders/${id}`);
+      // APIResponse wrapper: { success, data: { ...order } }
+      return r.data?.data || r.data;
+    },
     refetchInterval: (q) => {
       const s = q.state.data?.status;
       return ["pending", "confirmed", "accepted", "packed", "out_for_delivery"].includes(s) ? 30_000 : false;

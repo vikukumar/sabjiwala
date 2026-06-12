@@ -247,7 +247,9 @@ async def list_orders(
 
     # RBAC logic
     role = current_user.get("role") or current_user.get("user_type", "customer")
-    if role == "customer":
+    if role in ["admin", "super_admin"]:
+        pass  # Admins see all orders — no filter applied
+    elif role == "customer":
         query = query.where(Order.user_id == current_user["user_id"])
     elif role in ["vendor", "vendor_manager"]:
         from app.models.vendor import Vendor
@@ -276,9 +278,33 @@ async def list_orders(
 
     total_pages = (total_items + page_size - 1) // page_size
 
+    # For admin, batch-fetch vendor stores to populate vendor_store field
+    vendor_store_map = {}
+    if role in ["admin", "super_admin"] and orders:
+        from app.models.vendor import VendorStore
+        vendor_ids = list({o.vendor_id for o in orders if o.vendor_id})
+        if vendor_ids:
+            store_res = await db.execute(
+                select(VendorStore).where(VendorStore.vendor_id.in_(vendor_ids))
+            )
+            for store in store_res.scalars().all():
+                vendor_store_map[store.vendor_id] = {
+                    "name": store.store_name,
+                    "address": store.address_line_1,
+                    "city": store.city,
+                    "latitude": store.latitude,
+                    "longitude": store.longitude,
+                }
+
+    def build_response(o: Order) -> OrderResponse:
+        r = OrderResponse.model_validate(o)
+        if o.vendor_id in vendor_store_map:
+            r.vendor_store = vendor_store_map[o.vendor_id]
+        return r
+
     return PaginatedResponse(
         success=True,
-        data=[OrderResponse.model_validate(o) for o in orders],
+        data=[build_response(o) for o in orders],
         pagination=PaginationMeta(
             page=page,
             page_size=page_size,
