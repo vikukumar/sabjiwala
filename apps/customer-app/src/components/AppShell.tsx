@@ -1400,6 +1400,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  const isNative = typeof window !== "undefined" && !!(window as any).Capacitor;
   const pathname = usePathname();
   const router = useRouter();
 
@@ -1471,7 +1472,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [publicSettings]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window === "undefined") return true;
+    if (isNative) return false;
+    return localStorage.getItem("sw_splash_onboarding") !== "completed";
+  });
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
@@ -1818,9 +1823,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Public routes or sub-portals that don't need customer app shell (full screen / own layout)
   const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
   const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
-  const isBypassRoute = isUnified
-    ? (!isCustomerAppPath || pathname === "/app/login" || pathname === "/app/register")
-    : ["/login", "/register", "/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r));
+  const isBypassRoute = isNative
+    ? (pathname === "/login" || pathname === "/register" || pathname?.startsWith("/login/") || pathname?.startsWith("/register/"))
+    : (isUnified
+        ? (!isCustomerAppPath || pathname === "/app/login" || pathname === "/app/register")
+        : ["/login", "/register", "/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r)));
   if (isBypassRoute) return <>{children}</>;
 
   if (showSplash) {
@@ -1876,7 +1883,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AppShellContext.Provider value={true}>
       {/* 1. Force the app to match exact screen height and stop body scrolling */}
-      <div className="h-[100dvh] w-full flex overflow-hidden">
+      <div className="h-screen md:h-[100dvh] w-full flex overflow-hidden">
 
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenLocation={() => setShowLocationModal(true)} />
 
