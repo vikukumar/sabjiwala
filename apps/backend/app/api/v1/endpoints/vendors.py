@@ -101,12 +101,7 @@ async def get_my_vendor_profile(
     db: AsyncSession = Depends(get_db),
 ):
     """Get current vendor's profile."""
-    result = await db.execute(
-        select(Vendor)
-        .options(selectinload(Vendor.store))
-        .where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False)
-    )
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor profile not found")
     return APIResponse(success=True, data=VendorResponse.model_validate(vendor))
@@ -118,10 +113,7 @@ async def get_my_vendor_metrics(
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve current vendor's sales and order metrics."""
-    result = await db.execute(
-        select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False)
-    )
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor profile not found")
         
@@ -138,8 +130,7 @@ async def update_vendor_profile(
     db: AsyncSession = Depends(get_db),
 ):
     """Update vendor profile."""
-    result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor profile not found")
 
@@ -158,11 +149,7 @@ async def update_store_timings(
     db: AsyncSession = Depends(get_db),
 ):
     """Update store operating timings."""
-    result = await db.execute(
-        select(Vendor).options(selectinload(Vendor.store))
-        .where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False)
-    )
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor or not vendor.store:
         raise HTTPException(status_code=404, detail="Store not found")
 
@@ -178,8 +165,7 @@ async def create_service_area(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a delivery service area (radius or polygon)."""
-    result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
@@ -203,8 +189,7 @@ async def create_delivery_rule(
     db: AsyncSession = Depends(get_db),
 ):
     """Set delivery charge rules."""
-    result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
@@ -220,8 +205,7 @@ async def get_my_service_areas(
     db: AsyncSession = Depends(get_db),
 ):
     """Get current vendor's service areas."""
-    result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
     
@@ -249,8 +233,7 @@ async def get_my_delivery_rules(
     db: AsyncSession = Depends(get_db),
 ):
     """Get current vendor's delivery rules."""
-    result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
     
@@ -415,11 +398,7 @@ async def update_store_location(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Vendor).options(selectinload(Vendor.store))
-        .where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False)
-    )
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
     if not vendor.store:
@@ -446,8 +425,7 @@ async def get_vendor_earnings(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
     wallet_result = await db.execute(select(VendorWallet).where(VendorWallet.vendor_id == vendor.id))
@@ -498,8 +476,7 @@ async def get_vendor_analytics(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
     try:
@@ -520,8 +497,7 @@ async def get_vendor_top_products(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
     try:
@@ -537,8 +513,7 @@ async def request_vendor_payout(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
     wallet_result = await db.execute(select(VendorWallet).where(VendorWallet.vendor_id == vendor.id))

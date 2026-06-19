@@ -8,7 +8,7 @@ from typing import Optional
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from redis.asyncio import Redis
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -376,7 +376,7 @@ async def verify_and_resolve_user_role(db: AsyncSession, user_id: UUID, requeste
         else:
             break
             
-    raise HTTPException(status_code=403, detail=f"User does not have the {requested_role_name} role")
+    raise HTTPException(status_code=400, detail=f"User does not have the {requested_role_name} role")
 
 
 def _decrypt_payload_if_needed(request: Request, body) -> Optional[dict]:
@@ -421,8 +421,11 @@ def _decrypt_payload_if_needed(request: Request, body) -> Optional[dict]:
 
 
 @router.get("/e2ee/key", response_model=APIResponse)
-async def get_e2ee_public_key(request: Request):
+async def get_e2ee_public_key(request: Request, response: Response):
     """Retrieve the server's public key for E2EE payload encryption."""
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     public_key = getattr(request.app.state, "rsa_public_key", None)
     if not public_key:
         raise HTTPException(
@@ -532,10 +535,13 @@ async def login(
 
     await logger.ainfo("User logged in", user_id=str(user.id))
 
+    user_res = UserResponse.model_validate(user)
+    user_res.active_role = active_role
+
     return APIResponse(
         success=True,
         message="Login successful",
-        data=UserResponse.model_validate(user),
+        data=user_res,
         meta={
             "access_token": access_token,
             "refresh_token": refresh_token,
@@ -677,10 +683,13 @@ async def verify_login_otp(
     db.add(session)
     await db.flush()
 
+    user_res = UserResponse.model_validate(user)
+    user_res.active_role = active_role
+
     return APIResponse(
         success=True,
         message="OTP verified successfully",
-        data=UserResponse.model_validate(user),
+        data=user_res,
         meta={
             "access_token": access_token,
             "refresh_token": refresh_token,
@@ -1539,10 +1548,13 @@ async def magic_link_verify(
     db.add(session)
     await db.flush()
 
+    user_res = UserResponse.model_validate(user)
+    user_res.active_role = active_role
+
     return APIResponse(
         success=True,
         message="Login successful",
-        data=UserResponse.model_validate(user),
+        data=user_res,
         meta={
             "access_token": access_token,
             "refresh_token": refresh_token,

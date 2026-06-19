@@ -193,6 +193,7 @@ class UserResponse(BaseModel):
     referral_code: Optional[str] = None
     mfa_enabled: bool = False
     created_at: datetime
+    active_role: Optional[str] = None
 
     class Config:
         from_attributes = True

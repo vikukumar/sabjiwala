@@ -253,8 +253,7 @@ async def list_orders(
         query = query.where(Order.user_id == current_user["user_id"])
     elif role in ["vendor", "vendor_manager"]:
         from app.models.vendor import Vendor
-        vendor_res = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"]))
-        vendor = vendor_res.scalars().first()
+        vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
         if not vendor:
             raise HTTPException(status_code=403, detail="Vendor profile required")
         query = query.where(Order.vendor_id == vendor.id)

@@ -43,8 +43,7 @@ async def create_product(
 ):
     """Create a new product (vendor only)."""
     # Get vendor
-    vendor_result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = vendor_result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=403, detail="Vendor profile required")
 
@@ -131,8 +130,7 @@ async def update_product(
     db: AsyncSession = Depends(get_db),
 ):
     """Update a product."""
-    vendor_result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = vendor_result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
 
     result = await db.execute(
         select(Product)
@@ -209,8 +207,7 @@ async def update_inventory(
     db: AsyncSession = Depends(get_db),
 ):
     """Update product inventory."""
-    vendor_result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = vendor_result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=403, detail="Vendor required")
 
@@ -258,8 +255,7 @@ async def bulk_import_products(
     db: AsyncSession = Depends(get_db),
 ):
     """Bulk import products from CSV file."""
-    vendor_result = await db.execute(select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False))
-    vendor = vendor_result.scalars().first()
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=403, detail="Vendor required")
 

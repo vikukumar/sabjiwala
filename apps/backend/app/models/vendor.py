@@ -12,6 +12,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import BaseEntity
 
@@ -99,6 +100,32 @@ class Vendor(BaseEntity):
     __table_args__ = (
         Index("ix_vendors_status_active", "status", "is_deleted"),
     )
+
+    @classmethod
+    async def get_by_user_id(cls, db: AsyncSession, user_id: UUID) -> Optional["Vendor"]:
+        """Resolve vendor profile for a user ID (either as owner or as staff)."""
+        from sqlalchemy import select
+        # 1. Try finding vendor where user is owner
+        result = await db.execute(select(cls).where(cls.user_id == user_id, cls.is_deleted == False))
+        vendor = result.scalars().first()
+        if vendor:
+            return vendor
+            
+        # 2. Try finding vendor where user is staff
+        result = await db.execute(
+            select(VendorStaff).where(
+                VendorStaff.user_id == user_id,
+                VendorStaff.is_active == True,
+                VendorStaff.is_deleted == False
+            )
+        )
+        staff = result.scalars().first()
+        if staff:
+            vendor_result = await db.execute(select(cls).where(cls.id == staff.vendor_id, cls.is_deleted == False))
+            return vendor_result.scalars().first()
+            
+        return None
+
 
 
 class VendorStore(BaseEntity):
