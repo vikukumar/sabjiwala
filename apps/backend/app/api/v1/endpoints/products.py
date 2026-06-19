@@ -9,7 +9,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
-from sqlalchemy import select, func, update
+from sqlalchemy import select, func, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -69,6 +69,18 @@ async def create_product(
     )
     db.add(product)
     await db.flush()
+
+    if body.images:
+        product.primary_image_url = body.images[0]
+        for idx, img_url in enumerate(body.images):
+            db_img = ProductImage(
+                product_id=product.id,
+                image_url=img_url,
+                is_primary=(idx == 0),
+                sort_order=idx
+            )
+            db.add(db_img)
+        await db.flush()
 
     # Create default variant
     variant = ProductVariant(
@@ -134,14 +146,14 @@ async def update_product(
 
     result = await db.execute(
         select(Product)
-        .options(selectinload(Product.category))
+        .options(selectinload(Product.category), selectinload(Product.images))
         .where(Product.id == product_id, Product.is_deleted == False)
     )
     product = result.scalars().first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    for field, value in body.model_dump(exclude_unset=True, exclude={"price", "compare_at_price"}).items():
+    for field, value in body.model_dump(exclude_unset=True, exclude={"price", "compare_at_price", "images"}).items():
         if hasattr(product, field) and value is not None:
             if field == "category_id":
                 cat_res = await db.execute(select(Category).where(Category.id == value, Category.is_deleted == False))
@@ -174,6 +186,23 @@ async def update_product(
                 compare_at_price=body.compare_at_price
             )
             db.add(price_obj)
+
+    if body.images is not None:
+        await db.execute(delete(ProductImage).where(ProductImage.product_id == product.id))
+        if body.images:
+            product.primary_image_url = body.images[0]
+            for idx, img_url in enumerate(body.images):
+                db_img = ProductImage(
+                    product_id=product.id,
+                    image_url=img_url,
+                    is_primary=(idx == 0),
+                    sort_order=idx
+                )
+                db.add(db_img)
+        else:
+            product.primary_image_url = None
+        await db.flush()
+        await db.refresh(product, attribute_names=["images"])
 
     product.updated_by = current_user["user_id"]
     await db.flush()

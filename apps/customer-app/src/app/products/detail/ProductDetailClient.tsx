@@ -104,6 +104,7 @@ export default function ProductDetailClient() {
   };
 
   const [localCart, setLocalCart] = useState<any>(getLocalGuestCart());
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     const handleUpdate = () => setLocalCart(getLocalGuestCart());
@@ -226,6 +227,15 @@ export default function ProductDetailClient() {
     { icon: Truck, label: "Fast Delivery", desc: "10 minutes" },
   ];
 
+  const imgs = product?.images || [];
+  const urls: string[] = imgs.map((img: any) => img.image_url);
+  if (urls.length === 0 && product?.primary_image_url) {
+    urls.push(product.primary_image_url);
+  }
+  if (urls.length === 0 && product?.attributes?.image_url) {
+    urls.push(product.attributes.image_url);
+  }
+
   return (
     <div className="max-w-2xl mx-auto font-sans">
       {/* Back button */}
@@ -240,25 +250,54 @@ export default function ProductDetailClient() {
 
       <div className="px-4 pb-32 space-y-4">
         {/* Product Hero */}
-        <div className="relative bg-gradient-to-br from-emerald-50 to-teal-55/20 dark:from-slate-800/50 dark:to-slate-900 rounded-3xl p-8 flex items-center justify-center overflow-hidden" style={{ minHeight: "240px" }}>
+        <div className="relative bg-gradient-to-br from-emerald-50 to-teal-50/20 dark:from-slate-800/50 dark:to-slate-900 rounded-3xl p-8 flex flex-col items-center justify-center overflow-hidden" style={{ minHeight: "280px" }}>
           {hasDiscount && (
-            <span className="absolute top-4 left-4 bg-rose-500 text-white text-xs font-black px-2.5 py-1 rounded-full">
+            <span className="absolute top-4 left-4 bg-rose-500 text-white text-xs font-black px-2.5 py-1 rounded-full z-10">
               -{discountPct}% OFF
             </span>
           )}
-          <span className="text-[110px] leading-none drop-shadow-lg">{emoji}</span>
+          
+          <div className="flex-1 w-full flex items-center justify-center h-48">
+            {urls.length > 0 ? (
+              <img
+                src={urls[activeImageIndex]}
+                alt={product.name}
+                className="max-h-full max-w-full object-contain rounded-2xl transition-all duration-300"
+              />
+            ) : (
+              <span className="text-[110px] leading-none drop-shadow-lg select-none">{emoji}</span>
+            )}
+          </div>
+
           <button
             onClick={() => toggleWishlist.mutate()}
             disabled={toggleWishlist.isPending}
-            className="absolute top-4 right-4 p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 active:scale-95 transition-all text-slate-455 hover:text-rose-550 cursor-pointer"
+            className="absolute top-4 right-4 p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 active:scale-95 transition-all text-slate-455 hover:text-rose-550 cursor-pointer z-10"
             aria-label={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
           >
             <Heart className={`w-4 h-4 transition-colors ${isWishlisted ? "fill-rose-500 text-rose-500" : "text-slate-400"}`} />
           </button>
-          <button className="absolute top-14 right-4 p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 transition-transform">
+          <button className="absolute top-14 right-4 p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 transition-transform z-10">
             <Share2 className="w-4 h-4 text-slate-400" />
           </button>
         </div>
+
+        {/* Thumbnail Row */}
+        {urls.length > 1 && (
+          <div className="flex gap-2 justify-center py-2 overflow-x-auto">
+            {urls.map((url, idx) => (
+              <button
+                key={url}
+                onClick={() => setActiveImageIndex(idx)}
+                className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${
+                  activeImageIndex === idx ? "border-emerald-500 scale-105 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
+                }`}
+              >
+                <img src={url} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Info */}
         <div className="space-y-2">

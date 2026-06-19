@@ -343,6 +343,7 @@ class ProductCreate(BaseModel):
     compare_at_price: Optional[float] = None
     tags: Optional[List[str]] = None
     attributes: Optional[dict] = None
+    images: Optional[List[str]] = None
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
@@ -356,6 +357,7 @@ class ProductUpdate(BaseModel):
     attributes: Optional[dict] = None
     price: Optional[float] = None
     compare_at_price: Optional[float] = None
+    images: Optional[List[str]] = None
 
 class CategoryCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
@@ -382,6 +384,18 @@ class CategoryResponse(BaseModel):
         from_attributes = True
 
 
+class ProductImageResponse(BaseModel):
+    id: UUID
+    image_url: str
+    thumbnail_url: Optional[str] = None
+    alt_text: Optional[str] = None
+    sort_order: int = 0
+    is_primary: bool = False
+
+    class Config:
+        from_attributes = True
+
+
 class ProductResponse(BaseModel):
     id: UUID
     name: str
@@ -398,6 +412,7 @@ class ProductResponse(BaseModel):
     tags: Optional[List[str]] = None
     attributes: Optional[dict] = None
     stock: Optional[float] = None
+    images: Optional[List[ProductImageResponse]] = None
     created_at: datetime
 
     class Config:

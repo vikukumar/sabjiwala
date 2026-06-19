@@ -262,8 +262,16 @@ export default function ProductCard({ product }: { product: any }) {
 
       {/* Image & Discount Display */}
       <Link href={resolveLink(`/products/${product.id}`)} className="block">
-        <div className="relative bg-gradient-to-br from-slate-50/80 to-emerald-50/20 dark:from-slate-800/40 dark:to-slate-900/50 h-32 flex items-center justify-center">
-          <span className="text-5xl group-hover:scale-110 transition-transform duration-500 ease-out select-none">{emoji}</span>
+        <div className="relative bg-gradient-to-br from-slate-50/80 to-emerald-50/20 dark:from-slate-800/40 dark:to-slate-900/50 h-32 flex items-center justify-center overflow-hidden">
+          {product.primary_image_url || product.attributes?.image_url ? (
+            <img
+              src={product.primary_image_url || product.attributes?.image_url}
+              alt={product.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+            />
+          ) : (
+            <span className="text-5xl group-hover:scale-110 transition-transform duration-500 ease-out select-none">{emoji}</span>
+          )}
           {hasDiscount && (
             <span className="absolute top-2 left-2 bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm">
               -{discountPct}% OFF

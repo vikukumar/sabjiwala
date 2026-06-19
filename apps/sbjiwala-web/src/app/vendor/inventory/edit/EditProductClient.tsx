@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
@@ -27,7 +27,7 @@ export default function EditProductClient() {
     const [emoji, setEmoji] = useState("🥬");
     const [stock, setStock] = useState("");
     const [stockChangeType, setStockChangeType] = useState<"set" | "add" | "remove">("set");
-    const [imageUrl, setImageUrl] = useState("");
+    const [imageUrls, setImageUrls] = useState<string[]>([]);
     const [imageUploading, setImageUploading] = useState(false);
     const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -69,7 +69,16 @@ export default function EditProductClient() {
             setComparePrice(attrs.compare_at_price ? String(attrs.compare_at_price) : "");
             setEmoji(attrs.image_emoji || "🥬");
             setStock(String(attrs.quantity || "0.0"));
-            setImageUrl(attrs.image_url || "");
+            
+            const imgs = productData.images || [];
+            const urls = imgs.map((img: any) => img.image_url);
+            if (urls.length === 0 && productData.primary_image_url) {
+                urls.push(productData.primary_image_url);
+            }
+            if (urls.length === 0 && attrs.image_url) {
+                urls.push(attrs.image_url);
+            }
+            setImageUrls(urls);
         }
     }, [productData]);
 
@@ -88,8 +97,9 @@ export default function EditProductClient() {
                 compare_at_price: comparePrice ? parseFloat(comparePrice) : null,
                 attributes: {
                     image_emoji: emoji,
-                    image_url: imageUrl || undefined,
-                }
+                    image_url: imageUrls[0] || undefined,
+                },
+                images: imageUrls
             });
 
             const stockVal = parseFloat(stock);
@@ -138,17 +148,27 @@ export default function EditProductClient() {
         );
     }
 
-    const handleImageUpload = async (file: File) => {
+    const handleImagesUpload = async (files: File[]) => {
         setImageUploading(true);
         try {
-            const formData = new FormData();
-            formData.append("file", file);
-            const res = await api.post("/storage/upload", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-            const url = res.data?.url || res.data?.file_url || "";
-            if (url) setImageUrl(url);
-            else showError("Upload Failed", "No URL returned from server");
+            const uploadedUrls: string[] = [];
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append("file", file);
+                const res = await api.post("/storage/upload", formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                const url = res.data?.url || res.data?.file_url || "";
+                if (url) {
+                    uploadedUrls.push(url);
+                }
+            }
+            if (uploadedUrls.length > 0) {
+                setImageUrls(prev => [...prev, ...uploadedUrls]);
+                success(`${uploadedUrls.length} image(s) uploaded successfully!`);
+            } else {
+                showError("Upload Failed", "No URLs returned from server");
+            }
         } catch (err: any) {
             showError("Upload Failed", err.response?.data?.detail || err.message);
         } finally {
@@ -261,30 +281,90 @@ export default function EditProductClient() {
 
                         {/* Photo Upload */}
                         <div className="space-y-1.5">
-                            <label className="font-bold text-slate-555 uppercase">Product Photo</label>
+                            <label className="font-bold text-slate-555 uppercase">Product Photos</label>
                             <input
                                 ref={imageInputRef}
                                 type="file"
                                 accept="image/*"
+                                multiple
                                 className="hidden"
-                                onChange={e => {
-                                    const file = e.target.files?.[0];
-                                    if (file) handleImageUpload(file);
+                                onChange={async e => {
+                                    const files = e.target.files;
+                                    if (files && files.length > 0) {
+                                        await handleImagesUpload(Array.from(files));
+                                    }
                                 }}
                             />
-                            <div className="flex items-center gap-3 flex-wrap">
-                                <button
-                                    type="button"
-                                    onClick={() => imageInputRef.current?.click()}
-                                    disabled={imageUploading}
-                                    className="px-4 py-2 rounded-xl border border-dashed border-slate-350 dark:border-slate-750 hover:border-emerald-500 bg-slate-55 dark:bg-slate-950 text-slate-655 dark:text-slate-400 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
-                                >
-                                    {imageUploading ? "Uploading..." : "Upload Image"}
-                                </button>
-                                {imageUrl && (
-                                    <div className="flex items-center gap-2">
-                                        <img src={imageUrl} alt="Preview" className="w-12 h-12 object-cover rounded-xl border border-slate-200" />
-                                        <button type="button" onClick={() => setImageUrl("")} className="text-rose-500 text-xs font-bold hover:underline">Remove</button>
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <button
+                                        type="button"
+                                        onClick={() => imageInputRef.current?.click()}
+                                        disabled={imageUploading}
+                                        className="px-4 py-2.5 rounded-xl border border-dashed border-slate-350 dark:border-slate-750 hover:border-emerald-500 bg-slate-50 dark:bg-slate-950 text-slate-655 dark:text-slate-400 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                                    >
+                                        {imageUploading ? (
+                                            <>
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                Uploading...
+                                            </>
+                                        ) : (
+                                            "Upload Images (Max 5)"
+                                        )}
+                                    </button>
+                                </div>
+                                
+                                {imageUrls.length > 0 && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                                        {imageUrls.map((url, idx) => (
+                                            <div key={url} className="relative group rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 aspect-square">
+                                                <img src={url} alt={`Product image ${idx + 1}`} className="w-full h-full object-cover" />
+                                                
+                                                {/* Actions Overlay */}
+                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+                                                    <div className="flex justify-end">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setImageUrls(prev => prev.filter((_, i) => i !== idx));
+                                                            }}
+                                                            className="p-1.5 rounded-lg bg-rose-650/90 text-white hover:bg-rose-500 transition-colors cursor-pointer"
+                                                            title="Delete Image"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    {idx === 0 ? (
+                                                        <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md self-start">
+                                                            PRIMARY
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setImageUrls(prev => {
+                                                                    const next = [...prev];
+                                                                    const item = next.splice(idx, 1)[0];
+                                                                    next.unshift(item);
+                                                                    return next;
+                                                                });
+                                                            }}
+                                                            className="bg-white/90 text-slate-900 hover:bg-white text-[9px] font-black px-2 py-0.5 rounded-md self-start transition-colors cursor-pointer"
+                                                        >
+                                                            Set Primary
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                
+                                                {/* Primary badge outside hover */}
+                                                {idx === 0 && (
+                                                    <div className="absolute top-2 left-2 bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md shadow z-10">
+                                                        PRIMARY
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>

@@ -26,7 +26,7 @@ export default function VendorInventoryPage() {
   const [newProdComparePrice, setNewProdComparePrice] = useState("");
   const [newProdEmoji, setNewProdEmoji] = useState("🥬");
   const [newProdInitialStock, setNewProdInitialStock] = useState("50.0");
-  const [newProdImageUrl, setNewProdImageUrl] = useState("");
+  const [newProdImageUrls, setNewProdImageUrls] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,17 +39,27 @@ export default function VendorInventoryPage() {
   // Delete product state
   const [productToDelete, setProductToDelete] = useState<any | null>(null);
 
-  const handleImageUpload = async (file: File) => {
+  const handleImagesUpload = async (files: File[]) => {
     setImageUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await api.post("/storage/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      const url = res.data?.url || res.data?.file_url || "";
-      if (url) setNewProdImageUrl(url);
-      else showError("Upload Failed", "No URL returned from server");
+      const uploadedUrls: string[] = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await api.post("/storage/upload", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        const url = res.data?.url || res.data?.file_url || "";
+        if (url) {
+          uploadedUrls.push(url);
+        }
+      }
+      if (uploadedUrls.length > 0) {
+        setNewProdImageUrls(prev => [...prev, ...uploadedUrls]);
+        success(`${uploadedUrls.length} image(s) uploaded successfully!`);
+      } else {
+        showError("Upload Failed", "No URLs returned from server");
+      }
     } catch (err: any) {
       showError("Upload Failed", err.response?.data?.detail || err.message);
     } finally {
@@ -132,8 +142,9 @@ export default function VendorInventoryPage() {
         compare_at_price: newProdComparePrice ? parseFloat(newProdComparePrice) : null,
         attributes: {
           image_emoji: newProdEmoji,
-          image_url: newProdImageUrl || undefined,
-        }
+          image_url: newProdImageUrls[0] || undefined,
+        },
+        images: newProdImageUrls
       });
 
       const createdProd = res.data;
@@ -161,7 +172,7 @@ export default function VendorInventoryPage() {
       setNewProdComparePrice("");
       setNewProdInitialStock("50.0");
       setNewProdEmoji("🥬");
-      setNewProdImageUrl("");
+      setNewProdImageUrls([]);
       setActiveSubTab("list");
     },
     onError: (err: any) => {
@@ -389,32 +400,92 @@ export default function VendorInventoryPage() {
                 </div>
               </div>
 
-              {/* Photo Upload */}
+               {/* Photo Upload */}
               <div className="space-y-1.5">
-                <label className="font-bold text-slate-555 uppercase">Product Photo</label>
+                <label className="font-bold text-slate-555 uppercase">Product Photos</label>
                 <input
                   ref={imageInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
-                  onChange={e => {
-                    const file = e.target.files?.[0];
-                    if (file) handleImageUpload(file);
+                  onChange={async e => {
+                    const files = e.target.files;
+                    if (files && files.length > 0) {
+                      await handleImagesUpload(Array.from(files));
+                    }
                   }}
                 />
-                <div className="flex items-center gap-3 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => imageInputRef.current?.click()}
-                    disabled={imageUploading}
-                    className="px-4 py-2 rounded-xl border border-dashed border-slate-350 dark:border-slate-750 hover:border-emerald-500 bg-slate-50 dark:bg-slate-950 text-slate-655 dark:text-slate-400 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    {imageUploading ? "Uploading..." : "Upload Image"}
-                  </button>
-                  {newProdImageUrl && (
-                    <div className="flex items-center gap-2">
-                      <img src={newProdImageUrl} alt="Preview" className="w-12 h-12 object-cover rounded-xl border border-slate-200" />
-                      <button type="button" onClick={() => setNewProdImageUrl("")} className="text-rose-500 text-xs font-bold hover:underline">Remove</button>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={imageUploading}
+                      className="px-4 py-2.5 rounded-xl border border-dashed border-slate-350 dark:border-slate-750 hover:border-emerald-500 bg-slate-55 dark:bg-slate-950 text-slate-655 dark:text-slate-450 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                    >
+                      {imageUploading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        "Upload Images (Max 5)"
+                      )}
+                    </button>
+                  </div>
+                  
+                  {newProdImageUrls.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                      {newProdImageUrls.map((url, idx) => (
+                        <div key={url} className="relative group rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 aspect-square">
+                          <img src={url} alt={`Product image ${idx + 1}`} className="w-full h-full object-cover" />
+                          
+                          {/* Actions Overlay */}
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNewProdImageUrls(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                className="p-1.5 rounded-lg bg-rose-655/90 text-white hover:bg-rose-500 transition-colors cursor-pointer"
+                                title="Delete Image"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            
+                            {idx === 0 ? (
+                              <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md self-start">
+                                PRIMARY
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNewProdImageUrls(prev => {
+                                    const next = [...prev];
+                                    const item = next.splice(idx, 1)[0];
+                                    next.unshift(item);
+                                    return next;
+                                  });
+                                }}
+                                className="bg-white/90 text-slate-900 hover:bg-white text-[9px] font-black px-2 py-0.5 rounded-md self-start transition-colors cursor-pointer"
+                              >
+                                Set Primary
+                              </button>
+                            )}
+                          </div>
+                          
+                          {/* Primary badge outside hover */}
+                          {idx === 0 && (
+                            <div className="absolute top-2 left-2 bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md shadow z-10">
+                              PRIMARY
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -522,8 +593,8 @@ export default function VendorInventoryPage() {
                         return (
                           <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/10 transition-colors">
                             <td className="p-4 text-center">
-                              {attrs.image_url ? (
-                                <img src={attrs.image_url} alt={p.name} className="w-10 h-10 object-cover rounded-xl border border-slate-200 mx-auto" />
+                              {p.primary_image_url || p.images?.[0]?.image_url || attrs.image_url ? (
+                                <img src={p.primary_image_url || p.images?.[0]?.image_url || attrs.image_url} alt={p.name} className="w-10 h-10 object-cover rounded-xl border border-slate-205 mx-auto" />
                               ) : (
                                 <span className="text-3xl">{attrs.image_emoji || "🥬"}</span>
                               )}

@@ -517,7 +517,7 @@ function CartFooter() {
   if (count === 0) return null;
 
   return (
-    <div className="fixed bottom-16 md:bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md z-30 animate-slide-up">
+    <div className="fixed bottom-16 md:bottom-6 left-1/2 md:left-[calc(50%+8rem)] -translate-x-1/2 w-[calc(100%-2rem)] max-w-md z-30 animate-slide-up">
       <div className="bg-slate-900 dark:bg-slate-950 rounded-2xl shadow-2xl p-4 flex items-center justify-between border border-slate-800">
         <div>
           <p className="text-xs text-slate-400 font-medium">{count} item{count !== 1 ? "s" : ""} in cart</p>
@@ -685,7 +685,7 @@ export default function HomePage() {
   const isInRange = rangeCheck ? rangeCheck.in_range : true;
 
   return (
-    <div className="space-y-8 pb-4 relative">
+    <div className="space-y-8 pb-32 md:pb-28 relative">
       {/* Push Notification Toast Banner */}
       {notificationBanner && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] w-[90%] max-w-md bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-2xl shadow-2xl p-4 flex items-start gap-3 border-l-4 border-l-emerald-500 animate-slide-down">
