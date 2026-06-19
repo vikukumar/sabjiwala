@@ -22,7 +22,7 @@ export default function VendorOrdersPage() {
         }
       });
       // API returns PaginatedResponse: { success, data: [...], pagination: {} }
-      return res.data?.data || [];
+      return res.data || [];
     }
   });
 

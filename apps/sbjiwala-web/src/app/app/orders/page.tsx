@@ -143,7 +143,7 @@ export default function OrdersPage() {
         params: activeTab !== "all" ? { status: activeTab } : {},
       });
       // PaginatedResponse: { success, data: [...], pagination: {} }
-      return res.data?.data || [];
+      return res.data || [];
     },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
   });
