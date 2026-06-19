@@ -3,7 +3,7 @@ Vendor domain models — vendor profiles, stores, documents, service areas, staf
 """
 import enum
 from datetime import datetime, time, timezone
-from typing import List, Optional
+from typing import ClassVar, List, Optional
 from uuid import UUID
 
 from sqlalchemy import (
@@ -151,7 +151,7 @@ class VendorStore(BaseEntity):
 
     # Prep time
     preparation_time_minutes: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
-    service_radius_km: Optional[float] = None
+    service_radius_km: ClassVar[Optional[float]] = None
 
     vendor: Mapped["Vendor"] = relationship(back_populates="store")
     holidays: Mapped[List["VendorHoliday"]] = relationship(back_populates="store", lazy="selectin")
