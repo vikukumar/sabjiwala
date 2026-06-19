@@ -490,17 +490,18 @@ async def update_store_location(
     vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
-    if not vendor.store:
+    store = vendor.store
+    if not store:
         store = VendorStore(vendor_id=vendor.id, store_name=vendor.business_name)
         db.add(store)
         await db.flush()
         vendor.store = store
     if "latitude" in body:
-        vendor.store.latitude = body["latitude"]
+        store.latitude = body["latitude"]
     if "longitude" in body:
-        vendor.store.longitude = body["longitude"]
+        store.longitude = body["longitude"]
     if "address_line_1" in body:
-        vendor.store.address_line_1 = body["address_line_1"]
+        store.address_line_1 = body["address_line_1"]
 
     if "service_radius_km" in body:
         radius_km = float(body["service_radius_km"])
@@ -520,14 +521,14 @@ async def update_store_location(
                 vendor_id=vendor.id,
                 name="Default",
                 radius_km=radius_km,
-                center_latitude=vendor.store.latitude,
-                center_longitude=vendor.store.longitude
+                center_latitude=store.latitude,
+                center_longitude=store.longitude
             )
             db.add(area)
         else:
             area.radius_km = radius_km
-            area.center_latitude = vendor.store.latitude
-            area.center_longitude = vendor.store.longitude
+            area.center_latitude = store.latitude
+            area.center_longitude = store.longitude
 
         # 2. Update or create default delivery rule
         rule_res = await db.execute(
