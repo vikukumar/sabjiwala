@@ -161,6 +161,25 @@ async def register(
             verification_identifier = existing_user.email if (existing_user.email and existing_user.phone) else (existing_user.email or existing_user.phone)
             if not verification_identifier:
                 raise HTTPException(status_code=400, detail="User email or phone is required")
+
+            if "@" not in verification_identifier:
+                # Add role without OTP verification
+                existing_user.is_active = True
+                existing_user.is_verified = True
+                existing_user.is_phone_verified = True
+                await db.flush()
+                await db.commit()
+                await logger.ainfo("Role added to existing user (no OTP required)", user_id=str(existing_user.id), role=role_name)
+                return APIResponse(
+                    success=True,
+                    message=f"Added {role_name} role. Please use your password to log in with your mobile number.",
+                    data=UserResponse.model_validate(existing_user),
+                    meta={
+                        "requires_otp_verification": False,
+                        "verification_identifier": verification_identifier,
+                    }
+                )
+
             redis = await _get_redis(request)
             otp_res = await send_otp(redis, verification_identifier, purpose="register")
             if not otp_res["success"]:
@@ -178,7 +197,7 @@ async def register(
 
             return APIResponse(
                 success=True,
-                message=f"Added {role_name} role. Please verify using the OTP sent to your contact details.",
+                message=f"Added {role_name} role. Please verify using the OTP sent to your email.",
                 data=UserResponse.model_validate(existing_user),
                 meta=meta_data
             )
@@ -303,6 +322,25 @@ async def register(
     if not verification_identifier:
         raise HTTPException(status_code=400, detail="Email or phone number is required")
 
+    if "@" not in verification_identifier:
+        # Sign up with mobile number: do not send OTP, set active/verified immediately
+        user.is_active = True
+        user.is_verified = True
+        user.is_phone_verified = True
+        await db.flush()
+        await db.commit()
+        await logger.ainfo("User registered with phone (no OTP required)", user_id=str(user.id), phone=user.phone, role=body.role)
+        
+        return APIResponse(
+            success=True,
+            message="Registration successful. Please use your password to log in with your mobile number.",
+            data=UserResponse.model_validate(user),
+            meta={
+                "requires_otp_verification": False,
+                "verification_identifier": verification_identifier,
+            }
+        )
+
     redis = await _get_redis(request)
     otp_res = await send_otp(redis, verification_identifier, purpose="register")
     if not otp_res["success"]:
@@ -317,9 +355,11 @@ async def register(
     if "otp" in otp_res:
         meta_data["otp"] = otp_res["otp"]
 
+    await db.commit()
+
     return APIResponse(
         success=True,
-        message=f"Registration successful. Please verify the OTP sent to your { 'email' if '@' in verification_identifier else 'phone' }.",
+        message=f"Registration successful. Please verify the OTP sent to your email.",
         data=UserResponse.model_validate(user),
         meta=meta_data
     )
@@ -589,6 +629,13 @@ async def send_login_otp(
             target_identifier = user.email or user.phone
     else:
         target_identifier = identifier
+
+    # For login / register, do not send OTP to phone numbers, instruct to use password
+    if target_identifier and "@" not in target_identifier and body.purpose in ["login", "register"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Please use your password with your mobile number to log in."
+        )
 
     result = await send_otp(redis, target_identifier, body.purpose)
 

@@ -42,15 +42,46 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     await logger.ainfo("Starting Sbjiwala Backend", version="0.1.0", env=settings.APP_ENV)
 
-    # Generate E2EE RSA keypair dynamically for this startup session
+    # Load or generate E2EE RSA keypair persistently
+    import os
     from cryptography.hazmat.primitives.asymmetric import rsa
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048
-    )
+    from cryptography.hazmat.primitives import serialization
+
+    key_dir = "storage"
+    os.makedirs(key_dir, exist_ok=True)
+    key_path = os.path.join(key_dir, "e2ee_private_key.pem")
+
+    private_key = None
+    if os.path.exists(key_path):
+        try:
+            with open(key_path, "rb") as f:
+                private_key = serialization.load_pem_private_key(
+                    f.read(),
+                    password=None
+                )
+            await logger.ainfo("E2EE Persistent RSA Private Key loaded from storage")
+        except Exception as e:
+            await logger.awarning(f"Failed to load E2EE private key from storage: {e}. Regenerating...")
+
+    if not private_key:
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048
+        )
+        try:
+            pem = private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+            with open(key_path, "wb") as f:
+                f.write(pem)
+            await logger.ainfo("E2EE Persistent RSA Private Key generated and saved to storage")
+        except Exception as e:
+            await logger.aerror(f"Failed to save generated E2EE private key: {e}")
+
     app.state.rsa_private_key = private_key
     app.state.rsa_public_key = private_key.public_key()
-    await logger.ainfo("E2EE Dynamic RSA Keypair generated successfully")
 
     # Run auto schema evolution
     await schema_evolution_engine.evolve(db_engine)

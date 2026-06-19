@@ -75,6 +75,11 @@ export class ApiClient {
         if (this.accessToken) {
           config.headers.Authorization = `Bearer ${this.accessToken}`;
         }
+
+        if (config.data && typeof config.data === 'object' && '_rawPayload' in config.data) {
+          (config as any)._rawPayload = (config.data as any)._rawPayload;
+        }
+        
         return config;
       },
       (error) => Promise.reject(error)
@@ -85,7 +90,21 @@ export class ApiClient {
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
-        if (error.response?.status === 401 && !originalRequest._retry) {
+
+        // Check for E2EE decryption failure to retry with plain payload
+        if (error.response?.status === 400 && 
+            error.response?.data?.detail === "E2EE payload decryption failed" && 
+            originalRequest &&
+            (originalRequest as any)._rawPayload && 
+            !(originalRequest as any)._retryE2EE) {
+          
+          (originalRequest as any)._retryE2EE = true;
+          originalRequest.data = JSON.stringify((originalRequest as any)._rawPayload);
+          originalRequest.headers['Content-Type'] = 'application/json';
+          return this.client(originalRequest);
+        }
+
+        if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
           originalRequest._retry = true;
           
           if (!this.refreshToken && typeof window !== 'undefined') {
