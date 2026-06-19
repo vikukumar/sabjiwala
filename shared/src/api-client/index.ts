@@ -131,7 +131,25 @@ export class ApiClient {
               this.clearTokens();
               // Trigger redirect to login in frontend if handler registered
               if (typeof window !== 'undefined') {
-                window.location.href = '/login';
+                const pathname = window.location.pathname;
+                // Never redirect if the user is on the root main page '/'
+                if (pathname !== '/') {
+                  if (pathname.startsWith('/vendor')) {
+                    window.location.href = '/vendor/login';
+                  } else if (pathname.startsWith('/delivery')) {
+                    window.location.href = '/delivery/login';
+                  } else if (pathname.startsWith('/admin')) {
+                    window.location.href = '/admin/login';
+                  } else if (pathname.startsWith('/app')) {
+                    window.location.href = '/app/login';
+                  } else {
+                    // Public static pages should also not trigger redirect
+                    const publicPaths = ['/about', '/privacy', '/terms', '/refund-policy', '/contact', '/faq'];
+                    if (!publicPaths.includes(pathname)) {
+                      window.location.href = '/login';
+                    }
+                  }
+                }
               }
             }
           }
