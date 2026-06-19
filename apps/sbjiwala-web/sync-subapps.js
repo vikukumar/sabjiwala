@@ -154,6 +154,12 @@ try {
 
   // 6. Clean and Copy Delivery app specific pages under /delivery/
   console.log(`Syncing delivery-app pages...`);
+  const deliveryLayoutSrc = path.join(deliverySrc, 'components/DeliveryLayout.tsx');
+  const deliveryLayoutDest = path.join(webSrc, 'components/DeliveryLayout.tsx');
+  if (fs.existsSync(deliveryLayoutSrc)) {
+    copyRecursiveSync(deliveryLayoutSrc, deliveryLayoutDest);
+  }
+
   const deliveryPageDest = path.join(webAppDir, 'delivery/page.tsx');
   copyRecursiveSync(path.join(deliverySrc, 'app/page.tsx'), deliveryPageDest);
 
@@ -165,12 +171,15 @@ try {
   removeRecursiveSync(deliveryRegisterDest);
   copyRecursiveSync(path.join(deliverySrc, 'app/register'), deliveryRegisterDest);
 
-  // Sync new delivery profile route
-  const deliveryProfileDest = path.join(webAppDir, 'delivery/profile');
-  removeRecursiveSync(deliveryProfileDest);
-  if (fs.existsSync(path.join(deliverySrc, 'app/profile'))) {
-    copyRecursiveSync(path.join(deliverySrc, 'app/profile'), deliveryProfileDest);
-  }
+  // Sync additional delivery routes: profile, stores, history, earnings, payout
+  ['profile', 'stores', 'history', 'earnings', 'payout'].forEach((route) => {
+    const dest = path.join(webAppDir, `delivery/${route}`);
+    removeRecursiveSync(dest);
+    const srcPath = path.join(deliverySrc, `app/${route}`);
+    if (fs.existsSync(srcPath)) {
+      copyRecursiveSync(srcPath, dest);
+    }
+  });
 
   // 7. Clean and Copy Admin app specific pages under /admin/
   console.log(`Syncing admin-app pages...`);
