@@ -20,11 +20,11 @@ export class ApiClient {
       } else {
         const isNextDev = window.location.port === '3000' || window.location.port === '3001' || window.location.port === '3002' || window.location.port === '3003';
         const isCapacitor = window.location.hostname === 'localhost' && (window.location.port === '' || window.location.protocol.startsWith('capacitor'));
-        
+
         if (isNextDev) {
           finalBaseURL = 'http://localhost:8000/api/v1';
         } else if (isCapacitor) {
-          finalBaseURL = 'http://10.0.2.2/api/v1';
+          finalBaseURL = 'https://sbjiwala.qzz.io/api/v1';
         }
       }
     }
@@ -71,7 +71,7 @@ export class ApiClient {
         if (!this.accessToken && typeof window !== 'undefined') {
           this.loadTokensFromStorage();
         }
-        
+
         if (this.accessToken) {
           config.headers.Authorization = `Bearer ${this.accessToken}`;
         }
@@ -79,7 +79,7 @@ export class ApiClient {
         if (config.data && typeof config.data === 'object' && '_rawPayload' in config.data) {
           (config as any)._rawPayload = (config.data as any)._rawPayload;
         }
-        
+
         return config;
       },
       (error) => Promise.reject(error)
@@ -92,12 +92,12 @@ export class ApiClient {
         const originalRequest = error.config;
 
         // Check for E2EE decryption failure to retry with plain payload
-        if (error.response?.status === 400 && 
-            error.response?.data?.detail === "E2EE payload decryption failed" && 
-            originalRequest &&
-            (originalRequest as any)._rawPayload && 
-            !(originalRequest as any)._retryE2EE) {
-          
+        if (error.response?.status === 400 &&
+          error.response?.data?.detail === "E2EE payload decryption failed" &&
+          originalRequest &&
+          (originalRequest as any)._rawPayload &&
+          !(originalRequest as any)._retryE2EE) {
+
           (originalRequest as any)._retryE2EE = true;
           originalRequest.data = JSON.stringify((originalRequest as any)._rawPayload);
           originalRequest.headers['Content-Type'] = 'application/json';
@@ -106,7 +106,7 @@ export class ApiClient {
 
         if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
           originalRequest._retry = true;
-          
+
           if (!this.refreshToken && typeof window !== 'undefined') {
             this.loadTokensFromStorage();
           }
@@ -117,12 +117,12 @@ export class ApiClient {
               const res = await axios.post<APIResponse>(`${this.client.defaults.baseURL}/auth/refresh`, {
                 refresh_token: this.refreshToken,
               });
-              
+
               if (res.data.success && res.data.meta) {
                 const newAccess = res.data.meta.access_token;
                 const newRefresh = res.data.meta.refresh_token;
                 this.setTokens(newAccess, newRefresh);
-                
+
                 // Retry original request
                 originalRequest.headers.Authorization = `Bearer ${newAccess}`;
                 return this.client(originalRequest);
