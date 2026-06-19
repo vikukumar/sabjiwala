@@ -359,6 +359,7 @@ class ProductResponse(BaseModel):
     is_featured: bool
     tags: Optional[List[str]] = None
     attributes: Optional[dict] = None
+    stock: Optional[float] = None
     created_at: datetime
 
     class Config:

@@ -23,6 +23,13 @@ const syncGuestCart = async () => {
     const cart = JSON.parse(raw);
     if (!cart.items || cart.items.length === 0) return;
 
+    // Clear backend cart first so guest cart overwrites it
+    try {
+      await api.delete("/cart");
+    } catch (clearErr) {
+      console.warn("Failed to clear backend cart prior to sync:", clearErr);
+    }
+
     for (const item of cart.items) {
       await api.post("/cart/items", {
         product_id: item.product_id,

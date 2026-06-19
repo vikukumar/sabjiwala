@@ -51,6 +51,13 @@ function CartItemRow({ item, isGuest, onUpdateGuestQty }: CartItemRowProps) {
   const price = isGuest ? rawPrice : Math.round(rawPrice * 1.045 * 100) / 100;
 
   const handleQtyChange = (newQty: number) => {
+    const stock = item.stock ?? item.attributes?.stock ?? 0;
+    const isUnlimited = item.is_unlimited ?? item.attributes?.is_unlimited ?? false;
+    if (newQty > item.quantity && !isUnlimited && newQty > stock) {
+      showError("Insufficient stock", `Only ${stock} items available in stock.`);
+      return;
+    }
+
     if (isGuest && onUpdateGuestQty) {
       onUpdateGuestQty(item.product_id, newQty);
     } else {
@@ -92,11 +99,12 @@ function CartItemRow({ item, isGuest, onUpdateGuestQty }: CartItemRowProps) {
 }
 
 // ==================== COUPON SECTION ====================
-function CouponSection({ onApply, appliedCoupon, onRemove, disabled }: {
+function CouponSection({ onApply, appliedCoupon, onRemove, disabled, vendorId }: {
   onApply: (code: string, discount: number) => void;
   appliedCoupon: { code: string; discount: number } | null;
   onRemove: () => void;
   disabled?: boolean;
+  vendorId: string;
 }) {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -107,14 +115,31 @@ function CouponSection({ onApply, appliedCoupon, onRemove, disabled }: {
       showError("Guest Mode", "Please login to apply coupon discounts");
       return;
     }
-    if (!code.trim()) return;
+    if (!code.trim() || !vendorId) return;
     setLoading(true);
     try {
       const res = await api.post("/coupons/validate", { code: code.trim().toUpperCase() });
+      await api.post("/cart/apply-coupon", null, {
+        params: { code: code.trim().toUpperCase(), vendor_id: vendorId }
+      });
       onApply(code.trim().toUpperCase(), res.data?.discount_amount || 0);
       success("Coupon applied! 🎉", `You save ₹${res.data?.discount_amount}`);
     } catch (err: any) {
       showError("Invalid coupon", err.response?.data?.detail || "This coupon cannot be applied");
+    } finally { setLoading(false); }
+  };
+
+  const remove = async () => {
+    if (!vendorId) return;
+    setLoading(true);
+    try {
+      await api.post("/cart/apply-coupon", null, {
+        params: { code: "", vendor_id: vendorId }
+      });
+      onRemove();
+      success("Coupon removed");
+    } catch (err: any) {
+      showError("Failed to remove coupon", err.response?.data?.detail || err.message);
     } finally { setLoading(false); }
   };
 
@@ -128,8 +153,8 @@ function CouponSection({ onApply, appliedCoupon, onRemove, disabled }: {
             <p className="text-xs text-emerald-600 dark:text-emerald-500">You save ₹{appliedCoupon.discount}</p>
           </div>
         </div>
-        <button onClick={onRemove} className="text-xs font-bold text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20">
-          Remove
+        <button onClick={remove} disabled={loading} className="text-xs font-bold text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 disabled:opacity-50 cursor-pointer">
+          {loading ? "..." : "Remove"}
         </button>
       </div>
     );
@@ -195,6 +220,17 @@ export default function CartPage() {
     },
     enabled: typeof window !== "undefined" && !isGuest && !!items.length,
   });
+
+  useEffect(() => {
+    if (serverCart?.coupon_code && previewData) {
+      setAppliedCoupon({
+        code: serverCart.coupon_code,
+        discount: previewData.coupon_discount || 0
+      });
+    } else if (serverCart && !serverCart.coupon_code) {
+      setAppliedCoupon(null);
+    }
+  }, [serverCart, previewData]);
 
   const subtotal = previewData ? previewData.subtotal : (isGuest ? localCart?.subtotal || 0 : (serverCart?.subtotal || 0) * 1.045);
   const freeDeliveryAbove = previewData?.free_delivery_above ?? 199;
@@ -323,6 +359,7 @@ export default function CartPage() {
               onApply={(code, disc) => setAppliedCoupon({ code, discount: disc })}
               onRemove={() => setAppliedCoupon(null)}
               disabled={isGuest}
+              vendorId={vendorId}
             />
             {!isGuest && (
               <Link href={resolveLink("/coupons")} className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">

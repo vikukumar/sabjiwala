@@ -4,7 +4,7 @@ Cart management endpoints — add/remove items, apply coupons, get totals.
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -70,6 +70,21 @@ async def get_cart(
             if product and "image_emoji" not in product_attributes:
                 product_attributes["image_emoji"] = product.primary_image_url or "🥬"
                 
+            # Query stock
+            inv_query = select(Inventory).where(
+                Inventory.product_id == item.product_id,
+                Inventory.vendor_id == item.vendor_id,
+                Inventory.is_deleted == False
+            )
+            inv_res = await db.execute(inv_query)
+            inv = inv_res.scalars().first()
+            
+            stock_qty = float(inv.quantity) if inv else 0.0
+            is_unlimited = inv.is_unlimited if inv else False
+            
+            product_attributes["stock"] = stock_qty
+            product_attributes["is_unlimited"] = is_unlimited
+            
             all_items.append({
                 "id": str(item.id),
                 "product_id": str(item.product_id),
@@ -82,6 +97,8 @@ async def get_cart(
                 "name": product.name if product else "Unknown Product",
                 "unit": str(product.unit.value) if product and hasattr(product.unit, 'value') else (str(product.unit) if product else "kg"),
                 "price": float(item.unit_price),
+                "stock": stock_qty,
+                "is_unlimited": is_unlimited,
                 "attributes": product_attributes,
             })
 
@@ -152,8 +169,6 @@ async def add_to_cart(
     )
     inv_result = await db.execute(inv_query)
     inventory = inv_result.scalars().first()
-    if inventory and not inventory.is_unlimited and inventory.quantity < body.quantity:
-        raise HTTPException(status_code=400, detail="Insufficient stock")
 
     # Enforce single-vendor cart: Check if there are other active carts with items
     other_carts_res = await db.execute(
@@ -200,6 +215,17 @@ async def add_to_cart(
     cart_item = existing.scalars().first()
 
     if cart_item:
+        target_qty = body.quantity if cart_item.is_deleted else (cart_item.quantity + body.quantity)
+    else:
+        target_qty = body.quantity
+
+    if inventory and not inventory.is_unlimited and inventory.quantity < target_qty:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient stock. Only {inventory.quantity} items available."
+        )
+
+    if cart_item:
         if cart_item.is_deleted:
             cart_item.is_deleted = False
             cart_item.quantity = body.quantity
@@ -241,6 +267,19 @@ async def update_cart_item(
     if body.quantity <= 0:
         item.soft_delete(current_user["user_id"])
     else:
+        # Check stock
+        inv_query = select(Inventory).where(
+            Inventory.product_id == item.product_id,
+            Inventory.vendor_id == item.vendor_id,
+            Inventory.is_deleted == False,
+        )
+        inv_result = await db.execute(inv_query)
+        inventory = inv_result.scalars().first()
+        if inventory and not inventory.is_unlimited and inventory.quantity < body.quantity:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient stock. Only {inventory.quantity} items available."
+            )
         item.quantity = body.quantity
 
     await db.flush()
@@ -293,12 +332,12 @@ async def clear_cart(
 
 @router.post("/apply-coupon", response_model=APIResponse)
 async def apply_coupon_to_cart(
-    code: str,
     vendor_id: UUID,
+    code: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Apply a coupon code to the cart."""
+    """Apply a coupon code to the cart. If code is empty, clear the coupon."""
     result = await db.execute(
         select(Cart).where(Cart.user_id == current_user["user_id"], Cart.vendor_id == vendor_id, Cart.is_deleted == False)
     )
@@ -306,15 +345,20 @@ async def apply_coupon_to_cart(
     if not cart:
         raise HTTPException(status_code=404, detail="Cart not found")
 
+    if not code or not code.strip():
+        cart.coupon_code = None
+        await db.flush()
+        return APIResponse(success=True, message="Coupon removed")
+
     # Validate coupon
     from app.services.coupon_engine import CouponEngine
     coupon_engine = CouponEngine(db)
-    validation = await coupon_engine.validate_coupon(code, current_user["user_id"], vendor_id)
+    validation = await coupon_engine.validate_coupon(code.strip().upper(), current_user["user_id"], vendor_id)
 
     if not validation["valid"]:
         raise HTTPException(status_code=400, detail=validation["message"])
 
-    cart.coupon_code = code
+    cart.coupon_code = code.strip().upper()
     await db.flush()
 
     return APIResponse(success=True, message="Coupon applied", meta=validation)

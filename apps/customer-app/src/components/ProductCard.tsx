@@ -110,6 +110,14 @@ export default function ProductCard({ product }: { product: any }) {
     const existing = current.items.find((i: any) => i.product_id === product.id);
     const vendorId = targetVendorId;
 
+    const stock = product.stock ?? product.attributes?.quantity ?? 0;
+    const isUnlimited = product.attributes?.is_unlimited ?? false;
+    const existingQty = existing ? existing.quantity : 0;
+    if (!isUnlimited && existingQty + 1 > stock) {
+      showError("Out of stock", `Only ${stock} items available`);
+      return;
+    }
+
     if (existing) {
       existing.quantity += 1;
     } else {
@@ -137,6 +145,13 @@ export default function ProductCard({ product }: { product: any }) {
     const current = getLocalGuestCart();
     const idx = current.items.findIndex((i: any) => i.product_id === product.id);
     if (idx === -1) return;
+
+    const stock = product.stock ?? product.attributes?.quantity ?? 0;
+    const isUnlimited = product.attributes?.is_unlimited ?? false;
+    if (newQty > current.items[idx].quantity && !isUnlimited && newQty > stock) {
+      showError("Insufficient stock", `Only ${stock} items available in stock.`);
+      return;
+    }
 
     if (newQty <= 0) {
       current.items.splice(idx, 1);
@@ -192,6 +207,15 @@ export default function ProductCard({ product }: { product: any }) {
     if (differentVendor) {
       setShowClearCartModal(true);
     } else {
+      const stock = product.stock ?? product.attributes?.quantity ?? 0;
+      const isUnlimited = product.attributes?.is_unlimited ?? false;
+      const existingItem = currentItems?.find((i: any) => i.product_id === product.id);
+      const existingQty = existingItem ? existingItem.quantity : 0;
+      if (!isUnlimited && existingQty + 1 > stock) {
+        showError("Insufficient stock", `Only ${stock} items available in stock.`);
+        return;
+      }
+
       if (isGuest) {
         handleGuestAdd();
       } else {
@@ -295,11 +319,20 @@ export default function ProductCard({ product }: { product: any }) {
               </button>
               <span className="px-1 text-xs font-black min-w-[16px] text-center select-none">{cartItem.quantity}</span>
               <button
-                onClick={() =>
-                  isGuest
-                    ? handleGuestUpdateQty(cartItem.quantity + 1)
-                    : updateQty.mutate({ itemId: cartItem.id, qty: cartItem.quantity + 1 })
-                }
+                onClick={() => {
+                  const targetQty = cartItem.quantity + 1;
+                  const stock = product.stock ?? product.attributes?.quantity ?? 0;
+                  const isUnlimited = product.attributes?.is_unlimited ?? false;
+                  if (!isUnlimited && targetQty > stock) {
+                    showError("Insufficient stock", `Only ${stock} items available in stock.`);
+                    return;
+                  }
+                  if (isGuest) {
+                    handleGuestUpdateQty(targetQty);
+                  } else {
+                    updateQty.mutate({ itemId: cartItem.id, qty: targetQty });
+                  }
+                }}
                 className="w-5.5 h-5.5 flex items-center justify-center rounded-lg hover:bg-emerald-700 active:bg-emerald-800 transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />

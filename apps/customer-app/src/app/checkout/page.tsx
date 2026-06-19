@@ -424,12 +424,15 @@ export default function CheckoutPage() {
   });
 
   const { data: previewData } = useQuery<any>({
-    queryKey: ["orderPreview", selectedAddress, paymentMethod, useWallet, cartData?.items],
+    queryKey: ["orderPreview", selectedAddress, paymentMethod, useWallet, cartData?.items, cartData?.coupon_code],
     queryFn: async () => {
       if (!cartData?.items?.length) return null;
       const vendorId = cartData.items[0]?.vendor_id;
       const res = await api.post("/orders/preview", {
-        address_id: selectedAddress || null, payment_method: paymentMethod, use_wallet: useWallet,
+        address_id: selectedAddress || null,
+        payment_method: paymentMethod,
+        use_wallet: useWallet,
+        coupon_code: cartData?.coupon_code || null,
       }, { params: { vendor_id: vendorId } });
       return res.data;
     },
@@ -444,7 +447,8 @@ export default function CheckoutPage() {
   }, [addresses, selectedAddress]);
 
   const subtotal = previewData ? previewData.subtotal : ((cartData?.subtotal || 0) * 1.045);
-  const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= 199 ? 0 : 20);
+  const freeDeliveryAbove = previewData?.free_delivery_above ?? 199;
+  const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= freeDeliveryAbove ? 0 : 20);
   const taxAmount = previewData ? previewData.tax_amount : (subtotal * 0.05);
   const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
   const couponDiscount = previewData ? previewData.coupon_discount : 0.0;
@@ -508,6 +512,7 @@ export default function CheckoutPage() {
         address_id: selectedAddress,
         payment_method: backendPaymentMethod,
         use_wallet: useWallet,
+        coupon_code: cartData?.coupon_code || null,
       }, { params: { vendor_id: vendorId } });
     },
     onSuccess: async (res) => {

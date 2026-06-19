@@ -131,6 +131,14 @@ export default function ProductDetailClient() {
     const existing = current.items.find((i: any) => i.product_id === id);
     const vendorId = product?.attributes?.vendor_id || product?.vendor_id;
 
+    const stock = product.stock ?? product.attributes?.quantity ?? 0;
+    const isUnlimited = product.attributes?.is_unlimited ?? false;
+    const existingQty = existing ? existing.quantity : 0;
+    if (!isUnlimited && existingQty + 1 > stock) {
+      showError("Out of stock", `Only ${stock} items available`);
+      return;
+    }
+
     if (existing) {
       existing.quantity += 1;
     } else {
@@ -160,6 +168,13 @@ export default function ProductDetailClient() {
     const current = getLocalGuestCart();
     const idx = current.items.findIndex((i: any) => i.product_id === id);
     if (idx === -1) return;
+
+    const stock = product.stock ?? product.attributes?.quantity ?? 0;
+    const isUnlimited = product.attributes?.is_unlimited ?? false;
+    if (newQty > current.items[idx].quantity && !isUnlimited && newQty > stock) {
+      showError("Insufficient stock", `Only ${stock} items available in stock.`);
+      return;
+    }
 
     if (newQty <= 0) {
       current.items.splice(idx, 1);
@@ -338,7 +353,20 @@ export default function ProductDetailClient() {
                 </button>
                 <span className="text-lg font-black">{cartItem.quantity}</span>
                 <button
-                  onClick={() => isGuest ? handleGuestUpdateQty(cartItem.quantity + 1) : updateQty.mutate({ itemId: cartItem.id, qty: cartItem.quantity + 1 })}
+                  onClick={() => {
+                    const targetQty = cartItem.quantity + 1;
+                    const stock = product.stock ?? product.attributes?.quantity ?? 0;
+                    const isUnlimited = product.attributes?.is_unlimited ?? false;
+                    if (!isUnlimited && targetQty > stock) {
+                      showError("Insufficient stock", `Only ${stock} items available in stock.`);
+                      return;
+                    }
+                    if (isGuest) {
+                      handleGuestUpdateQty(targetQty);
+                    } else {
+                      updateQty.mutate({ itemId: cartItem.id, qty: targetQty });
+                    }
+                  }}
                   className="w-8 h-8 flex items-center justify-center bg-emerald-700 hover:bg-emerald-800 rounded-xl transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
@@ -349,7 +377,20 @@ export default function ProductDetailClient() {
                 fullWidth
                 size="lg"
                 loading={!isGuest && addToCart.isPending}
-                onClick={() => isGuest ? handleGuestAdd() : addToCart.mutate()}
+                onClick={() => {
+                  const stock = product.stock ?? product.attributes?.quantity ?? 0;
+                  const isUnlimited = product.attributes?.is_unlimited ?? false;
+                  const existingQty = cartItem ? cartItem.quantity : 0;
+                  if (!isUnlimited && existingQty + 1 > stock) {
+                    showError("Insufficient stock", `Only ${stock} items available in stock.`);
+                    return;
+                  }
+                  if (isGuest) {
+                    handleGuestAdd();
+                  } else {
+                    addToCart.mutate();
+                  }
+                }}
                 leftIcon={<ShoppingCart className="w-5 h-5" />}
                 className="rounded-2xl shadow-lg cursor-pointer"
               >

@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import {
-  DollarSign, ShoppingBag, Award, RefreshCw, Clock, MapPin, Loader2, Navigation, Save
+  DollarSign, ShoppingBag, Award, RefreshCw, Clock, MapPin, Loader2, Navigation, Save,
+  TrendingUp, BarChart3, Check, X, Package, Truck, CheckCircle2
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
@@ -82,6 +83,33 @@ export default function VendorDashboard() {
     queryFn: async () => {
       const res = await api.get("/orders", { params: { page_size: 5 } });
       return res.data || [];
+    }
+  });
+
+  const { data: analyticsData, isLoading: analyticsLoading } = useQuery<any>({
+    queryKey: ["vendorAnalytics"],
+    queryFn: async () => {
+      const res = await api.get("/vendors/me/analytics", { params: { period: "7d" } });
+      return res.data;
+    }
+  });
+
+  const updateOrderStatus = useMutation({
+    mutationFn: async ({ orderId, status, notes, deliveryOption }: { orderId: string, status: string, notes?: string, deliveryOption?: string }) => {
+      return api.patch(`/orders/${orderId}/status`, {
+        status,
+        notes: notes || `Updated to ${status} via Dashboard`,
+        delivery_option: deliveryOption || "auto"
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorRecentOrders"] });
+      queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
+      queryClient.invalidateQueries({ queryKey: ["vendorAnalytics"] });
+      success("Order status updated successfully!");
+    },
+    onError: (err: any) => {
+      showError("Status Update Failed", err.response?.data?.detail || err.message);
     }
   });
 
@@ -356,150 +384,191 @@ export default function VendorDashboard() {
         </div>
       </div>
 
-      {/* Main Grid: Service Area & Rules */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Service Area Map */}
-        <div className="lg:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-3xl p-6 shadow-sm space-y-4">
-          <div className="flex justify-between items-center flex-wrap gap-2">
+      {/* Analytics Trend Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Sales Trend Chart */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Store Service Area Map
+              <h3 className="text-sm font-black text-slate-800 dark:text-slate-105 flex items-center gap-1.5">
+                <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Sales Trend (Last 7 Days)
               </h3>
-              <p className="text-[10px] text-slate-500">Specify center point coordinates and active range radius on the map.</p>
+              <p className="text-[10px] text-slate-500">Daily store earnings trend overview</p>
             </div>
-            <button
-              onClick={() => {
-                if (typeof window !== "undefined" && navigator.geolocation) {
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                      setCenterLat(pos.coords.latitude);
-                      setCenterLng(pos.coords.longitude);
-                      success("Store GPS obtained!");
-                    },
-                    () => showError("GPS Access Failed"),
-                    { enableHighAccuracy: true }
-                  );
-                }
-              }}
-              className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-xl text-[10px] font-black border border-blue-150 dark:border-blue-900/50 flex items-center gap-1 cursor-pointer transition-all uppercase"
-            >
-              <Navigation className="w-3.5 h-3.5" /> GPS Locate Store
-            </button>
+            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 px-2.5 py-1 rounded-full">
+              ₹{(analyticsData?.revenue_trend || []).reduce((sum: number, d: any) => sum + (d.revenue || 0), 0).toFixed(2)} Total
+            </span>
           </div>
 
-          <div ref={mapContainerRef} className="h-[300px] rounded-2xl border border-slate-205 dark:border-slate-800 overflow-hidden relative shadow-inner" style={{ zIndex: 1 }} />
+          <div className="relative w-full h-[200px] flex items-center justify-center">
+            {analyticsLoading ? (
+              <div className="flex items-center gap-2 text-slate-450"><Loader2 className="w-4 h-4 animate-spin" /> Loading trend...</div>
+            ) : (
+              (() => {
+                const trendData = analyticsData?.revenue_trend || [
+                  { date: "Mon", revenue: 0 },
+                  { date: "Tue", revenue: 0 },
+                  { date: "Wed", revenue: 0 },
+                  { date: "Thu", revenue: 0 },
+                  { date: "Fri", revenue: 0 },
+                  { date: "Sat", revenue: 0 },
+                  { date: "Sun", revenue: 0 }
+                ];
+                const maxRevenue = Math.max(...trendData.map((d: any) => d.revenue || 0), 100);
+                const revenuePoints = trendData.map((d: any, i: number) => {
+                  const x = 40 + i * (460 - 40) / Math.max(1, trendData.length - 1);
+                  const y = 170 - ((d.revenue || 0) / maxRevenue) * (170 - 30);
+                  return { x, y, val: d.revenue || 0, date: d.date };
+                });
+                
+                const linePath = revenuePoints.reduce((acc: string, p: any, i: number) => {
+                  return acc + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`);
+                }, "");
+                const areaPath = linePath ? (linePath + ` L ${revenuePoints[revenuePoints.length - 1].x} 170 L ${revenuePoints[0].x} 170 Z`) : "";
 
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 dark:bg-slate-950/40 p-3 rounded-2xl border border-slate-150 dark:border-slate-800 text-[10px]">
-            <div className="flex gap-4 font-mono text-slate-500">
-              <div>Lat: <span className="font-bold text-slate-800 dark:text-slate-100">{centerLat.toFixed(6)}</span></div>
-              <div>Lng: <span className="font-bold text-slate-800 dark:text-slate-100">{centerLng.toFixed(6)}</span></div>
-            </div>
-            <div className="flex gap-2 items-center">
-              <span className="font-bold text-slate-500">Radius:</span>
-              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{radius.toFixed(1)} km</span>
-            </div>
+                const formatTrendDate = (dateStr: string) => {
+                  try {
+                    const d = new Date(dateStr);
+                    if (isNaN(d.getTime())) return dateStr;
+                    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+                  } catch { return dateStr; }
+                };
+
+                return (
+                  <svg viewBox="0 0 500 200" className="w-full h-full overflow-visible">
+                    <defs>
+                      <linearGradient id="salesAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+                    {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
+                      const y = 30 + p * (170 - 30);
+                      return (
+                        <line key={i} x1="40" y1={y} x2="460" y2={y} stroke="currentColor" className="text-slate-100 dark:text-slate-800" strokeDasharray="3 3" />
+                      );
+                    })}
+                    <text x="35" y="35" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">₹{Math.round(maxRevenue)}</text>
+                    <text x="35" y="100" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">₹{Math.round(maxRevenue/2)}</text>
+                    <text x="35" y="170" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">₹0</text>
+
+                    {areaPath && <path d={areaPath} fill="url(#salesAreaGrad)" />}
+                    {linePath && <path d={linePath} fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />}
+
+                    {revenuePoints.map((p: any, i: number) => (
+                      <g key={i} className="group/dot cursor-pointer">
+                        <circle cx={p.x} cy={p.y} r="5" fill="#10b981" stroke="#ffffff" strokeWidth="2" className="transition-all group-hover/dot:r-7" />
+                        <g className="opacity-0 group-hover/dot:opacity-100 transition-opacity duration-200 pointer-events-none">
+                          <rect x={Math.max(10, p.x - 45)} y={p.y - 35} width="90" height="24" rx="6" fill="#1e293b" />
+                          <text x={p.x} y={p.y - 20} textAnchor="middle" fill="#ffffff" className="text-[9px] font-bold">₹{p.val.toFixed(0)}</text>
+                        </g>
+                      </g>
+                    ))}
+
+                    {revenuePoints.map((p: any, i: number) => (
+                      <text key={i} x={p.x} y="190" textAnchor="middle" className="fill-slate-450 dark:fill-slate-500 text-[9px] font-bold">
+                        {formatTrendDate(p.date)}
+                      </text>
+                    ))}
+                  </svg>
+                );
+              })()
+            )}
           </div>
         </div>
 
-        {/* Range and Pricing Rules */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-3xl p-6 shadow-sm space-y-4">
-            <h4 className="text-xs font-black text-slate-800 dark:text-slate-100">Service Range Radius</h4>
-            <div className="space-y-2">
-              <input
-                type="range"
-                min="0.5"
-                max="15.0"
-                step="0.5"
-                value={radius}
-                onChange={(e) => setRadius(parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-600"
-              />
+        {/* Orders Trend Chart */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-sm font-black text-slate-800 dark:text-slate-105 flex items-center gap-1.5">
+                <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Orders Trend (Last 7 Days)
+              </h3>
+              <p className="text-[10px] text-slate-500">Daily processed orders volume overview</p>
             </div>
-            <button
-              onClick={() => saveServiceAreaMutation.mutate()}
-              disabled={saveServiceAreaMutation.isPending}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
-            >
-              {saveServiceAreaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Save Active Range
-            </button>
+            <span className="text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 px-2.5 py-1 rounded-full">
+              {(analyticsData?.orders_trend || []).reduce((sum: number, d: any) => sum + (d.orders || 0), 0)} Orders
+            </span>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-3xl p-6 shadow-sm space-y-4">
-            <h4 className="text-xs font-black text-slate-800 dark:text-slate-100">Delivery Billing Rules</h4>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="space-y-1">
-                <label className="font-bold text-slate-500 uppercase">Base Charge (₹)</label>
-                <input
-                  type="number"
-                  value={baseCharge}
-                  onChange={(e) => setBaseCharge(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-900 dark:text-white"
-                />
-              </div>
+          <div className="relative w-full h-[200px] flex items-center justify-center">
+            {analyticsLoading ? (
+              <div className="flex items-center gap-2 text-slate-450"><Loader2 className="w-4 h-4 animate-spin" /> Loading trend...</div>
+            ) : (
+              (() => {
+                const ordersData = analyticsData?.orders_trend || [
+                  { date: "Mon", orders: 0 },
+                  { date: "Tue", orders: 0 },
+                  { date: "Wed", orders: 0 },
+                  { date: "Thu", orders: 0 },
+                  { date: "Fri", orders: 0 },
+                  { date: "Sat", orders: 0 },
+                  { date: "Sun", orders: 0 }
+                ];
+                const maxOrders = Math.max(...ordersData.map((d: any) => d.orders || 0), 5);
 
-              <div className="space-y-1">
-                <label className="font-bold text-slate-500 uppercase">Per-KM Fee (₹)</label>
-                <input
-                  type="number"
-                  value={perKmCharge}
-                  onChange={(e) => setPerKmCharge(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-900 dark:text-white"
-                />
-              </div>
+                const formatTrendDate = (dateStr: string) => {
+                  try {
+                    const d = new Date(dateStr);
+                    if (isNaN(d.getTime())) return dateStr;
+                    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+                  } catch { return dateStr; }
+                };
 
-              <div className="space-y-1">
-                <label className="font-bold text-slate-500 uppercase">Min Order (₹)</label>
-                <input
-                  type="number"
-                  value={minOrder}
-                  onChange={(e) => setMinOrder(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-900 dark:text-white"
-                />
-              </div>
+                return (
+                  <svg viewBox="0 0 500 200" className="w-full h-full overflow-visible">
+                    <defs>
+                      <linearGradient id="ordersBarGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3b82f6" />
+                        <stop offset="100%" stopColor="#1d4ed8" />
+                      </linearGradient>
+                    </defs>
+                    {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
+                      const y = 30 + p * (170 - 30);
+                      return (
+                        <line key={i} x1="40" y1={y} x2="460" y2={y} stroke="currentColor" className="text-slate-100 dark:text-slate-800" strokeDasharray="3 3" />
+                      );
+                    })}
+                    <text x="35" y="35" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">{Math.round(maxOrders)}</text>
+                    <text x="35" y="100" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">{Math.round(maxOrders/2)}</text>
+                    <text x="35" y="170" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">0</text>
 
-              <div className="space-y-1">
-                <label className="font-bold text-slate-500 uppercase">Free Delivery Above (₹)</label>
-                <input
-                  type="number"
-                  placeholder="Optional"
-                  value={freeAbove}
-                  onChange={(e) => setFreeAbove(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-900 dark:text-white"
-                />
-              </div>
+                    {ordersData.map((d: any, i: number) => {
+                      const barWidth = 24;
+                      const x = 50 + i * (450 - 50) / Math.max(1, ordersData.length - 1) - barWidth / 2;
+                      const barHeight = ((d.orders || 0) / maxOrders) * 140;
+                      const y = 170 - barHeight;
+                      return (
+                        <g key={i} className="group/bar cursor-pointer">
+                          <rect
+                            x={x}
+                            y={y}
+                            width={barWidth}
+                            height={barHeight}
+                            rx={5}
+                            fill="url(#ordersBarGrad)"
+                            className="transition-all group-hover/bar:opacity-85"
+                          />
+                          <g className="opacity-0 group-hover/bar:opacity-100 transition-opacity duration-200 pointer-events-none">
+                            <rect x={Math.max(10, x - 28)} y={y - 30} width="80" height="22" rx="6" fill="#1e293b" />
+                            <text x={x + barWidth/2} y={y - 16} textAnchor="middle" fill="#ffffff" className="text-[9px] font-bold">{d.orders} orders</text>
+                          </g>
+                        </g>
+                      );
+                    })}
 
-              <div className="space-y-1 col-span-2">
-                <label className="font-bold text-slate-500 uppercase">Packaging Fee (₹)</label>
-                <input
-                  type="number"
-                  value={packagingFee}
-                  onChange={(e) => setPackagingFee(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div className="space-y-1 col-span-2">
-                <label className="font-bold text-slate-500 uppercase">Exempt Platform Fee Above Subtotal (₹)</label>
-                <input
-                  type="number"
-                  placeholder="e.g. 500 (Free platform fee above ₹500)"
-                  value={freePlatformFeeAbove}
-                  onChange={(e) => setFreePlatformFeeAbove(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-slate-900 dark:text-white"
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={() => saveDeliveryRulesMutation.mutate()}
-              disabled={saveDeliveryRulesMutation.isPending}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
-            >
-              {saveDeliveryRulesMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Save Delivery Rules
-            </button>
+                    {ordersData.map((d: any, i: number) => {
+                      const x = 50 + i * (450 - 50) / Math.max(1, ordersData.length - 1);
+                      return (
+                        <text key={i} x={x} y="190" textAnchor="middle" className="fill-slate-450 dark:fill-slate-500 text-[9px] font-bold">
+                          {formatTrendDate(d.date)}
+                        </text>
+                      );
+                    })}
+                  </svg>
+                );
+              })()
+            )}
           </div>
         </div>
       </div>
@@ -588,17 +657,72 @@ export default function VendorDashboard() {
                     <h5 className="font-extrabold text-slate-800 dark:text-slate-150">#Order {order.order_number}</h5>
                     <p className="text-[10px] text-slate-500 mt-0.5">₹{order.total_amount} • {order.payment_method.toUpperCase()}</p>
                   </div>
-                  <span className={`inline-block text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                    order.status === "pending"
-                      ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
-                      : order.status === "confirmed"
-                        ? "bg-purple-100 dark:bg-purple-955/40 text-purple-800 dark:text-purple-400"
-                        : order.status === "accepted"
-                          ? "bg-teal-100 dark:bg-teal-955/40 text-teal-800 dark:text-teal-400"
-                          : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
-                  }`}>
-                    {order.status}
-                  </span>
+                  
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-block text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                      order.status === "pending"
+                        ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
+                        : order.status === "confirmed"
+                          ? "bg-purple-100 dark:bg-purple-955/40 text-purple-800 dark:text-purple-400"
+                          : order.status === "accepted"
+                            ? "bg-teal-100 dark:bg-teal-955/40 text-teal-800 dark:text-teal-400"
+                            : order.status === "packed"
+                              ? "bg-blue-100 dark:bg-blue-955/40 text-blue-800 dark:text-blue-400"
+                              : order.status === "out_for_delivery"
+                                ? "bg-orange-100 dark:bg-orange-955/40 text-orange-850 dark:text-orange-400"
+                                : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
+                    }`}>
+                      {order.status}
+                    </span>
+
+                    <div className="flex gap-1.5">
+                      {(order.status === "pending" || order.status === "confirmed") && (
+                        <>
+                          <button
+                            onClick={() => updateOrderStatus.mutate({ orderId: order.id, status: "accepted", deliveryOption: "auto" })}
+                            disabled={updateOrderStatus.isPending}
+                            className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white dark:bg-emerald-950/30 dark:hover:bg-emerald-600 dark:text-emerald-400 dark:hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-emerald-250 dark:border-emerald-900/40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => updateOrderStatus.mutate({ orderId: order.id, status: "cancelled", notes: "Cancelled by vendor" })}
+                            disabled={updateOrderStatus.isPending}
+                            className="bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white dark:bg-rose-950/30 dark:hover:bg-rose-600 dark:text-rose-400 dark:hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-rose-250 dark:border-rose-900/40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+                      {order.status === "accepted" && (
+                        <button
+                          onClick={() => updateOrderStatus.mutate({ orderId: order.id, status: "packed" })}
+                          disabled={updateOrderStatus.isPending}
+                          className="bg-purple-50 hover:bg-purple-650 text-purple-700 hover:text-white dark:bg-purple-950/30 dark:hover:bg-purple-600 dark:text-purple-450 dark:hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-purple-250 dark:border-purple-900/40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        >
+                          Pack Order
+                        </button>
+                      )}
+                      {order.status === "packed" && (
+                        <button
+                          onClick={() => updateOrderStatus.mutate({ orderId: order.id, status: "out_for_delivery" })}
+                          disabled={updateOrderStatus.isPending}
+                          className="bg-blue-50 hover:bg-blue-650 text-blue-700 hover:text-white dark:bg-blue-950/30 dark:hover:bg-blue-600 dark:text-blue-450 dark:hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-blue-250 dark:border-blue-900/40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        >
+                          Ship / Out
+                        </button>
+                      )}
+                      {order.status === "out_for_delivery" && (
+                        <button
+                          onClick={() => updateOrderStatus.mutate({ orderId: order.id, status: "delivered" })}
+                          disabled={updateOrderStatus.isPending}
+                          className="bg-emerald-50 hover:bg-emerald-655 text-emerald-700 hover:text-white dark:bg-emerald-950/30 dark:hover:bg-emerald-600 dark:text-emerald-450 dark:hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-emerald-250 dark:border-emerald-900/40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        >
+                          Deliver
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))
             ) : (

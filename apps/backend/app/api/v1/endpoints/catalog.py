@@ -4,7 +4,7 @@ Catalog endpoints — customer-facing product browsing, search, filters.
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -349,3 +349,54 @@ async def range_check(
             "covered_vendor_ids": covered_vendor_ids
         }
     )
+
+
+@router.get("/products/{product_id}", response_model=APIResponse[ProductResponse])
+async def get_catalog_product(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get single product details enriched with vendor price and stock for catalog browsing."""
+    result = await db.execute(
+        select(Product)
+        .options(selectinload(Product.variants), selectinload(Product.images), selectinload(Product.category))
+        .where(Product.id == product_id, Product.is_deleted == False, Product.status == ProductStatus.ACTIVE)
+    )
+    product = result.scalars().first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    p_attrs = dict(product.attributes or {})
+
+    # Get inventory entry
+    inv_query = select(Inventory).where(Inventory.product_id == product.id, Inventory.is_deleted == False)
+    inv_res = await db.execute(inv_query)
+    inv = inv_res.scalars().first()
+
+    # Get product price entry
+    price_query = select(ProductPrice).where(
+        ProductPrice.product_id == product.id,
+        ProductPrice.is_active == True
+    )
+    if inv:
+        price_query = price_query.where(ProductPrice.vendor_id == inv.vendor_id)
+        
+    price_res = await db.execute(price_query)
+    price_obj = price_res.scalars().first()
+
+    p_attrs["price"] = float(price_obj.price) if price_obj else 30.0
+
+    if inv:
+        p_attrs["quantity"] = float(inv.quantity)
+        p_attrs["vendor_id"] = str(inv.vendor_id)
+        product.stock = float(inv.quantity)
+    else:
+        p_attrs["quantity"] = 0.0
+        p_attrs["vendor_id"] = ""
+        product.stock = 0.0
+
+    if "image_emoji" not in p_attrs:
+        p_attrs["image_emoji"] = "🥬"
+    product.attributes = p_attrs
+
+    return APIResponse(success=True, data=product)

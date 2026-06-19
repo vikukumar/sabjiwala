@@ -137,3 +137,91 @@ class AnalyticsService:
             "recent_30d_orders": recent_orders,
             "order_status_distribution": status_dist,
         }
+
+    async def get_vendor_analytics(self, vendor_id: UUID, period: str = "30d") -> Dict[str, Any]:
+        """Get vendor analytics trend data for charts."""
+        now = datetime.now(timezone.utc)
+        if period == "7d":
+            days = 7
+        elif period == "30d":
+            days = 30
+        else:
+            days = 30
+            
+        start_date = now - timedelta(days=days)
+        
+        summary_query = select(
+            func.sum(Order.subtotal),
+            func.count(Order.id),
+            func.count(func.distinct(Order.user_id))
+        ).where(
+            Order.vendor_id == vendor_id,
+            Order.status == OrderStatus.DELIVERED,
+            Order.created_at >= start_date,
+            Order.is_deleted == False
+        )
+        res = await self.db.execute(summary_query)
+        total_rev, total_orders, unique_customers = res.first() or (0.0, 0, 0)
+        total_rev = float(total_rev or 0.0)
+        
+        # Daily revenue and orders trends using python date formatting
+        orders_query = select(Order.created_at, Order.subtotal).where(
+            Order.vendor_id == vendor_id,
+            Order.status == OrderStatus.DELIVERED,
+            Order.created_at >= start_date,
+            Order.is_deleted == False
+        ).order_by(Order.created_at.asc())
+        orders_res = await self.db.execute(orders_query)
+        orders_list = orders_res.all()
+        
+        trend_dates = [(now - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(days-1, -1, -1)]
+        rev_trend = {d: 0.0 for d in trend_dates}
+        ord_trend = {d: 0 for d in trend_dates}
+        
+        for created_at, subtotal in orders_list:
+            d_str = created_at.strftime("%Y-%m-%d")
+            if d_str in rev_trend:
+                rev_trend[d_str] += float(subtotal or 0.0)
+                ord_trend[d_str] += 1
+                
+        revenue_trend_list = [{"date": d, "revenue": round(rev_trend[d], 2)} for d in trend_dates]
+        orders_trend_list = [{"date": d, "orders": ord_trend[d]} for d in trend_dates]
+        
+        return {
+            "total_revenue": total_rev,
+            "total_orders": total_orders,
+            "unique_customers": unique_customers,
+            "revenue_trend": revenue_trend_list,
+            "orders_trend": orders_trend_list
+        }
+
+    async def get_top_products(self, vendor_id: UUID, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get vendor's top products by sales volume."""
+        from app.models.order import OrderItem
+        query = select(
+            OrderItem.product_id,
+            OrderItem.product_name,
+            func.sum(OrderItem.quantity).label("units_sold"),
+            func.sum(OrderItem.total_price).label("revenue")
+        ).join(Order, Order.id == OrderItem.order_id).where(
+            Order.vendor_id == vendor_id,
+            Order.status == OrderStatus.DELIVERED,
+            Order.is_deleted == False
+        ).group_by(
+            OrderItem.product_id,
+            OrderItem.product_name
+        ).order_by(
+            func.sum(OrderItem.quantity).desc()
+        ).limit(limit)
+        
+        res = await self.db.execute(query)
+        rows = res.all()
+        return [
+            {
+                "product_id": str(row[0]),
+                "name": row[1],
+                "units_sold": float(row[2]),
+                "revenue": float(row[3])
+            }
+            for row in rows
+        ]
