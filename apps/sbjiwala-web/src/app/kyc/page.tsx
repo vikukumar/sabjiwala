@@ -10,7 +10,7 @@ import { api } from "@sbjiwala/shared";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { resolveVendorLink } from "@/components/VendorLayout";
-import versionInfo from "../version.json";
+import versionInfo from "@/app/version.json";
 
 interface KYCFormData {
   business_name: string;

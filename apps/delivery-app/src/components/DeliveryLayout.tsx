@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from "react";
 import {
   Home, MapPin, History, IndianRupee, ArrowUpRight, User,
-  ToggleLeft, ToggleRight, Loader2, Navigation, AlertCircle
+  ToggleLeft, ToggleRight, Loader2, Navigation, AlertCircle, Menu, X
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
@@ -43,8 +43,21 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
   const [simulationMode, setSimulationMode] = useState(false);
   const [distanceInfo, setDistanceInfo] = useState<string>("Offline");
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const triggeredProximityNotifs = useRef<Record<string, boolean>>({});
+  const simStartPosRef = useRef<[number, number] | null>(null);
+
+  // Capture recent location when entering simulation mode
+  useEffect(() => {
+    if (simulationMode) {
+      if (!simStartPosRef.current) {
+        simStartPosRef.current = globalPos;
+      }
+    } else {
+      simStartPosRef.current = null;
+    }
+  }, [simulationMode, globalPos]);
 
   // 1. Get profile data
   const { data: profile, isLoading: isProfileLoading } = useQuery<any>({
@@ -196,29 +209,64 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
   // GPS Tracking & Simulation
   useEffect(() => {
     if (!isOnline) { setDistanceInfo("Offline"); return; }
-    const activeDelivery = assignments.find((a: any) => a.status === "out_for_delivery");
+    const activeDelivery = assignments.find((a: any) =>
+      ["assigned", "confirmed", "accepted", "packed", "picked", "out_for_delivery"].includes(a.status)
+    );
     if (simulationMode) {
       if (activeDelivery) {
-        const storeLat = 19.0760; const storeLng = 72.9977;
-        const customerLat = activeDelivery.delivery_address?.latitude || 19.0735;
-        const customerLng = activeDelivery.delivery_address?.longitude || 72.9985;
+        const storeLat = activeDelivery.vendor_store?.latitude || 19.0760;
+        const storeLng = activeDelivery.vendor_store?.longitude || 72.9977;
+        const customerLat = activeDelivery.delivery_latitude || activeDelivery.delivery_address?.latitude || 19.0735;
+        const customerLng = activeDelivery.delivery_longitude || activeDelivery.delivery_address?.longitude || 72.9985;
+        const isPicked = ["picked", "out_for_delivery"].includes(activeDelivery.status);
+
+        // Determine simulation start and destination
+        let startLat: number;
+        let startLng: number;
+        let endLat: number;
+        let endLng: number;
+        let routeLabel = "";
+
+        if (!isPicked) {
+          // Travel to Store
+          startLat = simStartPosRef.current?.[0] || 19.0700;
+          startLng = simStartPosRef.current?.[1] || 72.9900;
+          endLat = storeLat;
+          endLng = storeLng;
+          routeLabel = "store";
+        } else {
+          // Travel to Customer
+          startLat = storeLat;
+          startLng = storeLng;
+          endLat = customerLat;
+          endLng = customerLng;
+          routeLabel = "customer";
+        }
+
         let step = 0;
         const interval = setInterval(() => {
           step = (step + 1) % 31;
           const ratio = step / 30;
-          setGlobalPos([storeLat + (customerLat - storeLat) * ratio, storeLng + (customerLng - storeLng) * ratio]);
-          setDistanceInfo(`${(2.4 * (1 - ratio)).toFixed(2)} km left to customer`);
-        }, 3050);
+          const currentLat = startLat + (endLat - startLat) * ratio;
+          const currentLng = startLng + (endLng - startLng) * ratio;
+          setGlobalPos([currentLat, currentLng]);
+
+          const totalDist = getHaversineDistance(startLat, startLng, endLat, endLng);
+          const remainingDist = totalDist * (1 - ratio);
+          setDistanceInfo(`Simulating: ${remainingDist.toFixed(2)} km left to ${routeLabel}`);
+        }, 3000);
         return () => clearInterval(interval);
       } else {
+        const startLat = simStartPosRef.current?.[0] || 19.0760;
+        const startLng = simStartPosRef.current?.[1] || 72.9977;
         const interval = setInterval(() => {
           setGlobalPos(([lat, lng]) => {
             const nl = lat + (Math.random() - 0.5) * 0.0003;
             const nn = lng + (Math.random() - 0.5) * 0.0003;
-            if (Math.abs(nl - 19.0760) > 0.015 || Math.abs(nn - 72.9977) > 0.015) return [19.0760, 72.9977];
+            if (getHaversineDistance(nl, nn, startLat, startLng) > 1.5) return [startLat, startLng];
             return [nl, nn];
           });
-          setDistanceInfo("Simulating GPS...");
+          setDistanceInfo("Simulating GPS (idle)...");
         }, 4000);
         return () => clearInterval(interval);
       }
@@ -360,6 +408,74 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
     return pathname === resolved || pathname.startsWith(resolved + "/");
   };
 
+  const sidebarContent = (
+    <div className="flex flex-col h-full justify-between font-sans text-slate-300">
+      <div className="space-y-6 flex flex-col h-[calc(100%-150px)]">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+            <span className="text-lg">🛵</span>
+          </div>
+          <div>
+            <p className="text-sm font-black text-white leading-none">Sbjiwala</p>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Delivery Partner</p>
+          </div>
+        </div>
+
+        {/* Scrollable sidebar menu area */}
+        <nav className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            const resolvedHref = resolveLink(item.href);
+            return (
+              <button
+                key={item.href}
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  router.push(resolvedHref);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer border-0 bg-transparent ${
+                  active
+                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/10"
+                    : "hover:bg-slate-800 hover:text-white text-slate-400"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div className="space-y-3 flex-shrink-0 pt-4 border-t border-slate-800">
+        <div className="bg-slate-850 rounded-xl p-4 space-y-1.5 border border-slate-800">
+          <p className="text-[10px] text-slate-500 uppercase font-black">Agent Profile</p>
+          <h4 className="text-xs font-bold text-white truncate">
+            {profile?.full_name || profile?.phone || "Delivery Agent"}
+          </h4>
+          <span className={`inline-block text-[9px] font-extrabold px-2 py-0.5 rounded ${
+            profile?.status === "active" ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"
+          }`}>
+            {(profile?.status || "PENDING").toUpperCase()}
+          </span>
+        </div>
+
+        <button
+          onClick={() => {
+            localStorage.removeItem("sw_access_token");
+            localStorage.removeItem("sw_refresh_token");
+            const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+            router.replace(isUnified ? "/delivery/login" : "/login");
+          }}
+          className="w-full flex items-center gap-2 px-4 py-2 rounded-xl text-xs hover:bg-rose-950/20 text-rose-400 hover:text-rose-355 font-bold transition-all cursor-pointer border-0 bg-transparent"
+        >
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <DeliveryContext.Provider value={{
       profile, isOnline, toggleOnline,
@@ -368,50 +484,92 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
       distanceInfo, setDistanceInfo,
       isProfileLoading
     }}>
-      <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 antialiased font-sans flex flex-col transition-colors duration-200">
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="max-w-md mx-auto px-4 h-14 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-                <span className="text-lg">🛵</span>
-              </div>
-              <div>
-                <p className="text-xs font-black text-slate-900 dark:text-white leading-none">Sbjiwala</p>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Delivery Partner</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Theme toggle */}
-              <button onClick={toggleTheme}
-                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:scale-105 transition-all cursor-pointer">
-                <span className="text-sm">{theme === "light" ? "🌙" : "☀️"}</span>
+      <div className="h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 antialiased font-sans flex transition-colors duration-200">
+        {/* Mobile Navigation Drawer */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-50 flex md:hidden font-sans">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setIsMobileMenuOpen(false)}
+            ></div>
+            {/* Drawer Content */}
+            <aside className="relative w-64 max-w-xs bg-slate-900 text-slate-350 flex flex-col p-6 border-r border-slate-800 h-full">
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="absolute top-4 right-4 p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white border-0 bg-transparent"
+              >
+                <X className="w-5 h-5" />
               </button>
-              {/* Online toggle */}
-              <button onClick={() => toggleOnline(!isOnline)}
-                disabled={toggleOnlineMutation.isPending}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                  isOnline
-                    ? "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
-                } disabled:opacity-50`}>
-                {isOnline
-                  ? <><ToggleRight className="w-4 h-4" /> ONLINE</>
-                  : <><ToggleLeft className="w-4 h-4" /> OFFLINE</>
-                }
-              </button>
-            </div>
+              <div className="h-full">
+                {sidebarContent}
+              </div>
+            </aside>
           </div>
-        </header>
+        )}
 
-        {/* Scrollable Content */}
-        <main className="max-w-md w-full mx-auto px-4 py-4 space-y-4 flex-1 pb-24">
-          {children}
-        </main>
+        {/* Desktop Sidebar */}
+        <aside className="w-64 bg-slate-900 text-slate-300 hidden md:flex flex-col p-6 border-r border-slate-850 flex-shrink-0 h-full">
+          {sidebarContent}
+        </aside>
 
-        {/* Bottom Navigation */}
-        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 safe-area-pb">
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          {/* Header */}
+          <header className="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm flex-shrink-0">
+            <div className="w-full px-4 h-14 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                {/* Mobile Menu Toggle Button */}
+                <button
+                  onClick={() => setIsMobileMenuOpen(true)}
+                  className="md:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border-0 bg-transparent cursor-pointer"
+                >
+                  <Menu className="w-6 h-6" />
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center md:hidden">
+                    <span className="text-lg">🛵</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-900 dark:text-white leading-none md:hidden">Sbjiwala</p>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider md:hidden">Delivery Partner</p>
+                    <p className="text-sm font-black text-slate-800 dark:text-white leading-none hidden md:block">Delivery Agent Dashboard</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Theme toggle */}
+                <button onClick={toggleTheme}
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:scale-105 transition-all cursor-pointer border-0">
+                  <span className="text-sm">{theme === "light" ? "🌙" : "☀️"}</span>
+                </button>
+                {/* Online toggle */}
+                <button onClick={() => toggleOnline(!isOnline)}
+                  disabled={toggleOnlineMutation.isPending}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    isOnline
+                      ? "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                  } disabled:opacity-50`}>
+                  {isOnline
+                    ? <><ToggleRight className="w-4 h-4" /> ONLINE</>
+                    : <><ToggleLeft className="w-4 h-4" /> OFFLINE</>
+                  }
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Scrollable Content */}
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 pb-24 md:pb-6">
+            {children}
+          </main>
+        </div>
+
+        {/* Bottom Navigation (Mobile Only) */}
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 safe-area-pb md:hidden">
           <div className="max-w-md mx-auto flex">
             {navItems.map((item) => {
               const active = isActive(item.href);
@@ -421,16 +579,16 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
                 <button
                   key={item.href}
                   onClick={() => router.push(resolvedHref)}
-                  className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 relative transition-colors cursor-pointer ${
+                  className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 relative transition-colors cursor-pointer border-0 bg-transparent ${
                     active
-                      ? "text-emerald-600 dark:text-emerald-400"
+                      ? "text-emerald-600 dark:text-emerald-450"
                       : "text-slate-400 dark:text-slate-500"
                   }`}
                 >
                   <Icon className={`w-5 h-5 ${active ? "stroke-[2.5]" : ""}`} />
                   <span className="text-[9px] font-bold">{item.label}</span>
                   {active && (
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-emerald-600 dark:bg-emerald-455 rounded-full" />
                   )}
                 </button>
               );
@@ -444,10 +602,10 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
             <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
             <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full animate-scale-in text-center space-y-4 shadow-2xl">
               <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/40 rounded-2xl flex items-center justify-center mx-auto">
-                <Navigation className="w-8 h-8 text-rose-600 dark:text-rose-400 animate-bounce" />
+                <Navigation className="w-8 h-8 text-rose-600 dark:text-rose-455 animate-bounce" />
               </div>
               <h3 className="text-lg font-black text-slate-900 dark:text-white">Location Required 🛵</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-550 text-slate-500 dark:text-slate-400 leading-relaxed">
                 Enable location to receive order assignments, navigate routes, and earn location-based incentives.
               </p>
               <button onClick={() => {
@@ -457,7 +615,7 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
                     () => showError("Denied", "Enable location in browser settings.")
                   );
                 }
-              }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl text-sm transition-all cursor-pointer">
+              }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl text-sm transition-all cursor-pointer border-0">
                 Enable Location Access
               </button>
             </div>

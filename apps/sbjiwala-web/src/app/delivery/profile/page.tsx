@@ -4,7 +4,7 @@ import React from "react";
 import DeliveryLayout, { useDelivery } from "@/components/DeliveryLayout";
 import { Star, Bike, BadgeCheck, Phone } from "lucide-react";
 import { useRouter } from "next/navigation";
-import versionInfo from "../version.json";
+import versionInfo from "@/app/version.json";
 
 function ProfileTabContent() {
   const router = useRouter();

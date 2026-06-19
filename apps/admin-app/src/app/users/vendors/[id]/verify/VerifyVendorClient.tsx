@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { api } from "@sbjiwala/shared";
-import versionInfo from "../../../../version.json";
+import versionInfo from "@/app/version.json";
 
 export default function VerifyVendorClient() {
   const { id } = useParams<{ id: string }>();

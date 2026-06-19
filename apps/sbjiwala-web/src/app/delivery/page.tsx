@@ -167,7 +167,7 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
           {simulationMode ? "Simulated GPS 🛰️" : "Device GPS 📍"}
         </button>
       </div>
-      <div ref={mapContainerRef} className="h-48 rounded-2xl border border-slate-200 dark:border-slate-800 relative shadow-inner overflow-hidden" style={{ zIndex: 1 }} />
+      <div ref={mapContainerRef} className="h-48 md:h-80 rounded-2xl border border-slate-200 dark:border-slate-800 relative shadow-inner overflow-hidden" style={{ zIndex: 1 }} />
     </div>
   );
 }
@@ -186,6 +186,17 @@ function ActiveOrdersDashboard() {
       return res.data || [];
     },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token") && isOnline,
+  });
+
+  // Fetch nearby unassigned orders
+  const { data: nearbyOrders = [], isLoading: nearbyLoading } = useQuery<any[]>({
+    queryKey: ["deliveryNearbyOrders"],
+    queryFn: async () => {
+      const res = await api.get("/delivery/nearby-orders");
+      return res.data || [];
+    },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token") && isOnline,
+    refetchInterval: 15000,
   });
 
   const pickupOrderMutation = useMutation({
@@ -208,6 +219,16 @@ function ActiveOrdersDashboard() {
       setOtpPromptConfig(null);
     },
     onError: (err: any) => showError("Delivery Failed", err.response?.data?.detail || err.message)
+  });
+
+  const acceptOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => api.post(`/delivery/orders/${orderId}/accept`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] });
+      queryClient.invalidateQueries({ queryKey: ["deliveryNearbyOrders"] });
+      success("Order accepted! Go to store to pick it up.");
+    },
+    onError: (err: any) => showError("Accept Failed", err.response?.data?.detail || err.message)
   });
 
   const handleUpdateStatus = (id: string, currentStatus: string) => {
@@ -349,6 +370,92 @@ function ActiveOrdersDashboard() {
             </p>
           </div>
         )}
+      </div>
+
+      {/* Nearby Available Orders Section */}
+      <div className="pt-6 space-y-4">
+        <div className="flex justify-between items-center px-1">
+          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            Nearby Available Orders ({isOnline ? nearbyOrders.length : 0})
+          </h3>
+        </div>
+
+        <div className="space-y-4">
+          {!isOnline ? (
+            <div className="py-8 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs font-semibold text-slate-500">
+              Go Online to view nearby orders
+            </div>
+          ) : nearbyLoading ? (
+            <div className="py-8 flex justify-center items-center gap-2">
+              <Loader2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-spin" />
+              <span className="text-xs text-slate-500 font-semibold">Scanning nearby...</span>
+            </div>
+          ) : nearbyOrders.length > 0 ? (
+            nearbyOrders.map((order: any) => {
+              const destAddr = order.delivery_address || {};
+              const formattedAddr = destAddr.formatted_address || `${destAddr.address_line_1 || ""}, ${destAddr.city || ""}`;
+              return (
+                <div key={order.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-bold text-slate-400">#{order.order_number}</span>
+                      <h4 className="font-extrabold text-slate-900 dark:text-slate-50 text-xs">
+                        Store: {order.vendor_store?.store_name || "Store"}
+                      </h4>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-xs font-black text-emerald-600 dark:text-emerald-450">
+                        ₹{order.total_amount}
+                      </span>
+                      <span className="text-[9px] uppercase font-bold text-slate-400 bg-slate-100 dark:bg-slate-850 px-2 py-0.5 rounded-full">
+                        {order.payment_method === "cod" ? "💵 COD" : "✓ Paid"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 text-[11px] bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <div className="flex items-start gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-bold text-slate-705 dark:text-slate-300">Pickup location</p>
+                        <p className="text-slate-500 dark:text-slate-400 leading-tight">
+                          {order.vendor_store?.address_line_1 || "Store Address"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="border-t border-slate-200 dark:border-slate-800/60 my-1" />
+                    <div className="flex items-start gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-rose-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-bold text-slate-705 dark:text-slate-300">Deliver to</p>
+                        <p className="text-slate-500 dark:text-slate-400 leading-tight">
+                          {formattedAddr}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 pt-1">
+                    <div className="text-[10px] font-bold text-slate-500">
+                      Distance: <span className="text-emerald-600">{order.distance_km} km</span> away
+                    </div>
+                    <button
+                      onClick={() => acceptOrderMutation.mutate(order.id)}
+                      disabled={acceptOrderMutation.isPending}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50 border-0"
+                    >
+                      {acceptOrderMutation.isPending ? "Accepting..." : "Accept Order 🛵"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="py-8 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 text-center text-xs font-semibold text-slate-400">
+              No new unassigned orders nearby.
+            </div>
+          )}
+        </div>
       </div>
 
       <OtpPromptModal
