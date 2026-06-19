@@ -245,152 +245,154 @@ export default function ProductCard({ product }: { product: any }) {
   });
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-[22px] border border-slate-100 dark:border-slate-800/80 hover:border-emerald-300 dark:hover:border-emerald-700/50 hover:shadow-xl transition-all duration-300 group overflow-hidden product-card flex flex-col relative shadow-sm h-full">
-      
-      {/* Wishlist Button (iOS style) */}
-      <button
-        onClick={() => toggleWishlist.mutate()}
-        disabled={toggleWishlist.isPending}
-        className="absolute top-2 right-2 z-10 p-1.5 bg-white/80 dark:bg-slate-900/80 hover:bg-white dark:hover:bg-slate-800 backdrop-blur-md rounded-full shadow-md hover:scale-110 active:scale-95 transition-all text-slate-400 hover:text-rose-500 cursor-pointer"
-        aria-label={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
-      >
-        <Heart
-          className={`w-4 h-4 transition-colors ${
-            isWishlisted ? "fill-rose-500 text-rose-500" : "text-slate-450 dark:text-slate-400"
-          }`}
-        />
-      </button>
+    <div className="perspective-container h-full">
+      <div className="glass-ios dark:bg-slate-900/50 rounded-[24px] border border-slate-100/40 dark:border-slate-800/80 hover:border-emerald-300 dark:hover:border-emerald-700/50 hover:shadow-2xl transition-all duration-400 group overflow-hidden product-card card-3d glass-sheen flex flex-col relative shadow-sm h-full">
+        
+        {/* Wishlist Button (iOS style) */}
+        <button
+          onClick={() => toggleWishlist.mutate()}
+          disabled={toggleWishlist.isPending}
+          className="absolute top-3 right-3 z-10 p-2 bg-white/70 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800 backdrop-blur-md rounded-full shadow-md hover:scale-110 active:scale-95 transition-all text-slate-400 hover:text-rose-500 cursor-pointer card-3d-floating"
+          aria-label={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+        >
+          <Heart
+            className={`w-3.5 h-3.5 transition-colors ${
+              isWishlisted ? "fill-rose-500 text-rose-500" : "text-slate-450 dark:text-slate-400"
+            }`}
+          />
+        </button>
 
-      {/* Image & Discount Display */}
-      <Link href={resolveLink(`/products/${product.id}`)} className="block">
-        <div className="relative bg-gradient-to-br from-slate-50/80 to-emerald-50/20 dark:from-slate-800/40 dark:to-slate-900/50 h-32 flex items-center justify-center overflow-hidden">
-          {product.primary_image_url || product.attributes?.image_url ? (
-            <img
-              src={product.primary_image_url || product.attributes?.image_url}
-              alt={product.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-            />
-          ) : (
-            <span className="text-5xl group-hover:scale-110 transition-transform duration-500 ease-out select-none">{emoji}</span>
-          )}
-          {hasDiscount && (
-            <span className="absolute top-2 left-2 bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm">
-              -{discountPct}% OFF
-            </span>
-          )}
-        </div>
-      </Link>
-
-      {/* Info Container */}
-      <div className="p-3 flex flex-col flex-1 gap-1.5 justify-between">
-        <div>
-          {/* Rating */}
-          <div className="flex items-center gap-1 mb-0.5">
-            <Star className="w-3 h-3 text-amber-500 fill-current" />
-            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-500">{rating}</span>
-          </div>
-
-          {/* Product Name */}
-          <Link href={resolveLink(`/products/${product.id}`)}>
-            <h3 className="font-extrabold text-[12px] sm:text-xs text-slate-850 dark:text-slate-100 line-clamp-2 leading-tight hover:text-emerald-600 dark:hover:text-emerald-450 transition-colors">
-              {product.name}
-            </h3>
-          </Link>
-          
-          {/* Unit / Weight */}
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{product.unit || "1 kg"}</p>
-        </div>
-
-        {/* Pricing & Cart controls */}
-        <div className="flex items-center justify-between pt-1 gap-1 mt-auto">
-          <div className="flex flex-col">
-            <span className="text-sm sm:text-base font-black text-slate-905 dark:text-white leading-none">
-              ₹{price.toFixed(2)}
-            </span>
+        {/* Image & Discount Display */}
+        <Link href={resolveLink(`/products/${product.id}`)} className="block card-3d-image">
+          <div className="relative bg-gradient-to-br from-slate-50/50 to-emerald-50/10 dark:from-slate-800/20 dark:to-slate-900/30 h-32 flex items-center justify-center overflow-hidden rounded-t-[24px]">
+            {product.primary_image_url || product.attributes?.image_url ? (
+              <img
+                src={product.primary_image_url || product.attributes?.image_url}
+                alt={product.name}
+                className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out"
+              />
+            ) : (
+              <span className="text-5xl group-hover:scale-115 transition-transform duration-500 ease-out select-none drop-shadow-lg">{emoji}</span>
+            )}
             {hasDiscount && (
-              <span className="text-[10px] text-slate-400 line-through">
-                ₹{mrp?.toFixed(2)}
+              <span className="absolute top-3 left-3 bg-gradient-to-r from-rose-500 to-red-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full shadow-md card-3d-floating">
+                -{discountPct}% OFF
               </span>
             )}
           </div>
+        </Link>
 
-          {cartItem ? (
-            <div className="flex items-center gap-1.5 bg-emerald-600 text-white rounded-xl p-1 shadow-md animate-scale-in">
-              <button
-                onClick={() =>
-                  isGuest
-                    ? handleGuestUpdateQty(cartItem.quantity - 1)
-                    : updateQty.mutate({ itemId: cartItem.id, qty: cartItem.quantity - 1 })
-                }
-                className="w-5.5 h-5.5 flex items-center justify-center rounded-lg hover:bg-emerald-700 active:bg-emerald-800 transition-colors cursor-pointer"
-              >
-                <Minus className="w-3.5 h-3.5" />
-              </button>
-              <span className="px-1 text-xs font-black min-w-[16px] text-center select-none">{cartItem.quantity}</span>
-              <button
-                onClick={() => {
-                  const targetQty = cartItem.quantity + 1;
-                  const stock = product.stock ?? product.attributes?.quantity ?? 0;
-                  const isUnlimited = product.attributes?.is_unlimited ?? false;
-                  if (!isUnlimited && targetQty > stock) {
-                    showError("Insufficient stock", `Only ${stock} items available in stock.`);
-                    return;
-                  }
-                  if (isGuest) {
-                    handleGuestUpdateQty(targetQty);
-                  } else {
-                    updateQty.mutate({ itemId: cartItem.id, qty: targetQty });
-                  }
-                }}
-                className="w-5.5 h-5.5 flex items-center justify-center rounded-lg hover:bg-emerald-700 active:bg-emerald-800 transition-colors cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
+        {/* Info Container */}
+        <div className="p-4 flex flex-col flex-1 gap-2 justify-between card-3d-floating">
+          <div>
+            {/* Rating */}
+            <div className="flex items-center gap-1 mb-0.5">
+              <Star className="w-3 h-3 text-amber-500 fill-current animate-pulse" />
+              <span className="text-[10px] font-black text-amber-600 dark:text-amber-400">{rating}</span>
             </div>
-          ) : (
-            <button
-              onClick={handleAddToCartAttempt}
-              disabled={!isGuest && addToCart.isPending}
-              className="bg-emerald-50 hover:bg-emerald-650 text-emerald-700 hover:text-white dark:bg-emerald-950/30 dark:hover:bg-emerald-600 dark:text-emerald-400 dark:hover:text-white text-xs font-black px-3.5 py-1.5 rounded-xl border border-emerald-250 dark:border-emerald-900/40 transition-all shadow-sm active:scale-95 cursor-pointer uppercase tracking-wider"
-            >
-              {addToCart.isPending ? "..." : "ADD"}
-            </button>
-          )}
-        </div>
-      </div>
 
-      {/* Clear Cart Modal */}
-      {showClearCartModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowClearCartModal(false)} />
-          <div
-            className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl text-slate-800 dark:text-white"
-            style={{ zIndex: 1000 }}
-          >
-            <h3 className="text-base font-black uppercase tracking-wider">Replace cart items?</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">
-              Your cart has items from another store. Do you want to discard them and add this item instead?
-            </p>
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="danger"
-                onClick={handleConfirmClearCart}
-                loading={!isGuest && addToCartWithClear.isPending}
-                className="flex-1 py-3 text-xs font-bold cursor-pointer rounded-xl"
-              >
-                Yes, Replace
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowClearCartModal(false)}
-                className="flex-1 py-3 text-xs font-bold cursor-pointer rounded-xl"
-              >
-                Cancel
-              </Button>
+            {/* Product Name */}
+            <Link href={resolveLink(`/products/${product.id}`)}>
+              <h3 className="font-extrabold text-[12px] sm:text-xs text-slate-850 dark:text-slate-100 line-clamp-2 leading-tight hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                {product.name}
+              </h3>
+            </Link>
+            
+            {/* Unit / Weight */}
+            <p className="text-[10px] text-slate-400 dark:text-slate-450 font-bold mt-0.5">{product.unit || "1 kg"}</p>
+          </div>
+
+          {/* Pricing & Cart controls */}
+          <div className="flex items-center justify-between pt-1 gap-1 mt-auto">
+            <div className="flex flex-col">
+              <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-none">
+                ₹{price.toFixed(2)}
+              </span>
+              {hasDiscount && (
+                <span className="text-[10px] text-slate-450 line-through">
+                  ₹{mrp?.toFixed(2)}
+                </span>
+              )}
             </div>
+
+            {cartItem ? (
+              <div className="flex items-center gap-1 bg-emerald-600 dark:bg-emerald-500 text-white rounded-xl p-1 shadow-lg animate-scale-in card-3d-button">
+                <button
+                  onClick={() =>
+                    isGuest
+                      ? handleGuestUpdateQty(cartItem.quantity - 1)
+                      : updateQty.mutate({ itemId: cartItem.id, qty: cartItem.quantity - 1 })
+                  }
+                  className="w-5.5 h-5.5 flex items-center justify-center rounded-lg hover:bg-emerald-700 dark:hover:bg-emerald-650 active:scale-90 transition-transform cursor-pointer"
+                >
+                  <Minus className="w-3 h-3" />
+                </button>
+                <span className="px-1 text-xs font-black min-w-[16px] text-center select-none">{cartItem.quantity}</span>
+                <button
+                  onClick={() => {
+                    const targetQty = cartItem.quantity + 1;
+                    const stock = product.stock ?? product.attributes?.quantity ?? 0;
+                    const isUnlimited = product.attributes?.is_unlimited ?? false;
+                    if (!isUnlimited && targetQty > stock) {
+                      showError("Insufficient stock", `Only ${stock} items available in stock.`);
+                      return;
+                    }
+                    if (isGuest) {
+                      handleGuestUpdateQty(targetQty);
+                    } else {
+                      updateQty.mutate({ itemId: cartItem.id, qty: targetQty });
+                    }
+                  }}
+                  className="w-5.5 h-5.5 flex items-center justify-center rounded-lg hover:bg-emerald-700 dark:hover:bg-emerald-650 active:scale-90 transition-transform cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleAddToCartAttempt}
+                disabled={!isGuest && addToCart.isPending}
+                className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white dark:bg-emerald-950/20 dark:hover:bg-emerald-500 dark:text-emerald-400 dark:hover:text-white text-[10px] font-black px-4 py-2 rounded-xl border border-emerald-250 dark:border-emerald-900/40 transition-all shadow-sm active:scale-95 cursor-pointer uppercase tracking-widest card-3d-button btn-spring"
+              >
+                {addToCart.isPending ? "..." : "ADD"}
+              </button>
+            )}
           </div>
         </div>
-      )}
+
+        {/* Clear Cart Modal */}
+        {showClearCartModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowClearCartModal(false)} />
+            <div
+              className="relative bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl text-slate-805 dark:text-white"
+              style={{ zIndex: 1000 }}
+            >
+              <h3 className="text-base font-black uppercase tracking-wider">Replace cart items?</h3>
+              <p className="text-xs text-slate-550 dark:text-slate-400 leading-normal">
+                Your cart has items from another store. Do you want to discard them and add this item instead?
+              </p>
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="danger"
+                  onClick={handleConfirmClearCart}
+                  loading={!isGuest && addToCartWithClear.isPending}
+                  className="flex-1 py-3 text-xs font-bold cursor-pointer rounded-xl btn-spring"
+                >
+                  Yes, Replace
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowClearCartModal(false)}
+                  className="flex-1 py-3 text-xs font-bold cursor-pointer rounded-xl btn-spring"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

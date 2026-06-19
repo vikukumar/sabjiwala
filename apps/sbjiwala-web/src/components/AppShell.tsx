@@ -246,7 +246,7 @@ function Header({ onMenuOpen, onOpenLocation, onOpenSearch }: { onMenuOpen: () =
   const cartCount = cartData?.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0;
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+    <header className="sticky top-0 z-40 glass-ios-header shadow-sm transition-all duration-300">
       <div className="flex items-center justify-between h-16 px-4 md:px-6 max-w-7xl mx-auto">
         {/* Left: menu (mobile) + logo + location selector */}
         <div className="flex items-center gap-2 min-w-0 flex-1 md:flex-initial">
@@ -453,15 +453,15 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 flex-shrink-0 bg-[var(--sidebar-bg)] border-r border-white/8 fixed left-0 top-0 h-full z-30">
+      <aside className="hidden md:flex flex-col w-64 flex-shrink-0 bg-slate-900/60 dark:bg-slate-950/70 backdrop-blur-xl border-r border-slate-100/10 dark:border-slate-800/80 fixed left-0 top-0 h-full z-30">
         {content}
       </aside>
 
       {/* Mobile Drawer */}
       {isOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] bg-[var(--sidebar-bg)] animate-slide-right overflow-hidden">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+          <aside className="absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] bg-slate-900/80 dark:bg-slate-955/80 backdrop-blur-xl border-r border-slate-100/10 dark:border-slate-800/80 animate-slide-right overflow-hidden">
             {content}
           </aside>
         </div>
@@ -488,7 +488,7 @@ function BottomNav({ onOpenSearch }: { onOpenSearch: () => void }) {
   const cartCount = cartData?.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0;
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 bottom-nav-safe">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-ios shadow-lg bottom-nav-safe rounded-t-[20px]">
       <div className="flex items-center justify-around px-1 h-16">
         {mainNavItems.map((item) => {
           const resolvedHref = resolveLink(item.href);
@@ -509,13 +509,13 @@ function BottomNav({ onOpenSearch }: { onOpenSearch: () => void }) {
                   router.push(`${resolveLink("/login")}?redirect=${encodeURIComponent(resolvedHref)}`);
                 }
               }}
-              className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all ${isActive
+              className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all btn-spring active:scale-95 ${isActive
                 ? "text-emerald-600 dark:text-emerald-400"
                 : "text-slate-400 dark:text-slate-500"
                 }`}
               aria-label={item.label}
             >
-              <div className={`relative p-1.5 rounded-xl transition-all ${isActive ? "bg-emerald-50 dark:bg-emerald-950/40" : ""}`}>
+              <div className={`relative p-1.5 rounded-xl transition-all ${isActive ? "bg-emerald-55/40 dark:bg-emerald-950/40" : ""}`}>
                 <Icon className="w-5 h-5" />
                 {item.cartBadge && cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-emerald-600 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
@@ -527,7 +527,7 @@ function BottomNav({ onOpenSearch }: { onOpenSearch: () => void }) {
                 {item.label}
               </span>
               {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
               )}
             </Link>
           );

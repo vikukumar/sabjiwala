@@ -141,7 +141,15 @@ export default function UnifiedLandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] amoled:bg-black text-slate-800 dark:text-slate-100 flex flex-col justify-between transition-colors duration-300 antialiased font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] amoled:bg-black text-slate-800 dark:text-slate-100 flex flex-col justify-between transition-colors duration-300 antialiased font-sans relative overflow-hidden">
+      
+      {/* Dynamic Ambient Background Blobs (iOS/macOS glassy style) */}
+      <div className="blob-container">
+        <div className="blob bg-emerald-500/20 w-[350px] h-[350px] top-[-50px] left-[-50px]" />
+        <div className="blob bg-teal-500/25 w-[400px] h-[400px] top-[40%] right-[-100px]" style={{ animationDelay: '-5s', animationDuration: '30s' }} />
+        <div className="blob bg-emerald-600/20 w-[300px] h-[300px] bottom-[-50px] left-[20%]" style={{ animationDelay: '-10s', animationDuration: '22s' }} />
+      </div>
+
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 amoled:bg-black/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 shadow-sm transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -328,39 +336,39 @@ export default function UnifiedLandingPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Card 1 */}
-            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6.5 hover:scale-[1.02] hover:border-emerald-555/30 transition-all duration-300 flex flex-col justify-between shadow-sm">
+            <div className="glass-ios dark:bg-slate-900/50 border border-slate-100/40 dark:border-slate-800/80 rounded-3xl p-6.5 hover:scale-[1.03] hover:shadow-xl transition-all duration-300 flex flex-col justify-between shadow-sm btn-spring">
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                  <Leaf className="w-6 h-6" />
+                  <Leaf className="w-6 h-6 animate-bounce" />
                 </div>
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">Direct Farm Sourcing</h3>
                 <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-medium">
                   We bypass local wholesale brokers completely. Buying direct from 450+ verified growers ensures vegetables reach you fresher and farmer profits rise by 35%.
                 </p>
               </div>
-              <div className="pt-6 border-t border-slate-100 dark:border-slate-850 mt-6 flex items-center gap-1 text-[10px] font-black uppercase text-emerald-650 dark:text-emerald-400 tracking-wider">
+              <div className="pt-6 border-t border-slate-100/20 dark:border-slate-850 mt-6 flex items-center gap-1 text-[10px] font-black uppercase text-emerald-650 dark:text-emerald-400 tracking-wider">
                 Our growers story <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </div>
 
             {/* Card 2 */}
-            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6.5 hover:scale-[1.02] hover:border-emerald-555/30 transition-all duration-300 flex flex-col justify-between shadow-sm">
+            <div className="glass-ios dark:bg-slate-900/50 border border-slate-100/40 dark:border-slate-800/80 rounded-3xl p-6.5 hover:scale-[1.03] hover:shadow-xl transition-all duration-300 flex flex-col justify-between shadow-sm btn-spring">
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/50 text-teal-650 dark:text-teal-400 flex items-center justify-center">
-                  <Shield className="w-6 h-6" />
+                  <Shield className="w-6 h-6 animate-pulse" />
                 </div>
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">3-Stage Ozone Rinsing</h3>
                 <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-medium">
                   All greens undergo multi-stage sanitizing gas washes to eliminate 99.9% of microbes, fungus, dirt particles, and chemical pesticide traces.
                 </p>
               </div>
-              <div className="pt-6 border-t border-slate-100 dark:border-slate-850 mt-6 flex items-center gap-1 text-[10px] font-black uppercase text-teal-600 dark:text-teal-400 tracking-wider">
+              <div className="pt-6 border-t border-slate-100/20 dark:border-slate-850 mt-6 flex items-center gap-1 text-[10px] font-black uppercase text-teal-600 dark:text-teal-400 tracking-wider">
                 Learn process details <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </div>
 
             {/* Card 3 */}
-            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6.5 hover:scale-[1.02] hover:border-emerald-555/30 transition-all duration-300 flex flex-col justify-between shadow-sm">
+            <div className="glass-ios dark:bg-slate-900/50 border border-slate-100/40 dark:border-slate-800/80 rounded-3xl p-6.5 hover:scale-[1.03] hover:shadow-xl transition-all duration-300 flex flex-col justify-between shadow-sm btn-spring">
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                   <Award className="w-6 h-6" />
@@ -370,23 +378,23 @@ export default function UnifiedLandingPage() {
                   From harvest transit to packing stations, our vegetables stay at optimal, constant temperatures to lock in moisture, crispness, and vitamins.
                 </p>
               </div>
-              <div className="pt-6 border-t border-slate-100 dark:border-slate-850 mt-6 flex items-center gap-1 text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-wider">
+              <div className="pt-6 border-t border-slate-100/20 dark:border-slate-850 mt-6 flex items-center gap-1 text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-wider">
                 Cold storage info <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </div>
 
             {/* Card 4 */}
-            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6.5 hover:scale-[1.02] hover:border-emerald-555/30 transition-all duration-300 flex flex-col justify-between shadow-sm">
+            <div className="glass-ios dark:bg-slate-900/50 border border-slate-100/40 dark:border-slate-800/80 rounded-3xl p-6.5 hover:scale-[1.03] hover:shadow-xl transition-all duration-300 flex flex-col justify-between shadow-sm btn-spring">
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                  <Zap className="w-6 h-6" />
+                  <Zap className="w-6 h-6 animate-bounce" />
                 </div>
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">10-Minute Dispatch</h3>
                 <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-medium">
                   Our hyper-local micro dark stores ensure quick fulfillment. Couriers load and deliver orders immediately to reach your home in under 10 minutes.
                 </p>
               </div>
-              <div className="pt-6 border-t border-slate-100 dark:border-slate-850 mt-6 flex items-center gap-1 text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider">
+              <div className="pt-6 border-t border-slate-100/20 dark:border-slate-850 mt-6 flex items-center gap-1 text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider">
                 Fulfillment rules <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </div>
@@ -408,7 +416,7 @@ export default function UnifiedLandingPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Portal 1: Customer */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group shadow-md">
+              <div className="glass-ios dark:bg-slate-900/50 border border-slate-100/40 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group shadow-md hover:scale-[1.03] hover:shadow-xl transition-all duration-300 btn-spring">
                 <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/5 rounded-full blur-xl group-hover:scale-150 transition-all duration-300" />
                 <div className="space-y-4">
                   <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-sm">
@@ -422,7 +430,7 @@ export default function UnifiedLandingPage() {
                 <div className="mt-8">
                   <Link
                     href="/app"
-                    className="w-full bg-emerald-600 hover:bg-emerald-505 text-white font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 uppercase tracking-wider hover:scale-[1.01]"
+                    className="w-full bg-emerald-600 hover:bg-emerald-505 text-white font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 uppercase tracking-wider hover:scale-[1.01] btn-spring"
                   >
                     Enter Shop <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </Link>
@@ -430,7 +438,7 @@ export default function UnifiedLandingPage() {
               </div>
 
               {/* Portal 2: Vendor */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group shadow-md">
+              <div className="glass-ios dark:bg-slate-900/50 border border-slate-100/40 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group shadow-md hover:scale-[1.03] hover:shadow-xl transition-all duration-300 btn-spring">
                 <div className="absolute top-0 right-0 w-28 h-28 bg-amber-500/5 rounded-full blur-xl group-hover:scale-150 transition-all duration-300" />
                 <div className="space-y-4">
                   <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-sm">
@@ -444,7 +452,7 @@ export default function UnifiedLandingPage() {
                 <div className="mt-8">
                   <Link
                     href="/vendor"
-                    className="w-full bg-slate-850 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 uppercase tracking-wider hover:scale-[1.01]"
+                    className="w-full bg-slate-850 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 uppercase tracking-wider hover:scale-[1.01] btn-spring"
                   >
                     Vendor Console <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </Link>
@@ -452,10 +460,10 @@ export default function UnifiedLandingPage() {
               </div>
 
               {/* Portal 3: Delivery */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group shadow-md">
+              <div className="glass-ios dark:bg-slate-900/50 border border-slate-100/40 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group shadow-md hover:scale-[1.03] hover:shadow-xl transition-all duration-300 btn-spring">
                 <div className="absolute top-0 right-0 w-28 h-28 bg-teal-500/5 rounded-full blur-xl group-hover:scale-150 transition-all duration-300" />
                 <div className="space-y-4">
-                  <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/50 text-teal-650 dark:text-teal-400 flex items-center justify-center shadow-sm">
+                  <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/50 text-teal-655 dark:text-teal-400 flex items-center justify-center shadow-sm">
                     <Truck className="w-6 h-6" />
                   </div>
                   <h3 className="text-lg font-black text-slate-900 dark:text-white">Delivery Partner</h3>
@@ -466,7 +474,7 @@ export default function UnifiedLandingPage() {
                 <div className="mt-8">
                   <Link
                     href="/delivery"
-                    className="w-full bg-slate-850 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 uppercase tracking-wider hover:scale-[1.01]"
+                    className="w-full bg-slate-850 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 uppercase tracking-wider hover:scale-[1.01] btn-spring"
                   >
                     Courier Console <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </Link>
@@ -474,7 +482,7 @@ export default function UnifiedLandingPage() {
               </div>
 
               {/* Portal 4: Admin */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group shadow-md">
+              <div className="glass-ios dark:bg-slate-900/50 border border-slate-100/40 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group shadow-md hover:scale-[1.03] hover:shadow-xl transition-all duration-300 btn-spring">
                 <div className="absolute top-0 right-0 w-28 h-28 bg-indigo-500/5 rounded-full blur-xl group-hover:scale-150 transition-all duration-300" />
                 <div className="space-y-4">
                   <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm">
@@ -488,7 +496,7 @@ export default function UnifiedLandingPage() {
                 <div className="mt-8">
                   <Link
                     href="/admin"
-                    className="w-full bg-slate-850 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 uppercase tracking-wider hover:scale-[1.01]"
+                    className="w-full bg-slate-850 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 uppercase tracking-wider hover:scale-[1.01] btn-spring"
                   >
                     Oversight Board <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </Link>
