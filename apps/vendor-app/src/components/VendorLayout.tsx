@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import {
   ShoppingBag, TrendingUp, MapPin, Settings, LogOut,
-  Clock, Menu, X, Loader2
+  Clock, Menu, X, Loader2, IndianRupee, BarChart2, Bell, Navigation
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useWebSocket } from "@sbjiwala/shared";
@@ -104,6 +104,10 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
     const path = window.location.pathname;
     if (path.includes("/orders")) return "orders";
     if (path.includes("/inventory")) return "inventory";
+    if (path.includes("/earnings")) return "earnings";
+    if (path.includes("/analytics")) return "analytics";
+    if (path.includes("/location")) return "location";
+    if (path.includes("/notifications")) return "notifications";
     if (path.includes("/profile")) return "profile";
     return "dashboard";
   };
@@ -122,6 +126,10 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
     { id: "dashboard", label: "Overview", icon: ShoppingBag, href: resolveVendorLink("/") },
     { id: "orders", label: "Orders Board", icon: Clock, href: resolveVendorLink("/orders") },
     { id: "inventory", label: "Inventory", icon: TrendingUp, href: resolveVendorLink("/inventory") },
+    { id: "earnings", label: "Earnings", icon: IndianRupee, href: resolveVendorLink("/earnings") },
+    { id: "analytics", label: "Analytics", icon: BarChart2, href: resolveVendorLink("/analytics") },
+    { id: "location", label: "Store Location", icon: Navigation, href: resolveVendorLink("/location") },
+    { id: "notifications", label: "Notifications", icon: Bell, href: resolveVendorLink("/notifications") },
     { id: "profile", label: "My Profile", icon: Settings, href: resolveVendorLink("/profile") },
   ];
 

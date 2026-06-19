@@ -1628,18 +1628,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           router.replace("/admin/login?error=unauthorized");
           return;
         }
-        if (isCustomerPath && !isCustomerAuthPath && role !== "customer") {
+        if (isCustomerPath && isProtected && role !== "customer") {
           if (role === "vendor" || role === "vendor_manager") router.replace("/vendor");
           else if (role === "delivery_boy") router.replace("/delivery");
           else if (role === "admin" || role === "super_admin") router.replace("/admin");
           return;
         }
       } else {
-        // Standalone customer app - reject non-customer roles
-        if (role !== "customer") {
-          localStorage.removeItem("sw_access_token");
-          localStorage.removeItem("sw_refresh_token");
-          router.replace("/login?error=unauthorized_role");
+        // Standalone customer app - reject non-customer roles for protected pages only
+        if (isProtected && role !== "customer") {
+          router.replace(`/login?redirect=${encodeURIComponent(pathname)}&error=unauthorized_role`);
           return;
         }
         if (isVendorPath || isDeliveryPath || isAdminPath) {

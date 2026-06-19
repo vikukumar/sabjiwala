@@ -158,11 +158,24 @@ class Settings(BaseSettings):
     RATE_LIMIT_UPLOAD: str = "5/minute"
 
     # ---- CORS ----
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,https://localhost,capacitor://localhost"
+    CORS_ORIGINS: str = (
+        "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,"
+        "http://localhost:8000,http://localhost:8080,http://localhost,"
+        "https://localhost,https://localhost:3000,https://localhost:3001,"
+        "capacitor://localhost,ionic://localhost,"
+        "http://10.0.2.2,http://10.0.2.2:3000,http://10.0.2.2:8000,"
+        "http://10.0.3.2,http://10.0.3.2:3000,http://10.0.3.2:8000,"
+        "https://app.sbjiwala.in,https://vendor.sbjiwala.in,https://delivery.sbjiwala.in,https://admin.sbjiwala.in,"
+        "http://sbjiwala.qzz.io,https://sbjiwala.qzz.io"
+    )
 
     @property
     def CORS_ORIGINS_LIST(self) -> List[str]:
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        # Add null origin for packaged Android/iOS apps
+        if "null" not in origins:
+            origins.append("null")
+        return origins
 
     # ---- Frontend Ports ----
     CUSTOMER_APP_PORT: int = 3000
