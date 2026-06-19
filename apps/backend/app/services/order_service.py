@@ -628,8 +628,14 @@ class OrderService:
                 vw = VendorWallet(vendor_id=order.vendor_id, balance=0.0, pending_balance=0.0)
                 self.db.add(vw)
                 await self.db.flush()
-            vw.balance = float(vw.balance) + net_earnings
-            vw.total_earned = float(vw.total_earned) + net_earnings
+            
+            if order.payment_method and order.payment_method.lower() == "cod":
+                # For COD orders, the vendor collects cash directly, so virtual wallet balance is not credited.
+                # However, the order is still recorded in their total lifetime earnings.
+                vw.total_earned = float(vw.total_earned) + net_earnings
+            else:
+                vw.balance = float(vw.balance) + net_earnings
+                vw.total_earned = float(vw.total_earned) + net_earnings
 
         await self.db.flush()
 
