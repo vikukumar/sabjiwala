@@ -446,15 +446,25 @@ export default function CheckoutPage() {
     }
   }, [addresses, selectedAddress]);
 
-  const subtotal = previewData ? previewData.subtotal : ((cartData?.subtotal || 0) * 1.045);
+  const items = cartData?.items || [];
+  const localSubtotal = React.useMemo(() => {
+    return items.reduce((acc: number, item: any) => {
+      const rawPrice = item.price || item.product?.attributes?.price || 30;
+      const markedUpPrice = Math.round(rawPrice * 1.045 * 100) / 100;
+      return acc + (markedUpPrice * item.quantity);
+    }, 0);
+  }, [items]);
+
+  const subtotal = previewData ? previewData.subtotal : localSubtotal;
   const freeDeliveryAbove = previewData?.free_delivery_above ?? 199;
   const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= freeDeliveryAbove ? 0 : 20);
-  const taxAmount = previewData ? previewData.tax_amount : (subtotal * 0.05);
+  const taxAmount = previewData ? previewData.tax_amount : Math.round(subtotal * 0.05 * 100) / 100;
   const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
   const couponDiscount = previewData ? previewData.coupon_discount : 0.0;
   const walletBalance = walletData?.balance || 0;
-  const walletDeduction = previewData ? previewData.wallet_deduction : (useWallet ? Math.min(walletBalance, subtotal + deliveryFee) : 0);
-  const finalTotal = previewData ? previewData.total_amount : Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - couponDiscount - walletDeduction);
+  const walletDeduction = previewData ? previewData.wallet_deduction : (useWallet ? Math.round(Math.min(walletBalance, subtotal + deliveryFee + taxAmount + packagingCharge - couponDiscount) * 100) / 100 : 0);
+  const finalTotal = previewData ? previewData.total_amount : Math.round(Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - couponDiscount - walletDeduction) * 100) / 100;
+
 
   const savings = React.useMemo(() => {
     let itemSavings = 0;

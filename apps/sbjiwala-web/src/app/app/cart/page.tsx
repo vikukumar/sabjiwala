@@ -99,12 +99,13 @@ function CartItemRow({ item, isGuest, onUpdateGuestQty }: CartItemRowProps) {
 }
 
 // ==================== COUPON SECTION ====================
-function CouponSection({ onApply, appliedCoupon, onRemove, disabled, vendorId }: {
+function CouponSection({ onApply, appliedCoupon, onRemove, disabled, vendorId, subtotal }: {
   onApply: (code: string, discount: number) => void;
   appliedCoupon: { code: string; discount: number } | null;
   onRemove: () => void;
   disabled?: boolean;
   vendorId: string;
+  subtotal: number;
 }) {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -118,12 +119,16 @@ function CouponSection({ onApply, appliedCoupon, onRemove, disabled, vendorId }:
     if (!code.trim() || !vendorId) return;
     setLoading(true);
     try {
-      const res = await api.post("/coupons/validate", { code: code.trim().toUpperCase() });
+      const res = await api.post("/coupons/validate", {
+        code: code.trim().toUpperCase(),
+        cart_total: subtotal,
+        vendor_id: vendorId,
+      });
       await api.post("/cart/apply-coupon", null, {
         params: { code: code.trim().toUpperCase(), vendor_id: vendorId }
       });
-      onApply(code.trim().toUpperCase(), res.data?.discount_amount || 0);
-      success("Coupon applied! 🎉", `You save ₹${res.data?.discount_amount}`);
+      onApply(code.trim().toUpperCase(), res.data?.discount || 0);
+      success("Coupon applied! 🎉", `You save ₹${res.data?.discount}`);
     } catch (err: any) {
       showError("Invalid coupon", err.response?.data?.detail || "This coupon cannot be applied");
     } finally { setLoading(false); }
@@ -232,13 +237,23 @@ export default function CartPage() {
     }
   }, [serverCart, previewData]);
 
-  const subtotal = previewData ? previewData.subtotal : (isGuest ? localCart?.subtotal || 0 : (serverCart?.subtotal || 0) * 1.045);
+  const localSubtotal = React.useMemo(() => {
+    return items.reduce((acc: number, item: any) => {
+      const p = item.product || item;
+      const rawPrice = p.attributes?.price ?? p.price ?? 30;
+      const markedUpPrice = isGuest ? rawPrice : Math.round(rawPrice * 1.045 * 100) / 100;
+      return acc + (markedUpPrice * item.quantity);
+    }, 0);
+  }, [items, isGuest]);
+
+  const subtotal = previewData ? previewData.subtotal : localSubtotal;
   const freeDeliveryAbove = previewData?.free_delivery_above ?? 199;
+  const hasFreeDelivery = previewData ? (previewData.free_delivery_above !== null && previewData.free_delivery_above !== undefined) : true;
   const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= freeDeliveryAbove ? 0 : 20);
   const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
-  const taxAmount = previewData ? previewData.tax_amount : (subtotal * 0.05);
+  const taxAmount = previewData ? previewData.tax_amount : Math.round(subtotal * 0.05 * 100) / 100;
   const discount = previewData ? previewData.coupon_discount : (appliedCoupon?.discount || 0);
-  const total = previewData ? previewData.total_amount : Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - discount);
+  const total = previewData ? previewData.total_amount : Math.round(Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - discount) * 100) / 100;
 
   const savings = React.useMemo(() => {
     let itemSavings = 0;
@@ -336,12 +351,17 @@ export default function CartPage() {
               <Truck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <div>
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                  {deliveryFee === 0 ? "🎉 Free Delivery!" : `Add ₹${Math.max(0, freeDeliveryAbove - subtotal).toFixed(2)} more for free delivery`}
+                  {deliveryFee === 0 
+                    ? "🎉 Free Delivery!" 
+                    : hasFreeDelivery 
+                      ? `Add ₹${Math.max(0, freeDeliveryAbove - subtotal).toFixed(2)} more for free delivery`
+                      : "Standard delivery charge is calculated based on distance"
+                  }
                 </p>
-                <p className="text-xs text-slate-550 dark:text-slate-400">Estimated delivery in 10–15 minutes</p>
+                <p className="text-xs text-slate-555 dark:text-slate-400">Estimated delivery in 10–15 minutes</p>
               </div>
             </div>
-            {deliveryFee > 0 && (
+            {deliveryFee > 0 && hasFreeDelivery && (
               <div className="mt-3 bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
                 <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${Math.min(100, (subtotal / freeDeliveryAbove) * 100)}%` }} />
               </div>
@@ -360,6 +380,7 @@ export default function CartPage() {
               onRemove={() => setAppliedCoupon(null)}
               disabled={isGuest}
               vendorId={vendorId}
+              subtotal={subtotal}
             />
             {!isGuest && (
               <Link href={resolveLink("/coupons")} className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">

@@ -148,8 +148,13 @@ async def preview_order(
     if exempt_packaging:
         packaging_charge = 0.0
 
+    # Round individual components first to prevent floating point/off-by-one errors
+    subtotal = round(subtotal, 2)
+    delivery_charge = round(delivery_charge, 2)
+    packaging_charge = round(packaging_charge, 2)
+
     # Tax calculation (standard 5%)
-    tax_amount = subtotal * 0.05
+    tax_amount = round(subtotal * 0.05, 2)
 
     # Coupon discount
     coupon_discount = 0.0
@@ -161,7 +166,7 @@ async def preview_order(
             applied_coupon_code, current_user["user_id"], vendor_id, body.payment_method
         )
         if validation["valid"]:
-            coupon_discount = float(validation["discount"])
+            coupon_discount = round(float(validation["discount"]), 2)
             if validation.get("coupon_type") == "free_delivery":
                 delivery_charge = 0.0
 
@@ -171,10 +176,11 @@ async def preview_order(
     if body.use_wallet:
         wallet = await service.payment_service.get_or_create_wallet(current_user["user_id"])
         wallet_balance = float(wallet.balance)
-        total_before_wallet = subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount
-        wallet_amount = min(wallet_balance, total_before_wallet)
+        total_before_wallet = round(subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount, 2)
+        wallet_amount = round(min(wallet_balance, total_before_wallet), 2)
 
-    total_amount = subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount - wallet_amount
+    total_amount = round(subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount - wallet_amount, 2)
+
 
     return APIResponse(
         success=True,
