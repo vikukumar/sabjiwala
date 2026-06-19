@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from "react";
+import React, { createContext, useContext, useReducer, useCallback, useRef } from "react";
 import { CheckCircle2, XCircle, AlertCircle, Info, X } from "lucide-react";
 
 // ==================== TYPES ====================
@@ -98,30 +98,9 @@ const toastConfig = {
   },
 };
 
-const ensureString = (val: any): string => {
-  if (val === null || val === undefined) return "";
-  if (typeof val === "string") return val;
-  if (typeof val === "object") {
-    if (Array.isArray(val)) {
-      return val.map(v => ensureString(v)).join(", ");
-    }
-    if (val.message) return ensureString(val.message);
-    if (val.msg) return ensureString(val.msg);
-    if (val.detail) return ensureString(val.detail);
-    try {
-      return JSON.stringify(val);
-    } catch (e) {
-      return String(val);
-    }
-  }
-  return String(val);
-};
-
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) => void }) {
   const cfg = toastConfig[toast.type];
   const Icon = cfg.icon;
-  const titleStr = ensureString(toast.title);
-  const messageStr = toast.message ? ensureString(toast.message) : undefined;
   return (
     <div
       className={`flex items-start gap-3 p-4 rounded-2xl border shadow-lg backdrop-blur-sm max-w-sm w-full toast-enter ${cfg.bg}`}
@@ -129,9 +108,9 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
     >
       <Icon className={`w-5 h-5 mt-0.5 flex-shrink-0 ${cfg.icon_cls}`} />
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-bold ${cfg.title_cls}`}>{titleStr}</p>
-        {messageStr && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{messageStr}</p>
+        <p className={`text-sm font-bold ${cfg.title_cls}`}>{toast.title}</p>
+        {toast.message && (
+          <p className="text-xs text-slate-550 dark:text-slate-400 mt-0.5">{toast.message}</p>
         )}
       </div>
       <button

@@ -142,6 +142,16 @@ try {
     copyRecursiveSync(path.join(vendorSrc, 'app/profile'), vendorProfileDest);
   }
 
+  // Sync additional vendor routes: earnings, analytics, location, notifications
+  ['earnings', 'analytics', 'location', 'notifications'].forEach((route) => {
+    const dest = path.join(webAppDir, `vendor/${route}`);
+    removeRecursiveSync(dest);
+    const srcPath = path.join(vendorSrc, `app/${route}`);
+    if (fs.existsSync(srcPath)) {
+      copyRecursiveSync(srcPath, dest);
+    }
+  });
+
   // 6. Clean and Copy Delivery app specific pages under /delivery/
   console.log(`Syncing delivery-app pages...`);
   const deliveryPageDest = path.join(webAppDir, 'delivery/page.tsx');
@@ -186,6 +196,24 @@ try {
   removeRecursiveSync(adminProfileDest);
   if (fs.existsSync(path.join(adminSrc, 'app/profile'))) {
     copyRecursiveSync(path.join(adminSrc, 'app/profile'), adminProfileDest);
+  }
+
+  // Sync additional admin routes: analytics, banners, categories, coupons, delivery, maps, orders, settings, support, vendors
+  ['analytics', 'banners', 'categories', 'coupons', 'delivery', 'maps', 'orders', 'settings', 'support', 'vendors'].forEach((route) => {
+    const dest = path.join(webAppDir, `admin/${route}`);
+    removeRecursiveSync(dest);
+    const srcPath = path.join(adminSrc, `app/${route}`);
+    if (fs.existsSync(srcPath)) {
+      copyRecursiveSync(srcPath, dest);
+    }
+  });
+
+  // Copy admin-app custom components
+  console.log(`Syncing admin-app custom components...`);
+  if (fs.existsSync(path.join(adminSrc, 'components'))) {
+    fs.readdirSync(path.join(adminSrc, 'components')).forEach((child) => {
+      copyRecursiveSync(path.join(adminSrc, 'components', child), path.join(webSrc, 'components', child));
+    });
   }
 
   // 8. Sync public assets from customer-app to sbjiwala-web
