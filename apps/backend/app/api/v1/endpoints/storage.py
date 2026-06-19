@@ -33,17 +33,15 @@ async def upload_file(
     
     is_public = bucket == "public"
     
-    # Determine vendor if vendor
+    # Determine vendor if any exists for the user
     vendor_id = None
-    role = current_user.get("user_type", "customer")
-    if role in ["vendor", "vendor_manager"]:
-        from app.models.vendor import Vendor
-        res = await db.execute(
-            select(Vendor).where(Vendor.user_id == current_user["user_id"])
-        )
-        vendor = res.scalars().first()
-        if vendor:
-            vendor_id = vendor.id
+    from app.models.vendor import Vendor
+    res = await db.execute(
+        select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False)
+    )
+    vendor = res.scalars().first()
+    if vendor:
+        vendor_id = vendor.id
 
     try:
         metadata = await service.save_file(

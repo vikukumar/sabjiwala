@@ -84,6 +84,20 @@ export default function KYCOnboarding() {
             pan_number: res.data.pan_number || "",
             fssai_number: res.data.fssai_number || "",
           });
+          if (res.data.documents) {
+            const urls = { fssai_doc: "", gst_doc: "", pan_doc: "" };
+            res.data.documents.forEach((doc: any) => {
+              if (doc.document_type === "fssai_license") urls.fssai_doc = doc.file_url;
+              if (doc.document_type === "pan_card") urls.pan_doc = doc.file_url;
+              if (doc.document_type === "gst_certificate") urls.gst_doc = doc.file_url;
+            });
+            setFileUrls(urls);
+            setUploadProgress({
+              fssai_doc: urls.fssai_doc ? 100 : 0,
+              gst_doc: urls.gst_doc ? 100 : 0,
+              pan_doc: urls.pan_doc ? 100 : 0,
+            });
+          }
         }
       } catch (err: any) {
         error("Error fetching profile", err.response?.data?.detail || err.message);
@@ -181,7 +195,10 @@ export default function KYCOnboarding() {
         gst_number: formData.gst_number || null,
         pan_number: formData.pan_number,
         fssai_number: formData.fssai_number,
-        status: "documents_submitted"
+        status: "documents_submitted",
+        fssai_doc_url: fileUrls.fssai_doc || null,
+        pan_doc_url: fileUrls.pan_doc || null,
+        gst_doc_url: fileUrls.gst_doc || null,
       };
 
       let updateRes;
@@ -438,7 +455,7 @@ export default function KYCOnboarding() {
                     />
                     <Upload className="w-6 h-6 text-slate-400" />
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">
-                      {files.fssai_doc ? files.fssai_doc.name : "Choose FSSAI License File"}
+                      {files.fssai_doc ? files.fssai_doc.name : (fileUrls.fssai_doc ? "FSSAI Certificate (Uploaded) ✓" : "Choose FSSAI License File")}
                     </span>
                     {uploadProgress.fssai_doc > 0 && (
                       <div className="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full overflow-hidden mt-1">
@@ -460,7 +477,7 @@ export default function KYCOnboarding() {
                     />
                     <Upload className="w-6 h-6 text-slate-400" />
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">
-                      {files.pan_doc ? files.pan_doc.name : "Choose PAN Card Scan"}
+                      {files.pan_doc ? files.pan_doc.name : (fileUrls.pan_doc ? "PAN Card Scan (Uploaded) ✓" : "Choose PAN Card Scan")}
                     </span>
                     {uploadProgress.pan_doc > 0 && (
                       <div className="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full overflow-hidden mt-1">
@@ -482,7 +499,7 @@ export default function KYCOnboarding() {
                     />
                     <Upload className="w-6 h-6 text-slate-400" />
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">
-                      {files.gst_doc ? files.gst_doc.name : "Choose GST Registration Scan"}
+                      {files.gst_doc ? files.gst_doc.name : (fileUrls.gst_doc ? "GST Registration Scan (Uploaded) ✓" : "Choose GST Registration Scan")}
                     </span>
                     {uploadProgress.gst_doc > 0 && (
                       <div className="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full overflow-hidden mt-1">

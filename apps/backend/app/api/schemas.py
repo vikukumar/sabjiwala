@@ -255,6 +255,37 @@ class VendorRegisterRequest(BaseModel):
     pan_number: Optional[str] = None
     fssai_number: Optional[str] = None
     status: Optional[str] = None
+    fssai_doc_url: Optional[str] = None
+    pan_doc_url: Optional[str] = None
+    gst_doc_url: Optional[str] = None
+
+class VendorDocumentResponse(BaseModel):
+    id: UUID
+    document_type: str
+    document_number: Optional[str] = None
+    file_url: str
+    verification_status: str
+
+    class Config:
+        from_attributes = True
+
+class VendorStoreResponse(BaseModel):
+    id: UUID
+    store_name: str
+    address_line_1: str = ""
+    address_line_2: Optional[str] = None
+    city: str = ""
+    state: str = ""
+    country: str = "India"
+    postal_code: str = ""
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    is_open: bool = True
+    preparation_time_minutes: int = 30
+    service_radius_km: Optional[float] = None
+
+    class Config:
+        from_attributes = True
 
 class VendorResponse(BaseModel):
     id: UUID
@@ -267,6 +298,13 @@ class VendorResponse(BaseModel):
     total_orders: int
     commission_rate: float
     created_at: datetime
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    gst_number: Optional[str] = None
+    pan_number: Optional[str] = None
+    fssai_number: Optional[str] = None
+    documents: Optional[List[VendorDocumentResponse]] = None
+    store: Optional[VendorStoreResponse] = None
 
     class Config:
         from_attributes = True

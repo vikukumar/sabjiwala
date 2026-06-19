@@ -630,6 +630,25 @@ async def list_delivery_boys(
             ):
                 continue
                 
+        # Fetch KYC documents for this delivery boy
+        from app.models.storage import FileMetadata
+        doc_res = await db.execute(
+            select(FileMetadata).where(
+                FileMetadata.entity_type == "delivery_kyc",
+                FileMetadata.entity_id == str(b.id)
+            )
+        )
+        docs = doc_res.scalars().all()
+        kyc_docs = [
+            {
+                "id": str(d.id),
+                "document_type": d.custom_metadata.get("document_type") if d.custom_metadata else "Document",
+                "file_url": f"/api/v1/storage/{d.id}",
+                "original_filename": d.original_filename
+            }
+            for d in docs
+        ]
+
         boy_list.append({
             "id": str(b.id),
             "user_id": str(user.id),
@@ -645,7 +664,8 @@ async def list_delivery_boys(
             "average_rating": b.average_rating,
             "latitude": b.current_latitude,
             "longitude": b.current_longitude,
-            "created_at": b.created_at.isoformat() if b.created_at else ""
+            "created_at": b.created_at.isoformat() if b.created_at else "",
+            "kyc_documents": kyc_docs
         })
         
     return APIResponse(success=True, data=boy_list)

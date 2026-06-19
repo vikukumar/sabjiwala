@@ -20,7 +20,7 @@ from app.models.user import User, UserRole, UserType, Role
 from app.models.vendor import (
     Vendor, VendorBankAccount, VendorDeliveryRule, VendorDocument,
     VendorHoliday, VendorServiceArea, VendorStaff, VendorStatus,
-    VendorStore, VendorWallet,
+    VendorStore, VendorWallet, DocumentType, DocumentVerificationStatus
 )
 
 router = APIRouter()
@@ -31,6 +31,41 @@ def _slugify(text: str) -> str:
     text = re.sub(r"[^\w\s-]", "", text)
     text = re.sub(r"[-\s]+", "-", text)
     return text
+
+
+async def _save_vendor_documents(db: AsyncSession, vendor_id: UUID, body: VendorRegisterRequest):
+    docs_to_save = []
+    if body.fssai_doc_url:
+        docs_to_save.append((DocumentType.FSSAI_LICENSE, body.fssai_doc_url, body.fssai_number))
+    if body.pan_doc_url:
+        docs_to_save.append((DocumentType.PAN_CARD, body.pan_doc_url, body.pan_number))
+    if body.gst_doc_url:
+        docs_to_save.append((DocumentType.GST_CERTIFICATE, body.gst_doc_url, body.gst_number))
+        
+    for doc_type, url, doc_num in docs_to_save:
+        # Check if already exists
+        existing_res = await db.execute(
+            select(VendorDocument).where(
+                VendorDocument.vendor_id == vendor_id,
+                VendorDocument.document_type == doc_type,
+                VendorDocument.is_deleted == False
+            )
+        )
+        existing = existing_res.scalars().first()
+        if existing:
+            existing.file_url = url
+            existing.document_number = doc_num
+            existing.verification_status = DocumentVerificationStatus.PENDING
+        else:
+            new_doc = VendorDocument(
+                vendor_id=vendor_id,
+                document_type=doc_type,
+                document_number=doc_num,
+                file_url=url,
+                file_name=url.split("/")[-1] if "/" in url else "document",
+                verification_status=DocumentVerificationStatus.PENDING
+            )
+            db.add(new_doc)
 
 
 @router.post("/register", response_model=APIResponse[VendorResponse], status_code=201)
@@ -47,9 +82,21 @@ async def register_vendor(
     if existing.scalars().first():
         raise HTTPException(status_code=409, detail="Already registered as a vendor")
 
+    # Fetch user for session fallback
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalars().first()
+
     # Create vendor
     import secrets
     slug = _slugify(body.business_name) + "-" + secrets.token_hex(3)
+
+    # Use status from body if provided, else default to PENDING
+    status = VendorStatus.PENDING
+    if body.status:
+        try:
+            status = VendorStatus(body.status)
+        except ValueError:
+            pass
 
     vendor = Vendor(
         user_id=user_id,
@@ -57,14 +104,18 @@ async def register_vendor(
         business_type=body.business_type,
         slug=slug,
         description=body.description,
-        contact_email=body.contact_email,
-        contact_phone=body.contact_phone,
+        contact_email=body.contact_email or (user.email if user else None),
+        contact_phone=body.contact_phone or (user.phone if user else None),
         gst_number=body.gst_number,
         pan_number=body.pan_number,
-        status=VendorStatus.PENDING,
+        fssai_number=body.fssai_number,
+        status=status,
     )
     db.add(vendor)
     await db.flush()
+
+    # Save documents
+    await _save_vendor_documents(db, vendor.id, body)
 
     # Create default store
     store = VendorStore(
@@ -78,8 +129,6 @@ async def register_vendor(
     db.add(wallet)
 
     # Update user type
-    user_result = await db.execute(select(User).where(User.id == user_id))
-    user = user_result.scalars().first()
     if user:
         user.user_type = UserType.VENDOR
 
@@ -89,6 +138,9 @@ async def register_vendor(
     if vendor_role:
         user_role = UserRole(user_id=user_id, role_id=vendor_role.id)
         db.add(user_role)
+
+    if vendor.store:
+        vendor.store.service_radius_km = 10.0
 
     await db.flush()
 
@@ -104,6 +156,21 @@ async def get_my_vendor_profile(
     vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor profile not found")
+
+    if vendor.store:
+        rule_res = await db.execute(
+            select(VendorDeliveryRule.max_delivery_distance_km)
+            .where(VendorDeliveryRule.vendor_id == vendor.id, VendorDeliveryRule.is_deleted == False)
+        )
+        radius = rule_res.scalar()
+        if radius is None:
+            area_res = await db.execute(
+                select(VendorServiceArea.radius_km)
+                .where(VendorServiceArea.vendor_id == vendor.id, VendorServiceArea.name == "Default", VendorServiceArea.is_deleted == False)
+            )
+            radius = area_res.scalar() or 10.0
+        vendor.store.service_radius_km = float(radius)
+
     return APIResponse(success=True, data=VendorResponse.model_validate(vendor))
 
 
@@ -135,8 +202,30 @@ async def update_vendor_profile(
         raise HTTPException(status_code=404, detail="Vendor profile not found")
 
     for field, value in body.model_dump(exclude_unset=True).items():
-        if hasattr(vendor, field):
+        if field == "status" and value:
+            try:
+                vendor.status = VendorStatus(value)
+            except ValueError:
+                pass
+        elif hasattr(vendor, field):
             setattr(vendor, field, value)
+
+    # Save documents if provided
+    await _save_vendor_documents(db, vendor.id, body)
+
+    if vendor.store:
+        rule_res = await db.execute(
+            select(VendorDeliveryRule.max_delivery_distance_km)
+            .where(VendorDeliveryRule.vendor_id == vendor.id, VendorDeliveryRule.is_deleted == False)
+        )
+        radius = rule_res.scalar()
+        if radius is None:
+            area_res = await db.execute(
+                select(VendorServiceArea.radius_km)
+                .where(VendorServiceArea.vendor_id == vendor.id, VendorServiceArea.name == "Default", VendorServiceArea.is_deleted == False)
+            )
+            radius = area_res.scalar() or 10.0
+        vendor.store.service_radius_km = float(radius)
 
     await db.flush()
     return APIResponse(success=True, message="Profile updated", data=VendorResponse.model_validate(vendor))
@@ -410,11 +499,59 @@ async def update_store_location(
         vendor.store.latitude = body["latitude"]
     if "longitude" in body:
         vendor.store.longitude = body["longitude"]
-    if "service_radius_km" in body:
-        vendor.store.service_radius_km = body["service_radius_km"]
     if "address_line_1" in body:
         vendor.store.address_line_1 = body["address_line_1"]
+
+    if "service_radius_km" in body:
+        radius_km = float(body["service_radius_km"])
+        
+        # 1. Update or create default service area
+        area_res = await db.execute(
+            select(VendorServiceArea)
+            .where(
+                VendorServiceArea.vendor_id == vendor.id,
+                VendorServiceArea.name == "Default",
+                VendorServiceArea.is_deleted == False
+            )
+        )
+        area = area_res.scalars().first()
+        if not area:
+            area = VendorServiceArea(
+                vendor_id=vendor.id,
+                name="Default",
+                radius_km=radius_km,
+                center_latitude=vendor.store.latitude,
+                center_longitude=vendor.store.longitude
+            )
+            db.add(area)
+        else:
+            area.radius_km = radius_km
+            area.center_latitude = vendor.store.latitude
+            area.center_longitude = vendor.store.longitude
+
+        # 2. Update or create default delivery rule
+        rule_res = await db.execute(
+            select(VendorDeliveryRule)
+            .where(
+                VendorDeliveryRule.vendor_id == vendor.id,
+                VendorDeliveryRule.is_deleted == False
+            )
+        )
+        rule = rule_res.scalars().first()
+        if not rule:
+            rule = VendorDeliveryRule(
+                vendor_id=vendor.id,
+                max_delivery_distance_km=radius_km,
+                min_order_amount=0.0,
+                base_delivery_charge=0.0,
+                per_km_charge=0.0
+            )
+            db.add(rule)
+        else:
+            rule.max_delivery_distance_km = radius_km
+
     await db.flush()
+    await db.commit()
     return APIResponse(success=True, message="Store location updated successfully")
 
 

@@ -424,11 +424,14 @@ async def upload_kyc_document(
             file_bytes=contents,
             original_filename=file.filename or "unknown",
             owner_id=current_user["user_id"],
+            vendor_id=boy.vendor_id,
             bucket="public",
             is_public=True,
             entity_type="delivery_kyc",
             entity_id=str(boy.id)
         )
+        metadata.custom_metadata = {"document_type": document_type}
+        await db.flush()
         url = f"/api/v1/storage/{metadata.id}"
         return APIResponse(success=True, data={"url": url, "document_type": document_type})
     except Exception as e:
