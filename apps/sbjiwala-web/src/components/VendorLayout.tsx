@@ -47,7 +47,17 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
     setIsAuthed(true);
   }, [router]);
 
-  useWebSocket((message) => {
+  const { data: vendorOrders = [] } = useQuery<any[]>({
+    queryKey: ["vendorOrders"],
+    queryFn: async () => {
+      const res = await api.get("/orders");
+      return res.data || [];
+    },
+    enabled: !!isAuthed,
+    refetchInterval: 10000, // Poll every 10 seconds to keep live
+  });
+
+  const { sendMessage } = useWebSocket((message) => {
     if (message.type === "order_status_update") {
       queryClient.invalidateQueries({ queryKey: ["vendorOrders"] });
       queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
@@ -56,6 +66,64 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
       }
     }
   }, !!isAuthed);
+
+  // Geolocation tracking for active self-delivery orders
+  useEffect(() => {
+    if (!isAuthed) return;
+    
+    // Check if there are active self-delivery orders that are out_for_delivery
+    const activeSelfDeliveries = (vendorOrders || []).filter(
+      (order: any) =>
+        order.status === "out_for_delivery" &&
+        order.metadata_json?.delivery_option === "self"
+    );
+
+    if (activeSelfDeliveries.length === 0) return;
+
+    let watchId: number | null = null;
+    
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      const handleLocationUpdate = (position: GeolocationPosition) => {
+        activeSelfDeliveries.forEach((order: any) => {
+          sendMessage({
+            type: "location_update",
+            data: {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+              speed: position.coords.speed || 5,
+              heading: position.coords.heading || 0,
+              order_id: order.id
+            }
+          });
+        });
+      };
+
+      // Send initial position immediately
+      navigator.geolocation.getCurrentPosition(handleLocationUpdate, (err) => {
+        console.warn("Initial Geolocation fetch error:", err);
+      }, { enableHighAccuracy: true });
+
+      // Start watching position
+      watchId = navigator.geolocation.watchPosition(
+        handleLocationUpdate,
+        (error) => {
+          console.warn("Geolocation tracking error", error);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 10000,
+          timeout: 10000
+        }
+      );
+    }
+
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [vendorOrders, isAuthed, sendMessage]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {

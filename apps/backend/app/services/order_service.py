@@ -453,7 +453,9 @@ class OrderService:
         changed_by: UUID,
         user_type: str,
         notes: Optional[str] = None,
-        delivery_option: Optional[str] = None
+        delivery_option: Optional[str] = None,
+        otp: Optional[str] = None,
+        images: Optional[List[str]] = None
     ) -> Order:
         """
         Transition order state and execute business triggers.
@@ -481,6 +483,18 @@ class OrderService:
         if delivery_option:
             meta = dict(order.metadata_json) if order.metadata_json else {}
             meta["delivery_option"] = delivery_option
+            order.metadata_json = meta
+
+        if status == OrderStatus.DELIVERED:
+            if not otp:
+                raise ValueError("OTP is required to deliver the order")
+            if not images or len(images) < 2:
+                raise ValueError("Minimum 2 verification photos are required to deliver the order")
+            if order.delivery_otp != otp:
+                raise ValueError("Invalid OTP code. Delivery validation failed.")
+            
+            meta = dict(order.metadata_json) if order.metadata_json else {}
+            meta["delivery_proof_images"] = images
             order.metadata_json = meta
 
         # Update order status

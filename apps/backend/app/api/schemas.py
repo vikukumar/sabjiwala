@@ -492,6 +492,8 @@ class OrderStatusUpdate(BaseModel):
     status: str
     notes: Optional[str] = None
     delivery_option: Optional[str] = None  # "self" or "auto"
+    otp: Optional[str] = None
+    images: Optional[List[str]] = None
 
 class ReturnRequestCreate(BaseModel):
     order_id: UUID
@@ -679,6 +681,28 @@ class DeliveryLocationUpdate(BaseModel):
 class DeliveryOTPVerify(BaseModel):
     order_id: UUID
     otp: str
+    images: List[str]
+
+# ===== Review Schemas =====
+
+class ProductReviewCreate(BaseModel):
+    product_id: UUID
+    order_id: Optional[UUID] = None
+    rating: int = Field(..., ge=1, le=5)
+    comment: Optional[str] = None
+
+class ProductReviewResponse(BaseModel):
+    id: UUID
+    product_id: UUID
+    product_name: str
+    user_id: UUID
+    order_id: Optional[UUID] = None
+    rating: int
+    comment: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 class AvailabilityToggle(BaseModel):
     is_available: bool

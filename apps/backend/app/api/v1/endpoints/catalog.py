@@ -84,10 +84,38 @@ async def browse_products(
     query = query.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     products = result.scalars().all()
+
+    # Bulk fetch ratings
+    product_ids = [p.id for p in products]
+    ratings_map = {}
+    if product_ids:
+        from app.models.product import ProductReview
+        ratings_query = (
+            select(
+                ProductReview.product_id,
+                func.avg(ProductReview.rating).label("avg_rating"),
+                func.count(ProductReview.id).label("review_count")
+            )
+            .where(
+                ProductReview.product_id.in_(product_ids),
+                ProductReview.is_approved == True
+            )
+            .group_by(ProductReview.product_id)
+        )
+        ratings_res = await db.execute(ratings_query)
+        for row in ratings_res.all():
+            ratings_map[row.product_id] = {
+                "rating": round(float(row.avg_rating), 1),
+                "review_count": int(row.review_count)
+            }
     
     # Enrich products with database inventory price and stock details
+    product_stocks = {}
     for p in products:
         p_attrs = dict(p.attributes or {})
+        rating_info = ratings_map.get(p.id, {"rating": 0.0, "review_count": 0})
+        p_attrs["rating"] = rating_info["rating"]
+        p_attrs["review_count"] = rating_info["review_count"]
         
         # Get inventory entry
         inv_query = select(Inventory).where(Inventory.product_id == p.id, Inventory.is_deleted == False)
@@ -147,11 +175,17 @@ async def browse_products(
         if "image_emoji" not in p_attrs:
             p_attrs["image_emoji"] = "🥬"
         p.attributes = p_attrs
+        product_stocks[p.id] = float(inv.quantity) if inv else 0.0
 
     total_pages = (total + page_size - 1) // page_size if total > 0 else 1
 
+    def to_product_response(prod):
+        res = ProductResponse.model_validate(prod)
+        res.stock = product_stocks.get(prod.id, 0.0)
+        return res
+
     return PaginatedResponse(
-        data=[ProductResponse.model_validate(p) for p in products],
+        data=[to_product_response(prod) for prod in products],
         pagination=PaginationMeta(page=page, page_size=page_size, total_items=total, total_pages=total_pages, has_next=page < total_pages, has_previous=page > 1),
     )
 
@@ -368,6 +402,26 @@ async def get_catalog_product(
 
     p_attrs = dict(product.attributes or {})
 
+    from app.models.product import ProductReview
+    rating_stmt = (
+        select(
+            func.avg(ProductReview.rating).label("avg_rating"),
+            func.count(ProductReview.id).label("review_count")
+        )
+        .where(
+            ProductReview.product_id == product.id,
+            ProductReview.is_approved == True
+        )
+    )
+    rating_res = await db.execute(rating_stmt)
+    row = rating_res.first()
+    if row and row.avg_rating is not None:
+        p_attrs["rating"] = round(float(row.avg_rating), 1)
+        p_attrs["review_count"] = row.review_count
+    else:
+        p_attrs["rating"] = 0.0
+        p_attrs["review_count"] = 0
+
     # Get inventory entry
     inv_query = select(Inventory).where(Inventory.product_id == product.id, Inventory.is_deleted == False)
     inv_res = await db.execute(inv_query)
@@ -389,14 +443,17 @@ async def get_catalog_product(
     if inv:
         p_attrs["quantity"] = float(inv.quantity)
         p_attrs["vendor_id"] = str(inv.vendor_id)
-        product.stock = float(inv.quantity)
+        stock_val = float(inv.quantity)
     else:
         p_attrs["quantity"] = 0.0
         p_attrs["vendor_id"] = ""
-        product.stock = 0.0
+        stock_val = 0.0
 
     if "image_emoji" not in p_attrs:
         p_attrs["image_emoji"] = "🥬"
     product.attributes = p_attrs
 
-    return APIResponse(success=True, data=product)
+    product_res = ProductResponse.model_validate(product)
+    product_res.stock = stock_val
+
+    return APIResponse(success=True, data=product_res)

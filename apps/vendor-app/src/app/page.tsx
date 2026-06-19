@@ -8,14 +8,157 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
+import { Button } from "@/components/ui/index";
 import Link from "next/link";
 import VendorLayout, { resolveVendorLink } from "@/components/VendorLayout";
+
+// =========== OTP & Image Upload Modal ===========
+function OtpPromptModal({
+  isOpen, title, message, onConfirm, onCancel, loading
+}: {
+  isOpen: boolean; title: string; message: string;
+  onConfirm: (otp: string, images: string[]) => void; onCancel: () => void; loading?: boolean;
+}) {
+  const [otp, setOtp] = useState("");
+  const [images, setImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { success, error: showError } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      setOtp("");
+      setImages([]);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadedUrls: string[] = [...images];
+      for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append("file", files[i]);
+        const res = await api.post("/storage/upload", formData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+        if (res.data?.data?.url) {
+          uploadedUrls.push(res.data.data.url);
+        }
+      }
+      setImages(uploadedUrls);
+      success("Success", "Photos uploaded successfully!");
+    } catch (err: any) {
+      showError("Upload Failed", err.response?.data?.detail || err.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, idx) => idx !== index));
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl text-slate-850 dark:text-white">
+        <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-950/40 rounded-2xl flex items-center justify-center mx-auto">
+          <Package className="w-7 h-7 text-emerald-600 dark:text-emerald-450" />
+        </div>
+        <h3 className="text-base font-black uppercase tracking-wider">{title}</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">{message}</p>
+        
+        <div className="space-y-1">
+          <label className="block text-[10px] font-bold text-slate-400 uppercase text-left mb-1">Enter Customer OTP</label>
+          <input
+            type="text" maxLength={4} pattern="[0-9]*" inputMode="numeric"
+            value={otp} onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+            className="w-full text-center tracking-[1.5em] pl-[1.5em] py-2 text-2xl font-black border-2 border-slate-200 dark:border-slate-700 rounded-2xl bg-transparent focus:outline-none focus:border-emerald-500 transition-colors"
+            placeholder="••••" disabled={loading}
+          />
+        </div>
+
+        <div className="space-y-2 text-left">
+          <div className="flex justify-between items-center">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase">
+              Upload Proof Pics ({images.length}/2 minimum)
+            </label>
+            {images.length < 2 && (
+              <span className="text-[9px] font-black text-rose-500 uppercase animate-pulse">Required</span>
+            )}
+          </div>
+          
+          <input
+            type="file" multiple accept="image/*"
+            ref={fileInputRef} onChange={handleFileUpload}
+            className="hidden" disabled={loading || uploading}
+          />
+          
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading || uploading}
+            className="w-full py-2.5 border-2 border-dashed border-slate-205 dark:border-slate-800 hover:border-emerald-500 rounded-2xl text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          >
+            {uploading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+            ) : (
+              <span>📷 Upload Verification Photos</span>
+            )}
+          </button>
+
+          {images.length > 0 && (
+            <div className="grid grid-cols-4 gap-2 pt-1">
+              {images.map((url, idx) => (
+                <div key={idx} className="relative aspect-square border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden group">
+                  <img src={url} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    className="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 hover:bg-rose-600 shadow-sm"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="primary"
+            onClick={() => { if (otp.length === 4 && images.length >= 2) onConfirm(otp, images); }}
+            disabled={otp.length !== 4 || images.length < 2 || loading || uploading}
+            loading={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Verify & Deliver
+          </Button>
+          <Button variant="outline" onClick={onCancel} disabled={loading || uploading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold">
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function VendorDashboard() {
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [selectedOrderForDeliveryOption, setSelectedOrderForDeliveryOption] = useState<any>(null);
+  const [otpConfirmOrder, setOtpConfirmOrder] = useState<any>(null);
 
   // Service Area & map states
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -95,11 +238,13 @@ export default function VendorDashboard() {
   });
 
   const updateOrderStatus = useMutation({
-    mutationFn: async ({ orderId, status, notes, deliveryOption }: { orderId: string, status: string, notes?: string, deliveryOption?: string }) => {
+    mutationFn: async ({ orderId, status, notes, deliveryOption, otp, images }: { orderId: string, status: string, notes?: string, deliveryOption?: string, otp?: string, images?: string[] }) => {
       return api.patch(`/orders/${orderId}/status`, {
         status,
         notes: notes || `Updated to ${status} via Dashboard`,
-        delivery_option: deliveryOption || "auto"
+        delivery_option: deliveryOption || "auto",
+        otp,
+        images
       });
     },
     onSuccess: () => {
@@ -679,7 +824,7 @@ export default function VendorDashboard() {
                       {(order.status === "pending" || order.status === "confirmed") && (
                         <>
                           <button
-                            onClick={() => updateOrderStatus.mutate({ orderId: order.id, status: "accepted", deliveryOption: "auto" })}
+                            onClick={() => setSelectedOrderForDeliveryOption(order)}
                             disabled={updateOrderStatus.isPending}
                             className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white dark:bg-emerald-950/30 dark:hover:bg-emerald-600 dark:text-emerald-400 dark:hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-emerald-250 dark:border-emerald-900/40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
                           >
@@ -698,7 +843,7 @@ export default function VendorDashboard() {
                         <button
                           onClick={() => updateOrderStatus.mutate({ orderId: order.id, status: "packed" })}
                           disabled={updateOrderStatus.isPending}
-                          className="bg-purple-50 hover:bg-purple-650 text-purple-700 hover:text-white dark:bg-purple-950/30 dark:hover:bg-purple-600 dark:text-purple-450 dark:hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-purple-250 dark:border-purple-900/40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          className="bg-purple-50 hover:bg-purple-655 text-purple-700 hover:text-white dark:bg-purple-950/30 dark:hover:bg-purple-600 dark:text-purple-450 dark:hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-purple-250 dark:border-purple-900/40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
                         >
                           Pack Order
                         </button>
@@ -707,16 +852,16 @@ export default function VendorDashboard() {
                         <button
                           onClick={() => updateOrderStatus.mutate({ orderId: order.id, status: "out_for_delivery" })}
                           disabled={updateOrderStatus.isPending}
-                          className="bg-blue-50 hover:bg-blue-650 text-blue-700 hover:text-white dark:bg-blue-950/30 dark:hover:bg-blue-600 dark:text-blue-450 dark:hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-blue-250 dark:border-blue-900/40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          className="bg-blue-50 hover:bg-blue-655 text-blue-700 hover:text-white dark:bg-blue-950/30 dark:hover:bg-blue-600 dark:text-blue-450 dark:hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-blue-250 dark:border-blue-900/40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
                         >
                           Ship / Out
                         </button>
                       )}
                       {order.status === "out_for_delivery" && (
                         <button
-                          onClick={() => updateOrderStatus.mutate({ orderId: order.id, status: "delivered" })}
+                          onClick={() => setOtpConfirmOrder(order)}
                           disabled={updateOrderStatus.isPending}
-                          className="bg-emerald-50 hover:bg-emerald-655 text-emerald-700 hover:text-white dark:bg-emerald-950/30 dark:hover:bg-emerald-600 dark:text-emerald-450 dark:hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-emerald-250 dark:border-emerald-900/40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          className="bg-emerald-50 hover:bg-emerald-655 text-emerald-700 hover:text-white dark:bg-emerald-950/30 dark:hover:bg-emerald-600 dark:text-emerald-455 dark:hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-emerald-250 dark:border-emerald-900/40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
                         >
                           Deliver
                         </button>
@@ -731,6 +876,89 @@ export default function VendorDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Delivery Option Selection Modal */}
+      {selectedOrderForDeliveryOption && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedOrderForDeliveryOption(null)} />
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl animate-scale-in space-y-6 text-slate-850 dark:text-white">
+            <div className="space-y-1">
+              <h3 className="text-base font-black uppercase tracking-wider">Accept Order #{selectedOrderForDeliveryOption.order_number}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Choose how this order will be delivered before you start packing.</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <button
+                onClick={() => {
+                  updateOrderStatus.mutate({
+                    orderId: selectedOrderForDeliveryOption.id,
+                    status: "accepted",
+                    notes: "Order accepted by vendor with Platform Delivery",
+                    deliveryOption: "auto"
+                  });
+                  setSelectedOrderForDeliveryOption(null);
+                }}
+                className="flex flex-col items-start p-4 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99] text-left cursor-pointer group"
+              >
+                <span className="font-extrabold text-xs text-slate-850 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                  🚲 Platform Delivery Partner
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+                  Our system will automatically search and assign a delivery boy based on proximity to match order destination.
+                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  updateOrderStatus.mutate({
+                    orderId: selectedOrderForDeliveryOption.id,
+                    status: "accepted",
+                    notes: "Order accepted by vendor with Self Delivery",
+                    deliveryOption: "self"
+                  });
+                  setSelectedOrderForDeliveryOption(null);
+                }}
+                className="flex flex-col items-start p-4 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99] text-left cursor-pointer group"
+              >
+                <span className="font-extrabold text-xs text-slate-850 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                  🎒 Store Self Delivery
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+                  Deliver using your own store runner or personal courier. No platform delivery partner will be dispatched.
+                </span>
+              </button>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setSelectedOrderForDeliveryOption(null)}
+                className="flex-1 py-3 border border-slate-205 dark:border-slate-850 rounded-xl text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850/50 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OTP Confirmation Modal */}
+      <OtpPromptModal
+        isOpen={!!otpConfirmOrder}
+        title="Delivery OTP Verification"
+        message={`Enter 4-digit OTP and upload proof photos to deliver Order #${otpConfirmOrder?.order_number}`}
+        loading={updateOrderStatus.isPending}
+        onConfirm={(otp, images) => {
+          updateOrderStatus.mutate({
+            orderId: otpConfirmOrder.id,
+            status: "delivered",
+            otp,
+            images,
+            notes: "Order marked delivered by vendor (Self Delivery Verification)"
+          });
+          setOtpConfirmOrder(null);
+        }}
+        onCancel={() => setOtpConfirmOrder(null)}
+      />
     </VendorLayout>
   );
 }

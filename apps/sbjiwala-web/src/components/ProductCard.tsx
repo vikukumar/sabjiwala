@@ -80,7 +80,8 @@ export default function ProductCard({ product }: { product: any }) {
   const emoji = product.attributes?.image_emoji || "🥬";
   const hasDiscount = mrp && mrp > price;
   const discountPct = hasDiscount ? Math.round(((mrp - price) / mrp) * 100) : 0;
-  const rating = product.attributes?.rating ?? (4 + Math.random() * 0.9).toFixed(1);
+  const ratingVal = product.attributes?.rating;
+  const rating = ratingVal && ratingVal > 0 ? Number(ratingVal).toFixed(1) : "New";
 
   const targetVendorId = product.attributes?.vendor_id || product.vendor_id || product.vendor?.id;
 

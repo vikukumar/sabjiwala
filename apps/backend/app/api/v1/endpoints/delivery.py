@@ -281,13 +281,23 @@ async def deliver_order(
     if order.delivery_otp != body.otp:
         raise HTTPException(status_code=400, detail="Invalid OTP code. Delivery validation failed.")
 
+    if not body.images or len(body.images) < 2:
+        raise HTTPException(status_code=400, detail="Minimum 2 verification photos are required to complete delivery.")
+
     try:
+        # Save verification images
+        meta = dict(order.metadata_json) if order.metadata_json else {}
+        meta["delivery_proof_images"] = body.images
+        order.metadata_json = meta
+
         await service.update_order_status(
             order_id=order_id,
             status=OrderStatus.DELIVERED,
             changed_by=current_user["user_id"],
             user_type="delivery_boy",
-            notes="Delivered with OTP verification"
+            notes="Delivered with OTP verification",
+            otp=body.otp,
+            images=body.images
         )
         
         # Free delivery boy concurrent orders count

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   Navigation, CheckCircle2, AlertCircle, ShoppingBag,
-  MapPin, Loader2, Package, XCircle
+  MapPin, Loader2, Package, XCircle, X
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
@@ -16,11 +16,54 @@ function OtpPromptModal({
   isOpen, title, message, onConfirm, onCancel, loading
 }: {
   isOpen: boolean; title: string; message: string;
-  onConfirm: (otp: string) => void; onCancel: () => void; loading?: boolean;
+  onConfirm: (otp: string, images: string[]) => void; onCancel: () => void; loading?: boolean;
 }) {
   const [otp, setOtp] = useState("");
-  useEffect(() => { if (isOpen) setOtp(""); }, [isOpen]);
+  const [images, setImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { success, error: showError } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      setOtp("");
+      setImages([]);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadedUrls: string[] = [...images];
+      for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append("file", files[i]);
+        const res = await api.post("/storage/upload", formData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+        if (res.data?.data?.url) {
+          uploadedUrls.push(res.data.data.url);
+        }
+      }
+      setImages(uploadedUrls);
+      success("Success", "Photos uploaded successfully!");
+    } catch (err: any) {
+      showError("Upload Failed", err.response?.data?.detail || err.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, idx) => idx !== index));
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onCancel} />
@@ -30,21 +73,75 @@ function OtpPromptModal({
         </div>
         <h3 className="text-base font-black uppercase tracking-wider">{title}</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">{message}</p>
-        <div className="space-y-1.5">
+        
+        <div className="space-y-1">
+          <label className="block text-[10px] font-bold text-slate-400 uppercase text-left mb-1">Enter Customer OTP</label>
           <input
             type="text" maxLength={4} pattern="[0-9]*" inputMode="numeric"
             value={otp} onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
-            className="w-full text-center tracking-[1.5em] pl-[1.5em] py-3 text-2xl font-black border-2 border-slate-200 dark:border-slate-700 rounded-2xl bg-transparent focus:outline-none focus:border-emerald-500 transition-colors"
+            className="w-full text-center tracking-[1.5em] pl-[1.5em] py-2 text-2xl font-black border-2 border-slate-200 dark:border-slate-700 rounded-2xl bg-transparent focus:outline-none focus:border-emerald-500 transition-colors"
             placeholder="••••" disabled={loading}
           />
         </div>
+
+        <div className="space-y-2 text-left">
+          <div className="flex justify-between items-center">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase">
+              Upload Proof Pics ({images.length}/2 minimum)
+            </label>
+            {images.length < 2 && (
+              <span className="text-[9px] font-black text-rose-500 uppercase animate-pulse">Required</span>
+            )}
+          </div>
+          
+          <input
+            type="file" multiple accept="image/*"
+            ref={fileInputRef} onChange={handleFileUpload}
+            className="hidden" disabled={loading || uploading}
+          />
+          
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading || uploading}
+            className="w-full py-2.5 border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-emerald-500 rounded-2xl text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          >
+            {uploading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+            ) : (
+              <span>📷 Upload Verification Photos</span>
+            )}
+          </button>
+
+          {images.length > 0 && (
+            <div className="grid grid-cols-4 gap-2 pt-1">
+              {images.map((url, idx) => (
+                <div key={idx} className="relative aspect-square border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden group">
+                  <img src={url} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    className="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 hover:bg-rose-600 shadow-sm"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="flex gap-3 pt-2">
-          <Button variant="primary" onClick={() => { if (otp.length === 4) onConfirm(otp); }}
-            disabled={otp.length !== 4 || loading} loading={loading}
-            className="flex-1 py-3 text-xs cursor-pointer font-bold">
+          <Button
+            variant="primary"
+            onClick={() => { if (otp.length === 4 && images.length >= 2) onConfirm(otp, images); }}
+            disabled={otp.length !== 4 || images.length < 2 || loading || uploading}
+            loading={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
             Verify & Deliver
           </Button>
-          <Button variant="outline" onClick={onCancel} disabled={loading}
+          <Button variant="outline" onClick={onCancel} disabled={loading || uploading}
             className="flex-1 py-3 text-xs cursor-pointer font-bold">
             Cancel
           </Button>
@@ -209,8 +306,8 @@ function ActiveOrdersDashboard() {
   });
 
   const deliverOrderMutation = useMutation({
-    mutationFn: async ({ orderId, otp }: { orderId: string; otp: string }) =>
-      api.post(`/delivery/orders/${orderId}/deliver`, { order_id: orderId, otp }),
+    mutationFn: async ({ orderId, otp, images }: { orderId: string; otp: string; images: string[] }) =>
+      api.post(`/delivery/orders/${orderId}/deliver`, { order_id: orderId, otp, images }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] });
       queryClient.invalidateQueries({ queryKey: ["deliveryEarnings"] });
@@ -463,7 +560,7 @@ function ActiveOrdersDashboard() {
         title="Delivery OTP"
         message="Enter the 4-digit OTP from the customer to confirm delivery."
         loading={deliverOrderMutation.isPending}
-        onConfirm={(otp) => { if (otpPromptConfig?.orderId) deliverOrderMutation.mutate({ orderId: otpPromptConfig.orderId, otp }); }}
+        onConfirm={(otp, images) => { if (otpPromptConfig?.orderId) deliverOrderMutation.mutate({ orderId: otpPromptConfig.orderId, otp, images }); }}
         onCancel={() => setOtpPromptConfig(null)}
       />
     </div>

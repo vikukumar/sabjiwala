@@ -123,8 +123,8 @@ export default function ProductDetailClient() {
   const emoji = product?.attributes?.image_emoji || "🥬";
   const hasDiscount = mrp && mrp > price;
   const discountPct = hasDiscount ? Math.round(((mrp - price) / mrp) * 100) : 0;
-  const rating = product?.attributes?.rating ?? 4.7;
-  const reviewCount = product?.attributes?.review_count ?? 128;
+  const rating = product?.attributes?.rating ?? 0.0;
+  const reviewCount = product?.attributes?.review_count ?? 0;
 
   // Guest actions
   const handleGuestAdd = () => {
@@ -315,8 +315,10 @@ export default function ProductDetailClient() {
           {/* Rating */}
           <div className="flex items-center gap-2">
             <StarRating value={Math.round(rating)} />
-            <span className="text-sm font-bold text-amber-600">{rating}</span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">({reviewCount} reviews)</span>
+            <span className="text-sm font-bold text-amber-600">{rating > 0 ? rating.toFixed(1) : "New"}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              {reviewCount > 0 ? `(${reviewCount} reviews)` : "(No reviews yet)"}
+            </span>
           </div>
 
           {/* Stock badge */}

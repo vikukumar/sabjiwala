@@ -1,17 +1,159 @@
 "use client";
 
-import React, { useState } from "react";
-import { Clock, Loader2, Star, ShoppingBag } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Clock, Loader2, Star, ShoppingBag, X, Package, CheckCircle2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, useWebSocket } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
+import { Button } from "@/components/ui/index";
 import VendorLayout from "@/components/VendorLayout";
+
+// =========== OTP & Image Upload Modal ===========
+function OtpPromptModal({
+  isOpen, title, message, onConfirm, onCancel, loading
+}: {
+  isOpen: boolean; title: string; message: string;
+  onConfirm: (otp: string, images: string[]) => void; onCancel: () => void; loading?: boolean;
+}) {
+  const [otp, setOtp] = useState("");
+  const [images, setImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { success, error: showError } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      setOtp("");
+      setImages([]);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadedUrls: string[] = [...images];
+      for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append("file", files[i]);
+        const res = await api.post("/storage/upload", formData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+        if (res.data?.data?.url) {
+          uploadedUrls.push(res.data.data.url);
+        }
+      }
+      setImages(uploadedUrls);
+      success("Success", "Photos uploaded successfully!");
+    } catch (err: any) {
+      showError("Upload Failed", err.response?.data?.detail || err.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, idx) => idx !== index));
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl text-slate-855 dark:text-white">
+        <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-950/40 rounded-2xl flex items-center justify-center mx-auto">
+          <Package className="w-7 h-7 text-emerald-600 dark:text-emerald-455" />
+        </div>
+        <h3 className="text-base font-black uppercase tracking-wider">{title}</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">{message}</p>
+        
+        <div className="space-y-1">
+          <label className="block text-[10px] font-bold text-slate-400 uppercase text-left mb-1">Enter Customer OTP</label>
+          <input
+            type="text" maxLength={4} pattern="[0-9]*" inputMode="numeric"
+            value={otp} onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+            className="w-full text-center tracking-[1.5em] pl-[1.5em] py-2 text-2xl font-black border-2 border-slate-200 dark:border-slate-700 rounded-2xl bg-transparent focus:outline-none focus:border-emerald-500 transition-colors"
+            placeholder="••••" disabled={loading}
+          />
+        </div>
+
+        <div className="space-y-2 text-left">
+          <div className="flex justify-between items-center">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase">
+              Upload Proof Pics ({images.length}/2 minimum)
+            </label>
+            {images.length < 2 && (
+              <span className="text-[9px] font-black text-rose-500 uppercase animate-pulse">Required</span>
+            )}
+          </div>
+          
+          <input
+            type="file" multiple accept="image/*"
+            ref={fileInputRef} onChange={handleFileUpload}
+            className="hidden" disabled={loading || uploading}
+          />
+          
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading || uploading}
+            className="w-full py-2.5 border-2 border-dashed border-slate-205 dark:border-slate-800 hover:border-emerald-500 rounded-2xl text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          >
+            {uploading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+            ) : (
+              <span>📷 Upload Verification Photos</span>
+            )}
+          </button>
+
+          {images.length > 0 && (
+            <div className="grid grid-cols-4 gap-2 pt-1">
+              {images.map((url, idx) => (
+                <div key={idx} className="relative aspect-square border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden group">
+                  <img src={url} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    className="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 hover:bg-rose-600 shadow-sm"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="primary"
+            onClick={() => { if (otp.length === 4 && images.length >= 2) onConfirm(otp, images); }}
+            disabled={otp.length !== 4 || images.length < 2 || loading || uploading}
+            loading={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Verify & Deliver
+          </Button>
+          <Button variant="outline" onClick={onCancel} disabled={loading || uploading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold">
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function VendorOrdersPage() {
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("all");
   const [selectedOrderForDeliveryOption, setSelectedOrderForDeliveryOption] = useState<any>(null);
+  const [otpConfirmOrder, setOtpConfirmOrder] = useState<any>(null);
 
   const { data: ordersData, isLoading: ordersLoading, refetch: refetchOrders } = useQuery<any>({
     queryKey: ["vendorOrders", activeTab],
@@ -39,11 +181,13 @@ export default function VendorOrdersPage() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ orderId, status, notes, deliveryOption }: { orderId: string; status: string; notes: string; deliveryOption?: string }) => {
+    mutationFn: async ({ orderId, status, notes, deliveryOption, otp, images }: { orderId: string; status: string; notes: string; deliveryOption?: string; otp?: string; images?: string[] }) => {
       return api.patch(`/orders/${orderId}/status`, {
         status,
         notes,
-        delivery_option: deliveryOption
+        delivery_option: deliveryOption,
+        otp,
+        images
       });
     },
     onSuccess: () => {
@@ -184,7 +328,7 @@ export default function VendorOrdersPage() {
                     )}
                     {order.status === "out_for_delivery" && (
                       <button
-                        onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: "delivered", notes: "Order delivered by vendor" })}
+                        onClick={() => setOtpConfirmOrder(order)}
                         disabled={updateStatusMutation.isPending}
                         className="bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white text-[10px] sm:text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
                       >
@@ -295,6 +439,24 @@ export default function VendorOrdersPage() {
           </div>
         </div>
       )}
+      {/* OTP Confirmation Modal */}
+      <OtpPromptModal
+        isOpen={!!otpConfirmOrder}
+        title="Delivery OTP Verification"
+        message={`Enter 4-digit OTP and upload proof photos to deliver Order #${otpConfirmOrder?.order_number}`}
+        loading={updateStatusMutation.isPending}
+        onConfirm={(otp, images) => {
+          updateStatusMutation.mutate({
+            orderId: otpConfirmOrder.id,
+            status: "delivered",
+            otp,
+            images,
+            notes: "Order marked delivered by vendor (Self Delivery Verification)"
+          });
+          setOtpConfirmOrder(null);
+        }}
+        onCancel={() => setOtpConfirmOrder(null)}
+      />
     </VendorLayout>
   );
 }

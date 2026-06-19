@@ -329,23 +329,7 @@ async def list_orders(
     )
 
 
-@router.get("/{order_id}", response_model=APIResponse[OrderResponse])
-async def get_order_details(
-    order_id: UUID,
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Retrieve details for a single order."""
-    result = await db.execute(
-        select(Order)
-        .options(selectinload(Order.items))
-        .where(Order.id == order_id, Order.is_deleted == False)
-    )
-    order = result.scalars().first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-
-    # Construct the response model with delivery boy details
+async def enrich_order_response(order: Order, db: AsyncSession) -> OrderResponse:
     res_data = OrderResponse.model_validate(order)
     
     # Fetch vendor store details
@@ -359,6 +343,9 @@ async def get_order_details(
             "longitude": store.longitude,
             "address": store.address_line_1,
         }
+    
+    metadata = order.metadata_json or {}
+    delivery_option = metadata.get("delivery_option")
     
     if order.delivery_boy_id:
         from app.models.user import User
@@ -380,7 +367,47 @@ async def get_order_details(
                 "longitude": boy.current_longitude if boy else None,
             }
             res_data.delivery_otp = order.delivery_otp
+    elif delivery_option == "self":
+        from app.models.user import User
+        from app.models.vendor import Vendor
+        
+        vendor_res = await db.execute(select(Vendor).where(Vendor.id == order.vendor_id))
+        vendor = vendor_res.scalars().first()
+        if vendor:
+            user_res = await db.execute(select(User).where(User.id == vendor.user_id))
+            user = user_res.scalars().first()
+            
+            if user and store:
+                res_data.delivery_agent = {
+                    "name": f"{store.store_name} (Self Delivered)".strip(),
+                    "phone": user.phone,
+                    "vehicle_type": "delivery",
+                    "vehicle_number": "Store Self Delivery",
+                    "latitude": metadata.get("live_latitude") or store.latitude,
+                    "longitude": metadata.get("live_longitude") or store.longitude,
+                }
+                res_data.delivery_otp = order.delivery_otp
+                
+    return res_data
 
+
+@router.get("/{order_id}", response_model=APIResponse[OrderResponse])
+async def get_order_details(
+    order_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve details for a single order."""
+    result = await db.execute(
+        select(Order)
+        .options(selectinload(Order.items))
+        .where(Order.id == order_id, Order.is_deleted == False)
+    )
+    order = result.scalars().first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    res_data = await enrich_order_response(order, db)
     return APIResponse(success=True, data=res_data)
 
 
@@ -400,9 +427,12 @@ async def update_order_status(
             changed_by=current_user["user_id"],
             user_type=current_user.get("user_type", "customer"),
             notes=body.notes,
-            delivery_option=body.delivery_option
+            delivery_option=body.delivery_option,
+            otp=body.otp,
+            images=body.images
         )
-        return APIResponse(success=True, message="Order status updated", data=OrderResponse.model_validate(order))
+        res_data = await enrich_order_response(order, db)
+        return APIResponse(success=True, message="Order status updated", data=res_data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
