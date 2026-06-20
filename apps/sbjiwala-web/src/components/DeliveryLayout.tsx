@@ -621,7 +621,9 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
       }).catch((err) => console.warn("HTTP location sync failed:", err));
 
       if (isOnline && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        const activeDelivery = assignments?.find((a: any) => a.status === "out_for_delivery");
+        const activeDelivery = assignments?.find((a: any) =>
+          ["assigned", "confirmed", "accepted", "packed", "picked", "out_for_delivery"].includes(a.status)
+        );
         wsRef.current.send(JSON.stringify({
           type: "location_update",
           data: {

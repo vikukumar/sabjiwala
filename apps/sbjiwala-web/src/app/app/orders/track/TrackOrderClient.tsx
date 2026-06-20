@@ -10,20 +10,27 @@ import { Badge, Button, Spinner } from "@/components/ui/index";
 import { resolveLink } from "@/components/AppShell";
 
 const VEHICLES = [
-  { type: "scooty", emoji: "🛵" },
-  { type: "bike", emoji: "🏍️" },
-  { type: "truck", emoji: "🚚" },
-  { type: "bicycle", emoji: "🚲" }
+  { type: "scooty" },
+  { type: "bike" },
+  { type: "truck" },
+  { type: "bicycle" }
 ];
-const COLORS = ["#ef4444", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#10b981", "#ff4500", "#1e90ff"];
+const COLORS = ["#10b981", "#059669", "#0d9488", "#0f766e", "#14b8a6"];
 
 const getVehicleDetails = (orderId: string, agentVehicleType?: string) => {
   const hash = (orderId || "agent").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const vehicle = VEHICLES[hash % VEHICLES.length];
   const color = COLORS[(hash + 3) % COLORS.length];
   const type = agentVehicleType || vehicle.type;
-  const emoji = type === "scooty" ? "🛵" : type === "bike" ? "🏍️" : type === "truck" ? "🚚" : "🚲";
-  return { emoji, color };
+  
+  let svg = "";
+  if (type === "truck") {
+    svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;"><rect x="1" y="3" width="15" height="13" rx="2" ry="2"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>`;
+  } else {
+    // scooty, bike, bicycle all use the sleek bike icon
+    svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;"><circle cx="18.5" cy="17.5" r="2.5"></circle><circle cx="5.5" cy="17.5" r="2.5"></circle><path d="M15 5h1a2 2 0 0 1 2 2v2"></path><path d="M12 17.5V14l-3-3 4-3 2 3h2"></path></svg>`;
+  }
+  return { svg, color };
 };
 
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -165,12 +172,15 @@ export default function TrackOrderClient() {
       L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup("Pickup Store");
 
       // Delivery agent marker
-      const { emoji, color } = getVehicleDetails(order.id, order.delivery_agent?.vehicle_type);
+      const { svg, color } = getVehicleDetails(order.id, order.delivery_agent?.vehicle_type);
       const agentIcon = L.divIcon({
         html: `
-          <div style="filter: drop-shadow(0 6px 16px rgba(0,0,0,0.25)); position: relative;">
-            <div style="background: ${color}; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15)">
-              ${emoji}
+          <div style="filter: drop-shadow(0 6px 16px rgba(16,185,129,0.3)); position: relative;">
+            <!-- Pulsing halo -->
+            <span style="position: absolute; top: -6px; left: -6px; width: 50px; height: 50px; border-radius: 50%; background: rgba(16,185,129,0.15); animation: ping 1.5s infinite;"></span>
+            <!-- Inner marker -->
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15)">
+              ${svg}
             </div>
             <span style="position: absolute; bottom: -2px; right: -2px; width: 12px; height: 12px; background: #10b981; border: 2px solid white; border-radius: 50%; animation: ping 1.2s infinite;"></span>
           </div>
@@ -183,8 +193,8 @@ export default function TrackOrderClient() {
       driverMarkerRef.current = driverMarker;
 
       // Draw route line
-      L.polyline([[storeLat, storeLng], [customerLat, customerLng]], { color: "#cbd5e1", weight: 2, dashArray: "4 4" }).addTo(map);
-      pathLineRef.current = L.polyline([[initDriverLat, initDriverLng], [customerLat, customerLng]], { color: "#059669", weight: 4 }).addTo(map);
+      L.polyline([[storeLat, storeLng], [customerLat, customerLng]], { color: "#cbd5e1", weight: 3, dashArray: "5 5", opacity: 0.6 }).addTo(map);
+      pathLineRef.current = L.polyline([[initDriverLat, initDriverLng], [customerLat, customerLng]], { color: "#10b981", weight: 5, lineCap: "round", lineJoin: "round" }).addTo(map);
 
       map.fitBounds([[customerLat, customerLng], [storeLat, storeLng], [initDriverLat, initDriverLng]], { padding: [50, 50] });
 
