@@ -8,6 +8,8 @@ import { Button, Badge, EmptyState, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 import { useForm } from "react-hook-form";
 
+import { useRouter } from "next/navigation";
+
 function AddressCard({ addr, onEdit, onDelete, onDefault }: {
   addr: any;
   onEdit: (a: any) => void;
@@ -47,257 +49,6 @@ function AddressCard({ addr, onEdit, onDelete, onDefault }: {
   );
 }
 
-function AddressFormModal({ existing, onSave, onClose }: { existing?: any; onSave: () => void; onClose: () => void }) {
-  const { error: showError } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [coords, setCoords] = useState<{ lat: number; lng: number }>({
-    lat: existing?.latitude || 19.076,
-    lng: existing?.longitude || 72.877
-  });
-  
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [mapObj, setMapObj] = useState<any>(null);
-  const markerRef = useRef<any>(null);
-  const { register, handleSubmit, setValue } = useForm({
-    defaultValues: existing || {
-      label: "Home",
-      full_name: "",
-      phone: "",
-      address_line_1: "",
-      city: "",
-      state: "Maharashtra",
-      postal_code: ""
-    }
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !mapRef.current) return;
-
-    let map: any = null;
-    let active = true;
-
-    import("leaflet").then((L) => {
-      if (!active || !mapRef.current) return;
-
-      if ((mapRef.current as any)._leaflet_id) {
-        return;
-      }
-
-      // Fix default icons
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-      });
-
-      const initLat = coords.lat;
-      const initLng = coords.lng;
-
-      map = L.map(mapRef.current!).setView([initLat, initLng], 14);
-      const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
-      const tileUrl = isDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-      const tiles = L.tileLayer(tileUrl, {
-        attribution: "&copy; OpenStreetMap &copy; CARTO",
-        subdomains: "abcd",
-        maxZoom: 20
-      }).addTo(map);
-      tiles.on("tileerror", () => {
-        tiles.setUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
-      });
-
-      const pinIcon = L.divIcon({
-        html: `
-          <div style="filter: drop-shadow(0 4px 10px rgba(16,185,129,0.35)); position: relative;">
-            <span style="position: absolute; top: -4px; left: -4px; width: 40px; height: 40px; border-radius: 50%; background: rgba(16,185,129,0.15); animation: ping 1.5s infinite;"></span>
-            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2.5px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.15)">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
-            </div>
-          </div>
-        `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        className: "leaflet-custom-icon"
-      });
-
-      const marker = L.marker([initLat, initLng], { draggable: true, icon: pinIcon }).addTo(map);
-      markerRef.current = marker;
-
-      // Update coordinates on marker drag
-      marker.on("dragend", () => {
-        const position = marker.getLatLng();
-        setCoords({ lat: position.lat, lng: position.lng });
-      });
-
-      // Update coordinates on map click
-      map.on("click", (e: any) => {
-        marker.setLatLng(e.latlng);
-        setCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
-      });
-
-      setMapObj(map);
-    });
-
-    return () => {
-      active = false;
-      if (map) {
-        map.remove();
-      }
-    };
-  }, []);
-
-  const handleLocateMe = () => {
-    if (typeof window === "undefined" || !navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const { latitude, longitude } = pos.coords;
-      setCoords({ lat: latitude, lng: longitude });
-      if (mapObj) {
-        mapObj.setView([latitude, longitude], 16);
-      }
-      if (markerRef.current) {
-        markerRef.current.setLatLng([latitude, longitude]);
-      }
-      // Fill address details using OSM reverse geocoding
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.address) {
-            const road = data.address.road || data.address.suburb || "";
-            const city = data.address.city || data.address.town || data.address.suburb || "";
-            const postcode = data.address.postcode || "";
-            const state = data.address.state || "";
-            setValue("address_line_1", data.display_name || "");
-            setValue("city", city);
-            setValue("state", state);
-            setValue("postal_code", postcode);
-          }
-        });
-    });
-  };
-
-  const onSubmit = async (data: any) => {
-    setLoading(true);
-    try {
-      const payload = {
-        ...data,
-        latitude: coords.lat,
-        longitude: coords.lng
-      };
-      if (existing?.id) {
-        await api.put(`/users/me/addresses/${existing.id}`, payload);
-      } else {
-        await api.post("/users/me/addresses", payload);
-      }
-      onSave();
-    } catch (err: any) {
-      showError("Failed", err.response?.data?.detail || err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4">
-      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
-      <form onSubmit={handleSubmit(onSubmit)} className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-lg space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-black text-slate-900 dark:text-white">
-          {existing ? "Edit Address" : "Add New Address"}
-        </h3>
-        
-        {/* Leaflet CSS */}
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-        
-        {/* Interactive map picker */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400">
-            <span>Select exact location on map *</span>
-            <button
-              type="button"
-              onClick={handleLocateMe}
-              className="flex items-center gap-1 text-emerald-600 dark:text-emerald-450 hover:underline cursor-pointer"
-            >
-              <Navigation className="w-3.5 h-3.5" /> Locate Me
-            </button>
-          </div>
-          <div ref={mapRef} className="h-44 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 relative" style={{ zIndex: 1 }} />
-          <span className="text-[10px] text-slate-400 font-mono block text-right">
-            Lat: {coords.lat.toFixed(6)}, Lng: {coords.lng.toFixed(6)}
-          </span>
-        </div>
-
-        <div className="flex gap-2">
-          {["Home", "Work", "Other"].map(l => (
-            <label key={l} className="flex-1">
-              <input type="radio" value={l} {...register("label")} className="sr-only peer" defaultChecked={l === (existing?.label || "Home")} />
-              <div className="text-center py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50 dark:peer-checked:bg-emerald-950/30 peer-checked:text-emerald-700 border-slate-200 dark:border-slate-800 text-slate-500">
-                {l}
-              </div>
-            </label>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Full Name *</label>
-            <input {...register("full_name", { required: true })} className="input-base px-3 py-2.5 text-sm" placeholder="Recipient name" />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Phone *</label>
-            <input {...register("phone", { required: true })} className="input-base px-3 py-2.5 text-sm" type="tel" placeholder="Mobile number" />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Address Line 1 *</label>
-            <input {...register("address_line_1", { required: true })} className="input-base px-3 py-2.5 text-sm" placeholder="Flat/House number, building name" />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Landmark / Area</label>
-            <input {...register("address_line_2")} className="input-base px-3 py-2.5 text-sm" placeholder="Landmark (optional)" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">City *</label>
-            <input {...register("city", { required: true })} className="input-base px-3 py-2.5 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">State *</label>
-            <input {...register("state", { required: true })} className="input-base px-3 py-2.5 text-sm" placeholder="e.g. Maharashtra" />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">PIN Code *</label>
-            <input {...register("postal_code", { required: true })} className="input-base px-3 py-2.5 text-sm" maxLength={6} placeholder="400001" />
-          </div>
-        </div>
-        
-        <label className="flex items-center gap-2 cursor-pointer py-1">
-          <input type="checkbox" {...register("is_default")} className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Set as default address</span>
-        </label>
-        
-        <div className="flex gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3.5 rounded-2xl text-xs transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Address"}
-          </button>
-          <button
-            type="button"
-            className="px-6 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850/30 transition-all"
-            onClick={onClose}
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
 function ConfirmModal({
   isOpen,
   title,
@@ -317,7 +68,7 @@ function ConfirmModal({
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl">
         <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">{title}</h3>
-        <p className="text-xs text-slate-550 dark:text-slate-400 leading-normal">{message}</p>
+        <p className="text-xs text-slate-555 dark:text-slate-400 leading-normal">{message}</p>
         <div className="flex gap-3 pt-2">
           <Button
             variant="danger"
@@ -340,10 +91,9 @@ function ConfirmModal({
 }
 
 export default function AddressesPage() {
+  const router = useRouter();
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [editingAddr, setEditingAddr] = useState<any>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const { data: addresses = [], isLoading } = useQuery<any[]>({
@@ -362,29 +112,14 @@ export default function AddressesPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["addresses"] }); success("Default address updated"); },
   });
 
-  const handleSave = () => {
-    queryClient.invalidateQueries({ queryKey: ["addresses"] });
-    setShowForm(false);
-    setEditingAddr(null);
-    success(editingAddr ? "Address updated" : "Address saved");
-  };
-
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-      {(showForm || editingAddr) && (
-        <AddressFormModal
-          existing={editingAddr}
-          onSave={handleSave}
-          onClose={() => { setShowForm(false); setEditingAddr(null); }}
-        />
-      )}
-
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
           <h1 className="text-2xl font-black text-slate-900 dark:text-white">Saved Addresses</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">Manage your exact geolocated delivery addresses</p>
         </div>
-        <Button size="sm" leftIcon={<Plus className="w-3.5 h-3.5" />} onClick={() => setShowForm(true)}>Add New</Button>
+        <Button size="sm" leftIcon={<Plus className="w-3.5 h-3.5" />} onClick={() => router.push("/addresses/add")}>Add New</Button>
       </div>
 
       {isLoading ? (
@@ -394,7 +129,7 @@ export default function AddressesPage() {
           emoji="📍"
           title="No saved addresses"
           description="Add a precise delivery address for rapid 10-minute order routing."
-          action={<Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowForm(true)}>Add Address</Button>}
+          action={<Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => router.push("/addresses/add")}>Add Address</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -402,7 +137,7 @@ export default function AddressesPage() {
             <AddressCard
               key={addr.id}
               addr={addr}
-              onEdit={a => setEditingAddr(a)}
+              onEdit={a => router.push(`/addresses/add?id=${a.id}`)}
               onDelete={id => setConfirmDeleteId(id)}
               onDefault={id => setDefault.mutate(id)}
             />
@@ -425,3 +160,4 @@ export default function AddressesPage() {
     </div>
   );
 }
+

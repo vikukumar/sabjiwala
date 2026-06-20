@@ -1,12 +1,106 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Clock, Loader2, Star, ShoppingBag, X, Package, CheckCircle2 } from "lucide-react";
+import { Clock, Loader2, Star, ShoppingBag, X, Package, CheckCircle2, AlertCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, useWebSocket } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/index";
 import VendorLayout from "@/components/VendorLayout";
+
+// =========== ITEM REJECTION MODAL ===========
+function ItemRejectionModal({
+  isOpen, item, onConfirm, onCancel, loading
+}: {
+  isOpen: boolean; item: any;
+  onConfirm: (quantity: number, reason: string) => void; onCancel: () => void; loading?: boolean;
+}) {
+  const [quantity, setQuantity] = useState(0);
+  const [reason, setReason] = useState("Quality Issue");
+
+  useEffect(() => {
+    if (isOpen && item) {
+      setQuantity(item.quantity);
+      setReason("Quality Issue");
+    }
+  }, [isOpen, item]);
+
+  if (!isOpen || !item) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-slate-800 dark:text-white shadow-2xl">
+        <div className="w-12 h-12 bg-rose-100 dark:bg-rose-950/40 rounded-2xl flex items-center justify-center mx-auto text-rose-600 dark:text-rose-455">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <h3 className="text-base font-black uppercase tracking-wider text-center">Reject Produce</h3>
+        <p className="text-xs text-slate-555 dark:text-slate-400 text-center leading-normal">
+          Rejecting items for <span className="font-extrabold text-slate-800 dark:text-slate-200">{item.product_name || item.name}</span>.
+        </p>
+
+        <div className="space-y-3.5 text-left">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+              Quantity to Reject (Max: {item.quantity} {item.unit})
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              max={item.quantity}
+              value={quantity}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                setQuantity(isNaN(val) ? 0 : Math.min(val, item.quantity));
+              }}
+              className="w-full px-4 py-2.5 text-sm font-bold border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-transparent focus:outline-none focus:border-emerald-500 transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Reason for Rejection</label>
+            <select
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full px-4 py-2.5 text-sm font-bold border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500 transition-colors"
+            >
+              <option value="Quality Issue">Quality Issue</option>
+              <option value="Damaged / Bruised">Damaged / Bruised</option>
+              <option value="Incorrect Product">Incorrect Product</option>
+              <option value="Customer Refused">Customer Refused</option>
+              <option value="Not Fresh">Not Fresh / Rotten</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="danger"
+            onClick={() => {
+              if (quantity > 0 && quantity <= item.quantity) {
+                onConfirm(quantity, reason);
+              }
+            }}
+            disabled={quantity <= 0 || quantity > item.quantity || loading}
+            loading={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Confirm Rejection
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // =========== OTP & Image Upload Modal ===========
 function OtpPromptModal({
@@ -156,6 +250,19 @@ export default function VendorOrdersPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [selectedOrderForDeliveryOption, setSelectedOrderForDeliveryOption] = useState<any>(null);
   const [otpConfirmOrder, setOtpConfirmOrder] = useState<any>(null);
+  const [rejectionConfig, setRejectionConfig] = useState<{ isOpen: boolean; orderId: string; item: any } | null>(null);
+
+  const rejectItemsMutation = useMutation({
+    mutationFn: async ({ orderId, payload }: { orderId: string; payload: any }) =>
+      api.post(`/orders/${orderId}/reject-items`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorOrders"] });
+      queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
+      success("Success", "Items adjusted and prices recalculated successfully!");
+      setRejectionConfig(null);
+    },
+    onError: (err: any) => showError("Adjustment Failed", err.response?.data?.detail || err.message)
+  });
 
   const { data: ordersData, isLoading: ordersLoading, refetch: refetchOrders } = useQuery<any>({
     queryKey: ["vendorOrders", activeTab],
@@ -352,8 +459,22 @@ export default function VendorOrdersPage() {
                             <h6 className="text-xs font-extrabold text-slate-800 dark:text-slate-200 truncate">{item.product_name || item.name}</h6>
                             <p className="text-[10px] text-slate-500">{item.unit || "kg"}</p>
                           </div>
-                          <div className="text-right flex-shrink-0">
+                          <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
                             <span className="text-xs font-black text-slate-900 dark:text-white">Qty: {item.quantity}</span>
+                            {["picked", "out_for_delivery"].includes(order.status) && item.quantity > 0 && (
+                              <button
+                                onClick={() => {
+                                  setRejectionConfig({
+                                    isOpen: true,
+                                    orderId: order.id,
+                                    item: item
+                                  });
+                                }}
+                                className="px-2 py-0.5 rounded bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-455 font-black text-[8px] uppercase tracking-wider border border-rose-100 dark:border-rose-955/40 cursor-pointer active:scale-95 transition-all"
+                              >
+                                Reject
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -441,7 +562,6 @@ export default function VendorOrdersPage() {
           </div>
         </div>
       )}
-      {/* OTP Confirmation Modal */}
       <OtpPromptModal
         isOpen={!!otpConfirmOrder}
         title="Delivery OTP Verification"
@@ -458,6 +578,28 @@ export default function VendorOrdersPage() {
           setOtpConfirmOrder(null);
         }}
         onCancel={() => setOtpConfirmOrder(null)}
+      />
+
+      <ItemRejectionModal
+        isOpen={!!rejectionConfig?.isOpen}
+        item={rejectionConfig?.item}
+        loading={rejectItemsMutation.isPending}
+        onConfirm={(qty, reason) => {
+          if (rejectionConfig?.orderId && rejectionConfig?.item) {
+            rejectItemsMutation.mutate({
+              orderId: rejectionConfig.orderId,
+              payload: {
+                rejected_items: [{
+                  product_id: rejectionConfig.item.product_id,
+                  variant_id: rejectionConfig.item.variant_id,
+                  rejected_quantity: qty,
+                  reason: reason
+                }]
+              }
+            });
+          }
+        }}
+        onCancel={() => setRejectionConfig(null)}
       />
     </VendorLayout>
   );

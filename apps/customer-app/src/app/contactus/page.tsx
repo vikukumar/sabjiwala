@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { useSearchParams } from "next/navigation";
 
+import PublicPageWrapper from "@/components/PublicPageWrapper";
+
 function ContactForm() {
   const { data: publicSettings } = useQuery<any>({
     queryKey: ["publicSettings"],
@@ -90,14 +92,14 @@ function ContactForm() {
             {supportCoords.map((coord) => {
               const Icon = coord.icon;
               return (
-                <div key={coord.label} className="flex gap-3 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
+                <div key={coord.label} className="flex gap-3 bg-slate-55 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
                   <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl h-fit">
                     <Icon className="w-5 h-5" />
                   </div>
                   <div className="space-y-0.5">
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{coord.label}</p>
                     <p className="text-xs font-bold text-slate-900 dark:text-white">{coord.val}</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-405 font-medium">{coord.desc}</p>
+                    <p className="text-[10px] text-slate-550 dark:text-slate-405 font-medium">{coord.desc}</p>
                   </div>
                 </div>
               );
@@ -115,7 +117,7 @@ function ContactForm() {
                 </div>
                 <div className="space-y-1">
                   <h4 className="font-black text-slate-900 dark:text-white">Message Sent Successfully!</h4>
-                  <p className="text-xs text-slate-550 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+                  <p className="text-xs text-slate-550 dark:text-slate-400 max-w-xs mx-auto leading-relaxed font-semibold">
                     Thank you for contacting Sbjiwala. An operations coordinator or developer will respond to your inquiry shortly.
                   </p>
                 </div>
@@ -214,12 +216,15 @@ function ContactForm() {
 
 export default function ContactUsPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-emerald-550 animate-spin" />
-      </div>
-    }>
-      <ContactForm />
-    </Suspense>
+    <PublicPageWrapper>
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-emerald-550 animate-spin" />
+        </div>
+      }>
+        <ContactForm />
+      </Suspense>
+    </PublicPageWrapper>
   );
 }
+

@@ -214,6 +214,21 @@ async def get_assignments(
             "longitude": store.longitude,
         } if store else None
 
+        items_data = []
+        for item in order.items:
+            if not item.is_deleted:
+                items_data.append({
+                    "id": str(item.id),
+                    "product_id": str(item.product_id),
+                    "variant_id": str(item.variant_id) if item.variant_id else None,
+                    "product_name": item.product_name,
+                    "variant_name": item.variant_name,
+                    "quantity": float(item.quantity),
+                    "unit_price": float(item.unit_price),
+                    "total_price": float(item.total_price),
+                    "unit": item.unit
+                })
+
         data.append({
             "id": str(order.id),
             "order_number": order.order_number,
@@ -227,6 +242,7 @@ async def get_assignments(
             "customer_notes": order.customer_notes,
             "estimated_delivery_time": order.estimated_delivery_time.isoformat() if order.estimated_delivery_time else None,
             "vendor_store": store_data,
+            "items": items_data,
         })
 
     return APIResponse(success=True, data=data)

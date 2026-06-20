@@ -72,7 +72,7 @@ try {
       copyRecursiveSync(srcChildPath, path.join(webCustomerNestedDir, child));
       
       // Copy specific informational pages to root level of webAppDir for clean routing
-      if (['about', 'privacy', 'terms', 'contact', 'pricing', 'blogs', 'contactus'].includes(child)) {
+      if (['about', 'privacy', 'terms', 'contact', 'pricing', 'blogs', 'contactus', 'refund-policy'].includes(child)) {
         copyRecursiveSync(srcChildPath, path.join(webAppDir, child));
         if (child === 'privacy') {
           copyRecursiveSync(srcChildPath, path.join(webAppDir, 'privacy-policy'));

@@ -744,3 +744,16 @@ class ProductReviewResponse(BaseModel):
 
 class AvailabilityToggle(BaseModel):
     is_available: bool
+
+
+# ===== Doorstep Item Rejection Schemas =====
+
+class ItemRejectionItem(BaseModel):
+    product_id: UUID
+    variant_id: Optional[UUID] = None
+    rejected_quantity: float
+    reason: str
+
+class ItemRejectionRequest(BaseModel):
+    rejected_items: List[ItemRejectionItem]
+

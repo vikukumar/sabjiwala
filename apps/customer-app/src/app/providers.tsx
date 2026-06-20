@@ -1,9 +1,10 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ToastProvider } from "@/components/ui/Toast";
 import AppShell from "@/components/AppShell";
+import { initFirebaseAnalytics } from "@/utils/firebase";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -21,6 +22,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
+  useEffect(() => {
+    initFirebaseAnalytics().catch(err => {
+      console.warn("Failed to initialize Firebase Analytics on mount:", err);
+    });
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
@@ -29,3 +36,4 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     </QueryClientProvider>
   );
 }
+

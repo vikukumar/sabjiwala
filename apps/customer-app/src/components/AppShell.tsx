@@ -1132,6 +1132,7 @@ interface LocationSelectionModalProps {
 }
 
 function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
@@ -1309,7 +1310,18 @@ function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalPro
 
           {/* Saved Addresses list */}
           <div className="space-y-2">
-            <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">Saved Addresses</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">Saved Addresses</h4>
+              <button
+                onClick={() => {
+                  onClose();
+                  router.push("/addresses/add");
+                }}
+                className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 uppercase tracking-wider cursor-pointer"
+              >
+                + Add Address
+              </button>
+            </div>
             {loadingAddresses ? (
               <div className="text-center py-4">
                 <RefreshCw className="w-5 h-5 animate-spin mx-auto text-slate-400" />

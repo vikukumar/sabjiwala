@@ -16,6 +16,7 @@
     "@sbjiwala/shared": "file:../../shared",
     "@tanstack/react-query": "^5.100.14",
     "axios": "^1.16.1",
+    "firebase": "^12.15.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.17.0",
     "next": "16.2.6",

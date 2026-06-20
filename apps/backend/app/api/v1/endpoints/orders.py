@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.schemas import (
     APIResponse, CheckoutRequest, OrderResponse, OrderStatusUpdate,
-    PaginatedResponse, PaginationMeta, ReturnRequestCreate
+    PaginatedResponse, PaginationMeta, ReturnRequestCreate, ItemRejectionRequest
 )
 from app.core.rbac.engine import get_current_user
 from app.db.session import get_db
@@ -516,3 +516,261 @@ async def request_order_return(
     await db.flush()
 
     return APIResponse(success=True, message="Return request submitted", data={"return_request_id": str(ret_req.id)})
+
+
+@router.post("/{order_id}/reject-items", response_model=APIResponse[OrderResponse])
+async def reject_order_items(
+    order_id: UUID,
+    body: ItemRejectionRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Adjust order quantities for doorstep rejections and issue immediate refund or update COD total."""
+    # 1. Fetch Order
+    result = await db.execute(
+        select(Order)
+        .options(selectinload(Order.items))
+        .where(Order.id == order_id, Order.is_deleted == False)
+    )
+    order = result.scalars().first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # 2. Authorization Check
+    role = current_user.get("role") or current_user.get("user_type", "customer")
+    is_authorized = False
+
+    if role in ["admin", "super_admin"]:
+        is_authorized = True
+    elif role == "delivery_boy":
+        if order.delivery_boy_id == current_user["user_id"]:
+            is_authorized = True
+    elif role in ["vendor", "vendor_manager"]:
+        from app.models.vendor import Vendor
+        vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
+        if vendor and order.vendor_id == vendor.id:
+            is_authorized = True
+
+    if not is_authorized:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to perform doorstep rejection for this order."
+        )
+
+    # 3. Status Check
+    if order.status not in [OrderStatus.PICKED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED]:
+        raise HTTPException(
+            status_code=400,
+            detail="Doorstep item rejection is only allowed when order is picked, out for delivery, or delivered."
+        )
+
+    if not body.rejected_items:
+        raise HTTPException(status_code=400, detail="No rejected items provided.")
+
+    # 4. Process Rejections
+    original_paid = float(order.total_amount) + float(order.wallet_amount)
+    
+    # Track inventory modifications to commit them
+    rejection_records = []
+    
+    for r_item in body.rejected_items:
+        # Find item in order
+        order_item = None
+        for item in order.items:
+            if item.product_id == r_item.product_id and item.variant_id == r_item.variant_id:
+                order_item = item
+                break
+        
+        if not order_item:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Product {r_item.product_id} is not part of this order."
+            )
+            
+        if r_item.rejected_quantity <= 0:
+            continue
+            
+        if r_item.rejected_quantity > order_item.quantity:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Rejected quantity {r_item.rejected_quantity} exceeds ordered quantity {order_item.quantity} for {order_item.product_name}."
+            )
+
+        # Reduce order item quantity
+        qty_change = r_item.rejected_quantity
+        order_item.quantity = order_item.quantity - qty_change
+        order_item.total_price = round(float(order_item.unit_price) * order_item.quantity, 2)
+        order_item.tax_amount = round(order_item.total_price * 0.05, 2)
+
+        # Return stock to vendor inventory
+        from app.models.product import Inventory, InventoryLog
+        inv_res = await db.execute(
+            select(Inventory).where(
+                Inventory.product_id == r_item.product_id,
+                Inventory.variant_id == r_item.variant_id,
+                Inventory.vendor_id == order.vendor_id,
+                Inventory.is_deleted == False
+            )
+        )
+        inventory = inv_res.scalars().first()
+        if inventory:
+            qty_before = float(inventory.quantity)
+            inventory.quantity = qty_before + qty_change
+            inventory.is_in_stock = True
+            
+            # Log inventory change
+            inv_log = InventoryLog(
+                inventory_id=inventory.id,
+                vendor_id=order.vendor_id,
+                change_type="add",
+                quantity_change=qty_change,
+                quantity_before=qty_before,
+                quantity_after=qty_before + qty_change,
+                reference_type="order",
+                reference_id=str(order.id),
+                notes=f"Doorstep rejection: {r_item.reason}"
+            )
+            db.add(inv_log)
+
+        # Record metadata detail
+        rejection_records.append({
+            "product_id": str(r_item.product_id),
+            "variant_id": str(r_item.variant_id) if r_item.variant_id else None,
+            "product_name": order_item.product_name,
+            "rejected_quantity": qty_change,
+            "reason": r_item.reason,
+            "rejected_at": datetime.now(timezone.utc).isoformat()
+        })
+
+    # Save to order metadata
+    meta = order.metadata_json
+    if not meta:
+        meta = {}
+    current_rejections = meta.get("doorstep_rejections", [])
+    current_rejections.extend(rejection_records)
+    meta["doorstep_rejections"] = current_rejections
+    order.metadata_json = meta
+
+    # 5. Recalculate Totals
+    new_subtotal = round(sum(float(item.total_price) for item in order.items), 2)
+    new_tax_amount = round(new_subtotal * 0.05, 2)
+
+    # Recalculate Coupon Discount
+    coupon_discount = 0.0
+    if order.coupon_id:
+        from app.models.coupon import Coupon
+        coupon_res = await db.execute(select(Coupon).where(Coupon.id == order.coupon_id))
+        coupon = coupon_res.scalars().first()
+        if coupon:
+            if coupon.coupon_type == "percentage":
+                coupon_discount = round(new_subtotal * (float(coupon.discount_value) / 100.0), 2)
+                if coupon.max_discount_amount is not None:
+                    coupon_discount = min(coupon_discount, float(coupon.max_discount_amount))
+            elif coupon.coupon_type == "fixed":
+                coupon_discount = min(float(coupon.discount_value), new_subtotal)
+            elif coupon.coupon_type == "free_delivery":
+                coupon_discount = 0.0
+    
+    coupon_discount = round(coupon_discount, 2)
+    new_subtotal = round(new_subtotal, 2)
+
+    # Calculate new total before wallet
+    new_total_before_wallet = round(new_subtotal + float(order.delivery_charge) + new_tax_amount + float(order.packaging_charge) - coupon_discount, 2)
+    new_total_before_wallet = max(0.0, new_total_before_wallet)
+
+    # Wallet amount logic
+    new_wallet_amount = min(float(order.wallet_amount), new_total_before_wallet)
+    new_wallet_amount = round(new_wallet_amount, 2)
+    
+    # New final total amount (COD/online payable)
+    new_total_amount = round(new_total_before_wallet - new_wallet_amount, 2)
+
+    # Calculate refund due
+    new_required = new_total_before_wallet
+    refund_due = round(original_paid - new_required, 2)
+
+    # If wallet was used, and the wallet deduction exceeds the new requirement, 
+    # we refund the excess wallet amount back.
+    wallet_refund_due = round(float(order.wallet_amount) - new_wallet_amount, 2)
+
+    # Update order values
+    order.subtotal = new_subtotal
+    order.tax_amount = new_tax_amount
+    order.coupon_discount = coupon_discount
+    order.discount_amount = coupon_discount
+    order.wallet_amount = new_wallet_amount
+    order.total_amount = new_total_amount
+
+    # Write order status history
+    from app.models.order import OrderStatusHistory
+    history = OrderStatusHistory(
+        order_id=order.id,
+        from_status=order.status.value,
+        to_status=order.status.value,
+        changed_by=current_user["user_id"],
+        changed_by_type=role,
+        notes=f"Adjusted items at doorstep. Subtotal modified."
+    )
+    db.add(history)
+
+    # 6. Process financial adjustment
+    from app.services.payment_service import PaymentService
+    payment_service = PaymentService(db)
+    from app.models.payment import WalletTransactionType
+    from datetime import datetime, timezone
+    if order.payment_method == "cod":
+        if wallet_refund_due > 0:
+            await payment_service.credit_wallet(
+                user_id=order.user_id,
+                amount=wallet_refund_due,
+                txn_type=WalletTransactionType.REFUND,
+                reference_type="order",
+                reference_id=str(order.id),
+                description=f"Refund of excess wallet deduction for doorstep adjustments on COD order {order.order_number}"
+            )
+    else:
+        if refund_due > 0:
+            await payment_service.credit_wallet(
+                user_id=order.user_id,
+                amount=refund_due,
+                txn_type=WalletTransactionType.REFUND,
+                reference_type="order",
+                reference_id=str(order.id),
+                description=f"Refund for doorstep rejected items on prepaid order {order.order_number}"
+            )
+
+    await db.commit()
+    
+    # Notify customer via websocket/notification service
+    try:
+        from app.services.notification_service import NotificationService
+        notif = NotificationService(db)
+        if order.payment_method != "cod" and refund_due > 0:
+            await notif.dispatch(
+                event_key="order_refunded",
+                user_id=order.user_id,
+                variables={
+                    "order_number": order.order_number,
+                    "refund_amount": str(refund_due),
+                    "total_amount": str(order.total_amount)
+                },
+                reference_type="order",
+                reference_id=str(order.id)
+            )
+        else:
+            await notif.dispatch(
+                event_key="order_confirmed",
+                user_id=order.user_id,
+                variables={
+                    "order_number": order.order_number,
+                    "total_amount": str(order.total_amount)
+                },
+                reference_type="order",
+                reference_id=str(order.id)
+            )
+    except Exception as e:
+        pass
+
+    # Return enriched response
+    res_data = await enrich_order_response(order, db)
+    return APIResponse(success=True, message="Order adjusted successfully", data=res_data)
