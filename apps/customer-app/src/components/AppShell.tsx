@@ -252,7 +252,7 @@ function Header({ onMenuOpen, onOpenLocation, onOpenSearch }: { onMenuOpen: () =
         <div className="flex items-center gap-2 min-w-0 flex-1 md:flex-initial">
           <button
             onClick={onMenuOpen}
-            className="md:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors flex-shrink-0"
+            className="md:hidden p-2 rounded-xl hover:bg-slate-105 dark:hover:bg-slate-800 text-slate-605 dark:text-slate-300 transition-colors flex-shrink-0"
             aria-label="Open menu"
           >
             <Menu className="w-5 h-5" />
@@ -267,27 +267,26 @@ function Header({ onMenuOpen, onOpenLocation, onOpenSearch }: { onMenuOpen: () =
           {/* Location dropdown display */}
           <div
             onClick={onOpenLocation}
-            className="flex items-center gap-1 cursor-pointer max-w-[130px] sm:max-w-[180px] md:max-w-[220px] ml-2 text-left hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex-shrink min-w-0"
+            className="flex items-center gap-1.5 cursor-pointer max-w-[130px] sm:max-w-[200px] md:max-w-[260px] ml-2 text-left hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex-shrink min-w-0"
           >
             <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0 animate-bounce" />
             <div className="min-w-0 leading-none">
               <span className="text-[8px] text-slate-400 font-extrabold uppercase tracking-wider block">Deliver to</span>
-              <span className="text-xs font-black text-slate-700 dark:text-slate-200 truncate flex items-center gap-0.5 block">
-                {locationName}
+              <span className="text-xs font-black text-slate-700 dark:text-slate-200 truncate flex items-center gap-0.5">
+                {locationName.split(",")[0]?.trim() || "Select Location"}
                 <span className="text-emerald-500 text-[9px]">▼</span>
               </span>
+              {locationName.split(",").length > 1 && (
+                <span className="text-[9px] text-slate-500 dark:text-slate-400 truncate block mt-0.5">
+                  {locationName.split(",").slice(1, 3).map(p => p.trim()).join(", ")}
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Center: search (md+) */}
-        <button
-          onClick={onOpenSearch}
-          className="hidden md:flex flex-1 max-w-sm mx-6 items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2.5 border border-slate-205 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-600 transition-colors text-slate-400 dark:text-slate-500 text-sm cursor-text text-left focus:outline-none"
-        >
-          <Search className="w-4 h-4 flex-shrink-0" />
-          <span>Search fresh vegetables & fruits...</span>
-        </button>
+        {/* Center: Empty spacer (Search removed from header) */}
+        <div className="hidden md:flex flex-1" />
 
         {/* Right: actions */}
         <div className="flex items-center gap-2">
@@ -334,7 +333,11 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
   useEffect(() => {
     if (typeof window === "undefined") return;
     const updateLoc = () => {
-      setLocationName(localStorage.getItem("sw_location_name") || "Mumbai, Maharashtra");
+      let name = localStorage.getItem("sw_location_name") || "Select Location";
+      if (!name || name === "undefined" || name === "null" || name.startsWith("undefined") || name.includes("undefined, undefined")) {
+        name = "Select Location";
+      }
+      setLocationName(name);
     };
     updateLoc();
     window.addEventListener("sw_location_updated", updateLoc);
@@ -349,22 +352,23 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
   const handleLogout = () => {
     localStorage.removeItem("sw_access_token");
     localStorage.removeItem("sw_refresh_token");
+    localStorage.removeItem("sw_location_manually_set");
     setIsLoggedIn(false);
     router.replace(resolveLink("/login"));
   };
 
   const content = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-transparent">
       {/* Logo */}
-      <div className="flex items-center justify-between p-6 border-b border-white/10">
+      <div className="flex items-center justify-between p-6 border-b border-slate-200/40 dark:border-slate-800/80">
         <div className="flex items-center gap-2">
-          <img src={publicSettings?.app_logo_url || "/logo_horizontal.png"} alt={publicSettings?.app_name || "Sbjiwala"} className="h-7 w-auto object-contain brightness-0 invert" />
-          <span className="text-white font-black text-sm">{publicSettings?.app_name || "Sbjiwala"}</span>
+          <img src={publicSettings?.app_logo_url || "/logo_horizontal.png"} alt={publicSettings?.app_name || "Sbjiwala"} className="h-7 w-auto object-contain dark:brightness-0 dark:invert" />
+          <span className="text-slate-900 dark:text-white font-black text-sm">{publicSettings?.app_name || "Sbjiwala"}</span>
         </div>
         {onClose && (
           <button
             onClick={onClose}
-            className="md:hidden p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+            className="md:hidden p-1.5 rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -377,21 +381,21 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
           onClose();
           onOpenLocation();
         }}
-        className="mx-4 mt-4 flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2.5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all"
+        className="mx-4 mt-4 flex items-center gap-2 bg-slate-200/40 dark:bg-white/5 rounded-xl px-3.5 py-2.5 border border-slate-200/50 dark:border-slate-800/80 cursor-pointer hover:bg-slate-200/70 dark:hover:bg-white/10 transition-all shadow-sm"
       >
-        <MapPin className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+        <MapPin className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0 animate-pulse" />
         <div className="min-w-0">
-          <p className="text-[10px] text-slate-500 font-medium">Delivering to</p>
-          <p className="text-sm font-bold text-white truncate">{locationName}</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-none">Delivering to</p>
+          <p className="text-xs font-black text-slate-805 dark:text-white truncate mt-1">{locationName.split(",")[0] || locationName}</p>
         </div>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto flex-shrink-0" />
+        <ChevronRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-505 ml-auto flex-shrink-0" />
       </div>
 
       {/* Nav Sections */}
       <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 py-4 space-y-6">
         {sidebarSections.map((section) => (
           <div key={section.title}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 px-3 mb-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-450 dark:text-slate-650 px-3.5 mb-2">
               {section.title}
             </p>
             <ul className="space-y-0.5">
@@ -410,9 +414,9 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
                         }
                         if (onClose) onClose();
                       }}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${active
-                        ? "bg-emerald-600 text-white shadow-sm shadow-emerald-900/30"
-                        : "text-slate-400 hover:text-white hover:bg-white/8"
+                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${active
+                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/15 dark:shadow-emerald-950/30"
+                        : "text-slate-600 hover:text-slate-905 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5"
                         }`}
                     >
                       <Icon className="w-4.5 h-4.5 flex-shrink-0" />
@@ -427,11 +431,11 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
       </nav>
 
       {/* Footer: logout / signin */}
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 border-t border-slate-200/40 dark:border-slate-800/80">
         {isLoggedIn ? (
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-rose-650 dark:hover:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-all cursor-pointer"
           >
             <LogOut className="w-4.5 h-4.5" />
             <span>Sign Out</span>
@@ -440,7 +444,7 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
           <Link
             href={resolveLink("/login")}
             onClick={onClose}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-emerald-450 hover:bg-emerald-500/10 transition-all"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-emerald-650 dark:hover:text-emerald-450 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-all cursor-pointer"
           >
             <LogIn className="w-4.5 h-4.5" />
             <span>Sign In / Login</span>
@@ -453,7 +457,7 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 flex-shrink-0 bg-slate-900/60 dark:bg-slate-950/70 backdrop-blur-xl border-r border-slate-100/10 dark:border-slate-800/80 fixed left-0 top-0 h-full z-30">
+      <aside className="hidden md:flex flex-col w-64 flex-shrink-0 bg-slate-50/75 dark:bg-slate-950/75 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/80 fixed left-0 top-0 h-full z-30 shadow-sm">
         {content}
       </aside>
 
@@ -461,7 +465,7 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
       {isOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] bg-slate-900/80 dark:bg-slate-955/80 backdrop-blur-xl border-r border-slate-100/10 dark:border-slate-800/80 animate-slide-right overflow-hidden">
+          <aside className="absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/80 animate-slide-right overflow-hidden shadow-inner">
             {content}
           </aside>
         </div>

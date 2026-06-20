@@ -11,15 +11,70 @@ import { useToast } from "@/components/ui/Toast";
 import { resolveLink } from "@/components/AppShell";
 import ProductCard from "@/components/ProductCard";
 
+const HERO_MESSAGES = [
+  { en: "Farm Fresh Vegetables & Fruits", hi: "सीधे खेतों से ताज़ा सब्ज़ी और फल" },
+  { en: "Delivered to Your Doorstep", hi: "आपके घर तक सुरक्षित डिलीवरी" },
+  { en: "Express Delivery in 10 Minutes", hi: "मात्र 10 मिनट में सुपरफास्ट डिलीवरी" },
+  { en: "Hygienically Washed & Packed", hi: "साफ-सफाई से धुली और पैक की गई" }
+];
+
 // ==================== HERO ====================
-function Hero() {
+function Hero({ onSelectCategory }: { onSelectCategory: (cat: string) => void }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
+  const [msgIdx, setMsgIdx] = useState(0);
+  const [lang, setLang] = useState<"en" | "hi">("en");
+  const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setMsgIdx((prev) => (prev + 1) % HERO_MESSAGES.length);
+        setLang((prev) => (prev === "en" ? "hi" : "en"));
+        setFade(true);
+      }, 300);
+    }, 3800);
+    return () => clearInterval(t);
+  }, []);
+
+  const { data: categories = [] } = useQuery<any[]>({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const res = await api.get("/catalog/categories");
+      return res.data || [];
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: searchResults = [], isLoading: searchLoading } = useQuery<any[]>({
+    queryKey: ["homeSearch", query],
+    queryFn: async () => {
+      if (query.trim().length < 2) return [];
+      const res = await api.get("/catalog/products", { params: { search: query.trim(), limit: 12 } });
+      return res.data || [];
+    },
+    enabled: query.trim().length >= 2,
+    staleTime: 10_000,
+  });
+
+  const matchingCategories = React.useMemo(() => {
+    if (!query.trim()) return [];
+    return categories.filter((c: any) =>
+      c.name.toLowerCase().includes(query.toLowerCase())
+    );
+  }, [categories, query]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("sw_open_search_modal", { detail: { query: query.trim() } }));
+    if (query.trim()) {
+      setIsFocused(true);
     }
+  };
+
+  const handleBlur = () => {
+    setTimeout(() => setIsFocused(false), 250);
   };
 
   return (
@@ -35,12 +90,23 @@ function Hero() {
           <span>⚡ EXPRESS DELIVERY IN 10 MINS — FRESH GUARANTEE</span>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl font-black text-white leading-none tracking-tight">
-          Farm Fresh Vegetables &<br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-200">
-            Fruits
-          </span>{" "}
-          at Your Doorstep
+        <h1 className={`text-4xl sm:text-6xl font-black text-white leading-none tracking-tight transition-all duration-300 min-h-[120px] sm:min-h-[140px] flex flex-col justify-center ${fade ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"}`}>
+          {lang === "en" ? (
+            <>
+              {HERO_MESSAGES[msgIdx].en.split(" & ")[0]}
+              {HERO_MESSAGES[msgIdx].en.includes(" & ") ? (
+                <>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-200 mt-1">
+                    & {HERO_MESSAGES[msgIdx].en.split(" & ")[1]}
+                  </span>
+                </>
+              ) : (
+                ""
+              )}
+            </>
+          ) : (
+            <span>{HERO_MESSAGES[msgIdx].hi}</span>
+          )}
         </h1>
 
         <p className="text-emerald-100 text-sm sm:text-base max-w-lg mx-auto font-medium leading-relaxed">
@@ -48,29 +114,117 @@ function Hero() {
         </p>
 
         {/* Search */}
-        <form onSubmit={handleSearch} className="max-w-lg mx-auto transform hover:scale-[1.01] transition-all duration-300">
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-2xl p-2 shadow-2xl border border-white/20">
-            <Search className="w-5 h-5 text-slate-400 ml-2.5 flex-shrink-0" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("sw_open_search_modal", { detail: { query: query.trim() } }));
-                }
-              }}
-              placeholder="Search tomatoes, spinach, fruits, mangoes..."
-              className="flex-1 bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs sm:text-sm font-semibold cursor-pointer"
-            />
-            <button
-              type="submit"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-black text-xs sm:text-sm transition-all shadow-md cursor-pointer"
-            >
-              Search
-            </button>
-          </div>
-        </form>
+        <div className="max-w-lg mx-auto relative">
+          <form onSubmit={handleSearch} className="transform hover:scale-[1.01] transition-all duration-300 relative z-20">
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-2xl p-2 shadow-2xl border border-white/20 focus-within:ring-2 focus-within:ring-emerald-450/40">
+              <Search className="w-5 h-5 text-slate-400 ml-2.5 flex-shrink-0" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setIsFocused(true);
+                }}
+                onFocus={() => setIsFocused(true)}
+                onBlur={handleBlur}
+                placeholder="Search tomatoes, spinach, fruits, mangoes..."
+                className="flex-1 bg-transparent outline-none text-slate-805 dark:text-slate-100 placeholder-slate-400 text-xs sm:text-sm font-semibold"
+              />
+              <button
+                type="submit"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-black text-xs sm:text-sm transition-all shadow-md cursor-pointer"
+              >
+                Search
+              </button>
+            </div>
+          </form>
+
+          {/* Autocomplete dropdown dropdown */}
+          {isFocused && query.trim().length >= 2 && (
+            <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-4 text-left z-50 max-h-[350px] overflow-y-auto space-y-4 animate-scale-in">
+              {searchLoading ? (
+                <div className="flex items-center justify-center py-6 gap-2 text-slate-400">
+                  <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                  <span className="text-xs font-semibold">Searching items...</span>
+                </div>
+              ) : (
+                <>
+                  {/* Matching Categories */}
+                  {matchingCategories.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Categories</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {matchingCategories.map((cat: any) => (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              onSelectCategory(cat.name);
+                              setQuery("");
+                              setIsFocused(false);
+                            }}
+                            className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50 rounded-lg text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all cursor-pointer"
+                          >
+                            {cat.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Matching Products */}
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Products</p>
+                    {searchResults.length === 0 ? (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 py-2">No matching products found.</p>
+                    ) : (
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                        {searchResults.map((prod: any) => {
+                          const price = Math.round((prod.attributes?.price ?? prod.price ?? 30) * 1.045 * 100) / 100;
+                          return (
+                            <div key={prod.id} className="flex items-center justify-between py-2 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 rounded-xl px-1.5 transition-colors">
+                              <Link
+                                href={resolveLink(`/products/${prod.id}`)}
+                                className="flex items-center gap-2.5 flex-1 min-w-0"
+                                onClick={() => setIsFocused(false)}
+                              >
+                                {prod.primary_image_url || prod.attributes?.image_url ? (
+                                  <img
+                                    src={prod.primary_image_url || prod.attributes?.image_url}
+                                    alt={prod.name}
+                                    className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
+                                  />
+                                ) : (
+                                  <span className="text-2xl p-1 bg-slate-100 dark:bg-slate-900 rounded-lg select-none flex-shrink-0">
+                                    {prod.attributes?.image_emoji || "🥬"}
+                                  </span>
+                                )}
+                                <div className="min-w-0">
+                                  <p className="text-xs font-black text-slate-900 dark:text-white truncate">{prod.name}</p>
+                                  <p className="text-[10px] text-slate-400 font-bold">{prod.unit || "1 kg"}</p>
+                                </div>
+                              </Link>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs font-black text-slate-900 dark:text-white">₹{price.toFixed(2)}</span>
+                                <Link
+                                  href={resolveLink(`/products/${prod.id}`)}
+                                  className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white dark:bg-emerald-950/20 dark:hover:bg-emerald-500 dark:text-emerald-400 dark:hover:text-white text-[9px] font-black px-2.5 py-1.5 rounded-lg border border-emerald-250 dark:border-emerald-900/40 transition-all uppercase tracking-wider"
+                                  onClick={() => setIsFocused(false)}
+                                >
+                                  View
+                                </Link>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Quick chips */}
         <div className="flex flex-wrap justify-center gap-2 pt-1">
@@ -78,9 +232,8 @@ function Hero() {
             <button
               key={item}
               onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("sw_open_search_modal", { detail: { query: item } }));
-                }
+                setQuery(item);
+                setIsFocused(true);
               }}
               className="bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-all backdrop-blur-sm shadow-sm hover:scale-105 cursor-pointer"
             >
@@ -617,10 +770,50 @@ function ComingSoonArea({ currentAddress, onOpenLocation }: { currentAddress: st
         </div>
       </div>
 
-      <div className="text-[10px] text-slate-400/85 font-black uppercase tracking-wider flex items-center justify-center gap-4">
+      <div className="text-[10px] text-slate-400/85 font-black uppercase tracking-wider flex items-center justify-center gap-4 mt-6">
         <span>⚡ 10 Min Delivery</span>
         <span>•</span>
         <span>🥬 Farm Fresh</span>
+      </div>
+    </div>
+  );
+}
+
+// ==================== HOME SKELETON ====================
+function HomeSkeleton() {
+  return (
+    <div className="space-y-8 pb-32 animate-pulse px-4 w-full max-w-7xl mx-auto">
+      {/* Hero skeleton */}
+      <div className="h-64 sm:h-80 bg-slate-200 dark:bg-slate-800 rounded-3xl mt-4" />
+      
+      {/* Trust Badges skeleton */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-6xl mx-auto -mt-12 relative z-10">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl" />
+        ))}
+      </div>
+
+      {/* Banner skeleton */}
+      <div className="h-32 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
+
+      {/* Categories skeleton */}
+      <div className="space-y-4">
+        <div className="h-6 w-36 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-28 bg-slate-200 dark:bg-slate-800 rounded-3xl" />
+          ))}
+        </div>
+      </div>
+
+      {/* Products skeleton */}
+      <div className="space-y-4">
+        <div className="h-6 w-48 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="h-56 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -710,10 +903,7 @@ export default function HomePage() {
       )}
 
       {checkingRange ? (
-        <div className="py-20 flex flex-col items-center justify-center gap-2">
-          <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
-          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Checking range availability...</p>
-        </div>
+        <HomeSkeleton />
       ) : (
         <>
           {!isInRange && (
@@ -727,7 +917,7 @@ export default function HomePage() {
               </button>
             </div>
           )}
-          <Hero />
+          <Hero onSelectCategory={setSelectedCategory} />
           <TrustBadges />
           <OffersBanner />
           
