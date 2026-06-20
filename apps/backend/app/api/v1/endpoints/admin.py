@@ -99,7 +99,7 @@ async def verify_vendor(
     return APIResponse(success=True, message=f"Vendor status updated to {new_status.value}")
 
 
-@router.get("/settings", response_model=APIResponse)
+@router.get("/settings/values", response_model=APIResponse)
 async def get_system_settings(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
