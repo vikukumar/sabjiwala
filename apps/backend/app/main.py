@@ -104,8 +104,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from app.services.notification_service import NotificationService
         ns = NotificationService(session)
         await ns.seed_default_templates()
+        from app.core.config import apply_system_settings_overrides
+        await apply_system_settings_overrides(session)
         await session.commit()
-    await logger.ainfo("RBAC, notification templates, and catalog database seed completed")
+    await logger.ainfo("RBAC, notification templates, settings overrides, and catalog database seed completed")
 
     # Connect WebSocket manager to Redis
     await ws_manager.connect_redis()

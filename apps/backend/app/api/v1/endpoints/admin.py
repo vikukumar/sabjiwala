@@ -11,7 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.schemas import (
     APIResponse, PaginatedResponse, PaginationMeta, SystemSettingUpdate,
     UpdateUserStatusRequest, UpdateUserRoleRequest, UpdateVendorCommissionRequest,
-    UpdateDeliveryBoyStatusRequest, AdvertisementCreate
+    UpdateDeliveryBoyStatusRequest, AdvertisementCreate,
+    CmsPageCreateUpdate, EmailTemplateCreateUpdate, EmailTemplateTestRequest
 )
 from app.core.rbac.engine import get_current_user
 from app.db.session import get_db
@@ -1168,6 +1169,10 @@ async def update_system_setting(
     setting.value_json = body.value_json
     
     await db.commit()
+    
+    from app.core.config import apply_system_settings_overrides
+    await apply_system_settings_overrides(db)
+    
     return APIResponse(success=True, message=f"Setting '{key}' updated successfully")
 
 
@@ -1441,5 +1446,298 @@ async def create_support_agent(
         message="Support Agent created successfully",
         data={"id": str(agent_user.id), "email": agent_user.email}
     )
+
+
+# ===== CMS Page Endpoints =====
+
+@router.get("/pages", response_model=APIResponse)
+async def list_admin_pages(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all CMS pages for administrative oversight."""
+    await _verify_admin(current_user)
+    from app.models.cms import CmsPage
+    res = await db.execute(select(CmsPage).order_by(CmsPage.sort_order.asc()))
+    pages = res.scalars().all()
+    
+    data = [
+        {
+            "id": p.id,
+            "slug": p.slug,
+            "title": p.title,
+            "content": p.content,
+            "content_html": p.content_html,
+            "meta_title": p.meta_title,
+            "meta_description": p.meta_description,
+            "is_published": p.is_published,
+            "published_at": p.published_at.isoformat() if p.published_at else None,
+            "page_type": p.page_type,
+            "sort_order": p.sort_order,
+        }
+        for p in pages
+    ]
+    return APIResponse(success=True, data=data)
+
+
+@router.get("/pages/{slug}", response_model=APIResponse)
+async def get_admin_page(
+    slug: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get detail of a single CMS page."""
+    await _verify_admin(current_user)
+    from app.models.cms import CmsPage
+    res = await db.execute(select(CmsPage).where(CmsPage.slug == slug))
+    p = res.scalars().first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Page not found")
+        
+    data = {
+        "id": p.id,
+        "slug": p.slug,
+        "title": p.title,
+        "content": p.content,
+        "content_html": p.content_html,
+        "meta_title": p.meta_title,
+        "meta_description": p.meta_description,
+        "is_published": p.is_published,
+        "published_at": p.published_at.isoformat() if p.published_at else None,
+        "page_type": p.page_type,
+        "sort_order": p.sort_order,
+    }
+    return APIResponse(success=True, data=data)
+
+
+@router.post("/pages", response_model=APIResponse)
+async def create_admin_page(
+    body: CmsPageCreateUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new CMS page."""
+    await _verify_admin(current_user)
+    from app.models.cms import CmsPage
+    from datetime import datetime, timezone
+    
+    res = await db.execute(select(CmsPage).where(CmsPage.slug == body.slug))
+    if res.scalars().first():
+        raise HTTPException(status_code=400, detail="Page with this slug already exists")
+        
+    p = CmsPage(
+        slug=body.slug,
+        title=body.title,
+        content=body.content,
+        content_html=body.content_html or body.content,
+        meta_title=body.meta_title,
+        meta_description=body.meta_description,
+        is_published=body.is_published,
+        published_at=datetime.now(timezone.utc) if body.is_published else None,
+        page_type=body.page_type,
+        sort_order=body.sort_order,
+    )
+    db.add(p)
+    await db.commit()
+    return APIResponse(success=True, message="CMS page created successfully", data={"slug": p.slug})
+
+
+@router.put("/pages/{slug}", response_model=APIResponse)
+async def update_admin_page(
+    slug: str,
+    body: CmsPageCreateUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update an existing CMS page."""
+    await _verify_admin(current_user)
+    from app.models.cms import CmsPage
+    from datetime import datetime, timezone
+    
+    res = await db.execute(select(CmsPage).where(CmsPage.slug == slug))
+    p = res.scalars().first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Page not found")
+        
+    # Check if slug is changing and already exists
+    if body.slug != slug:
+        dup_res = await db.execute(select(CmsPage).where(CmsPage.slug == body.slug))
+        if dup_res.scalars().first():
+            raise HTTPException(status_code=400, detail="Page with new slug already exists")
+            
+    p.slug = body.slug
+    p.title = body.title
+    p.content = body.content
+    p.content_html = body.content_html or body.content
+    p.meta_title = body.meta_title
+    p.meta_description = body.meta_description
+    
+    if body.is_published and not p.is_published:
+        p.published_at = datetime.now(timezone.utc)
+    elif not body.is_published:
+        p.published_at = None
+        
+    p.is_published = body.is_published
+    p.page_type = body.page_type
+    p.sort_order = body.sort_order
+    
+    await db.commit()
+    return APIResponse(success=True, message="CMS page updated successfully")
+
+
+@router.delete("/pages/{slug}", response_model=APIResponse)
+async def delete_admin_page(
+    slug: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a CMS page."""
+    await _verify_admin(current_user)
+    from app.models.cms import CmsPage
+    res = await db.execute(select(CmsPage).where(CmsPage.slug == slug))
+    p = res.scalars().first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Page not found")
+        
+    await db.delete(p)
+    await db.commit()
+    return APIResponse(success=True, message="CMS page deleted successfully")
+
+
+# ===== Email Template Endpoints =====
+
+@router.get("/email-templates", response_model=APIResponse)
+async def list_admin_email_templates(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all email templates."""
+    await _verify_admin(current_user)
+    from app.models.cms import EmailTemplate
+    res = await db.execute(select(EmailTemplate).order_by(EmailTemplate.name.asc()))
+    templates = res.scalars().all()
+    
+    data = [
+        {
+            "id": t.id,
+            "name": t.name,
+            "slug": t.slug,
+            "subject": t.subject,
+            "body_html": t.body_html,
+            "body_text": t.body_text,
+            "variables": t.variables or [],
+            "is_active": t.is_active,
+            "category": t.category,
+        }
+        for t in templates
+    ]
+    return APIResponse(success=True, data=data)
+
+
+@router.post("/email-templates", response_model=APIResponse)
+async def create_admin_email_template(
+    body: EmailTemplateCreateUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new email template."""
+    await _verify_admin(current_user)
+    from app.models.cms import EmailTemplate
+    res = await db.execute(select(EmailTemplate).where(EmailTemplate.slug == body.slug))
+    if res.scalars().first():
+        raise HTTPException(status_code=400, detail="Template with this slug already exists")
+        
+    t = EmailTemplate(
+        name=body.name,
+        slug=body.slug,
+        subject=body.subject,
+        body_html=body.body_html,
+        body_text=body.body_text,
+        variables=body.variables or [],
+        is_active=body.is_active,
+        category=body.category,
+    )
+    db.add(t)
+    await db.commit()
+    return APIResponse(success=True, message="Email template created successfully", data={"slug": t.slug})
+
+
+@router.put("/email-templates/{slug}", response_model=APIResponse)
+async def update_admin_email_template(
+    slug: str,
+    body: EmailTemplateCreateUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update an existing email template."""
+    await _verify_admin(current_user)
+    from app.models.cms import EmailTemplate
+    res = await db.execute(select(EmailTemplate).where(EmailTemplate.slug == slug))
+    t = res.scalars().first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Email template not found")
+        
+    t.name = body.name
+    t.slug = body.slug
+    t.subject = body.subject
+    t.body_html = body.body_html
+    t.body_text = body.body_text
+    t.variables = body.variables or []
+    t.is_active = body.is_active
+    t.category = body.category
+    
+    await db.commit()
+    return APIResponse(success=True, message="Email template updated successfully")
+
+
+@router.post("/email-templates/{slug}/test", response_model=APIResponse)
+async def test_admin_email_template(
+    slug: str,
+    body: EmailTemplateTestRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Test send an email template using custom variables and current SMTP settings."""
+    await _verify_admin(current_user)
+    from app.models.cms import EmailTemplate
+    from app.models.notification import EmailQueue
+    from app.services.notification_service import send_queued_email
+    from jinja2 import Template
+    
+    res = await db.execute(select(EmailTemplate).where(EmailTemplate.slug == slug))
+    t = res.scalars().first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Email template not found")
+        
+    try:
+        # Render template elements
+        subject_tpl = Template(t.subject)
+        body_html_tpl = Template(t.body_html)
+        
+        rendered_subject = subject_tpl.render(**body.variables)
+        rendered_body = body_html_tpl.render(**body.variables)
+        rendered_text = Template(t.body_text or t.subject).render(**body.variables)
+        
+        email_q = EmailQueue(
+            to_email=body.to_email,
+            to_name="Test Recipient",
+            subject=rendered_subject,
+            body_html=rendered_body,
+            body_text=rendered_text,
+        )
+        db.add(email_q)
+        await db.flush()
+        
+        success = await send_queued_email(email_q)
+        await db.commit()
+        
+        if success:
+            return APIResponse(success=True, message=f"Test email successfully dispatched to {body.to_email}")
+        else:
+            raise HTTPException(status_code=500, detail=f"Failed to dispatch test email: {email_q.error_message}")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error rendering/sending test email: {str(e)}")
+
 
 

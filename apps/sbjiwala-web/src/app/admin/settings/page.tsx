@@ -1,241 +1,276 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Settings, Save, AlertTriangle, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
-import { useToast } from "@/components/ui/Toast";
+import { Save, Radio, Shield, Globe, Mail, MessageSquare, ExternalLink, Key, Check } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 
+const SECTIONS = [
+  { id: "general", label: "General & Branding", icon: Globe },
+  { id: "oauth", label: "Social Logins & OAuth", icon: Shield },
+  { id: "smtp", label: "SMTP Email Server", icon: Mail },
+  { id: "sms", label: "SMS Gateway Config", icon: MessageSquare },
+];
+
 export default function AdminSettingsPage() {
-  const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
+  const [activeSection, setActiveSection] = useState("general");
+  const [toastMsg, setToastMsg] = useState("");
+  const [editedSettings, setEditedSettings] = useState<Record<string, any>>({});
 
-  const [globalConfig, setGlobalConfig] = useState({
-    app_name: "Sbjiwala",
-    maintenance_mode: "false",
-    platform_handling_fee: "5.00",
-    free_platform_fee_above: "199.00",
-    delivery_boy_rate_per_km: "10.00",
-    subscription_bronze_price: "199",
-    subscription_silver_price: "499",
-    subscription_gold_price: "999",
-    inventory_max_limit: "500"
-  });
-
-  // Global system settings
-  const { data: systemSettings, isLoading } = useQuery<any>({
-    queryKey: ["systemSettings"],
+  // Fetch settings
+  const { data: settings = [], isLoading, refetch } = useQuery<any[]>({
+    queryKey: ["adminSettings"],
     queryFn: async () => {
       const res = await api.get("/admin/settings");
-      if (res.data) {
-        setGlobalConfig({
-          app_name: res.data.app_name || "Sbjiwala",
-          maintenance_mode: String(res.data.maintenance_mode || "false"),
-          platform_handling_fee: String(res.data.platform_handling_fee || "5.00"),
-          free_platform_fee_above: String(res.data.free_platform_fee_above || "199.00"),
-          delivery_boy_rate_per_km: String(res.data.delivery_boy_rate_per_km || "10.00"),
-          subscription_bronze_price: String(res.data.subscription_bronze_price || "199"),
-          subscription_silver_price: String(res.data.subscription_silver_price || "499"),
-          subscription_gold_price: String(res.data.subscription_gold_price || "999"),
-          inventory_max_limit: String(res.data.inventory_max_limit || "500")
-        });
-      }
-      return res.data;
+      return res.data?.data || res.data || [];
     }
   });
 
-  // Update System Settings
-  const updateSettingMutation = useMutation({
-    mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      return api.patch(`/admin/settings/${key}`, { value });
+  // Initialize edited states
+  useEffect(() => {
+    if (settings.length > 0) {
+      const initial: Record<string, any> = {};
+      settings.forEach((s: any) => {
+        initial[s.key] = s.value_json || s.value || "";
+      });
+      setEditedSettings(initial);
+    }
+  }, [settings]);
+
+  // Mutation to save single setting
+  const saveSettingMutation = useMutation({
+    mutationFn: async ({ key, value, isJson }: { key: string; value: any; isJson: boolean }) => {
+      const payload = isJson ? { value_json: value } : { value: String(value) };
+      return api.put(`/admin/settings/${key}`, payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["systemSettings"] });
+      queryClient.invalidateQueries({ queryKey: ["adminSettings"] });
+      setToastMsg("Setting updated successfully!");
+      setTimeout(() => setToastMsg(""), 3000);
     },
     onError: (err: any) => {
-      showError("Failed to save system setting", err.message);
+      alert("Failed to update setting: " + (err.response?.data?.detail || err.message));
     }
   });
 
-  const saveAllGlobalSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      for (const [key, val] of Object.entries(globalConfig)) {
-        await updateSettingMutation.mutateAsync({ key, value: val });
-      }
-      success("All system configuration and pricing settings saved!");
-    } catch (err: any) {
-      showError("Save Failed", err.message);
-    }
+  if (isLoading) {
+    return (
+      <AdminLayout title="Platform Configuration Settings">
+        <div className="h-96 flex items-center justify-center">
+          <div className="text-center space-y-2">
+            <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="text-xs font-bold text-slate-400">Loading system settings...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  const appUrl = editedSettings["app_url"] || "http://localhost:3000";
+  const googleCallback = `${appUrl}/api/v1/auth/google/callback`;
+  const facebookCallback = `${appUrl}/api/v1/auth/facebook/callback`;
+  const appleCallback = `${appUrl}/api/v1/auth/apple/callback`;
+
+  const handleSave = (key: string) => {
+    const orig = settings.find(s => s.key === key);
+    if (!orig) return;
+    const value = editedSettings[key];
+    const isJson = orig.value_type === "json";
+    saveSettingMutation.mutate({ key, value, isJson });
+  };
+
+  const handleChange = (key: string, val: any) => {
+    setEditedSettings(prev => ({ ...prev, [key]: val }));
+  };
+
+  // Group settings for editing
+  const getSettingControl = (key: string, label: string, desc: string, type: "text" | "password" | "boolean" | "select", options?: string[]) => {
+    const orig = settings.find(s => s.key === key);
+    if (!orig) return null;
+    const currentVal = editedSettings[key];
+
+    return (
+      <div key={key} className="p-4 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1 max-w-lg">
+          <h4 className="text-xs font-black text-slate-850 dark:text-white">{label}</h4>
+          <p className="text-[10px] text-slate-400 leading-normal">{desc}</p>
+          <p className="text-[9px] font-mono text-slate-400 dark:text-slate-500">Key: {key.toUpperCase()}</p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {type === "boolean" ? (
+            <button
+              onClick={() => {
+                const nextVal = currentVal === "true" || currentVal === true ? "false" : "true";
+                handleChange(key, nextVal);
+                saveSettingMutation.mutate({ key, value: nextVal, isJson: false });
+              }}
+              className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all duration-300 ${
+                currentVal === "true" || currentVal === true ? "bg-emerald-600 justify-end" : "bg-slate-300 dark:bg-slate-800 justify-start"
+              }`}
+            >
+              <span className="bg-white w-4 h-4 rounded-full shadow-md"></span>
+            </button>
+          ) : type === "select" ? (
+            <select
+              value={currentVal}
+              onChange={(e) => {
+                handleChange(key, e.target.value);
+                saveSettingMutation.mutate({ key, value: e.target.value, isJson: false });
+              }}
+              className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+            >
+              {options?.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type={type === "password" ? "password" : "text"}
+              value={currentVal}
+              onChange={(e) => handleChange(key, e.target.value)}
+              className="w-48 px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+            />
+          )}
+
+          {type !== "boolean" && type !== "select" && (
+            <button
+              onClick={() => handleSave(key)}
+              className="p-2 bg-slate-50 dark:bg-slate-850 hover:bg-emerald-50 dark:hover:bg-emerald-950 text-slate-500 hover:text-emerald-600 rounded-xl transition-all cursor-pointer border border-slate-200/50 dark:border-slate-800"
+            >
+              <Save className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <AdminLayout title="System Settings & Pricing Configuration">
-      <div className="space-y-6 text-slate-800 dark:text-slate-100 font-sans max-w-4xl">
-        {isLoading ? (
-          <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 text-emerald-500 animate-spin" /></div>
-        ) : (
-          <form onSubmit={saveAllGlobalSettings} className="space-y-6">
-            {/* Pricing Section */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-              <div className="border-b border-slate-100 dark:border-slate-850 pb-4">
-                <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">Global Pricing & Surcharges</h3>
-                <p className="text-xs text-slate-500 mt-1">Configure global application commissions, packaging, and shipping rules</p>
-              </div>
+    <AdminLayout title="Platform settings dashboard">
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-emerald-600 text-white font-black text-xs px-5 py-3 rounded-2xl shadow-xl animate-bounce">
+          <Check className="w-4 h-4" /> {toastMsg}
+        </div>
+      )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Packaging & Handling Fee (₹)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={globalConfig.platform_handling_fee}
-                    onChange={e => setGlobalConfig(p => ({ ...p, platform_handling_fee: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                  />
-                  <p className="text-[10px] text-slate-400">Flat packaging surcharge applied on all customer orders.</p>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Global Free Platform Fee Above (₹)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={globalConfig.free_platform_fee_above}
-                    onChange={e => setGlobalConfig(p => ({ ...p, free_platform_fee_above: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                  />
-                  <p className="text-[10px] text-slate-400">Order subtotal above which packaging fee is exempted globally.</p>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Delivery Boy Rate (₹ per KM)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={globalConfig.delivery_boy_rate_per_km}
-                    onChange={e => setGlobalConfig(p => ({ ...p, delivery_boy_rate_per_km: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                  />
-                  <p className="text-[10px] text-slate-400">Rate paid automatically to public delivery boys per delivered KM.</p>
-                </div>
-              </div>
-
-              <div className="border-b border-slate-100 dark:border-slate-850 pb-4 pt-2">
-                <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">Subscription Tier Packages</h3>
-                <p className="text-xs text-slate-500 mt-1">Configure monthly pricing packages for VIP customers offering free shipping rules</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Bronze Package Pricing (₹)</label>
-                  <input
-                    type="number"
-                    value={globalConfig.subscription_bronze_price}
-                    onChange={e => setGlobalConfig(p => ({ ...p, subscription_bronze_price: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Silver Package Pricing (₹)</label>
-                  <input
-                    type="number"
-                    value={globalConfig.subscription_silver_price}
-                    onChange={e => setGlobalConfig(p => ({ ...p, subscription_silver_price: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Gold Package Pricing (₹)</label>
-                  <input
-                    type="number"
-                    value={globalConfig.subscription_gold_price}
-                    onChange={e => setGlobalConfig(p => ({ ...p, subscription_gold_price: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Config Preferences */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-              <div className="border-b border-slate-100 dark:border-slate-850 pb-4">
-                <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">Global Preferences</h3>
-                <p className="text-xs text-slate-500 mt-1">Configure brand name, source limit, and debug preferences</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Application Brand Name</label>
-                  <input
-                    type="text"
-                    value={globalConfig.app_name}
-                    onChange={e => setGlobalConfig(p => ({ ...p, app_name: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Inventory Sourcing Max Limit (Items)</label>
-                  <input
-                    type="number"
-                    value={globalConfig.inventory_max_limit}
-                    onChange={e => setGlobalConfig(p => ({ ...p, inventory_max_limit: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
-                  />
-                  <p className="text-[10px] text-slate-400">Limits catalog stock entry volumes vendors can register.</p>
-                </div>
-              </div>
-
-              {/* Maintenance Mode */}
-              <div className="space-y-3 bg-red-50/20 dark:bg-red-950/15 p-5 rounded-2xl border border-red-500/10">
-                <div className="flex gap-3 items-center">
-                  <AlertTriangle className="w-5 h-5 text-red-500" />
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">Emergency Maintenance Mode</h4>
-                    <p className="text-xs text-slate-500 mt-0.5">Toggle this setting to block customer and partner operations during backend upgrades.</p>
-                  </div>
-                </div>
-                <div className="pt-2 flex gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setGlobalConfig(p => ({ ...p, maintenance_mode: "true" }))}
-                    className={`px-4 py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
-                      globalConfig.maintenance_mode === "true"
-                        ? "bg-red-600 text-white border-red-700 shadow"
-                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                    }`}
-                  >
-                    Enable Maintenance
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGlobalConfig(p => ({ ...p, maintenance_mode: "false" }))}
-                    className={`px-4 py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
-                      globalConfig.maintenance_mode === "false"
-                        ? "bg-emerald-600 text-white border-emerald-700 shadow"
-                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                    }`}
-                  >
-                    Disable Mode (Live App)
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Submit */}
-            <div className="flex justify-end pt-2">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 font-sans">
+        {/* Navigation panel */}
+        <div className="lg:col-span-1 space-y-2">
+          {SECTIONS.map((sec) => {
+            const Icon = sec.icon;
+            const isActive = activeSection === sec.id;
+            return (
               <button
-                type="submit"
-                disabled={updateSettingMutation.isPending}
-                className="bg-emerald-650 hover:bg-emerald-600 text-white font-bold text-xs px-6 py-3 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer uppercase tracking-wider"
+                key={sec.id}
+                onClick={() => setActiveSection(sec.id)}
+                className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                  isActive
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-500 border-none text-white shadow-md font-extrabold"
+                    : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-455 hover:bg-slate-50 dark:hover:bg-slate-800"
+                }`}
               >
-                <Save className="w-4 h-4" /> Save System Config
+                <Icon className="w-5 h-5 shrink-0" />
+                <span className="text-xs">{sec.label}</span>
               </button>
+            );
+          })}
+        </div>
+
+        {/* Setting values panel */}
+        <div className="lg:col-span-3 space-y-6">
+          {activeSection === "general" && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-black text-slate-800 dark:text-white">General & Sourcing Settings</h3>
+              {getSettingControl("app_name", "Application Brand Name", "Displayed as header title across client apps", "text")}
+              {getSettingControl("app_url", "Customer App Base URL", "Must be matching target customer app host to compute callbacks", "text")}
+              {getSettingControl("app_primary_color", "Brand Main Color", "Hex style color used dynamically", "text")}
+              
+              <h3 className="text-sm font-black text-slate-800 dark:text-white mt-8">Social Profile Links</h3>
+              {getSettingControl("social_facebook", "Facebook Profile", "Optional target hyperlink inside homepage footer", "text")}
+              {getSettingControl("social_instagram", "Instagram Profile", "Optional target hyperlink inside homepage footer", "text")}
+              {getSettingControl("social_twitter", "Twitter Handle", "Optional target hyperlink inside homepage footer", "text")}
+              {getSettingControl("social_linkedin", "LinkedIn URL", "Optional target hyperlink inside homepage footer", "text")}
+              {getSettingControl("social_youtube", "YouTube Channel", "Optional target hyperlink inside homepage footer", "text")}
             </div>
-          </form>
-        )}
+          )}
+
+          {activeSection === "oauth" && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-sm font-black text-slate-850 dark:text-white">Social Sign In Credentials</h3>
+                <p className="text-[10px] text-slate-400 mt-1">Configure credentials to allow customer logins using Google, Facebook, and Apple account integrations.</p>
+              </div>
+
+              {/* Dynamic redirection callbacks */}
+              <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-2xl p-5 space-y-4">
+                <h4 className="text-xs font-black text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                  <Key className="w-4 h-4 text-emerald-500" />
+                  Dynamic OAuth Callback URLs
+                </h4>
+                <p className="text-[10px] text-slate-550 dark:text-slate-400 leading-normal">
+                  Copy and configure these exact redirect URLs inside your Google developer console, Facebook developer app dashboard, and Apple services console credentials setup.
+                </p>
+
+                <div className="space-y-3 font-mono text-[10px]">
+                  {[
+                    { label: "Google Redirect URI", val: googleCallback },
+                    { label: "Facebook Redirect URI", val: facebookCallback },
+                    { label: "Apple Redirect URI", val: appleCallback },
+                  ].map(uri => (
+                    <div key={uri.label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex items-center justify-between">
+                      <div>
+                        <span className="text-[9px] font-sans font-bold text-slate-400 uppercase">{uri.label}</span>
+                        <div className="text-slate-750 dark:text-slate-300 mt-0.5 select-all">{uri.val}</div>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-400 cursor-pointer hover:text-slate-750" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-xs font-black text-slate-800 dark:text-white">Google OAuth Suffixes</h4>
+                {getSettingControl("google_client_id", "Google Client ID", "The client ID from credentials page", "text")}
+                {getSettingControl("google_client_secret", "Google Client Secret", "Keep secret secure", "password")}
+
+                <h4 className="text-xs font-black text-slate-800 dark:text-white mt-6">Facebook App Identifiers</h4>
+                {getSettingControl("facebook_client_id", "Facebook App Client ID", "Facebook client ID identifier", "text")}
+                {getSettingControl("facebook_client_secret", "Facebook App Client Secret", "Private application key", "password")}
+
+                <h4 className="text-xs font-black text-slate-800 dark:text-white mt-6">Apple Services Sign In</h4>
+                {getSettingControl("apple_client_id", "Apple Client ID", "Apple services developer client ID", "text")}
+                {getSettingControl("apple_client_secret", "Apple Client Secret", "Apple private developer token key", "password")}
+              </div>
+            </div>
+          )}
+
+          {activeSection === "smtp" && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-black text-slate-800 dark:text-white">SMTP Mail Server Credentials</h3>
+              {getSettingControl("smtp_host", "SMTP Host Address", "Host address of target mailserver (e.g. smtp.gmail.com)", "text")}
+              {getSettingControl("smtp_port", "SMTP Port Number", "TLS usually uses 587, SSL uses 465", "text")}
+              {getSettingControl("smtp_user", "SMTP Username Account", "Email address used to authenticate SMTP sessions", "text")}
+              {getSettingControl("smtp_password", "SMTP Password Key", "Use application app password keys", "password")}
+              {getSettingControl("smtp_from_name", "Sender Display Name", "Branded name shown in inbox", "text")}
+              {getSettingControl("smtp_from_email", "Sender Email Address", "Header address shown in inbox", "text")}
+              {getSettingControl("smtp_use_tls", "Use TLS Encryption", "Establish safe server handshakes", "boolean")}
+              {getSettingControl("smtp_start_tls", "Use StartTLS Command", "Issue StartTLS commands", "boolean")}
+            </div>
+          )}
+
+          {activeSection === "sms" && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-black text-slate-800 dark:text-white">SMS Gateway Configuration</h3>
+              {getSettingControl("sms_provider", "Select SMS Provider Mode", "Choose your active SMS dispatching channel", "select", ["android_gateway", "sms_server", "msg91"])}
+              {getSettingControl("sms_gateway_url", "Gateway REST API Endpoint", "HTTP URL (e.g., local gateway URL or Docker SMS server API endpoint)", "text")}
+              {getSettingControl("sms_gateway_key", "Bearer Authorization Key", "API key or token passed in request authorization headers", "password")}
+              {getSettingControl("sms_sender_id", "Sender ID / Header Code", "Branded header code for SMS", "text")}
+            </div>
+          )}
+        </div>
       </div>
     </AdminLayout>
   );

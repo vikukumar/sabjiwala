@@ -31,6 +31,121 @@ async def seed_system_settings(db: AsyncSession):
         {"key": "about_us", "value": "Sbjiwala is a direct-to-home hyper-local quick commerce platform delivering fresh farm vegetables and fruits straight from local farms to your home in 10 minutes.", "value_type": "string", "group": "policy", "description": "About Us content", "is_public": True},
         {"key": "how_it_works", "value": "Our system detects your precise coordinates, displays catalog stock from the nearest vendor, dispatches the order to a nearby delivery boy, and delivers fresh in 10 minutes.", "value_type": "string", "group": "policy", "description": "How it works description", "is_public": True},
         {"key": "vapid_public_key", "value": settings.VAPID_PUBLIC_KEY or "", "value_type": "string", "group": "notification", "description": "VAPID Public Key for Web Push", "is_public": True},
+        # Social Media Links
+        {"key": "social_facebook", "value": "", "value_type": "string", "group": "appearance", "description": "Facebook Profile URL", "is_public": True},
+        {"key": "social_instagram", "value": "", "value_type": "string", "group": "appearance", "description": "Instagram Profile URL", "is_public": True},
+        {"key": "social_twitter", "value": "", "value_type": "string", "group": "appearance", "description": "Twitter Profile URL", "is_public": True},
+        {"key": "social_linkedin", "value": "", "value_type": "string", "group": "appearance", "description": "LinkedIn Profile URL", "is_public": True},
+        {"key": "social_youtube", "value": "", "value_type": "string", "group": "appearance", "description": "YouTube Channel URL", "is_public": True},
+        # SMTP Settings
+        {"key": "smtp_host", "value": "smtp.gmail.com", "value_type": "string", "group": "notification", "description": "SMTP Hostname", "is_public": False},
+        {"key": "smtp_port", "value": "587", "value_type": "integer", "group": "notification", "description": "SMTP Port", "is_public": False},
+        {"key": "smtp_user", "value": "", "value_type": "string", "group": "notification", "description": "SMTP Username", "is_public": False},
+        {"key": "smtp_password", "value": "", "value_type": "string", "group": "notification", "description": "SMTP Password", "is_public": False},
+        {"key": "smtp_from_name", "value": "Sabjiwala", "value_type": "string", "group": "notification", "description": "SMTP From Name", "is_public": True},
+        {"key": "smtp_from_email", "value": "noreply@sbjiwala.qzz.io", "value_type": "string", "group": "notification", "description": "SMTP From Email Address", "is_public": True},
+        {"key": "smtp_use_tls", "value": "true", "value_type": "boolean", "group": "notification", "description": "Enable TLS for SMTP", "is_public": False},
+        {"key": "smtp_start_tls", "value": "true", "value_type": "boolean", "group": "notification", "description": "Enable StartTLS for SMTP", "is_public": False},
+        # SMS Gateways
+        {"key": "sms_provider", "value": "android_gateway", "value_type": "string", "group": "notification", "description": "SMS provider mode: android_gateway, sms_server, or msg91", "is_public": False},
+        {"key": "sms_gateway_url", "value": "", "value_type": "string", "group": "notification", "description": "SMS gateway REST endpoint url", "is_public": False},
+        {"key": "sms_gateway_key", "value": "", "value_type": "string", "group": "notification", "description": "SMS gateway key or bearer authorization token", "is_public": False},
+        {"key": "sms_sender_id", "value": "SABJWL", "value_type": "string", "group": "notification", "description": "Default sender ID or channel name", "is_public": False},
+        # Social Logins (Google, Facebook, Apple)
+        {"key": "google_client_id", "value": "", "value_type": "string", "group": "security", "description": "Google Client ID for OAuth", "is_public": True},
+        {"key": "google_client_secret", "value": "", "value_type": "string", "group": "security", "description": "Google Client Secret for OAuth", "is_public": False},
+        {"key": "facebook_client_id", "value": "", "value_type": "string", "group": "security", "description": "Facebook App ID for OAuth", "is_public": True},
+        {"key": "facebook_client_secret", "value": "", "value_type": "string", "group": "security", "description": "Facebook App Secret for OAuth", "is_public": False},
+        {"key": "apple_client_id", "value": "", "value_type": "string", "group": "security", "description": "Apple Services Client ID for OAuth", "is_public": True},
+        {"key": "apple_client_secret", "value": "", "value_type": "string", "group": "security", "description": "Apple Services Client Secret for OAuth", "is_public": False},
+        {"key": "app_url", "value": "http://localhost:3000", "value_type": "string", "group": "general", "description": "Public URL of customer app to build dynamic oauth redirect links", "is_public": True},
+        # Invoice Setup
+        {"key": "invoice_template_html", "value": (
+            "<!DOCTYPE html>\n"
+            "<html>\n"
+            "<head>\n"
+            "    <meta charset=\"utf-8\">\n"
+            "    <title>Invoice {{ order_number }}</title>\n"
+            "    <style>\n"
+            "        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; margin: 0; padding: 20px; }\n"
+            "        .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, .15); font-size: 16px; line-height: 24px; color: #555; }\n"
+            "        .invoice-box table { width: 100%; line-height: inherit; text-align: left; border-collapse: collapse; }\n"
+            "        .invoice-box table td { padding: 8px; vertical-align: top; }\n"
+            "        .invoice-box table tr td:nth-child(2) { text-align: right; }\n"
+            "        .invoice-box table tr.top table td { padding-bottom: 20px; }\n"
+            "        .invoice-box table tr.top table td.title { font-size: 45px; line-height: 45px; color: #059669; font-weight: bold; }\n"
+            "        .invoice-box table tr.information table td { padding-bottom: 40px; }\n"
+            "        .invoice-box table tr.heading td { background: #059669; color: #fff; font-weight: bold; padding: 10px; }\n"
+            "        .invoice-box table tr.details td { padding-bottom: 20px; }\n"
+            "        .invoice-box table tr.item td { border-bottom: 1px solid #eee; }\n"
+            "        .invoice-box table tr.item.last td { border-bottom: none; }\n"
+            "        .invoice-box table tr.total td:nth-child(2) { border-top: 2px solid #059669; font-weight: bold; font-size: 18px; color: #059669; }\n"
+            "        .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }\n"
+            "    </style>\n"
+            "</head>\n"
+            "<body>\n"
+            "    <div class=\"invoice-box\">\n"
+            "        <table>\n"
+            "            <tr class=\"top\">\n"
+            "                <td colspan=\"2\">\n"
+            "                    <table>\n"
+            "                        <tr>\n"
+            "                            <td class=\"title\">\n"
+            "                                {{ company_name }}\n"
+            "                            </td>\n"
+            "                            <td>\n"
+            "                                Invoice #: {{ order_number }}<br>\n"
+            "                                Date: {{ created_at }}<br>\n"
+            "                                Status: {{ status }}\n"
+            "                            </td>\n"
+            "                        </tr>\n"
+            "                    </table>\n"
+            "                </td>\n"
+            "            </tr>\n"
+            "            <tr class=\"information\">\n"
+            "                <td colspan=\"2\">\n"
+            "                    <table>\n"
+            "                        <tr>\n"
+            "                            <td>\n"
+            "                                <strong>Billed By:</strong><br>\n"
+            "                                {{ vendor_name }}<br>\n"
+            "                                {{ vendor_address }}<br>\n"
+            "                                GSTIN: {{ vendor_gst }}\n"
+            "                            </td>\n"
+            "                            <td>\n"
+            "                                <strong>Billed To:</strong><br>\n"
+            "                                {{ customer_name }}<br>\n"
+            "                                {{ customer_phone }}<br>\n"
+            "                                {{ delivery_address }}\n"
+            "                            </td>\n"
+            "                        </tr>\n"
+            "                    </table>\n"
+            "                </td>\n"
+            "            </tr>\n"
+            "            <tr class=\"heading\">\n"
+            "                <td>Item</td>\n"
+            "                <td>Price</td>\n"
+            "            </tr>\n"
+            "            {% for item in items %}\n"
+            "            <tr class=\"item\">\n"
+            "                <td>{{ item.name }} (x{{ item.quantity }} {{ item.unit }})</td>\n"
+            "                <td>₹{{ item.total_price }}</td>\n"
+            "            </tr>\n"
+            "            {% endfor %}\n"
+            "            <tr class=\"total\">\n"
+            "                <td></td>\n"
+            "                <td>Total: ₹{{ total_amount }}</td>\n"
+            "            </tr>\n"
+            "        </table>\n"
+            "        <div class=\"footer\">\n"
+            "            Thank you for buying fresh from Sabjiwala! Keep supporting your local farmers.\n"
+            "        </div>\n"
+            "    </div>\n"
+            "</body>\n"
+            "</html>\n"
+        ), "value_type": "string", "group": "appearance", "description": "HTML Jinja2 template layout of invoices", "is_public": True},
+        {"key": "invoice_branding_json", "value": "", "value_json": {"company_name": "Sabjiwala", "company_address": "Main Wholesale Mandi, Jaipur, Rajasthan", "company_phone": "+91 99999 88888", "gstin": "08ABCDE1234F1Z1"}, "value_type": "json", "group": "appearance", "description": "Global business metadata attributes for invoices", "is_public": True},
+
     ]
     for d in defaults:
         res = await db.execute(select(SystemSetting).where(SystemSetting.key == d["key"]))

@@ -757,3 +757,32 @@ class ItemRejectionItem(BaseModel):
 class ItemRejectionRequest(BaseModel):
     rejected_items: List[ItemRejectionItem]
 
+
+# ===== CMS & Email Designer Schemas =====
+
+class CmsPageCreateUpdate(BaseModel):
+    slug: str
+    title: str
+    content: str
+    content_html: Optional[str] = None
+    meta_title: Optional[str] = None
+    meta_description: Optional[str] = None
+    is_published: bool = False
+    page_type: str = "custom"
+    sort_order: int = 0
+
+class EmailTemplateCreateUpdate(BaseModel):
+    name: str
+    slug: str
+    subject: str
+    body_html: str
+    body_text: Optional[str] = None
+    variables: Optional[List[str]] = []
+    is_active: bool = True
+    category: str = "transactional"
+
+class EmailTemplateTestRequest(BaseModel):
+    to_email: str
+    variables: Optional[dict] = {}
+
+

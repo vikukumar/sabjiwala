@@ -18,13 +18,25 @@ function ContactForm() {
     }
   });
 
+  const { data: cmsPage } = useQuery<any>({
+    queryKey: ["cmsPage", "contact-us"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/pages/contact-us");
+        return res.data || null;
+      } catch {
+        return null;
+      }
+    }
+  });
+
   const searchParams = useSearchParams();
   const selectedPlan = searchParams?.get("plan") || "";
 
   useEffect(() => {
     const brandName = publicSettings?.app_name || "Sbjiwala";
-    document.title = `Contact Us & Vendor Support | ${brandName}`;
-  }, [publicSettings]);
+    document.title = `${cmsPage?.title || "Contact Us & Vendor Support"} | ${brandName}`;
+  }, [publicSettings, cmsPage]);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -67,13 +79,29 @@ function ContactForm() {
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-12 font-sans">
       {/* Header */}
       <div className="text-center space-y-3">
-        <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-          Get In Touch With<br />
-          <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">Our Core Team</span>
-        </h1>
-        <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 max-w-xl mx-auto leading-relaxed font-medium">
-          Have questions about self-hosting, local delivery boys operations, or want to register as a farm vendor? We are here to help.
-        </p>
+        {cmsPage ? (
+          <div className="text-left max-w-3xl mx-auto">
+            <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight mb-4 text-center">
+              {cmsPage.title}
+            </h1>
+            <Card className="p-6">
+              <div 
+                className="prose dark:prose-invert max-w-none text-xs text-slate-700 dark:text-slate-350 font-medium"
+                dangerouslySetInnerHTML={{ __html: cmsPage.content_html || cmsPage.content }}
+              />
+            </Card>
+          </div>
+        ) : (
+          <>
+            <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Get In Touch With<br />
+              <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">Our Core Team</span>
+            </h1>
+            <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 max-w-xl mx-auto leading-relaxed font-medium">
+              Have questions about self-hosting, local delivery boys operations, or want to register as a farm vendor? We are here to help.
+            </p>
+          </>
+        )}
       </div>
 
       <div className="grid md:grid-cols-5 gap-8 items-start">

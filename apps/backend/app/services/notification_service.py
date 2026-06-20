@@ -171,6 +171,114 @@ class NotificationService:
                 push_body=t.get("push_body"),
                 channels=["in_app", "push"],
             )
+        await self.seed_default_email_templates()
+
+    async def seed_default_email_templates(self) -> None:
+        """Seed beautiful default email templates if they don't exist."""
+        from app.models.cms import EmailTemplate
+        
+        default_templates = [
+            {
+                "slug": "order_placed",
+                "name": "Order Placed Notification",
+                "subject": "Order Placed Successfully - Sabjiwala",
+                "body_html": (
+                    "<div style='font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>"
+                    "<div style='text-align: center; border-bottom: 2px solid #059669; padding-bottom: 10px;'>"
+                    "<h2 style='color: #059669; margin: 0;'>Sabjiwala</h2>"
+                    "<p style='color: #64748b; margin: 5px 0 0 0;'>Kisan ke Ghar Se Apke Ghar Tak</p>"
+                    "</div>"
+                    "<h3 style='color: #0f172a; margin-top: 20px;'>Aapka Order Place Ho Gaya Hai! 🎉</h3>"
+                    "<p>Hello,</p>"
+                    "<p>Thank you for shopping with us! Your order <strong>#{{ order_number }}</strong> has been successfully received.</p>"
+                    "<div style='background-color: #f8fafc; border-radius: 6px; padding: 15px; margin: 20px 0;'>"
+                    "<p style='margin: 0 0 10px 0;'><strong>Order Details:</strong></p>"
+                    "<table style='width: 100%; border-collapse: collapse;'>"
+                    "<tr>"
+                    "<td style='padding: 5px 0; color: #64748b;'>Order Amount:</td>"
+                    "<td style='padding: 5px 0; text-align: right; font-weight: bold;'>₹{{ total_amount }}</td>"
+                    "</tr>"
+                    "<tr>"
+                    "<td style='padding: 5px 0; color: #64748b;'>Delivery Address:</td>"
+                    "<td style='padding: 5px 0; text-align: right;'>{{ delivery_address }}</td>"
+                    "</tr>"
+                    "</table>"
+                    "</div>"
+                    "<p>Our delivery boy will arrive at your doorstep in 10 minutes!</p>"
+                    "<hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>"
+                    "<p style='font-size: 12px; color: #94a3b8; text-align: center;'>Sabjiwala © 2026. All rights reserved.</p>"
+                    "</div>"
+                ),
+                "body_text": "Hello, thank you for shopping with us! Your order #{{ order_number }} has been placed. Amount: ₹{{ total_amount }}.",
+                "variables": ["order_number", "total_amount", "delivery_address"]
+            },
+            {
+                "slug": "order_confirmed",
+                "name": "Order Confirmed Notification",
+                "subject": "Your Order is Confirmed - Sabjiwala",
+                "body_html": (
+                    "<div style='font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>"
+                    "<div style='text-align: center; border-bottom: 2px solid #059669; padding-bottom: 10px;'>"
+                    "<h2 style='color: #059669; margin: 0;'>Sabjiwala</h2>"
+                    "</div>"
+                    "<h3 style='color: #0f172a; margin-top: 20px;'>Order Confirmed! 👍</h3>"
+                    "<p>Hello,</p>"
+                    "<p>We have confirmed your order <strong>#{{ order_number }}</strong>. The vendor is now preparing and packing your fresh greens.</p>"
+                    "<hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>"
+                    "<p style='font-size: 12px; color: #94a3b8; text-align: center;'>Sabjiwala © 2026. All rights reserved.</p>"
+                    "</div>"
+                ),
+                "body_text": "Hello, your order #{{ order_number }} has been confirmed and is being packed.",
+                "variables": ["order_number"]
+            },
+            {
+                "slug": "order_delivered",
+                "name": "Order Delivered Notification",
+                "subject": "Order Delivered! 🏁 - Sabjiwala",
+                "body_html": (
+                    "<div style='font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>"
+                    "<div style='text-align: center; border-bottom: 2px solid #059669; padding-bottom: 10px;'>"
+                    "<h2 style='color: #059669; margin: 0;'>Sabjiwala</h2>"
+                    "</div>"
+                    "<h3 style='color: #0f172a; margin-top: 20px;'>Order Delivered Successfully! 🏁</h3>"
+                    "<p>Hello,</p>"
+                    "<p>Your order <strong>#{{ order_number }}</strong> has been delivered. Thank you for choosing Sabjiwala for your daily fresh veggies!</p>"
+                    "<p>Please let us know how your delivery agent did.</p>"
+                    "<hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>"
+                    "<p style='font-size: 12px; color: #94a3b8; text-align: center;'>Sabjiwala © 2026. All rights reserved.</p>"
+                    "</div>"
+                ),
+                "body_text": "Hello, your order #{{ order_number }} has been delivered successfully. Thank you!",
+                "variables": ["order_number"]
+            },
+            {
+                "slug": "order_refunded",
+                "name": "Order Refunded Notification",
+                "subject": "Refund Credited to Wallet - Sabjiwala",
+                "body_html": (
+                    "<div style='font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>"
+                    "<div style='text-align: center; border-bottom: 2px solid #059669; padding-bottom: 10px;'>"
+                    "<h2 style='color: #059669; margin: 0;'>Sabjiwala</h2>"
+                    "</div>"
+                    "<h3 style='color: #0f172a; margin-top: 20px;'>Refund Processed 💰</h3>"
+                    "<p>Hello,</p>"
+                    "<p>A refund of <strong>₹{{ refund_amount }}</strong> for order <strong>#{{ order_number }}</strong> has been successfully credited back to your Sabjiwala Wallet.</p>"
+                    "<p>You can use this wallet balance for your next grocery order.</p>"
+                    "<hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>"
+                    "<p style='font-size: 12px; color: #94a3b8; text-align: center;'>Sabjiwala © 2026. All rights reserved.</p>"
+                    "</div>"
+                ),
+                "body_text": "Hello, a refund of ₹{{ refund_amount }} for order #{{ order_number }} has been credited to your wallet.",
+                "variables": ["order_number", "refund_amount"]
+            }
+        ]
+        
+        for t in default_templates:
+            res = await self.db.execute(select(EmailTemplate).where(EmailTemplate.slug == t["slug"]))
+            existing = res.scalars().first()
+            if not existing:
+                self.db.add(EmailTemplate(**t))
+        await self.db.flush()
 
     async def dispatch(
         self,
@@ -244,27 +352,72 @@ class NotificationService:
                 logger.debug("Real-time WebSocket dispatch failed (user may be offline)", error=str(e))
 
         # 2. Email Queueing
-        if "email" in channels and user.email and template.email_body:
-            email_q = EmailQueue(
-                to_email=user.email,
-                to_name=f"{user.first_name} {user.last_name}".strip(),
-                subject=render(template.email_subject),
-                body_html=render(template.email_body),
-                template_id=template.id,
-                reference_type=reference_type,
-                reference_id=reference_id,
-            )
-            self.db.add(email_q)
+        if "email" in channels or event_key in ["order_placed", "order_confirmed", "order_delivered", "order_refunded", "order_cancelled", "order_out_for_delivery"]:
+            if user.email:
+                from app.models.cms import EmailTemplate
+                email_template_res = await self.db.execute(
+                    select(EmailTemplate).where(EmailTemplate.slug == event_key, EmailTemplate.is_active == True)
+                )
+                email_template = email_template_res.scalars().first()
+                
+                subject = ""
+                body_html = ""
+                body_text = ""
+                
+                if email_template:
+                    try:
+                        subject = Template(email_template.subject).render(**variables)
+                        body_html = Template(email_template.body_html).render(**variables)
+                        body_text = Template(email_template.body_text or email_template.subject).render(**variables)
+                    except Exception as e:
+                        logger.error("Failed to render custom email template", error=str(e))
+                
+                # Fallback to system default notification template email fields if dynamic template didn't render
+                if not body_html and template.email_body:
+                    subject = render(template.email_subject)
+                    body_html = render(template.email_body)
+                    body_text = render(template.email_subject)
+                    
+                if body_html:
+                    email_q = EmailQueue(
+                        to_email=user.email,
+                        to_name=f"{user.first_name} {user.last_name}".strip(),
+                        subject=subject,
+                        body_html=body_html,
+                        body_text=body_text,
+                        template_id=template.id,
+                        reference_type=reference_type,
+                        reference_id=reference_id,
+                    )
+                    self.db.add(email_q)
 
         # 3. SMS Queueing
-        if "sms" in channels and user.phone and template.sms_body:
-            sms_q = SmsQueue(
-                to_phone=user.phone,
-                message=render(template.sms_body),
-                reference_type=reference_type,
-                reference_id=reference_id,
-            )
-            self.db.add(sms_q)
+        if "sms" in channels or event_key in ["order_placed", "order_confirmed", "order_delivered", "order_refunded", "order_cancelled", "order_out_for_delivery"]:
+            if user.phone:
+                from app.models.cms import SmsTemplate
+                sms_template_res = await self.db.execute(
+                    select(SmsTemplate).where(SmsTemplate.slug == event_key, SmsTemplate.is_active == True)
+                )
+                sms_template = sms_template_res.scalars().first()
+                
+                sms_message = ""
+                if sms_template:
+                    try:
+                        sms_message = Template(sms_template.message).render(**variables)
+                    except Exception as e:
+                        logger.error("Failed to render custom SMS template", error=str(e))
+                        
+                if not sms_message and template.sms_body:
+                    sms_message = render(template.sms_body)
+                    
+                if sms_message:
+                    sms_q = SmsQueue(
+                        to_phone=user.phone,
+                        message=sms_message,
+                        reference_type=reference_type,
+                        reference_id=reference_id,
+                    )
+                    self.db.add(sms_q)
 
         # 4. Push Notifications
         if "push" in channels and template.push_title:
@@ -398,16 +551,32 @@ async def send_queued_sms(sms_q: SmsQueue) -> bool:
         sms_q.attempts += 1
         sms_q.last_attempt_at = datetime.now(timezone.utc)
 
-        # Build payload based on settings/MSG91 format
-        payload = {
-            "mobile": sms_q.to_phone,
-            "message": sms_q.message,
-            "authkey": settings.SMS_GATEWAY_KEY,
-            "sender": settings.SMS_SENDER_ID,
-        }
+        # Build payload and headers based on SMS provider
+        payload = {}
+        headers = {}
+        
+        provider = (settings.SMS_PROVIDER or "msg91").lower()
+        if provider in ["android_gateway", "sms_server"]:
+            # Standard payload for Android SMS Gateways and local Docker SMS Gateways
+            payload = {
+                "to": sms_q.to_phone,
+                "phone": sms_q.to_phone,
+                "message": sms_q.message,
+            }
+            if settings.SMS_GATEWAY_KEY:
+                headers["Authorization"] = f"Bearer {settings.SMS_GATEWAY_KEY}"
+                headers["x-api-key"] = settings.SMS_GATEWAY_KEY
+        else:
+            # Fallback/Default MSG91 / generic format
+            payload = {
+                "mobile": sms_q.to_phone,
+                "message": sms_q.message,
+                "authkey": settings.SMS_GATEWAY_KEY,
+                "sender": settings.SMS_SENDER_ID,
+            }
 
         async with httpx.AsyncClient() as client:
-            response = await client.post(settings.SMS_GATEWAY_URL, json=payload, timeout=10)
+            response = await client.post(settings.SMS_GATEWAY_URL, json=payload, headers=headers, timeout=10)
             
         sms_q.provider_response = response.json() if "application/json" in response.headers.get("content-type", "") else {"text": response.text}
         

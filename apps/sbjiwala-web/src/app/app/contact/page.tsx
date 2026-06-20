@@ -1,16 +1,43 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Mail, Phone, MapPin, Send, MessageSquare, Clock, HelpCircle, CheckCircle } from "lucide-react";
 import { Button, Card, Input } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 import PublicPageWrapper from "@/components/PublicPageWrapper";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@sbjiwala/shared";
 
 export default function ContactPage() {
   const { success, error } = useToast();
   const [loading, setLoading] = useState(false);
   const [formState, setFormState] = useState({ name: "", email: "", phone: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
+
+  const { data: publicSettings } = useQuery<any>({
+    queryKey: ["publicSettings"],
+    queryFn: async () => {
+      const res = await api.get("/installation/public-settings");
+      return res.data || {};
+    }
+  });
+
+  const { data: cmsPage } = useQuery<any>({
+    queryKey: ["cmsPage", "contact-us"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/pages/contact-us");
+        return res.data || null;
+      } catch {
+        return null;
+      }
+    }
+  });
+
+  useEffect(() => {
+    const brandName = publicSettings?.app_name || "Sbjiwala";
+    document.title = `${cmsPage?.title || "Contact Us"} | ${brandName}`;
+  }, [publicSettings, cmsPage]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,13 +89,29 @@ export default function ContactPage() {
               <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-450" />
               24/7 Support Desk
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-              Get in Touch with<br />
-              <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">Sbjiwala Team</span>
-            </h1>
-            <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 max-w-xl mx-auto leading-relaxed font-medium">
-              Have questions about organic sourcing, vendor partnerships, dark store deliveries, or loaded wallets? Fill out the form or reach out directly.
-            </p>
+            {cmsPage ? (
+              <div className="text-left max-w-3xl mx-auto">
+                <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight mb-4 text-center">
+                  {cmsPage.title}
+                </h1>
+                <Card className="p-6">
+                  <div 
+                    className="prose dark:prose-invert max-w-none text-xs text-slate-700 dark:text-slate-350 font-medium"
+                    dangerouslySetInnerHTML={{ __html: cmsPage.content_html || cmsPage.content }}
+                  />
+                </Card>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                  Get in Touch with<br />
+                  <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">Sbjiwala Team</span>
+                </h1>
+                <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 max-w-xl mx-auto leading-relaxed font-medium">
+                  Have questions about organic sourcing, vendor partnerships, dark store deliveries, or loaded wallets? Fill out the form or reach out directly.
+                </p>
+              </>
+            )}
           </div>
 
           <div className="grid md:grid-cols-5 gap-8">

@@ -5,7 +5,6 @@ import { ShieldCheck, Lock, Eye, Key } from "lucide-react";
 import { Card } from "@/components/ui/index";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
-
 import PublicPageWrapper from "@/components/PublicPageWrapper";
 
 export default function PrivacyPage() {
@@ -17,17 +16,49 @@ export default function PrivacyPage() {
     }
   });
 
+  const { data: cmsPage } = useQuery<any>({
+    queryKey: ["cmsPage", "privacy-policy"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/pages/privacy-policy");
+        return res.data || null;
+      } catch {
+        return null;
+      }
+    }
+  });
+
   useEffect(() => {
     const brandName = publicSettings?.app_name || "Sbjiwala";
-    document.title = `Privacy Policy — Geolocation & Data | ${brandName}`;
+    document.title = `${cmsPage?.title || "Privacy Policy"} | ${brandName}`;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        publicSettings?.seo_description || "Read Sbjiwala's user data policy. Learn about precise GPS coordinate encryption, secure tokenized checkouts, and your personal data rights."
+        cmsPage?.meta_description || publicSettings?.seo_description || "Read Sbjiwala's user data policy."
       );
     }
-  }, [publicSettings]);
+  }, [publicSettings, cmsPage]);
+
+  if (cmsPage) {
+    return (
+      <PublicPageWrapper>
+        <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
+          <div className="space-y-2 text-center">
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              {cmsPage.title}
+            </h1>
+          </div>
+          <Card className="p-6">
+            <div 
+              className="prose dark:prose-invert max-w-none text-xs text-slate-700 dark:text-slate-350 font-medium"
+              dangerouslySetInnerHTML={{ __html: cmsPage.content_html || cmsPage.content }}
+            />
+          </Card>
+        </div>
+      </PublicPageWrapper>
+    );
+  }
 
   return (
     <PublicPageWrapper>
@@ -88,7 +119,7 @@ export default function PrivacyPage() {
 
         {/* Consent Notice */}
         <div className="bg-slate-55 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-850 rounded-2xl p-5 text-center">
-          <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-450 font-semibold">
+          <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-455 font-semibold">
             For any data deletion requests, profile access queries, or specific privacy feedback, please submit a support ticket via the help center or email our data protection officer directly at <span className="text-emerald-600 dark:text-emerald-400">privacy@sbjiwala.qzz.io</span>.
           </p>
         </div>

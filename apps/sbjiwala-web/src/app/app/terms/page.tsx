@@ -5,7 +5,6 @@ import { FileText, Award, UserCheck, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/index";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
-
 import PublicPageWrapper from "@/components/PublicPageWrapper";
 
 export default function TermsPage() {
@@ -17,17 +16,49 @@ export default function TermsPage() {
     }
   });
 
+  const { data: cmsPage } = useQuery<any>({
+    queryKey: ["cmsPage", "terms-conditions"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/pages/terms-conditions");
+        return res.data || null;
+      } catch {
+        return null;
+      }
+    }
+  });
+
   useEffect(() => {
     const brandName = publicSettings?.app_name || "Sbjiwala";
-    document.title = `Terms of Service — User Agreement | ${brandName}`;
+    document.title = `${cmsPage?.title || "Terms of Service"} | ${brandName}`;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        publicSettings?.seo_description || "Read Sbjiwala's terms of service and billing guidelines. Learn about order cancellations, user accounts, and digital wallet terms."
+        cmsPage?.meta_description || publicSettings?.seo_description || "Read Sbjiwala's terms of service."
       );
     }
-  }, [publicSettings]);
+  }, [publicSettings, cmsPage]);
+
+  if (cmsPage) {
+    return (
+      <PublicPageWrapper>
+        <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
+          <div className="space-y-2 text-center">
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              {cmsPage.title}
+            </h1>
+          </div>
+          <Card className="p-6">
+            <div 
+              className="prose dark:prose-invert max-w-none text-xs text-slate-700 dark:text-slate-350 font-medium"
+              dangerouslySetInnerHTML={{ __html: cmsPage.content_html || cmsPage.content }}
+            />
+          </Card>
+        </div>
+      </PublicPageWrapper>
+    );
+  }
 
   return (
     <PublicPageWrapper>
@@ -88,7 +119,7 @@ export default function TermsPage() {
 
         {/* Compliance Note */}
         <div className="bg-slate-55 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-850 rounded-2xl p-5 text-center">
-          <p className="text-[11px] leading-relaxed text-slate-550 dark:text-slate-450 font-semibold">
+          <p className="text-[11px] leading-relaxed text-slate-550 dark:text-slate-455 font-semibold">
             For formal legal inquiries, partnership terms, or compliance disputes, please write directly to our counsel at <span className="text-emerald-600 dark:text-emerald-400">legal@sbjiwala.qzz.io</span>.
           </p>
         </div>

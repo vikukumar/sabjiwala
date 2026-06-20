@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Building2, Users, ShoppingBag, Truck,
   Map, BarChart3, Settings, Tag, Image, MessageSquare,
   LogOut, Menu, X, Loader2, ChevronRight, Bell, Shield,
-  Activity, FileText, Megaphone
+  Activity, FileText, Megaphone, Mail, Receipt, BookOpen
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
@@ -47,6 +47,9 @@ const navItems = [
   { id: "support", label: "Support", icon: MessageSquare, href: "/support" },
   { id: "support_agents", label: "Support Agents", icon: Shield, href: "/support-agents" },
   { id: "returns", label: "Returns", icon: FileText, href: "/returns" },
+  { id: "pages", label: "CMS Pages", icon: BookOpen, href: "/pages" },
+  { id: "email-designer", label: "Email Designer", icon: Mail, href: "/email-designer" },
+  { id: "invoice-builder", label: "Invoice Builder", icon: Receipt, href: "/invoice-builder" },
   { id: "settings", label: "Settings", icon: Settings, href: "/settings" },
 ];
 

@@ -774,3 +774,88 @@ async def reject_order_items(
     # Return enriched response
     res_data = await enrich_order_response(order, db)
     return APIResponse(success=True, message="Order adjusted successfully", data=res_data)
+
+
+@router.get("/{order_id}/invoice")
+async def get_order_invoice(
+    order_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Compile and render a print-friendly invoice HTML for an order."""
+    from fastapi.responses import HTMLResponse
+    from app.models.system import SystemSetting
+    from app.models.order import Order
+    from app.models.user import User
+    from app.models.vendor import Vendor
+    from jinja2 import Template
+    
+    # Fetch order
+    res = await db.execute(
+        select(Order)
+        .where(Order.id == order_id)
+        .options(selectinload(Order.items))
+    )
+    order = res.scalars().first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    # Fetch system invoice settings
+    setting_res = await db.execute(
+        select(SystemSetting).where(SystemSetting.key.in_(["invoice_template_html", "invoice_branding_json"]))
+    )
+    settings_db = setting_res.scalars().all()
+    settings_dict = {s.key: s.value_json if s.value_json else s.value for s in settings_db}
+    
+    invoice_template = settings_dict.get("invoice_template_html")
+    branding = settings_dict.get("invoice_branding_json") or {}
+    
+    if not invoice_template:
+        raise HTTPException(status_code=500, detail="Invoice template not configured")
+        
+    # Fetch customer
+    customer_res = await db.execute(select(User).where(User.id == order.user_id))
+    customer = customer_res.scalars().first()
+    customer_name = f"{customer.first_name} {customer.last_name}" if customer else "Customer"
+    customer_phone = customer.phone if customer else ""
+    
+    # Fetch vendor
+    vendor_res = await db.execute(select(Vendor).where(Vendor.id == order.vendor_id))
+    vendor = vendor_res.scalars().first()
+    vendor_name = vendor.business_name if vendor else "Vendor"
+    vendor_address = "Local Mandi"
+    vendor_gst = "N/A"
+    
+    # Construct template variables
+    items_list = []
+    for item in order.items:
+        items_list.append({
+            "name": item.product_name,
+            "quantity": item.quantity,
+            "unit": item.unit.value if hasattr(item.unit, "value") else str(item.unit),
+            "total_price": float(item.price) * float(item.quantity)
+        })
+        
+    variables = {
+        "company_name": branding.get("company_name", "Sbjiwala"),
+        "company_address": branding.get("company_address", ""),
+        "company_phone": branding.get("company_phone", ""),
+        "company_gstin": branding.get("gstin", ""),
+        "order_number": order.order_number,
+        "created_at": order.created_at.strftime("%Y-%m-%d %H:%M") if order.created_at else "",
+        "status": order.status.value if hasattr(order.status, "value") else str(order.status),
+        "vendor_name": vendor_name,
+        "vendor_address": vendor_address,
+        "vendor_gst": vendor_gst,
+        "customer_name": customer_name,
+        "customer_phone": customer_phone,
+        "delivery_address": order.delivery_address,
+        "items": items_list,
+        "total_amount": float(order.total_amount)
+    }
+    
+    try:
+        html_content = Template(invoice_template).render(**variables)
+        return HTMLResponse(content=html_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to render invoice template: {str(e)}")
+

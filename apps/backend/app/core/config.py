@@ -198,3 +198,55 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+async def apply_system_settings_overrides(db) -> None:
+    """Load settings from the database and override the in-memory settings object."""
+    try:
+        from app.models.system import SystemSetting
+        from sqlalchemy import select
+        
+        result = await db.execute(select(SystemSetting))
+        db_settings = result.scalars().all()
+        
+        excluded_keys = {
+            "POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD",
+            "DATABASE_SSL", "DATABASE_URL", "REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD",
+            "REDIS_SSL", "REDIS_URL", "CELERY_BROKER_URL", "CELERY_RESULT_BACKEND",
+            "APP_SECRET_KEY", "JWT_SECRET_KEY"
+        }
+        
+        for s in db_settings:
+            key = s.key.upper()
+            if key in excluded_keys:
+                continue
+                
+            if hasattr(settings, key):
+                val = s.value
+                val_json = s.value_json
+                
+                if s.value_type == "integer" and val is not None:
+                    try:
+                        setattr(settings, key, int(val))
+                    except ValueError:
+                        pass
+                elif s.value_type == "float" and val is not None:
+                    try:
+                        setattr(settings, key, float(val))
+                    except ValueError:
+                        pass
+                elif s.value_type == "boolean" and val is not None:
+                    setattr(settings, key, val.lower() in ("true", "1", "yes"))
+                elif s.value_type == "json" and val_json is not None:
+                    setattr(settings, key, val_json)
+                elif val is not None:
+                    setattr(settings, key, val)
+                    
+        # Dynamically update redirect URIs if APP_URL changed
+        if hasattr(settings, "APP_URL"):
+            settings.GOOGLE_REDIRECT_URI = f"{settings.APP_URL}/api/v1/auth/google/callback"
+            settings.FACEBOOK_REDIRECT_URI = f"{settings.APP_URL}/api/v1/auth/facebook/callback"
+            
+    except Exception:
+        pass
+

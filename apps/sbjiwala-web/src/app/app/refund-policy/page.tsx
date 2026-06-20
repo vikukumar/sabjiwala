@@ -16,17 +16,49 @@ export default function RefundPolicyPage() {
     }
   });
 
+  const { data: cmsPage } = useQuery<any>({
+    queryKey: ["cmsPage", "refund-policy"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/pages/refund-policy");
+        return res.data || null;
+      } catch {
+        return null;
+      }
+    }
+  });
+
   useEffect(() => {
     const brandName = publicSettings?.app_name || "Sbjiwala";
-    document.title = `Refund & Replacement Policy | ${brandName}`;
+    document.title = `${cmsPage?.title || "Refund & Rejection Policy"} | ${brandName}`;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        publicSettings?.seo_description || "Learn about Sbjiwala's doorstep quality check. Inspect and reject fresh produce at delivery time."
+        cmsPage?.meta_description || publicSettings?.seo_description || "Learn about Sbjiwala's doorstep quality check."
       );
     }
-  }, [publicSettings]);
+  }, [publicSettings, cmsPage]);
+
+  if (cmsPage) {
+    return (
+      <PublicPageWrapper>
+        <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
+          <div className="space-y-2 text-center">
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              {cmsPage.title}
+            </h1>
+          </div>
+          <Card className="p-6">
+            <div 
+              className="prose dark:prose-invert max-w-none text-xs text-slate-700 dark:text-slate-350 font-medium"
+              dangerouslySetInnerHTML={{ __html: cmsPage.content_html || cmsPage.content }}
+            />
+          </Card>
+        </div>
+      </PublicPageWrapper>
+    );
+  }
 
   return (
     <PublicPageWrapper>
@@ -75,7 +107,7 @@ export default function RefundPolicyPage() {
                 Step 2
               </span>
               <h4 className="font-extrabold text-xs text-slate-900 dark:text-white">Reject at Doorstep</h4>
-              <p className="text-[10px] text-slate-550 dark:text-slate-450 leading-relaxed font-medium">
+              <p className="text-[10px] text-slate-550 dark:text-slate-455 leading-relaxed font-medium">
                 Hand back any damaged, bruised, or unwanted items to the delivery boy, indicating the reason.
               </p>
             </Card>
@@ -84,7 +116,7 @@ export default function RefundPolicyPage() {
               <span className="inline-block bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-400 text-xs font-black px-2.5 py-1 rounded-lg">
                 Step 3
               </span>
-              <h4 className="font-extrabold text-xs text-slate-900 dark:text-white">Instant Price Adjust</h4>
+              <h4 className="font-extrabold text-xs text-slate-900 dark:text-white">Instant Adjust</h4>
               <p className="text-[10px] text-slate-500 dark:text-slate-455 leading-relaxed font-medium">
                 The rider updates the order. COD totals decrease instantly, and prepaid differences refund to your wallet immediately.
               </p>
@@ -98,26 +130,30 @@ export default function RefundPolicyPage() {
             <AlertTriangle className="w-5 h-5 text-yellow-500" />
             Key Policy Terms
           </h3>
-          <ul className="space-y-3 pl-5 list-disc text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-medium">
+
+          <ul className="space-y-3 pl-6 list-disc text-xs text-slate-500 dark:text-slate-450 leading-relaxed font-medium">
             <li>
-              **Perishable Produce Rule**: No return request or refund claim will be accepted after the delivery agent departs from your location. All quality checks must happen at delivery time.
+              <strong>Vegetable & Fruit Shipments:</strong> Since fresh produce is short-lived, you must check everything at delivery time. No returns will be allowed once the agent departs.
             </li>
             <li>
-              **Cash Collection**: If you selected Cash on Delivery, the delivery boy will update the order, and you only need to pay the modified subtotal.
+              <strong>Wallet Refund Timing:</strong> Doorstep rejection differences for prepaid digital payments reflect in your Sabjiwala Wallet balance instantly.
             </li>
             <li>
-              **Online Prepayments**: For prepaid card or UPI orders, the difference for any rejected item is credited back to your digital wallet immediately upon doorstep update.
+              <strong>Cash on Delivery:</strong> For COD orders, the rider adjusts the total bill directly on their delivery boy app. You pay only for the accepted items.
             </li>
           </ul>
         </div>
 
-        {/* Contact Note */}
-        <div className="bg-slate-55 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-850 rounded-2xl p-5 text-center">
-          <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-455 font-semibold flex items-center justify-center gap-2">
-            <HelpCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-450 flex-shrink-0" />
-            <span>Need assistance? You can chat with our support team or mail <span className="text-emerald-600 dark:text-emerald-400">support@sbjiwala.qzz.io</span>.</span>
-          </p>
-        </div>
+        {/* Support Help */}
+        <Card className="p-5 flex items-start gap-4 bg-emerald-50/50 dark:bg-emerald-950/10 border-dashed">
+          <HelpCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-450 shrink-0" />
+          <div className="space-y-1">
+            <h4 className="font-bold text-xs text-slate-900 dark:text-white">Need Post-Delivery Support?</h4>
+            <p className="text-[10px] leading-relaxed text-slate-550 dark:text-slate-455 font-medium">
+              If an item deteriorates unexpectedly post-delivery due to hidden internal decay, raise a support ticket under the "Orders" page within 2 hours of delivery with clear photographs. Our support agents will review and issue wallet adjustments where valid.
+            </p>
+          </div>
+        </Card>
       </div>
     </PublicPageWrapper>
   );
