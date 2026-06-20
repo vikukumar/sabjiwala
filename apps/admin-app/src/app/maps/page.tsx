@@ -183,7 +183,6 @@ function LiveOpsMap({ vendors, deliveryBoys, orders }: {
 
   return (
     <>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
       <div ref={mapRef} className="w-full h-full rounded-2xl overflow-hidden" style={{ zIndex: 1 }} />
     </>
   );

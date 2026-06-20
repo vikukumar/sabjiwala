@@ -260,6 +260,72 @@ function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: nu
   return R * c;
 }
 
+// =========== DELIVERY TRACKING MAP helpers ===========
+const VEHICLES = [
+  { type: "scooty" },
+  { type: "bike" },
+  { type: "truck" },
+  { type: "bicycle" }
+];
+
+const getVehicleDetails = (orderId: string, agentVehicleType?: string) => {
+  const hash = (orderId || "agent").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const types = ["scooty", "bike", "bicycle", "truck"];
+  const type = agentVehicleType || types[hash % types.length];
+  
+  let svg = "";
+  if (type === "truck") {
+    svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ea580c" stroke="#ffffff" stroke-width="1.5" style="width: 36px; height: 36px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3)); flex-shrink: 0;">
+        <rect x="1" y="3" width="15" height="13" rx="2" ry="2"></rect>
+        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+        <circle cx="5.5" cy="18.5" r="2.5"></circle>
+        <circle cx="18.5" cy="18.5" r="2.5"></circle>
+      </svg>
+    `;
+  } else if (type === "bicycle") {
+    svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 36px; height: 36px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3)); flex-shrink: 0;">
+        <circle cx="5.5" cy="17.5" r="2.5"></circle>
+        <circle cx="18.5" cy="17.5" r="2.5"></circle>
+        <path d="M15 5h1M12 17.5V14l-3-3 4-3 2 3h2" stroke="#ea580c" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    `;
+  } else if (type === "scooty") {
+    svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ea580c" stroke="#ffffff" stroke-width="1.5" style="width: 36px; height: 36px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3)); flex-shrink: 0;">
+        <circle cx="6" cy="18" r="2.5"></circle>
+        <circle cx="18" cy="18" r="2.5"></circle>
+        <path d="M6 18h4l2-5h5l1.5 2.5h1.5l1-2.5v-2h-3l-1.5-3H13v2.5l-2 2.5H8l-2-5H3v2h2l1 5.5z"></path>
+      </svg>
+    `;
+  } else {
+    // bike
+    svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ea580c" stroke="#ffffff" stroke-width="1.5" style="width: 36px; height: 36px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3)); flex-shrink: 0;">
+        <circle cx="6" cy="18" r="3"></circle>
+        <circle cx="18" cy="18" r="3"></circle>
+        <path d="M6 18h4.5l2-6h4l1.5 6H21v-2l-2-4h-4.5L12 8H8L6 18z"></path>
+      </svg>
+    `;
+  }
+  return { svg };
+};
+
+const fetchRoute = async (start: [number, number], end: [number, number]): Promise<[number, number][]> => {
+  try {
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`);
+    const data = await res.json();
+    if (data.routes && data.routes.length > 0) {
+      const coords = data.routes[0].geometry.coordinates; // Array of [lng, lat]
+      return coords.map((c: any) => [c[1], c[0]]); // Convert to [lat, lng]
+    }
+  } catch (error) {
+    console.error("OSRM Route API failed, falling back to straight line:", error);
+  }
+  return [start, end];
+};
+
 // =========== DELIVERY TRACKING MAP ===========
 function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationMode, distanceInfo }: {
   order: any; currentPos: [number, number]; simulationMode: boolean;
@@ -268,21 +334,20 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [mapObj, setMapObj] = useState<any>(null);
   const driverMarkerRef = useRef<any>(null);
-  const pathLineRef = useRef<any>(null);
+  const agentToStoreLineRef = useRef<any>(null);
+  const storeToCustomerLineRef = useRef<any>(null);
 
   useEffect(() => {
     if (typeof window === "undefined" || !mapContainerRef.current || !order) return;
     let map: any = null;
     let active = true;
+
+    // Clean up container completely to resolve strict-mode duplication issues
+    mapContainerRef.current.innerHTML = "";
+    (mapContainerRef.current as any)._leaflet_id = null;
+
     import("leaflet").then((L) => {
       if (!active || !mapContainerRef.current) return;
-      if ((mapContainerRef.current as any)._leaflet_id) return;
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-      });
 
       const customerLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
       const customerLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
@@ -299,7 +364,7 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
         ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
       const tiles = L.tileLayer(tileUrl, {
-        attribution: "&copy; OpenStreetMap &copy; CARTO",
+        attribution: "",
         subdomains: "abcd",
         maxZoom: 20
       }).addTo(map);
@@ -307,16 +372,13 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
         tiles.setUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
       });
 
+      // Delivery address marker (Customer) - Backgroundless Swiggy Style
       const homeIcon = L.divIcon({
         html: `
-          <div style="filter: drop-shadow(0 4px 10px rgba(79, 70, 229, 0.4)); position: relative; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;">
-            <span style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background: rgba(79, 70, 229, 0.15); animation: ping 2s infinite; display: block; box-sizing: border-box;"></span>
-            <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2.5px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 2; box-sizing: border-box;">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
-              </svg>
-            </div>
+          <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3b82f6" stroke="#ffffff" stroke-width="1.5" style="width: 30px; height: 30px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); flex-shrink: 0;">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 11.2c-2.67 0-8 1.34-8 4v1.8h16v-1.8c0-2.66-5.33-4-8-4z"/>
+            </svg>
           </div>
         `,
         iconSize: [32, 32],
@@ -325,17 +387,13 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
       });
       L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
 
+      // Store marker - Backgroundless Swiggy Style
       const storeIcon = L.divIcon({
         html: `
-          <div style="filter: drop-shadow(0 4px 10px rgba(239, 68, 68, 0.4)); position: relative; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;">
-            <span style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); animation: ping 1.8s infinite; display: block; box-sizing: border-box;"></span>
-            <div style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2.5px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 2; box-sizing: border-box;">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
-                <path d="m2 7 4.41-3.67A2 2 0 0 1 7.73 3h8.54a2 2 0 0 1 1.32.33L22 7"/>
-                <path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
-                <path d="M12 12A4 4 0 0 0 4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a4 4 0 0 0-8 0Z"/>
-              </svg>
-            </div>
+          <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" style="width: 30px; height: 30px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); flex-shrink: 0;">
+              <path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/>
+            </svg>
           </div>
         `,
         iconSize: [32, 32],
@@ -344,19 +402,12 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
       });
       L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup(order.vendor_store?.store_name || "Store");
 
+      // Delivery agent marker - Backgroundless Swiggy Style
+      const { svg } = getVehicleDetails(order.id, order.delivery_agent?.vehicle_type);
       const driverIcon = L.divIcon({
         html: `
-          <div style="filter: drop-shadow(0 6px 16px rgba(16, 185, 129, 0.4)); position: relative; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px;">
-            <span style="position: absolute; width: 46px; height: 46px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); animation: ping 1.5s infinite; display: block; box-sizing: border-box;"></span>
-            <div style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 2; box-sizing: border-box;">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
-                <circle cx="18.5" cy="17.5" r="2.5"></circle>
-                <circle cx="5.5" cy="17.5" r="2.5"></circle>
-                <path d="M15 5h1a2 2 0 0 1 2 2v2"></path>
-                <path d="M12 17.5V14l-3-3 4-3 2 3h2"></path>
-              </svg>
-            </div>
-            <span style="position: absolute; bottom: -2px; right: -2px; width: 10px; height: 10px; background: #10b981; border: 2px solid white; border-radius: 50%; z-index: 3; display: block; box-sizing: border-box;"></span>
+          <div style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex-shrink: 0;">
+            ${svg}
           </div>
         `,
         iconSize: [36, 36],
@@ -366,8 +417,48 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
       const driverMarker = L.marker(currentPos, { icon: driverIcon }).addTo(map);
       driverMarkerRef.current = driverMarker;
 
-      L.polyline([[storeLat, storeLng], [customerLat, customerLng]], { color: "#cbd5e1", weight: 3, dashArray: "5 5", opacity: 0.6 }).addTo(map);
-      pathLineRef.current = L.polyline([currentPos, [destLat, destLng]], { color: isPicked ? "#10b981" : "#3b82f6", weight: 5, lineCap: "round", lineJoin: "round" }).addTo(map);
+      // Draw route lines using OSRM driving paths
+      const agentToStorePolyline = L.polyline([], {
+        color: isPicked ? "#10b981" : "#f97316",
+        weight: 5,
+        lineCap: "round",
+        lineJoin: "round"
+      }).addTo(map);
+      agentToStoreLineRef.current = agentToStorePolyline;
+
+      const storeToCustomerPolyline = L.polyline([], {
+        color: "#10b981",
+        weight: 5,
+        lineCap: "round",
+        lineJoin: "round"
+      }).addTo(map);
+      storeToCustomerLineRef.current = storeToCustomerPolyline;
+
+      // Fetch Leg 2: Store to Customer (dashed green / grey)
+      fetchRoute([storeLat, storeLng], [customerLat, customerLng]).then((coords) => {
+        if (!active) return;
+        storeToCustomerPolyline.setLatLngs(coords);
+        if (isPicked) {
+          storeToCustomerPolyline.setStyle({ color: "#cbd5e1", weight: 3, dashArray: "5 5" });
+        } else {
+          storeToCustomerPolyline.setStyle({ color: "#10b981", weight: 4, dashArray: "5 5" });
+        }
+      });
+
+      // Fetch Leg 1: Driver to current target (Store or Customer)
+      if (!isPicked) {
+        fetchRoute(currentPos, [storeLat, storeLng]).then((coords) => {
+          if (!active) return;
+          agentToStorePolyline.setLatLngs(coords);
+          agentToStorePolyline.setStyle({ color: "#f97316", weight: 5 });
+        });
+      } else {
+        fetchRoute(currentPos, [customerLat, customerLng]).then((coords) => {
+          if (!active) return;
+          agentToStorePolyline.setLatLngs(coords);
+          agentToStorePolyline.setStyle({ color: "#10b981", weight: 5 });
+        });
+      }
 
       map.fitBounds([currentPos, [destLat, destLng]], { padding: [40, 40] });
       setMapObj(map);
@@ -376,26 +467,36 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
   }, [order]);
 
   useEffect(() => {
-    if (mapObj && driverMarkerRef.current) {
+    if (mapObj && driverMarkerRef.current && order) {
       driverMarkerRef.current.setLatLng(currentPos);
-      if (pathLineRef.current && order) {
-        const customerLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
-        const customerLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
-        const storeLat = order.vendor_store?.latitude || 19.0760;
-        const storeLng = order.vendor_store?.longitude || 72.9977;
+      
+      const customerLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
+      const customerLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
+      const storeLat = order.vendor_store?.latitude || 19.0760;
+      const storeLng = order.vendor_store?.longitude || 72.9977;
 
-        const isPicked = ["picked", "out_for_delivery"].includes(order.status);
-        const destLat = isPicked ? customerLat : storeLat;
-        const destLng = isPicked ? customerLng : storeLng;
-
-        pathLineRef.current.setLatLngs([currentPos, [destLat, destLng]]);
+      const isPicked = ["picked", "out_for_delivery"].includes(order.status);
+      
+      if (isPicked) {
+        fetchRoute(currentPos, [customerLat, customerLng]).then((coords) => {
+          if (agentToStoreLineRef.current) {
+            agentToStoreLineRef.current.setLatLngs(coords);
+            agentToStoreLineRef.current.setStyle({ color: "#10b981", weight: 5 });
+          }
+        });
+      } else {
+        fetchRoute(currentPos, [storeLat, storeLng]).then((coords) => {
+          if (agentToStoreLineRef.current) {
+            agentToStoreLineRef.current.setLatLngs(coords);
+            agentToStoreLineRef.current.setStyle({ color: "#f97316", weight: 5 });
+          }
+        });
       }
     }
   }, [currentPos, mapObj, order]);
 
   return (
     <div className="space-y-3">
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
       <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 p-3 flex-wrap gap-2 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs">
         <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-100">
           <Navigation className="w-4 h-4 text-emerald-600 dark:text-emerald-450 animate-bounce" />

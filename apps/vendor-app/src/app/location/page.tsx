@@ -109,7 +109,6 @@ function StoreLocationMap({
 
   return (
     <>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
       <div ref={mapRef} className="w-full h-96 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner" />
     </>
   );
