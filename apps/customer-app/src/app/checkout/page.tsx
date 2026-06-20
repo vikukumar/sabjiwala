@@ -108,12 +108,12 @@ function AddressForm({ onSave, onCancel, existing }: {
 
       const pinIcon = L.divIcon({
         html: `
-          <div style="filter: drop-shadow(0 4px 10px rgba(16,185,129,0.35)); position: relative;">
-            <span style="position: absolute; top: -4px; left: -4px; width: 40px; height: 40px; border-radius: 50%; background: rgba(16,185,129,0.15); animation: ping 1.5s infinite;"></span>
-            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2.5px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.15)">
+          <div style="filter: drop-shadow(0 4px 10px rgba(79, 70, 229, 0.4)); position: relative; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;">
+            <span style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background: rgba(79, 70, 229, 0.15); animation: ping 2s infinite; display: block; box-sizing: border-box;"></span>
+            <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2.5px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 2; box-sizing: border-box;">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
               </svg>
             </div>
           </div>

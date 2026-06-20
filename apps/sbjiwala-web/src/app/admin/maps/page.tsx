@@ -62,15 +62,16 @@ function LiveOpsMap({ vendors, deliveryBoys, orders }: {
 
         const isOnline = vendor.is_open || vendor.status === "approved";
         const icon = L.divIcon({
-          html: `<div style="position:relative">
-            <div style="background:${isOnline ? "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)" : "#94a3b8"};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
+          html: `<div style="filter: drop-shadow(0 4px 10px rgba(0,0,0,0.15)); position: relative; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;">
+            ${isOnline ? '<span style="position: absolute; width: 48px; height: 48px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); animation: ping 1.8s infinite; display: block; box-sizing: border-box;"></span>' : ''}
+            <div style="background:${isOnline ? "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)" : "#94a3b8"};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:2;box-sizing:border-box;cursor:pointer">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
                 <path d="m2 7 4.41-3.67A2 2 0 0 1 7.73 3h8.54a2 2 0 0 1 1.32.33L22 7"/>
                 <path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
                 <path d="M12 12A4 4 0 0 0 4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a4 4 0 0 0-8 0Z"/>
               </svg>
             </div>
-            ${isOnline ? '<div style="position:absolute;top:-2px;right:-2px;width:12px;height:12px;background:#10b981;border-radius:50%;border:2px solid white"></div>' : ""}
+            ${isOnline ? '<div style="position:absolute;top:-2px;right:-2px;width:12px;height:12px;background:#10b981;border-radius:50%;border:2px solid white;z-index:3;display:block;box-sizing:border-box;"></div>' : ""}
           </div>`,
           iconSize: [40, 40],
           iconAnchor: [20, 20],
@@ -100,8 +101,9 @@ function LiveOpsMap({ vendors, deliveryBoys, orders }: {
         const isDelivering = boy.current_order_id;
 
         const icon = L.divIcon({
-          html: `<div style="position:relative">
-            <div style="background:${isDelivering ? "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" : isOnline ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "#94a3b8"};width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer">
+          html: `<div style="filter: drop-shadow(0 4px 10px rgba(0,0,0,0.15)); position: relative; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px;">
+            ${isOnline ? `<span style="position: absolute; width: 46px; height: 46px; border-radius: 50%; background: ${isDelivering ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)"}; animation: ping 1.5s infinite; display: block; box-sizing: border-box;"></span>` : ''}
+            <div style="background:${isDelivering ? "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" : isOnline ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "#94a3b8"};width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:2;box-sizing:border-box;cursor:pointer">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
                 <circle cx="18.5" cy="17.5" r="2.5"></circle>
                 <circle cx="5.5" cy="17.5" r="2.5"></circle>
@@ -109,7 +111,7 @@ function LiveOpsMap({ vendors, deliveryBoys, orders }: {
                 <path d="M12 17.5V14l-3-3 4-3 2 3h2"></path>
               </svg>
             </div>
-            ${isOnline ? '<div style="position:absolute;top:-2px;right:-2px;width:12px;height:12px;background:' + (isDelivering ? "#f59e0b" : "#10b981") + ';border-radius:50%;border:2px solid white;animation:pulse 2s infinite"></div>' : ""}
+            ${isOnline ? `<div style="position:absolute;top:-2px;right:-2px;width:12px;height:12px;background:${isDelivering ? "#f59e0b" : "#10b981"};border-radius:50%;border:2px solid white;z-index:3;display:block;box-sizing:border-box;"></div>` : ""}
           </div>`,
           iconSize: [38, 38],
           iconAnchor: [19, 19],
@@ -150,11 +152,14 @@ function LiveOpsMap({ vendors, deliveryBoys, orders }: {
 
         // Customer icon 🏠
         const homeIcon = L.divIcon({
-          html: `<div style="background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25)">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
-              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
+          html: `<div style="filter: drop-shadow(0 4px 10px rgba(79, 70, 229, 0.4)); position: relative; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;">
+            <span style="position: absolute; width: 38px; height: 38px; border-radius: 50%; background: rgba(79, 70, 229, 0.15); animation: ping 2s infinite; display: block; box-sizing: border-box;"></span>
+            <div style="background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:2;box-sizing:border-box;">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </div>
           </div>`,
           iconSize: [30, 30],
           iconAnchor: [15, 15],

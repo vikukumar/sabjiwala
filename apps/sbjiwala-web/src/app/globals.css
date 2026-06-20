@@ -586,8 +586,30 @@ input[type="checkbox"], input[type="radio"] {
   animation: shine-sweep 3s infinite ease-in-out;
 }
 
-/* Custom Leaflet DivIcon reset to prevent default border/background */
-.leaflet-custom-icon {
+/* Fix Leaflet marker distortion due to Tailwind image resets */
+.leaflet-container img {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* Hide default marker shadow pane completely to avoid visual bugs */
+.leaflet-shadow-pane {
+  display: none !important;
+}
+
+/* Flex layout resets on custom Leaflet divIcons to prevent vertical collapsing or stretching */
+.leaflet-custom-icon, .leaflet-div-icon {
   background: transparent !important;
   border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: visible !important;
+}
+
+.leaflet-marker-icon.leaflet-custom-icon, 
+.leaflet-marker-icon.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }

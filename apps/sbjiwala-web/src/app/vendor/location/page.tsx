@@ -35,9 +35,9 @@ function StoreLocationMap({
 
       const storeIcon = L.divIcon({
         html: `
-          <div style="filter: drop-shadow(0 4px 12px rgba(59,130,246,0.35)); position: relative;">
-            <span style="position: absolute; top: -6px; left: -6px; width: 56px; height: 56px; border-radius: 50%; background: rgba(59,130,246,0.15); animation: ping 1.8s infinite;"></span>
-            <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(59,130,246,0.5); cursor: grab">
+          <div style="filter: drop-shadow(0 4px 12px rgba(239, 68, 68, 0.4)); position: relative; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px;">
+            <span style="position: absolute; width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); animation: ping 1.8s infinite; display: block; box-sizing: border-box;"></span>
+            <div style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5); cursor: grab; box-sizing: border-box;">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
                 <path d="m2 7 4.41-3.67A2 2 0 0 1 7.73 3h8.54a2 2 0 0 1 1.32.33L22 7"/>
                 <path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
