@@ -154,3 +154,5 @@ apps/backend/storage
 # tmp/fix_node_modules.py
 scratch
 scratch/
+google-services.json
+sbjiwala-app-firebase-adminsdk-fbsvc-354be70545.json

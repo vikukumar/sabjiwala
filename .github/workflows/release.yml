@@ -299,6 +299,54 @@ jobs:
             echo "HAS_PLAY_STORE_CONFIG=false" >> $GITHUB_ENV
           fi
 
+      # ── Firebase google-services.json injection ───────────────────────────
+      - name: Inject Firebase google-services.json Files
+        run: |
+          # Customer App
+          if [ -n "${{ secrets.GOOGLE_SERVICES_CUSTOMER_BASE64 }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_CUSTOMER_BASE64 }}" | base64 --decode \
+              > apps/customer-app/android/app/google-services.json
+            echo "✅ customer google-services.json injected"
+          else
+            echo "⚠️  GOOGLE_SERVICES_CUSTOMER_BASE64 not set — FCM disabled for customer app"
+          fi
+
+          # Vendor App
+          if [ -n "${{ secrets.GOOGLE_SERVICES_VENDOR_BASE64 }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_VENDOR_BASE64 }}" | base64 --decode \
+              > apps/vendor-app/android/app/google-services.json
+            echo "✅ vendor google-services.json injected"
+          else
+            echo "⚠️  GOOGLE_SERVICES_VENDOR_BASE64 not set — FCM disabled for vendor app"
+          fi
+
+          # Delivery App
+          if [ -n "${{ secrets.GOOGLE_SERVICES_DELIVERY_BASE64 }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_DELIVERY_BASE64 }}" | base64 --decode \
+              > apps/delivery-app/android/app/google-services.json
+            echo "✅ delivery google-services.json injected"
+          else
+            echo "⚠️  GOOGLE_SERVICES_DELIVERY_BASE64 not set — FCM disabled for delivery app"
+          fi
+
+          # Admin App
+          if [ -n "${{ secrets.GOOGLE_SERVICES_ADMIN_BASE64 }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_ADMIN_BASE64 }}" | base64 --decode \
+              > apps/admin-app/android/app/google-services.json
+            echo "✅ admin google-services.json injected"
+          else
+            echo "⚠️  GOOGLE_SERVICES_ADMIN_BASE64 not set — FCM disabled for admin app"
+          fi
+
+          # Agent App
+          if [ -n "${{ secrets.GOOGLE_SERVICES_AGENT_BASE64 }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_AGENT_BASE64 }}" | base64 --decode \
+              > apps/agent-app/android/app/google-services.json
+            echo "✅ agent google-services.json injected"
+          else
+            echo "⚠️  GOOGLE_SERVICES_AGENT_BASE64 not set — FCM disabled for agent app"
+          fi
+
       # ── Reusable helper ───────────────────────────────────────────────────
       # Inline shell function used by every app build step below.
       # Usage: build_next_app <app-dir>
@@ -389,7 +437,7 @@ jobs:
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
-          packageName: com.sbjiwala.vendor
+          packageName: in.sbjiwala.vendor
           releaseFiles: sbjiwala-vendor-v${{ env.VER }}.aab
           track: internal
           status: completed
@@ -411,7 +459,7 @@ jobs:
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
-          packageName: com.sbjiwala.delivery
+          packageName: in.sbjiwala.delivery
           releaseFiles: sbjiwala-delivery-v${{ env.VER }}.aab
           track: internal
           status: completed
@@ -429,6 +477,20 @@ jobs:
             "sbjiwala-admin-v${{ env.VER }}.aab"
 
       # Admin APK is internal-only — no Play Store upload (internal tool)
+
+      # ── Agent App (NEW) ───────────────────────────────────────────────────
+      - name: Build & Sync Agent App (Android)
+        env:
+          API_URL: ${{ env.API_URL }}
+        run: /tmp/build_next_app.sh agent-app
+
+      - name: Compile & Sign Agent Android App
+        run: |
+          /tmp/gradle_sign.sh apps/agent-app \
+            "sbjiwala-agent-v${{ env.VER }}.apk" \
+            "sbjiwala-agent-v${{ env.VER }}.aab"
+
+      # Agent APK is internal-only — no Play Store upload (internal tool)
 
       # ── Package all APKs into per-app zip bundles ─────────────────────────
       - name: Create per-app zip bundles
@@ -452,6 +514,10 @@ jobs:
             sbjiwala-admin-v${VER}.apk \
             sbjiwala-admin-v${VER}.aab
 
+          zip sbjiwala-agent-v${VER}-android.zip \
+            sbjiwala-agent-v${VER}.apk \
+            sbjiwala-agent-v${VER}.aab
+
       - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -461,14 +527,17 @@ jobs:
             sbjiwala-vendor-v${{ env.VER }}.apk
             sbjiwala-delivery-v${{ env.VER }}.apk
             sbjiwala-admin-v${{ env.VER }}.apk
+            sbjiwala-agent-v${{ env.VER }}.apk
             sbjiwala-v${{ env.VER }}.aab
             sbjiwala-vendor-v${{ env.VER }}.aab
             sbjiwala-delivery-v${{ env.VER }}.aab
             sbjiwala-admin-v${{ env.VER }}.aab
+            sbjiwala-agent-v${{ env.VER }}.aab
             sbjiwala-customer-v${{ env.VER }}-android.zip
             sbjiwala-vendor-v${{ env.VER }}-android.zip
             sbjiwala-delivery-v${{ env.VER }}-android.zip
             sbjiwala-admin-v${{ env.VER }}-android.zip
+            sbjiwala-agent-v${{ env.VER }}-android.zip
 
   # ═══════════════════════════════════════════════════════════════════════════
   # 6. iOS — customer, vendor, delivery (macOS runner)
@@ -733,14 +802,17 @@ jobs:
             sbjiwala-vendor-v${{ env.VER }}-android.zip
             sbjiwala-delivery-v${{ env.VER }}-android.zip
             sbjiwala-admin-v${{ env.VER }}-android.zip
+            sbjiwala-agent-v${{ env.VER }}-android.zip
             sbjiwala-v${{ env.VER }}.apk
             sbjiwala-vendor-v${{ env.VER }}.apk
             sbjiwala-delivery-v${{ env.VER }}.apk
             sbjiwala-admin-v${{ env.VER }}.apk
+            sbjiwala-agent-v${{ env.VER }}.apk
             sbjiwala-v${{ env.VER }}.aab
             sbjiwala-vendor-v${{ env.VER }}.aab
             sbjiwala-delivery-v${{ env.VER }}.aab
             sbjiwala-admin-v${{ env.VER }}.aab
+            sbjiwala-agent-v${{ env.VER }}.aab
             sbjiwala-v${{ env.VER }}-ios.*
             sbjiwala-vendor-v${{ env.VER }}-ios.*
             sbjiwala-delivery-v${{ env.VER }}-ios.*
@@ -771,6 +843,7 @@ jobs:
             | Vendor App | `sbjiwala-vendor-v${{ env.VER }}-android.zip` |
             | Delivery App | `sbjiwala-delivery-v${{ env.VER }}-android.zip` |
             | Admin App | `sbjiwala-admin-v${{ env.VER }}-android.zip` |
+            | Agent Support App | `sbjiwala-agent-v${{ env.VER }}-android.zip` |
 
             ### iOS Builds (if enabled)
             | App | File |
