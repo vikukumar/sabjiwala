@@ -1,6 +1,7 @@
 """
 Orders API endpoints.
 """
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
@@ -16,7 +17,9 @@ from app.api.schemas import (
 from app.core.rbac.engine import get_current_user
 from app.db.session import get_db
 from app.models.order import Order, OrderStatus, ReturnRequest, ReturnStatus
+from app.models.payment import WalletTransactionType
 from app.services.order_service import OrderService
+from app.services.payment_service import PaymentService
 
 router = APIRouter()
 
@@ -637,15 +640,13 @@ async def reject_order_items(
             "product_id": str(r_item.product_id),
             "variant_id": str(r_item.variant_id) if r_item.variant_id else None,
             "product_name": order_item.product_name,
-            "rejected_quantity": qty_change,
+            "rejected_quantity": float(qty_change),
             "reason": r_item.reason,
             "rejected_at": datetime.now(timezone.utc).isoformat()
         })
 
     # Save to order metadata
-    meta = order.metadata_json
-    if not meta:
-        meta = {}
+    meta = dict(order.metadata_json) if order.metadata_json else {}
     current_rejections = meta.get("doorstep_rejections", [])
     current_rejections.extend(rejection_records)
     meta["doorstep_rejections"] = current_rejections
@@ -714,10 +715,7 @@ async def reject_order_items(
     db.add(history)
 
     # 6. Process financial adjustment
-    from app.services.payment_service import PaymentService
     payment_service = PaymentService(db)
-    from app.models.payment import WalletTransactionType
-    from datetime import datetime, timezone
     if order.payment_method == "cod":
         if wallet_refund_due > 0:
             await payment_service.credit_wallet(
@@ -799,16 +797,22 @@ async def get_order_invoice(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
         
-    # Fetch system invoice settings
+    # Fetch system invoice settings — template is stored as plain text (s.value),
+    # branding is stored as JSON object (s.value_json).
     setting_res = await db.execute(
         select(SystemSetting).where(SystemSetting.key.in_(["invoice_template_html", "invoice_branding_json"]))
     )
     settings_db = setting_res.scalars().all()
-    settings_dict = {s.key: s.value_json if s.value_json else s.value for s in settings_db}
-    
-    invoice_template = settings_dict.get("invoice_template_html")
-    branding = settings_dict.get("invoice_branding_json") or {}
-    
+    settings_by_key = {s.key: s for s in settings_db}
+
+    template_setting = settings_by_key.get("invoice_template_html")
+    branding_setting = settings_by_key.get("invoice_branding_json")
+
+    # invoice_template must be a plain str for Jinja2
+    invoice_template: str = (template_setting.value or "") if template_setting else ""
+    # branding is a JSON dict
+    branding: dict = (branding_setting.value_json or {}) if branding_setting else {}
+
     if not invoice_template:
         raise HTTPException(status_code=500, detail="Invoice template not configured")
         
@@ -831,10 +835,29 @@ async def get_order_invoice(
         items_list.append({
             "name": item.product_name,
             "quantity": item.quantity,
-            "unit": item.unit.value if hasattr(item.unit, "value") else str(item.unit),
-            "total_price": float(item.price) * float(item.quantity)
+            "unit": item.unit if isinstance(item.unit, str) else str(item.unit),
+            "unit_price": float(item.unit_price),
+            "total_price": float(item.unit_price) * float(item.quantity)
         })
-        
+
+    # delivery_address is stored as a JSONB dict — flatten it to a readable string
+    delivery_addr = order.delivery_address
+    if isinstance(delivery_addr, dict):
+        parts = [
+            delivery_addr.get("address_line_1", ""),
+            delivery_addr.get("address_line_2", ""),
+            delivery_addr.get("city", ""),
+            delivery_addr.get("state", ""),
+            delivery_addr.get("postal_code", ""),
+        ]
+        delivery_address_str = ", ".join(p for p in parts if p)
+    else:
+        delivery_address_str = str(delivery_addr or "")
+
+    # branding may be stored as a plain string (old format) — fall back safely
+    if not isinstance(branding, dict):
+        branding = {}
+
     variables = {
         "company_name": branding.get("company_name", "Sbjiwala"),
         "company_address": branding.get("company_address", ""),
@@ -848,13 +871,18 @@ async def get_order_invoice(
         "vendor_gst": vendor_gst,
         "customer_name": customer_name,
         "customer_phone": customer_phone,
-        "delivery_address": order.delivery_address,
+        "delivery_address": delivery_address_str,
         "items": items_list,
+        "subtotal": float(order.subtotal),
+        "delivery_charge": float(order.delivery_charge),
+        "tax_amount": float(order.tax_amount),
+        "packaging_charge": float(order.packaging_charge),
+        "discount_amount": float(order.discount_amount),
         "total_amount": float(order.total_amount)
     }
-    
+
     try:
-        html_content = Template(invoice_template).render(**variables)
+        html_content = Template(str(invoice_template)).render(**variables)
         return HTMLResponse(content=html_content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to render invoice template: {str(e)}")
