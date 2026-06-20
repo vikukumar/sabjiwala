@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Heart, Star, Plus, Minus, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/index";
@@ -271,7 +271,7 @@ export default function ProductCard({ product }: { product: any }) {
           <div className="relative bg-gradient-to-br from-slate-50/50 to-emerald-50/10 dark:from-slate-800/20 dark:to-slate-900/30 h-32 flex items-center justify-center overflow-hidden rounded-t-[24px]">
             {product.primary_image_url || product.attributes?.image_url ? (
               <img
-                src={product.primary_image_url || product.attributes?.image_url}
+                src={resolveImageUrl(product.primary_image_url || product.attributes?.image_url)}
                 alt={product.name}
                 className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out"
               />

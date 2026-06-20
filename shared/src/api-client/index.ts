@@ -193,3 +193,36 @@ export class ApiClient {
 
 export const api = new ApiClient();
 export default api;
+
+export function resolveImageUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image')) {
+    return url;
+  }
+  let origin = '';
+  if (typeof window !== 'undefined') {
+    const storedBaseUrl = localStorage.getItem('sw_api_base_url');
+    if (storedBaseUrl && storedBaseUrl.startsWith('http')) {
+      const match = storedBaseUrl.match(/^(https?:\/\/[^\/]+)/);
+      if (match) origin = match[1];
+    } else if (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.startsWith('http')) {
+      const match = process.env.NEXT_PUBLIC_API_URL.match(/^(https?:\/\/[^\/]+)/);
+      if (match) origin = match[1];
+    } else {
+      const isNextDev = window.location.port === '3000' || window.location.port === '3001' || window.location.port === '3002' || window.location.port === '3003';
+      const isCapacitor = window.location.hostname === 'localhost' && (window.location.port === '' || window.location.protocol.startsWith('capacitor'));
+      if (isNextDev) {
+        origin = 'http://localhost:8000';
+      } else if (isCapacitor) {
+        origin = 'https://sbjiwala.qzz.io';
+      } else {
+        origin = window.location.origin;
+      }
+    }
+  }
+  if (origin) {
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    return `${origin}${cleanUrl}`;
+  }
+  return url;
+}

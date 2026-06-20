@@ -3,7 +3,7 @@
 import React from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import Link from "next/link";
 import {
   Package, MapPin, Clock, CheckCircle2, Truck, XCircle,
@@ -267,8 +267,16 @@ export default function OrderDetailClient() {
         <h2 className="font-black text-slate-900 dark:text-white">Items Ordered</h2>
         {(order.items || []).map((item: any, i: number) => (
           <div key={i} className="flex items-center gap-3 py-3 border-b border-slate-100 dark:border-slate-800 last:border-none">
-            <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-2xl">
-              {item.attributes?.image_emoji || "🥬"}
+            <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-2xl overflow-hidden relative border border-slate-200/50">
+              {item.product_image_url || (item.attributes?.image_emoji && (item.attributes.image_emoji.startsWith("http") || item.attributes.image_emoji.startsWith("/"))) ? (
+                <img
+                  src={resolveImageUrl(item.product_image_url || item.attributes.image_emoji)}
+                  alt={item.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                item.attributes?.image_emoji || "🥬"
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm text-slate-900 dark:text-white line-clamp-1">{item.name}</p>

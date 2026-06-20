@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, ArrowRight, Star, Plus, Minus, ChevronRight, Zap, Truck, Leaf, ShieldCheck, Clock, TrendingUp, Loader2, Bell, X, Navigation } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, useWebSocket } from "@sbjiwala/shared";
+import { api, useWebSocket, resolveImageUrl } from "@sbjiwala/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Badge, Skeleton, EmptyState, SectionHeader } from "@/components/ui/index";
@@ -190,7 +190,7 @@ function Hero({ onSelectCategory }: { onSelectCategory: (cat: string) => void })
                               >
                                 {prod.primary_image_url || prod.attributes?.image_url ? (
                                   <img
-                                    src={prod.primary_image_url || prod.attributes?.image_url}
+                                    src={resolveImageUrl(prod.primary_image_url || prod.attributes?.image_url)}
                                     alt={prod.name}
                                     className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
                                   />

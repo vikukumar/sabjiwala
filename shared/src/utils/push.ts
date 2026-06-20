@@ -1,0 +1,103 @@
+import { api } from "../api-client";
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function registerWebPush(apiClient: typeof api) {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    console.warn("Web Push is not supported in this browser");
+    return;
+  }
+  try {
+    const settingsRes = await apiClient.get("/installation/public-settings");
+    const vapidKey = settingsRes.data?.vapid_public_key;
+    if (!vapidKey) {
+      console.warn("VAPID public key not found in system settings");
+      return;
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey),
+    });
+
+    const subJSON = subscription.toJSON();
+    if (subJSON.endpoint && subJSON.keys?.p256dh && subJSON.keys?.auth) {
+      await apiClient.post("/notifications/subscriptions", {
+        endpoint: subJSON.endpoint,
+        p256dh_key: subJSON.keys.p256dh,
+        auth_key: subJSON.keys.auth,
+        device_type: "web",
+      });
+      console.log("Web push notification registered successfully");
+    }
+  } catch (err) {
+    console.error("Error registering web push notifications:", err);
+  }
+}
+
+async function registerCapacitorPush(apiClient: typeof api) {
+  if (typeof window === "undefined" || !(window as any).Capacitor?.Plugins?.PushNotifications) {
+    console.warn("Capacitor PushNotifications plugin not available");
+    return;
+  }
+  try {
+    const PushNotifications = (window as any).Capacitor.Plugins.PushNotifications;
+    
+    let permStatus = await PushNotifications.checkPermissions();
+    if (permStatus.receive === "prompt") {
+      permStatus = await PushNotifications.requestPermissions();
+    }
+    if (permStatus.receive !== "granted") {
+      console.warn("User denied push notifications permission");
+      return;
+    }
+
+    await PushNotifications.register();
+
+    PushNotifications.addListener("registration", async (token: any) => {
+      console.log("Capacitor Push token:", token.value);
+      try {
+        await apiClient.post("/notifications/subscriptions", {
+          endpoint: "fcm",
+          p256dh_key: token.value,
+          auth_key: token.value,
+          device_type: "mobile",
+        });
+        console.log("Capacitor push notification registered successfully");
+      } catch (err: any) {
+        console.error("Failed to save Capacitor push token to server:", err);
+      }
+    });
+
+    PushNotifications.addListener("registrationError", (err: any) => {
+      console.error("Capacitor Push registration error:", err);
+    });
+
+    PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
+      console.log("Push received:", notification);
+    });
+  } catch (err) {
+    console.error("Error setting up Capacitor push notifications:", err);
+  }
+}
+
+export async function initPushNotifications() {
+  if (typeof window === "undefined") return;
+
+  const isNative = !!(window as any).Capacitor;
+  if (isNative) {
+    await registerCapacitorPush(api);
+  } else {
+    await registerWebPush(api);
+  }
+}

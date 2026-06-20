@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import { ChevronLeft, RotateCcw, Upload, X, Trash2, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
 import { Button, Card, Badge, Spinner } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
@@ -95,8 +95,10 @@ export default function ReturnOrderClient() {
       const res = await api.post("/storage/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
-      if (res.data?.url) {
-        handleFieldChange(itemId, "imageUrl", res.data.url);
+      const resAny = res as any;
+      const url = resAny.url || resAny.data?.url || resAny.data?.data?.url;
+      if (url) {
+        handleFieldChange(itemId, "imageUrl", url);
         success("Image uploaded!");
       }
     } catch (err: any) {
@@ -188,8 +190,12 @@ export default function ReturnOrderClient() {
                 </button>
 
                 {/* Product Detail */}
-                <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
-                  {item.attributes?.image_emoji || "🥬"}
+                <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden relative border border-slate-200/50">
+                  {item.product_image_url || (item.attributes?.image_emoji && (item.attributes.image_emoji.startsWith("http") || item.attributes.image_emoji.startsWith("/")))? (
+                    <img src={resolveImageUrl(item.product_image_url || item.attributes.image_emoji)} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    item.attributes?.image_emoji || "🥬"
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">{item.name || item.product_name}</h3>
@@ -233,7 +239,7 @@ export default function ReturnOrderClient() {
                     <div className="flex items-center gap-3">
                       {itemState.imageUrl ? (
                         <div className="relative w-16 h-16 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex-shrink-0 group">
-                          <img src={itemState.imageUrl} alt="Proof upload" className="w-full h-full object-cover" />
+                          <img src={resolveImageUrl(itemState.imageUrl)} alt="Proof upload" className="w-full h-full object-cover" />
                           <button
                             onClick={() => handleFieldChange(item.id, "imageUrl", "")}
                             className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"

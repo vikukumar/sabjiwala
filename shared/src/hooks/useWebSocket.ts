@@ -76,6 +76,36 @@ export function useWebSocket(onMessage?: (msg: any) => void, enabled: boolean = 
       };
     };
 
+    const handleResume = () => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        connectWS();
+      }
+    };
+
+    window.addEventListener("focus", handleResume);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        handleResume();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    let capacitorListener: any = null;
+    if (typeof window !== "undefined" && (window as any).Capacitor?.Plugins?.App) {
+      try {
+        const App = (window as any).Capacitor.Plugins.App;
+        App.addListener("appStateChange", (state: any) => {
+          if (state.isActive) {
+            handleResume();
+          }
+        }).then((listener: any) => {
+          capacitorListener = listener;
+        }).catch(() => {});
+      } catch (err) {
+        console.warn("Failed to attach Capacitor app state listener", err);
+      }
+    }
+
     connectWS();
 
     return () => {
@@ -86,6 +116,11 @@ export function useWebSocket(onMessage?: (msg: any) => void, enabled: boolean = 
       }
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (pingInterval) clearInterval(pingInterval);
+      window.removeEventListener("focus", handleResume);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (capacitorListener) {
+        capacitorListener.remove();
+      }
     };
   }, [onMessage, enabled]);
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import Link from "next/link";
 import { useParams, useRouter, usePathname, useSearchParams } from "next/navigation";
 import { resolveLink } from "@/components/AppShell";
@@ -232,12 +232,12 @@ export default function ProductDetailClient() {
   ];
 
   const imgs = product?.images || [];
-  const urls: string[] = imgs.map((img: any) => img.image_url);
+  const urls: string[] = imgs.map((img: any) => resolveImageUrl(img.image_url));
   if (urls.length === 0 && product?.primary_image_url) {
-    urls.push(product.primary_image_url);
+    urls.push(resolveImageUrl(product.primary_image_url));
   }
   if (urls.length === 0 && product?.attributes?.image_url) {
-    urls.push(product.attributes.image_url);
+    urls.push(resolveImageUrl(product.attributes.image_url));
   }
 
   return (

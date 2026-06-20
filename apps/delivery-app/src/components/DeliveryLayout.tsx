@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { useRouter, usePathname } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
+import Link from "next/link";
 
 interface DeliveryContextType {
   profile: any;
@@ -114,6 +115,10 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
   });
 
   const toggleOnline = (online: boolean) => {
+    if (profile?.status !== "active") {
+      showError("Access Denied", "Your KYC verification is incomplete. Please wait for admin approval.");
+      return;
+    }
     toggleOnlineMutation.mutate(online);
   };
 
@@ -291,8 +296,14 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
       if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
       return;
     }
-    let ws: WebSocket; let reconnectTimeout: any;
+    let ws: WebSocket;
+    let reconnectTimeout: any;
+    let capacitorListener: any = null;
+
     const connectWS = () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
+        return;
+      }
       const apiBase = api.client.defaults.baseURL || "/api/v1";
       let baseHost = ""; let protocol = "ws:";
       if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
@@ -342,9 +353,56 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
       ws.onclose = () => { reconnectTimeout = setTimeout(connectWS, 5000); };
       ws.onerror = () => ws.close();
     };
+
+    const handleResume = () => {
+      console.log("Delivery WebSocket checking connection status...");
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        connectWS();
+      }
+    };
+
+    window.addEventListener("focus", handleResume);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        handleResume();
+      }
+    });
+
+    if (typeof window !== "undefined" && (window as any).Capacitor?.Plugins?.App) {
+      try {
+        const App = (window as any).Capacitor.Plugins.App;
+        App.addListener("appStateChange", (state: any) => {
+          if (state.isActive) {
+            handleResume();
+          }
+        }).then((listener: any) => {
+          capacitorListener = listener;
+        }).catch(() => {});
+      } catch (err) {
+        console.warn("Failed to attach Capacitor app state listener", err);
+      }
+    }
+
     connectWS();
-    return () => { if (ws) ws.close(); if (reconnectTimeout) clearTimeout(reconnectTimeout); wsRef.current = null; };
+    return () => {
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      window.removeEventListener("focus", handleResume);
+      document.removeEventListener("visibilitychange", handleResume);
+      if (capacitorListener) capacitorListener.remove();
+      wsRef.current = null;
+    };
   }, [isOnline]);
+
+  // Initialize Push Notifications
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
+    if (token) {
+      import("@sbjiwala/shared").then(({ initPushNotifications }) => {
+        initPushNotifications().catch(err => console.warn("Failed to init push notifications:", err));
+      });
+    }
+  }, [profile]);
 
   // Send location via WS and HTTP
   useEffect(() => {
@@ -427,6 +485,25 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
             const Icon = item.icon;
             const active = isActive(item.href);
             const resolvedHref = resolveLink(item.href);
+            const isLocked = profile?.status !== "active" && !["/", "/profile"].includes(item.href);
+
+            if (isLocked) {
+              return (
+                <button
+                  key={item.href}
+                  type="button"
+                  onClick={() => showError("Access Locked", "Complete KYC verification to unlock all features")}
+                  className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-left font-medium text-sm text-slate-550 cursor-not-allowed hover:bg-slate-800/10 transition-all border-0 bg-transparent"
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-5 h-5 opacity-40" />
+                    <span className="opacity-50">{item.label}</span>
+                  </div>
+                  <span className="text-[10px]">🔒</span>
+                </button>
+              );
+            }
+
             return (
               <button
                 key={item.href}
@@ -547,7 +624,7 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
                 </button>
                 {/* Online toggle */}
                 <button onClick={() => toggleOnline(!isOnline)}
-                  disabled={toggleOnlineMutation.isPending}
+                  disabled={toggleOnlineMutation.isPending || profile?.status !== "active"}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                     isOnline
                       ? "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40"
@@ -564,7 +641,30 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
 
           {/* Scrollable Content */}
           <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 pb-24 md:pb-6">
-            {children}
+            {(() => {
+              const isCurrentTabLocked = profile?.status !== "active" && !["/", "/profile"].includes(pathname) && !pathname.includes("/kyc");
+              if (isCurrentTabLocked) {
+                return (
+                  <div className="flex flex-col items-center justify-center text-center py-20 px-4 space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
+                    <div className="w-20 h-20 bg-amber-500/10 dark:bg-amber-955/20 border border-amber-500/25 rounded-3xl flex items-center justify-center animate-bounce-in">
+                      <span className="text-4xl">🔒</span>
+                    </div>
+                    <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">Feature Locked</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
+                      This section is locked until your delivery agent KYC verification is completed and approved.
+                    </p>
+                    {profile?.status !== "documents_submitted" && profile?.status !== "under_review" && (
+                      <Link href={resolveLink("/kyc")}>
+                        <button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer border-0">
+                          Complete KYC Onboarding
+                        </button>
+                      </Link>
+                    )}
+                  </div>
+                );
+              }
+              return children;
+            })()}
           </main>
 
           {/* Bottom Navigation (Mobile Only) */}
@@ -574,14 +674,21 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
                 const active = isActive(item.href);
                 const resolvedHref = resolveLink(item.href);
                 const Icon = item.icon;
+                const isLocked = profile?.status !== "active" && !["/", "/profile"].includes(item.href);
                 return (
                   <button
                     key={item.href}
-                    onClick={() => router.push(resolvedHref)}
+                    onClick={() => {
+                      if (isLocked) {
+                        showError("Access Locked", "Complete KYC verification to unlock all features");
+                      } else {
+                        router.push(resolvedHref);
+                      }
+                    }}
                     className={`relative flex flex-col items-center justify-center flex-1 h-full transition-all active:scale-95 border-0 bg-transparent ${
                       active
                         ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-slate-400 dark:text-slate-500"
+                        : "text-slate-450 dark:text-slate-500"
                     }`}
                     aria-label={item.label}
                   >

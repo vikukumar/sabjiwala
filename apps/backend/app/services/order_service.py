@@ -315,6 +315,7 @@ class OrderService:
                 variant_id=item.variant_id,
                 vendor_id=vendor_id,
                 product_name=product.name,
+                product_image_url=product.primary_image_url,
                 unit=product.unit,
                 quantity=item.quantity,
                 unit_price=item.unit_price,

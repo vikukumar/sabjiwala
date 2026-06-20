@@ -143,8 +143,10 @@ export default function KYCOnboarding() {
         clearInterval(interval);
         setUploadProgress((prev) => ({ ...prev, [key]: 100 }));
         
-        if (res.data && res.data.data) {
-          setFileUrls((prev) => ({ ...prev, [key]: res.data.data.url }));
+        const resAny = res as any;
+        const url = resAny.url || resAny.data?.url || resAny.data?.data?.url;
+        if (url) {
+          setFileUrls((prev) => ({ ...prev, [key]: url }));
           success("Document pre-uploaded", `${file.name} successfully prepared`);
         }
       } catch (err: any) {
@@ -539,7 +541,7 @@ export default function KYCOnboarding() {
               ) : (
                 <button
                   onClick={submitKYC}
-                  disabled={isLoading || !files.fssai_doc || !files.pan_doc}
+                  disabled={isLoading || !(files.fssai_doc || fileUrls.fssai_doc) || !(files.pan_doc || fileUrls.pan_doc)}
                   className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-6 py-3 rounded-xl transition-all shadow-sm disabled:opacity-50"
                 >
                   {isLoading ? (

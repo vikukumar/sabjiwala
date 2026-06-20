@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import Link from "next/link";
 import { Heart, ShoppingCart, Trash2, Plus, Minus } from "lucide-react";
 import { Button, EmptyState, Skeleton, Badge } from "@/components/ui/index";
@@ -10,6 +10,7 @@ import { resolveLink } from "@/components/AppShell";
 import { useToast } from "@/components/ui/Toast";
 
 function WishlistItem({ item }: { item: any }) {
+  const [imageError, setImageError] = useState(false);
   const queryClient = useQueryClient();
   const { success, error: showError } = useToast();
   const { data: cartData } = useQuery<any>({
@@ -42,11 +43,21 @@ function WishlistItem({ item }: { item: any }) {
   const product = item.product || {};
   const price = product.attributes?.price || item.price || 30;
   const emoji = product.attributes?.image_emoji || "🥬";
+  const imageUrl = product.primary_image_url || product.attributes?.image_url;
 
   return (
     <div className="card p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
-      <Link href={resolveLink(`/products/${item.product_id}`)} className="w-16 h-16 bg-gradient-to-br from-slate-50 to-emerald-50/20 dark:from-slate-800/50 dark:to-slate-900 rounded-xl flex items-center justify-center text-3xl flex-shrink-0">
-        {emoji}
+      <Link href={resolveLink(`/products/${item.product_id}`)} className="w-16 h-16 bg-gradient-to-br from-slate-50 to-emerald-50/20 dark:from-slate-800/50 dark:to-slate-900 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden relative border border-slate-105 dark:border-slate-800/50">
+        {imageUrl && !imageError ? (
+          <img
+            src={resolveImageUrl(imageUrl)}
+            alt={product.name || item.product_name}
+            className="w-full h-full object-cover"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          emoji
+        )}
       </Link>
       <div className="flex-1 min-w-0">
         <Link href={resolveLink(`/products/${item.product_id}`)}>

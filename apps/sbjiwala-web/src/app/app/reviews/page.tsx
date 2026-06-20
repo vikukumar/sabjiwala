@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Star, Send, Package } from "lucide-react";
 import { Button, EmptyState, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
+import { resolveLink } from "@/components/AppShell";
 
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hover, setHover] = useState(0);

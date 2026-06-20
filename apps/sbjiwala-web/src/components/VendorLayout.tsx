@@ -31,7 +31,7 @@ interface VendorLayoutProps {
 }
 
 export default function VendorLayout({ children, title = "Vendor Portal" }: VendorLayoutProps) {
-  const { success } = useToast();
+  const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -163,6 +163,15 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
     enabled: !!isAuthed
   });
 
+  // Initialize push notifications on authentication
+  useEffect(() => {
+    if (isAuthed) {
+      import("@sbjiwala/shared").then(({ initPushNotifications }) => {
+        initPushNotifications().catch(err => console.warn("Failed to init push notifications:", err));
+      });
+    }
+  }, [isAuthed]);
+
   const vendorProfile = vendorProfileData || null;
   const businessName = vendorProfile?.business_name || "Green Grocers Ltd";
   const vendorStatus = vendorProfile?.status || "pending";
@@ -216,6 +225,25 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
+            const isLocked = vendorStatus !== "approved" && !["dashboard", "inventory", "profile"].includes(item.id);
+
+            if (isLocked) {
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => showError("Access Locked", "Complete KYC verification to unlock all features")}
+                  className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-left font-medium text-sm text-slate-500 cursor-not-allowed hover:bg-slate-800/10 transition-all border-0 bg-transparent"
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-5 h-5 opacity-45" />
+                    <span className="opacity-50">{item.label}</span>
+                  </div>
+                  <span className="text-[10px]">🔒</span>
+                </button>
+              );
+            }
+
             return (
               <Link
                 key={item.id}
@@ -368,7 +396,30 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
               )}
             </div>
           )}
-          {children}
+          {(() => {
+            const isCurrentTabLocked = vendorStatus !== "approved" && !["dashboard", "inventory", "profile"].includes(activeTab) && (activeTab as string) !== "kyc";
+            if (isCurrentTabLocked) {
+              return (
+                <div className="flex flex-col items-center justify-center text-center py-20 px-4 space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
+                  <div className="w-20 h-20 bg-amber-500/10 dark:bg-amber-950/20 border border-amber-500/20 rounded-3xl flex items-center justify-center">
+                    <span className="text-4xl">🔒</span>
+                  </div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">Feature Locked</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
+                    This section is locked until your store&apos;s KYC verification is completed and approved.
+                  </p>
+                  {vendorStatus !== "documents_submitted" && vendorStatus !== "under_review" && (
+                    <Link href={resolveVendorLink("/kyc")}>
+                      <button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer border-0">
+                        Complete KYC Onboarding
+                      </button>
+                    </Link>
+                  )}
+                </div>
+              );
+            }
+            return children;
+          })()}
         </main>
       </div>
     </div>

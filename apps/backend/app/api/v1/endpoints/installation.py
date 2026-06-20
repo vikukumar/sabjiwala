@@ -29,6 +29,7 @@ async def seed_system_settings(db: AsyncSession):
         {"key": "policy_refund", "value": "Refunds are processed automatically for cancelled or failed orders directly to the user's wallet. Wallet balances can be used on future checkouts but are non-transferable to bank accounts.", "value_type": "string", "group": "policy", "description": "Refund and Cancellation Policy HTML content", "is_public": True},
         {"key": "about_us", "value": "Sbjiwala is a direct-to-home hyper-local quick commerce platform delivering fresh farm vegetables and fruits straight from local farms to your home in 10 minutes.", "value_type": "string", "group": "policy", "description": "About Us content", "is_public": True},
         {"key": "how_it_works", "value": "Our system detects your precise coordinates, displays catalog stock from the nearest vendor, dispatches the order to a nearby delivery boy, and delivers fresh in 10 minutes.", "value_type": "string", "group": "policy", "description": "How it works description", "is_public": True},
+        {"key": "vapid_public_key", "value": settings.VAPID_PUBLIC_KEY or "", "value_type": "string", "group": "notification", "description": "VAPID Public Key for Web Push", "is_public": True},
     ]
     for d in defaults:
         res = await db.execute(select(SystemSetting).where(SystemSetting.key == d["key"]))

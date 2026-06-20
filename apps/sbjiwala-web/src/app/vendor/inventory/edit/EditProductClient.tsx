@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Loader2, Save, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import VendorLayout, { resolveVendorLink } from "@/components/VendorLayout";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -71,12 +71,12 @@ export default function EditProductClient() {
             setStock(String(attrs.quantity || "0.0"));
             
             const imgs = productData.images || [];
-            const urls = imgs.map((img: any) => img.image_url);
+            const urls = imgs.map((img: any) => resolveImageUrl(img.image_url));
             if (urls.length === 0 && productData.primary_image_url) {
-                urls.push(productData.primary_image_url);
+                urls.push(resolveImageUrl(productData.primary_image_url));
             }
             if (urls.length === 0 && attrs.image_url) {
-                urls.push(attrs.image_url);
+                urls.push(resolveImageUrl(attrs.image_url));
             }
             setImageUrls(urls);
         }
@@ -318,7 +318,7 @@ export default function EditProductClient() {
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                                         {imageUrls.map((url, idx) => (
                                             <div key={url} className="relative group rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 aspect-square">
-                                                <img src={url} alt={`Product image ${idx + 1}`} className="w-full h-full object-cover" />
+                                                <img src={resolveImageUrl(url)} alt={`Product image ${idx + 1}`} className="w-full h-full object-cover" />
                                                 
                                                 {/* Actions Overlay */}
                                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">

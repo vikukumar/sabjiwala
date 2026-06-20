@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   BadgeCheck, Upload, FileText, Camera, CheckCircle2, AlertCircle,
   Loader2, X, ChevronRight, Shield, User, Car
@@ -97,6 +97,20 @@ export default function DeliveryKycPage() {
     },
   });
 
+  // Populate existing KYC documents from profile
+  useEffect(() => {
+    if (profile?.kyc_documents) {
+      const docs: Record<string, { url: string; name: string }> = {};
+      profile.kyc_documents.forEach((doc: any) => {
+        docs[doc.document_type] = {
+          url: doc.file_url,
+          name: doc.original_filename || `${doc.document_type} file`
+        };
+      });
+      setUploadedDocs(docs);
+    }
+  }, [profile]);
+
   const handleUpload = async (file: File, key: string) => {
     setUploadingKey(key);
     try {
@@ -108,7 +122,8 @@ export default function DeliveryKycPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      const url = res.data?.url || URL.createObjectURL(file);
+      const resAny = res as any;
+      const url = resAny.url || resAny.data?.url || resAny.data?.data?.url || URL.createObjectURL(file);
       setUploadedDocs(prev => ({ ...prev, [key]: { url, name: file.name } }));
       success(`${file.name} uploaded! ✓`);
     } catch (err: any) {
@@ -231,7 +246,7 @@ export default function DeliveryKycPage() {
         {!isSubmitted && (
           <button
             onClick={() => submitMutation.mutate()}
-            disabled={submitMutation.isPending || uploadedCount === 0}
+            disabled={submitMutation.isPending || uploadedCount < requiredCount}
             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-lg shadow-emerald-900/20"
           >
             {submitMutation.isPending ? (

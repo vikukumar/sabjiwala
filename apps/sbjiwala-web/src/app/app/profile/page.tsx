@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import { User, Mail, Phone, Edit2, Save, Camera, LogOut, Shield, Bell, Palette, ChevronRight, Award, Package, Star, Heart } from "lucide-react";
 import { Button, Input, Card, Badge, StatCard, Spinner } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
@@ -15,6 +15,32 @@ export default function ProfilePage() {
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await api.post("/storage/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      const resAny = res as any;
+      const url = resAny.url || resAny.data?.url || resAny.data?.data?.url;
+      if (url) {
+        await updateProfile.mutateAsync({ ...profile, avatar_url: url });
+        success("Profile picture updated!");
+      }
+    } catch (err: any) {
+      showError("Upload Failed", err.response?.data?.detail || err.message);
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
 
   const { data: profile, isLoading, error } = useQuery<any>({
     queryKey: ["profile"],
@@ -92,7 +118,7 @@ export default function ProfilePage() {
 
   const getAvatarContent = () => {
     if (profile?.avatar_url) {
-      return <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover rounded-2xl" />;
+      return <img src={resolveImageUrl(profile.avatar_url)} alt="Avatar" className="w-full h-full object-cover rounded-2xl" />;
     }
     const emoji = profile?.gender === "male" ? "👨‍🌾" : profile?.gender === "female" ? "👩‍🌾" : "👤";
     return <span className="text-3xl select-none">{emoji}</span>;
@@ -111,10 +137,23 @@ export default function ProfilePage() {
         <div className="flex items-end gap-4 -mt-10 mb-4">
           <div className="relative flex-shrink-0">
             {/* Custom Farm Avatar */}
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white border-4 border-white dark:border-slate-900 shadow-lg">
-              {getAvatarContent()}
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white border-4 border-white dark:border-slate-900 shadow-lg relative overflow-hidden">
+              {uploadingAvatar ? <Spinner size="sm" className="text-white" /> : getAvatarContent()}
             </div>
-            <button className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-600 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 hover:bg-emerald-700 transition-colors">
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+              disabled={uploadingAvatar}
+            />
+            <button 
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-600 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 hover:bg-emerald-700 transition-colors cursor-pointer"
+            >
               <Camera className="w-3.5 h-3.5" />
             </button>
           </div>

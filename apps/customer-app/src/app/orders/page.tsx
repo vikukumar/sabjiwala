@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import Link from "next/link";
 import { Package, ChevronRight, MapPin, Clock, CheckCircle2, Truck, XCircle, Star, RefreshCcw, Loader2, Copy } from "lucide-react";
 import { Badge, Button, EmptyState, Skeleton, Tabs } from "@/components/ui/index";
@@ -67,8 +67,14 @@ function OrderCard({ order, myReviews, onCancel, success }: { order: any; myRevi
       {order.items && order.items.length > 0 && (
         <div className="flex gap-2 flex-wrap items-center">
           {previewItems.map((item: any, i: number) => (
-            <div key={i} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 rounded-xl px-2.5 py-1.5 border border-slate-100 dark:border-slate-800/40">
-              <span className="text-sm select-none">{item.attributes?.image_emoji || "🥬"}</span>
+            <div key={i} className="flex items-center gap-1.5 bg-slate-55 dark:bg-slate-800 rounded-xl px-2.5 py-1.5 border border-slate-100 dark:border-slate-800/40">
+              <span className="text-sm select-none w-5 h-5 overflow-hidden relative flex items-center justify-center rounded-md">
+                {item.product_image_url || (item.attributes?.image_emoji && (item.attributes.image_emoji.startsWith("http") || item.attributes.image_emoji.startsWith("/")))? (
+                  <img src={resolveImageUrl(item.product_image_url || item.attributes.image_emoji)} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  item.attributes?.image_emoji || "🥬"
+                )}
+              </span>
               <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{item.name || item.product_name} ×{item.quantity}</span>
             </div>
           ))}
@@ -76,8 +82,12 @@ function OrderCard({ order, myReviews, onCancel, success }: { order: any; myRevi
             <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 rounded-xl px-2.5 py-1 border border-slate-100 dark:border-slate-800/40">
               <div className="flex -space-x-1.5 overflow-hidden">
                 {remainingItems.slice(0, 4).map((item: any, idx: number) => (
-                  <span key={idx} className="inline-block text-base bg-white dark:bg-slate-900 w-6 h-6 rounded-full border border-slate-200 dark:border-slate-750 flex items-center justify-center select-none shadow-sm">
-                    {item.attributes?.image_emoji || "🥬"}
+                  <span key={idx} className="inline-block text-base bg-white dark:bg-slate-900 w-6 h-6 rounded-full border border-slate-200 dark:border-slate-750 flex items-center justify-center select-none shadow-sm overflow-hidden relative">
+                    {item.product_image_url || (item.attributes?.image_emoji && (item.attributes.image_emoji.startsWith("http") || item.attributes.image_emoji.startsWith("/")))? (
+                      <img src={resolveImageUrl(item.product_image_url || item.attributes.image_emoji)} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      item.attributes?.image_emoji || "🥬"
+                    )}
                   </span>
                 ))}
               </div>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import VendorLayout from "@/components/VendorLayout";
 
@@ -68,7 +68,7 @@ export default function EditProductClient({ id }: EditProductClientProps) {
             setComparePrice(attrs.compare_at_price ? String(attrs.compare_at_price) : "");
             setEmoji(attrs.image_emoji || "🥬");
             setStock(String(attrs.quantity || "0.0"));
-            setImageUrl(attrs.image_url || "");
+            setImageUrl(resolveImageUrl(attrs.image_url) || "");
         }
     }, [productData]);
 

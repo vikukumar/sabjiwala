@@ -46,8 +46,10 @@ function OtpPromptModal({
         const res = await api.post("/storage/upload", formData, {
           headers: { "Content-Type": "multipart/form-data" }
         });
-        if (res.data?.data?.url) {
-          uploadedUrls.push(res.data.data.url);
+        const resAny = res as any;
+        const url = resAny.url || resAny.data?.url || resAny.data?.data?.url;
+        if (url) {
+          uploadedUrls.push(url);
         }
       }
       setImages(uploadedUrls);

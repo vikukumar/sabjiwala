@@ -1451,6 +1451,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     // Geolocation is fetched real-time from user end
   }, []);
 
+  // Initialize push notifications on authentication
+  useEffect(() => {
+    if (token) {
+      import("@sbjiwala/shared").then(({ initPushNotifications }) => {
+        initPushNotifications().catch(err => console.warn("Failed to init push notifications:", err));
+      });
+    }
+  }, [token]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleOpen = () => setShowLocationModal(true);

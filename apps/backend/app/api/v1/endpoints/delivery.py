@@ -47,6 +47,12 @@ async def clock_in(
     """Register delivery agent clock in."""
     boy = await _get_delivery_boy(current_user["user_id"], db)
 
+    if boy.status != DeliveryBoyStatus.ACTIVE:
+        raise HTTPException(
+            status_code=403,
+            detail="Your KYC verification is incomplete. Please wait for admin approval."
+        )
+
     # Check if already clocked in
     exist_res = await db.execute(
         select(DeliveryAttendance)
@@ -115,6 +121,12 @@ async def toggle_availability(
 ):
     """Toggle delivery agent availability status (online/offline)."""
     boy = await _get_delivery_boy(current_user["user_id"], db)
+
+    if boy.status != DeliveryBoyStatus.ACTIVE:
+        raise HTTPException(
+            status_code=403,
+            detail="Your KYC verification is incomplete. Please wait for admin approval."
+        )
     
     boy.availability = AvailabilityStatus.AVAILABLE if body.is_available else AvailabilityStatus.OFFLINE
     await db.flush()
@@ -402,11 +414,32 @@ async def get_delivery_profile_alias(
     }
     kyc_status = status_map.get(boy.status, "pending")
 
+    # Fetch uploaded KYC documents
+    from app.models.storage import FileMetadata
+    docs_res = await db.execute(
+        select(FileMetadata).where(
+            FileMetadata.entity_id == str(boy.id),
+            FileMetadata.entity_type == "delivery_kyc",
+            FileMetadata.is_deleted == False
+        )
+    )
+    docs = docs_res.scalars().all()
+    kyc_docs = []
+    for doc in docs:
+        doc_type = doc.custom_metadata.get("document_type") if doc.custom_metadata else None
+        if doc_type:
+            kyc_docs.append({
+                "document_type": doc_type,
+                "file_url": f"/api/v1/storage/{doc.id}",
+                "original_filename": doc.original_filename
+            })
+
     data = {
         "id": str(boy.id), "user_id": str(boy.user_id),
         "full_name": f"{user.first_name} {user.last_name}" if user else "",
         "phone": user.phone if user else "",
         "kyc_status": kyc_status,
+        "kyc_documents": kyc_docs,
         "vehicle_type": boy.vehicle_type, "vehicle_number": boy.vehicle_number,
         "is_online": boy.availability.value == "available",
         "average_rating": float(getattr(boy, "average_rating", 0) or 0),
@@ -565,6 +598,12 @@ async def accept_order(
 ):
     """Manually accept/claim an unassigned nearby order."""
     boy = await _get_delivery_boy(current_user["user_id"], db)
+
+    if boy.status != DeliveryBoyStatus.ACTIVE:
+        raise HTTPException(
+            status_code=403,
+            detail="Your KYC verification is incomplete. Please wait for admin approval."
+        )
     
     if boy.availability == AvailabilityStatus.OFFLINE:
         raise HTTPException(status_code=400, detail="You must be online to accept orders")

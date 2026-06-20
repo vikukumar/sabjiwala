@@ -3,7 +3,7 @@
 import React, { useState, useRef } from "react";
 import { Plus, Trash2, ArrowLeft, Loader2, Search, Star, Edit } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import VendorLayout, { resolveVendorLink } from "@/components/VendorLayout";
 import { Button } from "@/components/ui/index";
@@ -438,8 +438,8 @@ export default function VendorInventoryPage() {
                   {newProdImageUrls.length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                       {newProdImageUrls.map((url, idx) => (
-                        <div key={url} className="relative group rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 aspect-square">
-                          <img src={url} alt={`Product image ${idx + 1}`} className="w-full h-full object-cover" />
+                        <div key={url} className="relative group rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-955 aspect-square">
+                          <img src={resolveImageUrl(url)} alt={`Product image ${idx + 1}`} className="w-full h-full object-cover" />
                           
                           {/* Actions Overlay */}
                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
@@ -594,7 +594,7 @@ export default function VendorInventoryPage() {
                           <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/10 transition-colors">
                             <td className="p-4 text-center">
                               {p.primary_image_url || p.images?.[0]?.image_url || attrs.image_url ? (
-                                <img src={p.primary_image_url || p.images?.[0]?.image_url || attrs.image_url} alt={p.name} className="w-10 h-10 object-cover rounded-xl border border-slate-205 mx-auto" />
+                                <img src={resolveImageUrl(p.primary_image_url || p.images?.[0]?.image_url || attrs.image_url)} alt={p.name} className="w-10 h-10 object-cover rounded-xl border border-slate-205 mx-auto" />
                               ) : (
                                 <span className="text-3xl">{attrs.image_emoji || "🥬"}</span>
                               )}

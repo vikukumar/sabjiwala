@@ -53,6 +53,11 @@ async def create_product(
     if not category:
         raise HTTPException(status_code=400, detail="Category not found")
 
+    from app.models.vendor import VendorStatus
+    prod_status = ProductStatus.ACTIVE
+    if vendor.status != VendorStatus.APPROVED:
+        prod_status = ProductStatus.DRAFT
+
     product = Product(
         name=body.name,
         slug=_slugify(body.name),
@@ -64,7 +69,7 @@ async def create_product(
         unit_value=body.unit_value,
         tags=body.tags or [],
         attributes=body.attributes or {},
-        status=ProductStatus.ACTIVE,
+        status=prod_status,
         created_by=current_user["user_id"],
     )
     db.add(product)
@@ -143,6 +148,16 @@ async def update_product(
 ):
     """Update a product."""
     vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
+    if not vendor:
+        raise HTTPException(status_code=403, detail="Vendor profile required")
+
+    if body.status is not None and body.status == ProductStatus.ACTIVE:
+        from app.models.vendor import VendorStatus
+        if vendor.status != VendorStatus.APPROVED:
+            raise HTTPException(
+                status_code=403,
+                detail="Your KYC verification is incomplete/pending. You can only save products as DRAFT."
+            )
 
     result = await db.execute(
         select(Product)
