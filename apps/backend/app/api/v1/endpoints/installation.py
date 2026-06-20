@@ -21,7 +21,11 @@ async def seed_system_settings(db: AsyncSession):
     defaults = [
         {"key": "app_name", "value": "Sbjiwala", "value_type": "string", "group": "appearance", "description": "Brand name of the application", "is_public": True},
         {"key": "app_logo_url", "value": "/logo_horizontal.png", "value_type": "string", "group": "appearance", "description": "URL of the application logo", "is_public": True},
+        {"key": "app_logo_vertical_url", "value": "/logo_vertical.png", "value_type": "string", "group": "appearance", "description": "URL of the vertical application logo", "is_public": True},
+        {"key": "app_icon_url", "value": "/icon.png", "value_type": "string", "group": "appearance", "description": "URL of the square application icon", "is_public": True},
         {"key": "app_primary_color", "value": "#059669", "value_type": "string", "group": "appearance", "description": "Primary brand color hex code", "is_public": True},
+        {"key": "app_secondary_color", "value": "#10b981", "value_type": "string", "group": "appearance", "description": "Secondary brand color hex code", "is_public": True},
+        {"key": "app_dark_mode", "value": "true", "value_type": "boolean", "group": "appearance", "description": "Enable dark mode by default", "is_public": True},
         {"key": "seo_title", "value": "Sbjiwala - Kisan ke Ghar Se Apke Ghar tak", "value_type": "string", "group": "seo", "description": "Global SEO meta title", "is_public": True},
         {"key": "seo_description", "value": "Read Sbjiwala's user data policy. Learn about precise GPS coordinate encryption, secure tokenized checkouts, and your personal data rights.", "value_type": "string", "group": "seo", "description": "Global SEO meta description", "is_public": True},
         {"key": "seo_keywords", "value": "vegetables, fruits, organic, quick commerce, delivery", "value_type": "string", "group": "seo", "description": "Global SEO keywords separated by commas", "is_public": True},

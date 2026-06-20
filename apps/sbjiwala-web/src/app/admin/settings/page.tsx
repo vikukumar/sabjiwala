@@ -89,7 +89,7 @@ export default function AdminSettingsPage() {
   const getSettingControl = (key: string, label: string, desc: string, type: "text" | "password" | "boolean" | "select", options?: string[]) => {
     const orig = settings.find(s => s.key === key);
     if (!orig) return null;
-    const currentVal = editedSettings[key];
+    const currentVal = editedSettings[key] || "";
 
     return (
       <div key={key} className="p-4 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -126,12 +126,27 @@ export default function AdminSettingsPage() {
                 <option key={opt} value={opt}>{opt}</option>
               ))}
             </select>
+          ) : key.includes("_color") ? (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <input
+                type="color"
+                value={typeof currentVal === "string" && currentVal.startsWith("#") ? currentVal : "#059669"}
+                onChange={(e) => handleChange(key, e.target.value)}
+                className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer overflow-hidden bg-transparent shrink-0"
+              />
+              <input
+                type="text"
+                value={currentVal}
+                onChange={(e) => handleChange(key, e.target.value)}
+                className="w-36 px-3.5 py-2 text-xs rounded-xl border border-slate-200/60 dark:border-slate-800 bg-transparent focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              />
+            </div>
           ) : (
             <input
               type={type === "password" ? "password" : "text"}
               value={currentVal}
               onChange={(e) => handleChange(key, e.target.value)}
-              className="w-48 px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
+              className="w-48 px-3.5 py-2 text-xs rounded-xl border border-slate-200/60 dark:border-slate-800 bg-transparent focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
             />
           )}
 
@@ -182,18 +197,153 @@ export default function AdminSettingsPage() {
         {/* Setting values panel */}
         <div className="lg:col-span-3 space-y-6">
           {activeSection === "general" && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white">General & Sourcing Settings</h3>
-              {getSettingControl("app_name", "Application Brand Name", "Displayed as header title across client apps", "text")}
-              {getSettingControl("app_url", "Customer App Base URL", "Must be matching target customer app host to compute callbacks", "text")}
-              {getSettingControl("app_primary_color", "Brand Main Color", "Hex style color used dynamically", "text")}
-              
-              <h3 className="text-sm font-black text-slate-800 dark:text-white mt-8">Social Profile Links</h3>
-              {getSettingControl("social_facebook", "Facebook Profile", "Optional target hyperlink inside homepage footer", "text")}
-              {getSettingControl("social_instagram", "Instagram Profile", "Optional target hyperlink inside homepage footer", "text")}
-              {getSettingControl("social_twitter", "Twitter Handle", "Optional target hyperlink inside homepage footer", "text")}
-              {getSettingControl("social_linkedin", "LinkedIn URL", "Optional target hyperlink inside homepage footer", "text")}
-              {getSettingControl("social_youtube", "YouTube Channel", "Optional target hyperlink inside homepage footer", "text")}
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-sm font-black text-slate-800 dark:text-white">General & Sourcing Settings</h3>
+                {getSettingControl("app_name", "Application Brand Name", "Displayed as header title across client apps", "text")}
+                {getSettingControl("app_url", "Customer App Base URL", "Must be matching target customer app host to compute callbacks", "text")}
+                {getSettingControl("app_primary_color", "Brand Main Color", "Hex style color used dynamically", "text")}
+                {getSettingControl("app_secondary_color", "Brand Secondary Color", "Secondary hex style color used dynamically", "text")}
+                {getSettingControl("app_logo_url", "Horizontal Logo URL", "Horizontal layout logo image URL used in headers", "text")}
+                {getSettingControl("app_logo_vertical_url", "Vertical Logo URL", "Vertical layout logo image URL used in pages", "text")}
+                {getSettingControl("app_icon_url", "Application Icon URL", "URL of the square application icon", "text")}
+                {getSettingControl("app_dark_mode", "Default Dark Mode", "Enable dark theme mode by default across portals", "boolean")}
+                
+                <h3 className="text-sm font-black text-slate-800 dark:text-white mt-8">Social Profile Links</h3>
+                {getSettingControl("social_facebook", "Facebook Profile", "Optional target hyperlink inside homepage footer", "text")}
+                {getSettingControl("social_instagram", "Instagram Profile", "Optional target hyperlink inside homepage footer", "text")}
+                {getSettingControl("social_twitter", "Twitter Handle", "Optional target hyperlink inside homepage footer", "text")}
+                {getSettingControl("social_linkedin", "LinkedIn URL", "Optional target hyperlink inside homepage footer", "text")}
+                {getSettingControl("social_youtube", "YouTube Channel", "Optional target hyperlink inside homepage footer", "text")}
+              </div>
+
+              {/* BRANDING LIVE PREVIEW PANEL */}
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-lg text-white">
+                <h4 className="text-xs font-black uppercase tracking-wider text-emerald-400">Branding Live Preview</h4>
+                <p className="text-[10px] text-slate-400 leading-normal">
+                  Visualize your configuration updates in real-time. Make sure image URLs are correct and colors harmonize well.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                  {/* Left Column: Logos & Icon Previews */}
+                  <div className="space-y-4 bg-slate-950/40 p-4 rounded-2xl border border-slate-800">
+                    <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Asset Assets</h5>
+                    
+                    <div className="space-y-3.5">
+                      {/* App Icon */}
+                      <div className="space-y-1">
+                        <span className="text-[9px] text-slate-500 font-bold uppercase">App Icon</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden border border-slate-700">
+                            <img
+                              src={editedSettings["app_icon_url"] || "/icon.png"}
+                              alt="App Icon"
+                              className="w-full h-full object-contain"
+                              onError={(e) => { e.currentTarget.src = "/icon.png"; }}
+                            />
+                          </div>
+                          <span className="text-[9px] font-mono text-slate-400 select-all truncate max-w-[100px]">
+                            {editedSettings["app_icon_url"] || "/icon.png"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Horizontal Logo */}
+                      <div className="space-y-1">
+                        <span className="text-[9px] text-slate-500 font-bold uppercase">Horizontal Logo</span>
+                        <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-center h-12 overflow-hidden">
+                          <img
+                            src={editedSettings["app_logo_url"] || "/logo_horizontal.png"}
+                            alt="Horizontal Logo"
+                            className="max-h-8 w-auto object-contain"
+                            onError={(e) => { e.currentTarget.src = "/logo_horizontal.png"; }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Vertical Logo */}
+                      <div className="space-y-1">
+                        <span className="text-[9px] text-slate-500 font-bold uppercase">Vertical Logo</span>
+                        <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-center h-20 overflow-hidden">
+                          <img
+                            src={editedSettings["app_logo_vertical_url"] || "/logo_vertical.png"}
+                            alt="Vertical Logo"
+                            className="max-h-16 w-auto object-contain"
+                            onError={(e) => { e.currentTarget.src = "/logo_vertical.png"; }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Middle & Right Column: UI Mockup Preview */}
+                  <div className="md:col-span-2 space-y-4 bg-slate-950/40 p-4 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                    <div>
+                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Theme Preview (Mock UI Elements)</h5>
+                      
+                      <div className="mt-4 space-y-4 font-sans text-xs">
+                        {/* Header Mockup */}
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={editedSettings["app_icon_url"] || "/icon.png"}
+                              alt="Icon"
+                              className="w-5 h-5 object-contain"
+                              onError={(e) => { e.currentTarget.src = "/icon.png"; }}
+                            />
+                            <span className="font-black text-white text-xs">{editedSettings["app_name"] || "Sbjiwala"}</span>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: editedSettings["app_primary_color"] || "#059669" }}></span>
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: editedSettings["app_secondary_color"] || "#10b981" }}></span>
+                          </div>
+                        </div>
+
+                        {/* Interactive UI Mock Cards */}
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* Card 1 */}
+                          <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: (editedSettings["app_primary_color"] || "#059669") + "33", color: editedSettings["app_primary_color"] || "#059669" }}>
+                                Primary Theme
+                              </span>
+                            </div>
+                            <h6 className="font-bold text-slate-300 text-[10px]">Mock Button element</h6>
+                            <button
+                              type="button"
+                              className="w-full text-white font-extrabold text-[9px] py-1.5 rounded-lg border-0 shadow cursor-pointer transition-all"
+                              style={{ backgroundColor: editedSettings["app_primary_color"] || "#059669" }}
+                            >
+                              Add to cart (Primary)
+                            </button>
+                          </div>
+
+                          {/* Card 2 */}
+                          <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: (editedSettings["app_secondary_color"] || "#10b981") + "33", color: editedSettings["app_secondary_color"] || "#10b981" }}>
+                                Secondary Theme
+                              </span>
+                            </div>
+                            <h6 className="font-bold text-slate-300 text-[10px]">Mock Badge element</h6>
+                            <button
+                              type="button"
+                              className="w-full text-white font-extrabold text-[9px] py-1.5 rounded-lg border-0 shadow cursor-pointer transition-all"
+                              style={{ backgroundColor: editedSettings["app_secondary_color"] || "#10b981" }}
+                            >
+                              Check settings (Secondary)
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-[9px] text-slate-500 italic text-right mt-4">
+                      Click the floppy disk save icons above to save settings permanently.
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

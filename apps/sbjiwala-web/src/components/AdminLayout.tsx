@@ -62,6 +62,14 @@ export default function AdminLayout({ children, title = "Admin Panel" }: AdminLa
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
 
+  const { data: publicSettings } = useQuery<any>({
+    queryKey: ["publicSettings"],
+    queryFn: async () => {
+      const res = await api.get("/installation/public-settings");
+      return res.data?.data || res.data || {};
+    },
+  });
+
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
     if (!token) {
@@ -90,6 +98,38 @@ export default function AdminLayout({ children, title = "Admin Panel" }: AdminLa
       document.documentElement.classList.toggle("dark", isDark);
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const primaryColor = publicSettings?.app_primary_color || "#059669";
+
+    let styleTag = document.getElementById("dynamic-admin-brand-styles");
+    if (!styleTag) {
+      styleTag = document.createElement("style");
+      styleTag.id = "dynamic-admin-brand-styles";
+      document.head.appendChild(styleTag);
+    }
+    styleTag.innerHTML = `
+      :root {
+        --primary-brand-color: ${primaryColor};
+        --emerald-600: ${primaryColor};
+        --emerald-500: ${primaryColor};
+        --emerald-705: ${primaryColor};
+        --emerald-700: ${primaryColor};
+      }
+      .bg-emerald-600 { background-color: var(--primary-brand-color) !important; }
+      .text-emerald-600 { color: var(--primary-brand-color) !important; }
+      .hover\\:bg-emerald-600:hover { background-color: var(--primary-brand-color) !important; }
+      .hover\\:text-emerald-600:hover { color: var(--primary-brand-color) !important; }
+      .bg-emerald-500 { background-color: var(--primary-brand-color) !important; }
+      .text-emerald-505 { color: var(--primary-brand-color) !important; }
+      .text-emerald-500 { color: var(--primary-brand-color) !important; }
+      .border-emerald-500 { border-color: var(--primary-brand-color) !important; }
+      .focus\\:border-emerald-500:focus { border-color: var(--primary-brand-color) !important; }
+      .bg-emerald-100 { background-color: var(--primary-brand-color)1a !important; }
+      .text-emerald-700 { color: var(--primary-brand-color) !important; }
+    `;
+  }, [publicSettings]);
 
   const toggleTheme = () => {
     const next = theme === "light" ? "dark" : "light";
@@ -130,12 +170,21 @@ export default function AdminLayout({ children, title = "Admin Panel" }: AdminLa
     <div className="flex flex-col h-full justify-between">
       <div className="space-y-6 flex flex-col h-[calc(100%-120px)]">
         {/* Logo */}
-        <div className="flex items-center gap-2 px-2 flex-shrink-0">
-          <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-lg">
-            S
+        <div className="flex items-center gap-2.5 px-2 flex-shrink-0">
+          <div className="relative w-8 h-8 flex-shrink-0 bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden">
+            <img
+              src={publicSettings?.app_icon_url || "/icon.png"}
+              alt="Icon"
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                e.currentTarget.src = "/icon.png";
+              }}
+            />
           </div>
           <div>
-            <p className="text-white font-black text-sm tracking-tight leading-none">Sbjiwala</p>
+            <p className="text-white font-black text-sm tracking-tight leading-none">
+              {publicSettings?.app_name || "Sbjiwala"}
+            </p>
             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Admin Portal</span>
           </div>
         </div>

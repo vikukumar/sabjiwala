@@ -10,6 +10,8 @@ import { useToast } from "@/components/ui/Toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import versionInfo from "../app/version.json";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@sbjiwala/shared";
 
 export const resolveAgentLink = (href: string) => {
   const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
@@ -37,6 +39,46 @@ export default function AgentLayout({ children, title = "Agent Portal", isAvaila
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+
+  const { data: publicSettings } = useQuery<any>({
+    queryKey: ["publicSettings"],
+    queryFn: async () => {
+      const res = await api.get("/installation/public-settings");
+      return res.data?.data || res.data || {};
+    },
+  });
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const primaryColor = publicSettings?.app_primary_color || "#059669";
+
+    let styleTag = document.getElementById("dynamic-agent-brand-styles");
+    if (!styleTag) {
+      styleTag = document.createElement("style");
+      styleTag.id = "dynamic-agent-brand-styles";
+      document.head.appendChild(styleTag);
+    }
+    styleTag.innerHTML = `
+      :root {
+        --primary-brand-color: ${primaryColor};
+        --emerald-600: ${primaryColor};
+        --emerald-500: ${primaryColor};
+        --emerald-750: ${primaryColor};
+        --emerald-700: ${primaryColor};
+      }
+      .bg-emerald-600 { background-color: var(--primary-brand-color) !important; }
+      .text-emerald-600 { color: var(--primary-brand-color) !important; }
+      .hover\\:bg-emerald-600:hover { background-color: var(--primary-brand-color) !important; }
+      .hover\\:text-emerald-600:hover { color: var(--primary-brand-color) !important; }
+      .bg-emerald-500 { background-color: var(--primary-brand-color) !important; }
+      .text-emerald-505 { color: var(--primary-brand-color) !important; }
+      .text-emerald-500 { color: var(--primary-brand-color) !important; }
+      .border-emerald-500 { border-color: var(--primary-brand-color) !important; }
+      .focus\\:border-emerald-500:focus { border-color: var(--primary-brand-color) !important; }
+      .bg-emerald-100 { background-color: var(--primary-brand-color)1a !important; }
+      .text-emerald-700 { color: var(--primary-brand-color) !important; }
+    `;
+  }, [publicSettings]);
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
@@ -109,8 +151,13 @@ export default function AgentLayout({ children, title = "Agent Portal", isAvaila
     <div className="flex flex-col h-full justify-between font-sans">
       <div className="space-y-6 flex flex-col h-[calc(100%-150px)]">
         <div className="flex items-center gap-2 flex-shrink-0">
-          <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-6 w-auto object-contain brightness-0 invert" />
-          <span className="text-[10px] uppercase tracking-wider bg-slate-800 text-slate-400 font-bold px-2 py-0.5 rounded">
+          <img
+            src={publicSettings?.app_logo_url || "/logo_horizontal.png"}
+            alt={publicSettings?.app_name || "Logo"}
+            className="h-6 w-auto object-contain brightness-0 invert"
+            onError={(e) => { e.currentTarget.src = "/logo_horizontal.png"; }}
+          />
+          <span className="text-[10px] uppercase tracking-wider bg-slate-800 text-slate-440 font-bold px-2 py-0.5 rounded">
             Support Agent
           </span>
         </div>
@@ -217,7 +264,12 @@ export default function AgentLayout({ children, title = "Agent Portal", isAvaila
             </button>
 
             <div className="flex items-center gap-2 md:hidden">
-              <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-7 w-auto object-contain" />
+              <img
+                src={publicSettings?.app_logo_url || "/logo_horizontal.png"}
+                alt={publicSettings?.app_name || "Logo"}
+                className="h-7 w-auto object-contain"
+                onError={(e) => { e.currentTarget.src = "/logo_horizontal.png"; }}
+              />
               <span className="text-[9px] uppercase bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded-full">
                 Support
               </span>
