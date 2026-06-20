@@ -10,6 +10,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import APIResponse, InstallationStep
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.system import InstallationState, SystemSetting
 
@@ -23,7 +24,7 @@ async def seed_system_settings(db: AsyncSession):
         {"key": "app_primary_color", "value": "#059669", "value_type": "string", "group": "appearance", "description": "Primary brand color hex code", "is_public": True},
         {"key": "seo_title", "value": "Sbjiwala - Kisan ke Ghar Se Apke Ghar tak", "value_type": "string", "group": "seo", "description": "Global SEO meta title", "is_public": True},
         {"key": "seo_description", "value": "Read Sbjiwala's user data policy. Learn about precise GPS coordinate encryption, secure tokenized checkouts, and your personal data rights.", "value_type": "string", "group": "seo", "description": "Global SEO meta description", "is_public": True},
-        {"key": "seo_keywords", "value": "vegetables, fruits, organic, blinkit, zepto, quick commerce, delivery", "value_type": "string", "group": "seo", "description": "Global SEO keywords separated by commas", "is_public": True},
+        {"key": "seo_keywords", "value": "vegetables, fruits, organic, quick commerce, delivery", "value_type": "string", "group": "seo", "description": "Global SEO keywords separated by commas", "is_public": True},
         {"key": "policy_privacy", "value": "At Sbjiwala, we prioritize the protection of your personal information. This Privacy Policy details how we collect, process, and secure your geolocation details, registration credentials, and purchase history. By using our applications, you consent to the practices described below.", "value_type": "string", "group": "policy", "description": "Privacy Policy HTML content", "is_public": True},
         {"key": "policy_terms", "value": "By accessing or placing orders through the Sbjiwala applications, you agree to comply with our purchasing guidelines. Orders are routed to the nearest vendor to ensure fresh 10-minute transit times. Conflicting vendor carts are not allowed.", "value_type": "string", "group": "policy", "description": "Terms and Conditions HTML content", "is_public": True},
         {"key": "policy_refund", "value": "Refunds are processed automatically for cancelled or failed orders directly to the user's wallet. Wallet balances can be used on future checkouts but are non-transferable to bank accounts.", "value_type": "string", "group": "policy", "description": "Refund and Cancellation Policy HTML content", "is_public": True},

@@ -110,7 +110,7 @@ export default function AdminDashboard() {
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
                 <span className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">Live Operations Panel</span>
               </div>
-              <h2 className="text-xl font-black mt-3 leading-tight max-w-md">Swiggy & Zomato style Real-Time tracking dispatch board</h2>
+              <h2 className="text-xl font-black mt-3 leading-tight max-w-md">Real-Time Tracking Dispatch Board</h2>
               <p className="text-xs text-slate-400 mt-2 max-w-sm">Monitor online vendors, active delivery riders, and live mapping routing metrics globally.</p>
             </div>
             <Link

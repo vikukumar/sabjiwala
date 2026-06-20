@@ -14,6 +14,19 @@ import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
 import versionInfo from "../app/version.json";
 
+export const resolveAdminLink = (href: string) => {
+  const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+  if (isUnified) {
+    if (href === "/") return "/admin";
+    if (href.startsWith("/admin")) return href;
+    return `/admin${href}`;
+  } else {
+    if (href === "/admin") return "/";
+    if (href.startsWith("/admin/")) return href.substring(6);
+  }
+  return href;
+};
+
 interface AdminLayoutProps {
   children: React.ReactNode;
   title?: string;
@@ -49,7 +62,7 @@ export default function AdminLayout({ children, title = "Admin Panel" }: AdminLa
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
     if (!token) {
-      router.replace("/login");
+      router.replace(resolveAdminLink("/login"));
       return;
     }
     // Verify it's an admin token
@@ -57,11 +70,11 @@ export default function AdminLayout({ children, title = "Admin Panel" }: AdminLa
       const base64Url = token.split(".")[1];
       const payload = JSON.parse(atob(base64Url));
       if (!["admin", "super_admin"].includes(payload.user_type)) {
-        router.replace("/login");
+        router.replace(resolveAdminLink("/login"));
         return;
       }
     } catch {
-      router.replace("/login");
+      router.replace(resolveAdminLink("/login"));
       return;
     }
     setIsAuthed(true);
@@ -86,7 +99,7 @@ export default function AdminLayout({ children, title = "Admin Panel" }: AdminLa
     localStorage.removeItem("sw_access_token");
     localStorage.removeItem("sw_refresh_token");
     queryClient.clear();
-    router.replace("/login");
+    router.replace(resolveAdminLink("/login"));
   };
 
   const { data: metricsData } = useQuery<any>({
@@ -128,13 +141,13 @@ export default function AdminLayout({ children, title = "Admin Panel" }: AdminLa
         {(pendingOrders > 0 || pendingKyc > 0) && (
           <div className="space-y-1.5 flex-shrink-0">
             {pendingOrders > 0 && (
-              <Link href="/orders?status=pending" className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl px-3 py-2 text-[10px] font-bold hover:bg-amber-500/20 transition-all">
+              <Link href={resolveAdminLink("/orders?status=pending")} className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl px-3 py-2 text-[10px] font-bold hover:bg-amber-500/20 transition-all">
                 <Bell className="w-3 h-3 animate-pulse" />
                 {pendingOrders} pending orders
               </Link>
             )}
             {pendingKyc > 0 && (
-              <Link href="/vendors?kyc=pending" className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl px-3 py-2 text-[10px] font-bold hover:bg-blue-500/20 transition-all">
+              <Link href={resolveAdminLink("/vendors?kyc=pending")} className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl px-3 py-2 text-[10px] font-bold hover:bg-blue-500/20 transition-all">
                 <Shield className="w-3 h-3 animate-pulse" />
                 {pendingKyc} KYC pending
               </Link>
@@ -146,11 +159,12 @@ export default function AdminLayout({ children, title = "Admin Panel" }: AdminLa
         <nav className="flex-1 overflow-y-auto space-y-0.5 pr-1 custom-scrollbar">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
+            const resolvedHref = resolveAdminLink(item.href);
+            const isActive = pathname === resolvedHref || (item.href !== "/" && pathname?.startsWith(resolvedHref));
             return (
               <Link
                 key={item.id}
-                href={item.href}
+                href={resolvedHref}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer ${
                   isActive

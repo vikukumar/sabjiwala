@@ -172,8 +172,8 @@ try {
   removeRecursiveSync(deliveryRegisterDest);
   copyRecursiveSync(path.join(deliverySrc, 'app/register'), deliveryRegisterDest);
 
-  // Sync additional delivery routes: profile, stores, history, earnings, payout
-  ['profile', 'stores', 'history', 'earnings', 'payout'].forEach((route) => {
+  // Sync additional delivery routes: profile, stores, history, earnings, payout, kyc
+  ['profile', 'stores', 'history', 'earnings', 'payout', 'kyc'].forEach((route) => {
     const dest = path.join(webAppDir, `delivery/${route}`);
     removeRecursiveSync(dest);
     const srcPath = path.join(deliverySrc, `app/${route}`);

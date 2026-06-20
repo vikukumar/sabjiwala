@@ -689,7 +689,7 @@ function CartFooter() {
 
 // ==================== ROUTE GUARD ====================
 function useAuthGuard() {
-  // Guard disabled for home page to support Swiggy guest browsing onboarding patterns
+  // Guard disabled for home page to support guest browsing onboarding patterns
 }
 
 // ==================== COMING SOON AREA OVERRIDE ====================
@@ -1072,7 +1072,7 @@ export default function HomePage() {
         <PromoPopupModal ad={activePopup} onClose={() => setActivePopup(null)} />
       )}
 
-      {/* Zepto-Style Video PIP Ad player */}
+      {/* Floating Video PIP Ad player */}
       {videoPipAd && <PipVideoAd ad={videoPipAd} />}
     </div>
   );

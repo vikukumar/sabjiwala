@@ -393,7 +393,7 @@ input[type="checkbox"], input[type="radio"] {
   background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
 }
 
-/* ===== 3D MODERN MAPS (SWIGGY / ZOMATO STYLE) ===== */
+/* ===== 3D MODERN MAPS ===== */
 .map-3d-wrapper {
   perspective: 1000px;
   overflow: hidden;

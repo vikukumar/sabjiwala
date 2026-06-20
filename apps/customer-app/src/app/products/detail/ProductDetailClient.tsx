@@ -315,7 +315,7 @@ export default function ProductDetailClient() {
       </div>
 
       <div className="px-4 pb-32 mt-4 space-y-4">
-        {/* Flipkart/Swiggy-style Image Gallery */}
+        {/* Image Gallery */}
         <div className="relative bg-gradient-to-br from-emerald-50 to-teal-50/20 dark:from-slate-800/50 dark:to-slate-900 rounded-3xl p-8 flex flex-col items-center justify-center overflow-hidden" style={{ minHeight: "280px" }}>
           {hasDiscount && (
             <span className="absolute top-4 left-4 bg-rose-500 text-white text-xs font-black px-2.5 py-1 rounded-full z-10 shadow-sm">

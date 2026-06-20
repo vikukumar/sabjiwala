@@ -318,7 +318,7 @@ export default function AdminAdsPage() {
                     >
                       <option value="inline">Inline Banner</option>
                       <option value="popup">Popup Modal</option>
-                      <option value="pip">Zepto Video PIP</option>
+                      <option value="pip">Video Picture-in-Picture</option>
                       <option value="sidebar">Sidebar Slot</option>
                     </select>
                   </div>

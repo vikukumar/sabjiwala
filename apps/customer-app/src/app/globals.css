@@ -545,7 +545,7 @@ input[type="checkbox"], input[type="radio"] {
   }
 }
 
-/* ===== 3D MODERN MAPS (SWIGGY / ZOMATO STYLE) ===== */
+/* ===== 3D MODERN MAPS ===== */
 .map-3d-wrapper {
   perspective: 1000px;
   overflow: hidden;
