@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, resolveImageUrl } from "@sbjiwala/shared";
+import { api, resolveImageUrl, useWebSocket } from "@sbjiwala/shared";
 import { User, Mail, Phone, Edit2, Save, Camera, LogOut, Shield, Bell, Palette, ChevronRight, Award, Package, Star, Heart } from "lucide-react";
 import { Button, Input, Card, Badge, StatCard, Spinner } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
@@ -17,6 +17,21 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const { isConnected: isWSConnected } = useWebSocket();
+  const [isOnline, setIsOnline] = useState(typeof window !== "undefined" ? navigator.onLine : true);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -224,17 +239,38 @@ export default function ProfilePage() {
         </div>
       </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard title="Orders" value={orderStats?.total || 0} icon={<Package className="w-5 h-5" />} />
-        <StatCard title="Delivered" value={orderStats?.delivered || 0} icon={<Award className="w-5 h-5" />} iconBg="bg-blue-50 dark:bg-blue-950/30" iconColor="text-blue-600 dark:text-blue-400" />
-        <StatCard
-          title="Total Saved"
-          value={`₹${(orderStats?.total_saved || 0).toFixed(0)}`}
-          icon={<Star className="w-5 h-5" />}
-          iconBg="bg-amber-50 dark:bg-amber-950/30"
-          iconColor="text-amber-600 dark:text-amber-400"
-        />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+        {/* Orders Card */}
+        <Card className="flex flex-col sm:flex-row items-center sm:items-start justify-between p-3 sm:p-5 relative overflow-hidden" padding="none">
+          <div className="text-center sm:text-left space-y-0.5 sm:space-y-1">
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-450 dark:text-slate-500 block">Orders</span>
+            <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white block">{orderStats?.total || 0}</span>
+          </div>
+          <div className="p-2 sm:p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-2 sm:mt-0">
+            <Package className="w-4 h-4 sm:w-5 sm:h-5" />
+          </div>
+        </Card>
+        {/* Delivered Card */}
+        <Card className="flex flex-col sm:flex-row items-center sm:items-start justify-between p-3 sm:p-5 relative overflow-hidden" padding="none">
+          <div className="text-center sm:text-left space-y-0.5 sm:space-y-1">
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-450 dark:text-slate-500 block">Delivered</span>
+            <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white block">{orderStats?.delivered || 0}</span>
+          </div>
+          <div className="p-2 sm:p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-2 sm:mt-0">
+            <Award className="w-4 h-4 sm:w-5 sm:h-5" />
+          </div>
+        </Card>
+        {/* Total Saved Card */}
+        <Card className="flex flex-col sm:flex-row items-center sm:items-start justify-between p-3 sm:p-5 relative overflow-hidden" padding="none">
+          <div className="text-center sm:text-left space-y-0.5 sm:space-y-1">
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-450 dark:text-slate-500 block">Saved</span>
+            <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white block">₹{(orderStats?.total_saved || 0).toFixed(0)}</span>
+          </div>
+          <div className="p-2 sm:p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-2 sm:mt-0">
+            <Star className="w-4 h-4 sm:w-5 sm:h-5" />
+          </div>
+        </Card>
       </div>
 
       {/* Quick Links */}
@@ -258,6 +294,45 @@ export default function ProfilePage() {
       <Button variant="danger" fullWidth onClick={handleLogout} leftIcon={<LogOut className="w-4 h-4" />} size="lg">
         Sign Out
       </Button>
+
+      {/* Connectivity Status Chips */}
+      <div className="flex flex-wrap justify-center items-center gap-2 pt-2 pb-1">
+        {/* Internet Status */}
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+          isOnline 
+            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50" 
+            : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/50"
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+          {isOnline ? "Internet Connected" : "No Internet"}
+        </span>
+
+        {/* WebSocket Status */}
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+          isWSConnected 
+            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50" 
+            : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50"
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${isWSConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+          {isWSConnected ? "Live Updates Active" : "Live Updates Connecting"}
+        </span>
+
+        {/* API Gateway Status */}
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+          !error 
+            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50" 
+            : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/50"
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${!error ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+          {!error ? "API Server Online" : "API Offline"}
+        </span>
+
+        {/* Platform Status */}
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800">
+          <span>📱</span>
+          {typeof window !== "undefined" && (window as any).Capacitor ? `App (${(window as any).Capacitor.getPlatform()})` : "Web Browser"}
+        </span>
+      </div>
 
       <p className="text-center text-xs text-slate-400 dark:text-slate-500">Sbjiwala v1.0 · Member since {new Date(profile?.created_at || Date.now()).getFullYear()}</p>
     </div>
