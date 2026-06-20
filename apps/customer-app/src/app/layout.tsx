@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import Providers from "./providers";
 import AppShell from "@/components/AppShell";

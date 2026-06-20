@@ -23,27 +23,23 @@ function StoreLocationMap({
     if (typeof window === "undefined" || !mapRef.current) return;
     if (mapObjRef.current) return;
 
+    // Clean up container to prevent duplicate map overlays in strict-mode
+    mapRef.current.innerHTML = "";
+    (mapRef.current as any)._leaflet_id = null;
+
     let active = true;
     import("leaflet").then((L) => {
       if (!active || !mapRef.current || mapObjRef.current) return;
       delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-      });
 
       const storeIcon = L.divIcon({
         html: `
-          <div style="filter: drop-shadow(0 4px 12px rgba(239, 68, 68, 0.4)); position: relative; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px;">
-            <span style="position: absolute; width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); animation: ping 1.8s infinite; display: block; box-sizing: border-box;"></span>
-            <div style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5); cursor: grab; box-sizing: border-box;">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
-                <path d="m2 7 4.41-3.67A2 2 0 0 1 7.73 3h8.54a2 2 0 0 1 1.32.33L22 7"/>
-                <path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
-                <path d="M12 12A4 4 0 0 0 4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a4 4 0 0 0-8 0Z"/>
-              </svg>
-            </div>
+          <div style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width: 36px; height: 36px; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.25)); flex-shrink: 0;">
+              <path d="m2 7 4.41-3.67A2 2 0 0 1 7.73 3h8.54a2 2 0 0 1 1.32.33L22 7"/>
+              <path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
+              <path d="M12 12A4 4 0 0 0 4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a4 4 0 0 0-8 0Z"/>
+            </svg>
           </div>
         `,
         iconSize: [44, 44],
@@ -57,7 +53,7 @@ function StoreLocationMap({
         isDark
           ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        { attribution: "© OpenStreetMap © CARTO", subdomains: "abcd", maxZoom: 20 }
+        { attribution: "", subdomains: "abcd", maxZoom: 20 }
       ).addTo(map);
 
       const marker = L.marker([lat, lng], { icon: storeIcon, draggable: true }).addTo(map);
