@@ -13,6 +13,7 @@
   "dependencies": {
     "@capacitor/local-notifications": "^8.2.0",
     "@capacitor/push-notifications": "^8.1.1",
+    "@capgo/capacitor-stream-call": "^8.0.41",
     "@sbjiwala/shared": "file:../../shared",
     "@tanstack/react-query": "^5.100.14",
     "axios": "^1.16.1",

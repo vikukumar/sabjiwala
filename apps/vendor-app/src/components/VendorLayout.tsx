@@ -7,7 +7,7 @@ import {
   Phone, Mic, Square, Radio
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, useWebSocket } from "@sbjiwala/shared";
+import { api, useWebSocket, initStreamCall, startStreamCall, endStreamCall, rejectStreamCall, isStreamCallAvailable } from "@sbjiwala/shared";
 import versionInfo from "../app/version.json";
 import { useToast } from "@/components/ui/Toast";
 import { useRouter } from "next/navigation";
@@ -71,11 +71,13 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
       handleCallAnswer(data.sdp, data.sender_id);
     } else if (type === "call_disconnected") {
       stopCallerTune();
+      if (isStreamCallAvailable()) endStreamCall();
       cleanupWebRTC();
       setCallStatus("idle");
       success("Call Ended", "Voice support session closed.");
     } else if (type === "call_rejected") {
       stopCallerTune();
+      if (isStreamCallAvailable()) endStreamCall();
       if (data.reason === "no_agents_available") {
         setCallStatus("ivr");
         setIvrMessage("All support agents are busy. Please select automated options or leave a voicemail:");
@@ -144,13 +146,26 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
   };
 
   const initiateCall = async () => {
-    setCallStatus("dialing");
-    playCallerTune("vendor");
+    const callId = "support_vendor_" + (vendorProfile?.id || "vendor") + "_" + Date.now();
+    
+    let nativeSuccess = false;
+    if (isStreamCallAvailable()) {
+      nativeSuccess = await startStreamCall(callId, "audio");
+    }
+
+    if (nativeSuccess) {
+      setCallStatus("connected");
+    } else {
+      setCallStatus("dialing");
+      playCallerTune("vendor");
+    }
+
     sendMessage({
       type: "call_initiate",
       data: {
         caller_name: businessName,
-        caller_phone: vendorProfile?.contact_phone || ""
+        caller_phone: vendorProfile?.contact_phone || "",
+        stream_call_id: nativeSuccess ? callId : undefined
       }
     });
   };
@@ -192,6 +207,9 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
 
   const disconnectCall = () => {
     stopCallerTune();
+    if (isStreamCallAvailable()) {
+      endStreamCall();
+    }
     sendMessage({
       type: "call_hangup",
       data: {
@@ -357,6 +375,21 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
     },
     enabled: !!isAuthed
   });
+
+  const { data: userProfile } = useQuery<any>({
+    queryKey: ["currentUserProfile"],
+    queryFn: async () => {
+      const res = await api.get("/users/me");
+      return res.data;
+    },
+    enabled: !!isAuthed
+  });
+
+  useEffect(() => {
+    if (userProfile) {
+      initStreamCall(userProfile).catch((err: any) => console.warn("Failed to init StreamCall:", err));
+    }
+  }, [userProfile]);
 
   // Initialize push notifications on authentication
   useEffect(() => {

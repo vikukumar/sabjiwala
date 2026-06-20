@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, useWebSocket } from "@sbjiwala/shared";
+import { api, useWebSocket, initStreamCall, startStreamCall, endStreamCall, rejectStreamCall, isStreamCallAvailable } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import {
   MessageSquare, X, Send, Phone, PhoneOff, Mic, Square,
@@ -63,6 +63,12 @@ export default function CustomerSupportWidget() {
     },
     enabled: hasToken && isOpen
   });
+
+  useEffect(() => {
+    if (profile) {
+      initStreamCall(profile).catch((err: any) => console.warn("Failed to init StreamCall:", err));
+    }
+  }, [profile]);
 
   // Synthesize Client-Side Caller Tunes using Web Audio API
   const playCallerTune = (role: string) => {
@@ -134,6 +140,7 @@ export default function CustomerSupportWidget() {
       // Customer is not expected to receive incoming agent calls in this widget layout, but handles just in case
     } else if (type === "call_rejected") {
       stopCallerTune();
+      if (isStreamCallAvailable()) endStreamCall();
       if (data.reason === "no_agents_available") {
         setCallStatus("ivr");
         setIvrMessage("All support agents are currently busy assisting other users. Please select automated assistance:");
@@ -143,6 +150,7 @@ export default function CustomerSupportWidget() {
       handleCallAnswer(data.sdp, data.sender_id);
     } else if (type === "call_disconnected") {
       stopCallerTune();
+      if (isStreamCallAvailable()) endStreamCall();
       cleanupWebRTC();
       setCallStatus("idle");
       success("Call Ended", "Voice support session closed.");
@@ -157,16 +165,28 @@ export default function CustomerSupportWidget() {
 
   // WebRTC handshakes
   const initiateCall = async () => {
-    setCallStatus("dialing");
     const roleName = profile?.user_type || "customer";
-    playCallerTune(roleName);
+    const callId = "support_" + (profile?.id || "user") + "_" + Date.now();
+    
+    let nativeSuccess = false;
+    if (isStreamCallAvailable()) {
+      nativeSuccess = await startStreamCall(callId, "audio");
+    }
+
+    if (nativeSuccess) {
+      setCallStatus("connected");
+    } else {
+      setCallStatus("dialing");
+      playCallerTune(roleName);
+    }
 
     // Send call initiation message
     sendMessage({
       type: "call_initiate",
       data: {
         caller_name: profile ? `${profile.first_name} ${profile.last_name}` : "Valued User",
-        caller_phone: profile?.phone || ""
+        caller_phone: profile?.phone || "",
+        stream_call_id: nativeSuccess ? callId : undefined
       }
     });
   };
@@ -213,6 +233,9 @@ export default function CustomerSupportWidget() {
 
   const disconnectCall = () => {
     stopCallerTune();
+    if (isStreamCallAvailable()) {
+      endStreamCall();
+    }
     sendMessage({
       type: "call_hangup",
       data: {

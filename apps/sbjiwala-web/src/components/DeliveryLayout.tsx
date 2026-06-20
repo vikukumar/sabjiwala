@@ -7,7 +7,7 @@ import {
   Phone, Mic, Square
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, initStreamCall, startStreamCall, endStreamCall, rejectStreamCall, isStreamCallAvailable } from "@sbjiwala/shared";
 import { useRouter, usePathname } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import Link from "next/link";
@@ -353,13 +353,26 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
   };
 
   const initiateCall = async () => {
-    setCallStatus("dialing");
-    playCallerTune("delivery");
+    const callId = "support_delivery_" + (profile?.id || "delivery") + "_" + Date.now();
+    
+    let nativeSuccess = false;
+    if (isStreamCallAvailable()) {
+      nativeSuccess = await startStreamCall(callId, "audio");
+    }
+
+    if (nativeSuccess) {
+      setCallStatus("connected");
+    } else {
+      setCallStatus("dialing");
+      playCallerTune("delivery");
+    }
+
     sendMessage({
       type: "call_initiate",
       data: {
         caller_name: profile?.full_name || profile?.phone || "Delivery Agent",
-        caller_phone: profile?.phone || ""
+        caller_phone: profile?.phone || "",
+        stream_call_id: nativeSuccess ? callId : undefined
       }
     });
   };
@@ -401,6 +414,9 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
 
   const disconnectCall = () => {
     stopCallerTune();
+    if (isStreamCallAvailable()) {
+      endStreamCall();
+    }
     sendMessage({
       type: "call_hangup",
       data: {
@@ -532,11 +548,13 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
             handleCallAnswer(message.data.sdp, message.data.sender_id);
           } else if (message.type === "call_disconnected") {
             stopCallerTune();
+            if (isStreamCallAvailable()) endStreamCall();
             cleanupWebRTC();
             setCallStatus("idle");
             success("Call Ended", "Voice support session closed.");
           } else if (message.type === "call_rejected") {
             stopCallerTune();
+            if (isStreamCallAvailable()) endStreamCall();
             if (message.data.reason === "no_agents_available") {
               setCallStatus("ivr");
               setIvrMessage("All support agents are busy. Please select automated options or leave a voicemail:");
@@ -595,6 +613,21 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
       stopCallerTune();
     };
   }, []);
+
+  const { data: userProfile } = useQuery<any>({
+    queryKey: ["currentUserProfile"],
+    queryFn: async () => {
+      const res = await api.get("/users/me");
+      return res.data;
+    },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
+  });
+
+  useEffect(() => {
+    if (userProfile) {
+      initStreamCall(userProfile).catch((err: any) => console.warn("Failed to init StreamCall:", err));
+    }
+  }, [userProfile]);
 
   // Initialize Push Notifications
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, useWebSocket } from "@sbjiwala/shared";
+import { api, useWebSocket, initStreamCall, startStreamCall, endStreamCall, rejectStreamCall, acceptStreamCall, isStreamCallAvailable } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import AgentLayout from "@/components/AgentLayout";
 import {
@@ -37,6 +37,7 @@ export default function AgentDashboard() {
     callerRole?: string;
     callerPhone?: string;
     duration: number;
+    streamCallId?: string;
   }>({ status: "idle", duration: 0 });
 
   // WebRTC & Audio Refs
@@ -46,6 +47,21 @@ export default function AgentDashboard() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const ringtoneOscRef = useRef<any>(null);
   const callDurationInterval = useRef<any>(null);
+
+  const { data: profile } = useQuery<any>({
+    queryKey: ["currentAgentProfile"],
+    queryFn: async () => {
+      const res = await api.get("/users/me");
+      return res.data;
+    },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
+  });
+
+  useEffect(() => {
+    if (profile) {
+      initStreamCall(profile).catch((err: any) => console.warn("Failed to init StreamCall:", err));
+    }
+  }, [profile]);
 
   // Queries
   const { data: ticketsData = [] } = useQuery<any[]>({
@@ -221,11 +237,13 @@ export default function AgentDashboard() {
         callerRole: data.caller_role,
         callerName: data.caller_name,
         callerPhone: data.caller_phone,
-        duration: 0
+        duration: 0,
+        streamCallId: data.stream_call_id
       });
       playRingtone();
     } else if (type === "call_disconnected") {
       stopRingtone();
+      if (isStreamCallAvailable()) endStreamCall();
       cleanupWebRTC();
       setActiveCall({ status: "idle", duration: 0 });
       success("Call Ended", "The voice support session ended.");
@@ -294,6 +312,18 @@ export default function AgentDashboard() {
     stopRingtone();
     if (!activeCall.callerId) return;
 
+    if (activeCall.streamCallId && isStreamCallAvailable()) {
+      try {
+        const StreamCall = (window as any).Capacitor.Plugins.StreamCall;
+        await StreamCall.joinCall({
+          callId: activeCall.streamCallId,
+          callType: "audio"
+        });
+      } catch (err) {
+        console.error("Failed to join native StreamCall", err);
+      }
+    }
+
     setActiveCall(prev => ({ ...prev, status: "connected" }));
     // Start stopwatch counter
     callDurationInterval.current = setInterval(() => {
@@ -306,6 +336,9 @@ export default function AgentDashboard() {
 
   const rejectCall = () => {
     stopRingtone();
+    if (activeCall.streamCallId && isStreamCallAvailable()) {
+      rejectStreamCall();
+    }
     if (activeCall.callerId) {
       sendMessage({
         type: "call_hangup",
@@ -322,6 +355,9 @@ export default function AgentDashboard() {
 
   const hangupCall = () => {
     stopRingtone();
+    if (activeCall.streamCallId && isStreamCallAvailable()) {
+      endStreamCall();
+    }
     if (activeCall.callerId) {
       sendMessage({
         type: "call_hangup",

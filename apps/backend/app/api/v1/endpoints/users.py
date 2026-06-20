@@ -32,6 +32,38 @@ async def get_current_user_profile(
     return APIResponse(success=True, data=UserResponse.model_validate(user))
 
 
+@router.get("/me/stream-token", response_model=APIResponse)
+async def get_stream_token(
+    current_user: dict = Depends(get_current_user),
+):
+    """Generate a token for GetStream Video SDK."""
+    import os
+    import time
+    import jwt
+    
+    api_key = os.getenv("STREAM_API_KEY", "sbjiwala_stream_key")
+    api_secret = os.getenv("STREAM_API_SECRET", "sbjiwala_stream_secret")
+    
+    user_id = str(current_user["user_id"])
+    now = int(time.time())
+    payload = {
+        "user_id": user_id,
+        "iat": now,
+        "exp": now + (24 * 3600),  # Valid for 24 hours
+    }
+    
+    token = jwt.encode(payload, api_secret, algorithm="HS256")
+    
+    return APIResponse(
+        success=True,
+        data={
+            "token": token,
+            "apiKey": api_key,
+            "userId": user_id
+        }
+    )
+
+
 @router.patch("/me", response_model=APIResponse[UserResponse])
 @router.put("/me", response_model=APIResponse[UserResponse])
 async def update_profile(
