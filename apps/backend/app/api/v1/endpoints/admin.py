@@ -99,44 +99,7 @@ async def verify_vendor(
     return APIResponse(success=True, message=f"Vendor status updated to {new_status.value}")
 
 
-@router.get("/settings/values", response_model=APIResponse)
-async def get_system_settings(
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Retrieve system-wide config variables."""
-    await _verify_admin(current_user)
-    res = await db.execute(select(SystemSetting))
-    settings = res.scalars().all()
-    
-    data = {s.key: s.value_json if s.value_json else s.value for s in settings}
-    return APIResponse(success=True, data=data)
 
-
-@router.patch("/settings/{key}", response_model=APIResponse)
-async def update_system_setting(
-    key: str,
-    body: SystemSettingUpdate,
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Update a system config variable."""
-    await _verify_admin(current_user)
-    
-    res = await db.execute(select(SystemSetting).where(SystemSetting.key == key))
-    setting = res.scalars().first()
-    if not setting:
-        # Create new
-        setting = SystemSetting(key=key, value=body.value, value_json=body.value_json)
-        db.add(setting)
-    else:
-        if body.value is not None:
-            setting.value = body.value
-        if body.value_json is not None:
-            setting.value_json = body.value_json
-
-    await db.commit()
-    return APIResponse(success=True, message=f"System setting '{key}' updated successfully")
 
 
 @router.get("/schema-logs", response_model=APIResponse)
@@ -1154,19 +1117,21 @@ async def update_system_setting(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update a system setting value/json."""
+    """Update or create a system setting value/json."""
     await _verify_admin(current_user)
     
     res = await db.execute(select(SystemSetting).where(SystemSetting.key == key))
     setting = res.scalars().first()
     if not setting:
-        raise HTTPException(status_code=404, detail="System setting not found")
+        # Create new
+        setting = SystemSetting(key=key, value=body.value, value_json=body.value_json)
+        db.add(setting)
+    else:
+        if not setting.is_editable:
+            raise HTTPException(status_code=400, detail="This setting is not editable")
         
-    if not setting.is_editable:
-        raise HTTPException(status_code=400, detail="This setting is not editable")
-        
-    setting.value = body.value
-    setting.value_json = body.value_json
+        setting.value = body.value
+        setting.value_json = body.value_json
     
     await db.commit()
     
@@ -1262,70 +1227,7 @@ async def reject_return_request(
     return APIResponse(success=True, message="Return request rejected successfully")
 
 
-@router.get("/ads", response_model=APIResponse)
-async def list_admin_ads(
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """List all ads for administration."""
-    await _verify_admin(current_user)
-    from app.models.cms import Advertisement
-    
-    stmt = select(Advertisement).order_by(Advertisement.created_at.desc())
-    res = await db.execute(stmt)
-    ads = res.scalars().all()
-    
-    data = [
-        {
-            "id": str(a.id),
-            "name": a.name,
-            "description": a.description,
-            "advertiser_name": a.advertiser_name,
-            "image_url": a.image_url,
-            "click_url": a.click_url,
-            "placement": a.placement,
-            "video_url": getattr(a, "video_url", None),
-            "page_target": a.page_target,
-            "position": getattr(a, "position", None),
-            "is_active": a.is_active,
-            "starts_at": a.starts_at.isoformat() if a.starts_at else None,
-            "expires_at": a.expires_at.isoformat() if a.expires_at else None,
-        }
-        for a in ads
-    ]
-    return APIResponse(success=True, data=data)
 
-
-@router.post("/ads", response_model=APIResponse)
-async def create_admin_ad(
-    ad_data: AdvertisementCreate,
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Create a new advertisement."""
-    await _verify_admin(current_user)
-    from app.models.cms import Advertisement
-    
-    ad = Advertisement(
-        name=ad_data.name,
-        description=ad_data.description,
-        advertiser_name=ad_data.advertiser_name,
-        image_url=ad_data.image_url,
-        click_url=ad_data.click_url,
-        placement=ad_data.placement,
-        video_url=ad_data.video_url,
-        page_target=ad_data.page_target,
-        position=ad_data.position,
-        target_categories=ad_data.target_categories,
-        target_locations=ad_data.target_locations,
-        is_active=ad_data.is_active,
-        starts_at=ad_data.starts_at,
-        expires_at=ad_data.expires_at,
-    )
-    db.add(ad)
-    await db.commit()
-    await db.refresh(ad)
-    return APIResponse(success=True, message="Advertisement created successfully", data={"id": str(ad.id)})
 
 
 @router.put("/ads/{ad_id}", response_model=APIResponse)
@@ -1363,24 +1265,7 @@ async def update_admin_ad(
     return APIResponse(success=True, message="Advertisement updated successfully")
 
 
-@router.delete("/ads/{ad_id}", response_model=APIResponse)
-async def delete_admin_ad(
-    ad_id: UUID,
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Delete an advertisement."""
-    await _verify_admin(current_user)
-    from app.models.cms import Advertisement
-    
-    res = await db.execute(select(Advertisement).where(Advertisement.id == ad_id))
-    ad = res.scalars().first()
-    if not ad:
-        raise HTTPException(status_code=404, detail="Advertisement not found")
-        
-    await db.delete(ad)
-    await db.commit()
-    return APIResponse(success=True, message="Advertisement deleted successfully")
+
 
 
 @router.post("/agents", response_model=APIResponse)
