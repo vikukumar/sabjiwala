@@ -42,7 +42,7 @@ export default function AboutPage() {
       {/* Hero Header */}
       <div className="text-center space-y-4">
         <div className="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider border border-emerald-500/20">
-          <Github className="w-3.5 h-3.5" />
+          <GithubIcon className="w-3.5 h-3.5" />
           100% Open Source Project
         </div>
         <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
@@ -137,7 +137,7 @@ export default function AboutPage() {
           <div className="pt-2 flex flex-wrap gap-3">
             <a href="https://github.com" target="_blank" rel="noopener noreferrer">
               <Button className="bg-emerald-600 hover:bg-emerald-550 text-white font-extrabold flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs shadow-md">
-                <Github className="w-4 h-4" /> View Open Source Repo
+                <GithubIcon className="w-4 h-4" /> View Open Source Repo
               </Button>
             </a>
             <Link href="/pricing">
