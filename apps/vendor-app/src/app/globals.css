@@ -392,3 +392,31 @@ input[type="checkbox"], input[type="radio"] {
 .gradient-rose {
   background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
 }
+
+/* ===== 3D MODERN MAPS (SWIGGY / ZOMATO STYLE) ===== */
+.map-3d-wrapper {
+  perspective: 1000px;
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12), 0 5px 15px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
+}
+
+.map-3d-wrapper:hover {
+  box-shadow: 0 30px 60px rgba(5, 150, 105, 0.15), 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+.map-3d-wrapper .leaflet-container {
+  transform: rotateX(28deg) translateY(-12px) scale(1.05);
+  transform-origin: bottom center;
+  transition: transform 0.4s ease;
+}
+
+/* Make markers stand upright (counter-rotate them) */
+.map-3d-wrapper .leaflet-marker-icon {
+  transform: rotateX(-28deg) !important;
+  transform-origin: bottom center;
+  filter: drop-shadow(0 12px 12px rgba(0, 0, 0, 0.25));
+}
+

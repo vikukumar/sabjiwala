@@ -82,6 +82,10 @@ export default function ProductCard({ product }: { product: any }) {
   const discountPct = hasDiscount ? Math.round(((mrp - price) / mrp) * 100) : 0;
   const ratingVal = product.attributes?.rating;
   const rating = ratingVal && ratingVal > 0 ? Number(ratingVal).toFixed(1) : "New";
+  
+  const stock = product.stock ?? product.attributes?.quantity ?? 0;
+  const isUnlimited = product.attributes?.is_unlimited ?? false;
+  const isOutOfStock = !isUnlimited && stock <= 0;
 
   const targetVendorId = product.attributes?.vendor_id || product.vendor_id || product.vendor?.id;
 
@@ -279,6 +283,11 @@ export default function ProductCard({ product }: { product: any }) {
                 -{discountPct}% OFF
               </span>
             )}
+            {isOutOfStock && (
+              <span className="absolute inset-0 bg-slate-950/70 flex items-center justify-center text-white text-[10px] font-black uppercase tracking-widest card-3d-floating select-none">
+                Out of Stock
+              </span>
+            )}
           </div>
         </Link>
 
@@ -348,6 +357,13 @@ export default function ProductCard({ product }: { product: any }) {
                   <Plus className="w-3 h-3" />
                 </button>
               </div>
+            ) : isOutOfStock ? (
+              <button
+                disabled
+                className="bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 text-[9px] font-black px-3 py-2 rounded-xl border border-slate-250/50 dark:border-slate-800 uppercase tracking-widest cursor-not-allowed select-none"
+              >
+                OUT OF STOCK
+              </button>
             ) : (
               <button
                 onClick={handleAddToCartAttempt}

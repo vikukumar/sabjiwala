@@ -328,7 +328,7 @@ export default function VendorDashboard() {
       const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
       const tileUrl = isDark
         ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
       const tiles = L.tileLayer(tileUrl, {
         attribution: "&copy; OpenStreetMap &copy; CARTO",
         subdomains: "abcd",

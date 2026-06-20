@@ -40,7 +40,7 @@ function StoreLocationMap({
       L.tileLayer(
         isDark
           ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+          : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
         { attribution: "© OpenStreetMap © CARTO", subdomains: "abcd", maxZoom: 20 }
       ).addTo(map);
 

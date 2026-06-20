@@ -118,7 +118,7 @@ export default function TrackOrderClient() {
       const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
       const tileUrl = isDark
         ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
       const tiles = L.tileLayer(tileUrl, {
         attribution: "&copy; OpenStreetMap &copy; CARTO",
         subdomains: "abcd",
@@ -268,9 +268,9 @@ export default function TrackOrderClient() {
       )}
 
       {/* Map */}
-      <div className="card overflow-hidden" style={{ height: "360px" }}>
+      <div className="map-3d-wrapper card overflow-hidden" style={{ height: "360px" }}>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-        <div ref={mapRef} style={{ height: "100%", width: "100%", zIndex: 1 }} />
+        <div ref={mapRef} className="w-full h-full" style={{ zIndex: 1 }} />
         {!mapLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
             <div className="text-center space-y-2">

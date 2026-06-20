@@ -40,10 +40,25 @@ async def browse_products(
         .where(Product.is_deleted == False, Product.status == ProductStatus.ACTIVE)
     )
 
+    is_search = bool(search and search.strip())
+
     if vendor_id:
         query = query.join(Inventory, Inventory.product_id == Product.id).where(
             Inventory.vendor_id == vendor_id,
             Inventory.is_deleted == False
+        )
+        if not is_search:
+            query = query.where(Inventory.quantity > 0)
+    elif not is_search:
+        from sqlalchemy import exists
+        query = query.where(
+            exists().where(
+                and_(
+                    Inventory.product_id == Product.id,
+                    Inventory.is_deleted == False,
+                    Inventory.quantity > 0
+                )
+            )
         )
 
     if category_id:

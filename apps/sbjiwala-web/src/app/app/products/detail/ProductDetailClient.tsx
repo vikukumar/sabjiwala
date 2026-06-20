@@ -126,6 +126,10 @@ export default function ProductDetailClient() {
   const rating = product?.attributes?.rating ?? 0.0;
   const reviewCount = product?.attributes?.review_count ?? 0;
 
+  const stock = product?.stock ?? product?.attributes?.quantity ?? 0;
+  const isUnlimited = product?.attributes?.is_unlimited ?? false;
+  const isOutOfStock = !isUnlimited && stock <= 0;
+
   // Guest actions
   const handleGuestAdd = () => {
     const current = getLocalGuestCart();
@@ -413,6 +417,15 @@ export default function ProductDetailClient() {
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
+            ) : isOutOfStock ? (
+              <Button
+                fullWidth
+                size="lg"
+                disabled
+                className="rounded-2xl shadow-lg cursor-not-allowed bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500"
+              >
+                Out of Stock
+              </Button>
             ) : (
               <Button
                 fullWidth
