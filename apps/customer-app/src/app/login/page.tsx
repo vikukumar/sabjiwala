@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
   Eye, EyeOff, ArrowRight, Phone, Lock, Mail, User, CheckCircle2, 
-  Loader2, ChevronLeft, Leaf, ShoppingBag, Truck, Shield, Key, Sparkles, AlertCircle
+  Loader2, ChevronLeft, Leaf, ShoppingBag, Truck, Shield, Key, Sparkles, AlertCircle,
+  Fingerprint, Smartphone
 } from "lucide-react";
 import { api } from "@sbjiwala/shared";
 import { useQueryClient } from "@tanstack/react-query";
@@ -778,22 +779,27 @@ function LoginPageContent() {
             {/* Tab Switched Header */}
             <div className="flex bg-slate-100 dark:bg-slate-800/60 rounded-2xl p-1 mb-6 border border-slate-200/50 dark:border-slate-700/50 overflow-x-auto gap-0.5">
               {[
-                { id: "otp", label: "OTP" },
-                { id: "password", label: "Password" },
-                { id: "passkey", label: "Passkey" },
-                { id: "magic", label: "Magic" }
-              ].map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id as ActiveTab)}
-                  className={`flex-1 py-2 rounded-xl text-[11px] font-black tracking-wider transition-all whitespace-nowrap px-2.5 ${tab === t.id
-                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200/20"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
-                    }`}
-                >
-                  {t.label}
-                </button>
-              ))}
+                { id: "otp", label: "OTP", icon: Smartphone },
+                { id: "password", label: "Password", icon: Lock },
+                { id: "passkey", label: "Passkey", icon: Fingerprint },
+                { id: "magic", label: "Magic", icon: Sparkles }
+              ].map(t => {
+                const Icon = t.icon;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setTab(t.id as ActiveTab)}
+                    className={`flex-1 py-2 rounded-xl text-[11px] font-black tracking-wider transition-all whitespace-nowrap px-2 flex items-center justify-center gap-1.5 ${tab === t.id
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200/20"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                      }`}
+                  >
+                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="hidden sm:inline">{t.label}</span>
+                    <span className="sr-only">{t.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* 1. OTP Login Tab */}

@@ -28,7 +28,7 @@ export const resolveLink = (href: string) => {
   const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
 
   let formattedHref = href;
-  if (href.startsWith("/orders/detail") || href.startsWith("/orders/track")) {
+  if (href.startsWith("/orders/detail") || href.startsWith("/orders/track") || href.startsWith("/orders/return")) {
     // Already query-param formatted, do nothing
   } else if (href.startsWith("/orders/")) {
     const segments = href.split("/");
@@ -1334,8 +1334,8 @@ function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalPro
             ) : savedAddresses.length > 0 ? (
               <div className="space-y-1.5">
                 {savedAddresses.map((addr: any) => {
-                  const displayName = addr.name || addr.address_type || "Address";
-                  const fullAddress = `${addr.street_address}, ${addr.city}, ${addr.state}`;
+                  const displayName = addr.label || "Address";
+                  const fullAddress = `${addr.address_line_1}${addr.address_line_2 ? `, ${addr.address_line_2}` : ""}, ${addr.city}, ${addr.state}`;
                   const lat = parseFloat(addr.latitude);
                   const lon = parseFloat(addr.longitude);
                   return (
