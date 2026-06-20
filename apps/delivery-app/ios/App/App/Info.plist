@@ -55,6 +55,8 @@
 	<string>Background location tracking is mandatory for customers and stores to track your live delivery progress in the background.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is required to take pictures of delivered orders as confirmation proof.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We require microphone access to support real-time WebRTC voice calls with support agents.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Photo library access is required to upload vehicle documentation.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

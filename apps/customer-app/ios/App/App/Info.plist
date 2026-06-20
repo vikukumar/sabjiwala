@@ -55,6 +55,8 @@
 	<string>We require background location to map delivery hubs accurately.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>We require camera access to upload profile pictures or report vegetable quality issues.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We require microphone access to support real-time WebRTC voice calls with support agents.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We require photo library access to upload images.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

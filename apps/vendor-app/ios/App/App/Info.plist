@@ -55,6 +55,8 @@
 	<string>Background location is needed to keep GPS coordinates calibrated with couriers.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is needed to snap vegetable inventory items or profile logos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We require microphone access to support real-time WebRTC voice calls with support agents.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Photo library access is needed to upload billing documents.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

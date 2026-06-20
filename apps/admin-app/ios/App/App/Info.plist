@@ -55,6 +55,8 @@
 	<string>Background location tracking is needed to manage and check route updates of delivery couriers in the background.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is needed to capture validation items or verification profiles.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We require microphone access to support real-time WebRTC voice calls with support agents.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Photo library access is needed to check uploaded vendor documents.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

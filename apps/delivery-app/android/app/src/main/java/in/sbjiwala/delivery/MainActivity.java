@@ -37,6 +37,23 @@ public class MainActivity extends BridgeActivity {
             }
         }
         
+        // Microphone permission (for WebRTC support calling)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.RECORD_AUDIO);
+        }
+        
+        // Modify audio settings (needed to switch to speakerphone during calls)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.MODIFY_AUDIO_SETTINGS) != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.MODIFY_AUDIO_SETTINGS);
+        }
+
+        // Bluetooth connect (for headsets on Android 12+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                permissionsNeeded.add(Manifest.permission.BLUETOOTH_CONNECT);
+            }
+        }
+        
         if (!permissionsNeeded.isEmpty()) {
             new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
                 @Override
