@@ -40,7 +40,7 @@ export function useWebSocket(onMessage?: (msg: any) => void, enabled: boolean = 
         }
       }
       
-      const ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
+      const ws = new WebSocket(`${protocol}//${baseHost}/api/v1/ws?token=${token}`);
       wsRef.current = ws;
 
       ws.onopen = () => {

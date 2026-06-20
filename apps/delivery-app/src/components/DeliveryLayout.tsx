@@ -551,7 +551,7 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
         baseHost = window.location.host;
         protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       }
-      ws = new WebSocket(`${protocol}//${baseHost}/ws?token=${token}`);
+      ws = new WebSocket(`${protocol}//${baseHost}/api/v1/ws?token=${token}`);
       wsRef.current = ws;
       ws.onmessage = (event) => {
         try {

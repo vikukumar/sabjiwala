@@ -158,7 +158,7 @@ def create_app() -> FastAPI:
 
     # WebSocket Route
     from app.websocket.handlers import router as ws_router
-    app.include_router(ws_router)
+    app.include_router(ws_router, prefix="/api/v1")
 
     # Serve Next.js static UI files at root
     import os
