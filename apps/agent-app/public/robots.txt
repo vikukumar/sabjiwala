@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Allow: /categories
+Allow: /search
+Allow: /offers
+Allow: /coupons
+Allow: /faq
+Allow: /about
+Allow: /how-it-works
+Disallow: /cart
+Disallow: /checkout
+Disallow: /orders
+Disallow: /profile
+Disallow: /wallet
+Disallow: /referrals
+Disallow: /settings
+Disallow: /addresses
+Disallow: /support
+Disallow: /wishlist
+
+Sitemap: https://sbjiwala.qzz.io/sitemap.xml

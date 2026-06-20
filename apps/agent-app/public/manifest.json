@@ -1,0 +1,46 @@
+{
+  "name": "Sbjiwala — Fresh Vegetables & Fruits",
+  "short_name": "Sbjiwala",
+  "description": "Order fresh farm vegetables & fruits delivered in 10 minutes. Direct from local farms.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#059669",
+  "orientation": "portrait-primary",
+  "lang": "en-IN",
+  "categories": [
+    "food",
+    "shopping"
+  ],
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Search Products",
+      "url": "/search",
+      "description": "Find fresh vegetables and fruits"
+    },
+    {
+      "name": "My Orders",
+      "url": "/orders",
+      "description": "Track your orders"
+    },
+    {
+      "name": "My Cart",
+      "url": "/cart",
+      "description": "View your cart"
+    }
+  ]
+}
