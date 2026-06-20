@@ -67,7 +67,7 @@ function OtpPromptModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 md:left-64 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-center shadow-2xl text-slate-800 dark:text-white">
         <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-950/40 rounded-2xl flex items-center justify-center mx-auto">
@@ -173,7 +173,7 @@ function ItemRejectionModal({
   if (!isOpen || !item) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 md:left-64 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-slate-800 dark:text-white shadow-2xl">
         <div className="w-12 h-12 bg-rose-100 dark:bg-rose-950/40 rounded-2xl flex items-center justify-center mx-auto text-rose-600 dark:text-rose-455">

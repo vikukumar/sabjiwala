@@ -331,7 +331,7 @@ export default function AgentReturnsPage() {
 
         {/* Lightbox / Modal for Image Preview */}
         {selectedImage && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 md:left-64 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-fade-in">
             <button 
               onClick={() => setSelectedImage(null)}
               className="absolute top-4 right-4 text-white/80 hover:text-white p-2 hover:bg-white/10 rounded-full transition-all border-0 bg-transparent cursor-pointer"

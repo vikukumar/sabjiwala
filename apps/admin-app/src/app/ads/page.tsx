@@ -259,7 +259,7 @@ export default function AdminAdsPage() {
 
         {/* Create / Edit Modal Popup Form */}
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black/60 dark:bg-black/85 flex items-center justify-center p-4 z-50 animate-fade-in backdrop-blur-sm">
+          <div className="fixed inset-0 md:left-64 bg-black/60 dark:bg-black/85 flex items-center justify-center p-4 z-50 animate-fade-in backdrop-blur-sm">
             <div className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl max-w-lg w-full border border-slate-200 dark:border-slate-800 relative animate-scale-in max-h-[90vh] flex flex-col">
               {/* Modal Header */}
               <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
