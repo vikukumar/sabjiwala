@@ -55,9 +55,13 @@ self.addEventListener("fetch", (event) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          if (event.request.headers.get("accept") && event.request.headers.get("accept").includes("text/html")) {
-            return caches.match(OFFLINE_URL);
+          const acceptHeader = event.request.headers.get("accept");
+          if (acceptHeader && acceptHeader.includes("text/html")) {
+            return caches.match(OFFLINE_URL).then((offlineResp) => {
+              return offlineResp || new Response("Offline Mode", { status: 503, headers: { "Content-Type": "text/plain" } });
+            });
           }
+          return new Response("Service Unavailable", { status: 503, headers: { "Content-Type": "text/plain" } });
         });
       })
   );

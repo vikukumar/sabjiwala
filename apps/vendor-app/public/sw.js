@@ -51,13 +51,19 @@ self.addEventListener("fetch", (event) => {
         return response;
       })
       .catch(() => {
+        // Fallback to cache
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          if (event.request.headers.get("accept") && event.request.headers.get("accept").includes("text/html")) {
-            return caches.match(OFFLINE_URL);
+          // If page request, return offline shell
+          const acceptHeader = event.request.headers.get("accept");
+          if (acceptHeader && acceptHeader.includes("text/html")) {
+            return caches.match(OFFLINE_URL).then((offlineResp) => {
+              return offlineResp || new Response("Offline Mode", { status: 503, headers: { "Content-Type": "text/plain" } });
+            });
           }
+          return new Response("Service Unavailable", { status: 503, headers: { "Content-Type": "text/plain" } });
         });
       })
   );
