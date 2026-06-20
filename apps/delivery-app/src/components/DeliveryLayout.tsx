@@ -747,20 +747,15 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
     <div className="flex flex-col h-full justify-between font-sans text-slate-300">
       <div className="space-y-6 flex flex-col h-[calc(100%-150px)]">
         <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="relative w-8 h-8 flex-shrink-0 bg-slate-800 rounded-lg flex items-center justify-center overflow-hidden">
-            <img
-              src={publicSettings?.app_icon_url || "/icon.png"}
-              alt="Icon"
-              className="w-full h-full object-contain"
-              onError={(e) => { e.currentTarget.src = "/icon.png"; }}
-            />
-          </div>
-          <div>
-            <p className="text-sm font-black text-white leading-none">
-              {publicSettings?.app_name || "Sbjiwala"}
-            </p>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Delivery Partner</p>
-          </div>
+          <img
+            src={publicSettings?.app_logo_url || "/logo_horizontal.png"}
+            alt={publicSettings?.app_name || "Logo"}
+            className="h-6 w-auto object-contain brightness-0 invert"
+            onError={(e) => { e.currentTarget.src = "/logo_horizontal.png"; }}
+          />
+          <span className="text-[10px] uppercase tracking-wider bg-slate-800 text-emerald-400 font-bold px-2 py-0.5 rounded">
+            Partner
+          </span>
         </div>
 
         {/* Scrollable sidebar menu area */}
@@ -897,21 +892,18 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
                 </button>
 
                 <div className="flex items-center gap-2">
-                  <div className="relative w-8 h-8 flex-shrink-0 bg-slate-850 rounded-lg flex items-center justify-center overflow-hidden md:hidden">
+                  <div className="flex items-center gap-2 md:hidden">
                     <img
-                      src={publicSettings?.app_icon_url || "/icon.png"}
-                      alt="Icon"
-                      className="w-full h-full object-contain"
-                      onError={(e) => { e.currentTarget.src = "/icon.png"; }}
+                      src={publicSettings?.app_logo_url || "/logo_horizontal.png"}
+                      alt={publicSettings?.app_name || "Logo"}
+                      className="h-7 w-auto object-contain"
+                      onError={(e) => { e.currentTarget.src = "/logo_horizontal.png"; }}
                     />
+                    <span className="text-[9px] uppercase bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded-full">
+                      Partner
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-xs font-black text-slate-900 dark:text-white leading-none md:hidden">
-                      {publicSettings?.app_name || "Sbjiwala"}
-                    </p>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider md:hidden">Delivery Partner</p>
-                    <p className="text-sm font-black text-slate-800 dark:text-white leading-none hidden md:block">Delivery Agent Dashboard</p>
-                  </div>
+                  <p className="text-sm font-black text-slate-800 dark:text-white leading-none hidden md:block">Delivery Agent Dashboard</p>
                 </div>
               </div>
 

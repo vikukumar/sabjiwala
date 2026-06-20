@@ -170,23 +170,16 @@ export default function AdminLayout({ children, title = "Admin Panel" }: AdminLa
     <div className="flex flex-col h-full justify-between">
       <div className="space-y-6 flex flex-col h-[calc(100%-120px)]">
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-2 flex-shrink-0">
-          <div className="relative w-8 h-8 flex-shrink-0 bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden">
-            <img
-              src={publicSettings?.app_icon_url || "/icon.png"}
-              alt="Icon"
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                e.currentTarget.src = "/icon.png";
-              }}
-            />
-          </div>
-          <div>
-            <p className="text-white font-black text-sm tracking-tight leading-none">
-              {publicSettings?.app_name || "Sbjiwala"}
-            </p>
-            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Admin Portal</span>
-          </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <img
+            src={publicSettings?.app_logo_url || "/logo_horizontal.png"}
+            alt={publicSettings?.app_name || "Logo"}
+            className="h-6 w-auto object-contain brightness-0 invert"
+            onError={(e) => { e.currentTarget.src = "/logo_horizontal.png"; }}
+          />
+          <span className="text-[10px] uppercase tracking-wider bg-slate-800 text-slate-400 font-bold px-2 py-0.5 rounded">
+            Admin
+          </span>
         </div>
 
         {/* Alert badges */}
