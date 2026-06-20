@@ -124,7 +124,7 @@ export default function ProfilePage() {
 
   const getAvatarContent = () => {
     if (profile?.avatar_url) {
-      return <img src={resolveImageUrl(profile.avatar_url)} alt="Avatar" className="w-full h-full object-cover rounded-2xl" />;
+      return <img src={resolveImageUrl(profile.avatar_url)} alt="Avatar" className="w-full h-full object-cover rounded-full" />;
     }
     const emoji = profile?.gender === "male" ? "👨‍🌾" : profile?.gender === "female" ? "👩‍🌾" : "👤";
     return <span className="text-3xl select-none">{emoji}</span>;
@@ -135,10 +135,10 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
       {/* Profile Header */}
-      <Card className="relative overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md">
+      <Card padding="none" className="relative overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md">
         {/* Cover Image based on services and Sbjiwala mark */}
         <div 
-          className="h-36 rounded-t-2xl -mx-6 -mt-6 mb-0 relative overflow-hidden flex items-center justify-between px-6 text-white select-none border-b border-slate-200 dark:border-slate-805 bg-cover bg-center"
+          className="h-36 rounded-t-2xl mb-0 relative overflow-hidden flex items-center justify-between px-6 text-white select-none border-b border-slate-200 dark:border-slate-800 bg-cover bg-center"
           style={{ backgroundImage: `url('https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800')` }}
         >
           <div className="absolute inset-0 bg-slate-950/45 dark:bg-slate-950/60 backdrop-blur-[1px]" />
@@ -149,77 +149,79 @@ export default function ProfilePage() {
           <span className="text-4xl opacity-80 relative z-10 drop-shadow-md">🥬🥕🍅</span>
         </div>
 
-        <div className="flex items-end gap-4 -mt-12 mb-4 relative z-10">
-          <div className="relative flex-shrink-0">
-            {/* Custom Farm Avatar */}
-            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white border-4 border-white dark:border-slate-900 shadow-xl relative overflow-hidden">
-              {uploadingAvatar ? <Spinner size="sm" className="text-white" /> : getAvatarContent()}
-            </div>
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarChange}
-              disabled={uploadingAvatar}
-            />
-            <button 
-              type="button"
-              onClick={() => avatarInputRef.current?.click()}
-              disabled={uploadingAvatar}
-              className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 hover:bg-emerald-700 transition-all shadow-md cursor-pointer hover:scale-105 active:scale-95"
-            >
-              <Camera className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="pb-1 flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-xl font-black text-slate-900 dark:text-white truncate leading-tight">{fullName}</h2>
-              {isNameMissing && (
-                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/50 animate-pulse">
-                  ✏️ Set Name
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{profile?.email || profile?.phone}</p>
-            <Badge variant={profile?.is_verified ? "success" : "warning"} size="sm" className="mt-1.5">
-              {profile?.is_verified ? "Verified Profile" : "Unverified Profile"}
-            </Badge>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            leftIcon={<Edit2 className="w-3.5 h-3.5" />}
-            onClick={() => setEditing(!editing)}
-          >
-            {editing ? "Cancel" : "Edit Profile"}
-          </Button>
-        </div>
-
-        {/* Edit Form */}
-        {editing && (
-          <form onSubmit={handleSubmit((d) => updateProfile.mutate(d))} className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-            <div className="grid grid-cols-2 gap-3">
-              <Input label="First Name" leftIcon={<User className="w-4 h-4" />} {...register("first_name", { required: true })} />
-              <Input label="Last Name" leftIcon={<User className="w-4 h-4" />} {...register("last_name")} />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-bold text-slate-505 dark:text-slate-400 uppercase mb-1">Gender</label>
-              <select
-                {...register("gender")}
-                className="input-base px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full focus:outline-none focus:border-emerald-500 text-slate-800 dark:text-white"
+        <div className="px-6 pb-6 pt-4">
+          <div className="flex items-end gap-4 mb-4 relative z-10">
+            <div className="relative flex-shrink-0 -mt-12">
+              {/* Custom Farm Avatar */}
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white border-4 border-white dark:border-slate-900 shadow-xl relative overflow-hidden">
+                {uploadingAvatar ? <Spinner size="sm" className="text-white" /> : getAvatarContent()}
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+                disabled={uploadingAvatar}
+              />
+              <button 
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 hover:bg-emerald-700 transition-all shadow-md cursor-pointer hover:scale-105 active:scale-95"
               >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
+                <Camera className="w-4 h-4" />
+              </button>
             </div>
-            <Input label="Email" type="email" leftIcon={<Mail className="w-4 h-4" />} {...register("email")} />
-            <Input label="Phone" type="tel" leftIcon={<Phone className="w-4 h-4" />} {...register("phone")} readOnly hint="Contact support to change phone number" />
-            <Button type="submit" loading={updateProfile.isPending} leftIcon={<Save className="w-4 h-4" />}>Save Changes</Button>
-          </form>
-        )}
+            <div className="pb-1 flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white truncate leading-tight">{fullName}</h2>
+                {isNameMissing && (
+                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/50 animate-pulse">
+                    ✏️ Set Name
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{profile?.email || profile?.phone}</p>
+              <Badge variant={profile?.is_verified ? "success" : "warning"} size="sm" className="mt-1.5">
+                {profile?.is_verified ? "Verified Profile" : "Unverified Profile"}
+              </Badge>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<Edit2 className="w-3.5 h-3.5" />}
+              onClick={() => setEditing(!editing)}
+            >
+              {editing ? "Cancel" : "Edit Profile"}
+            </Button>
+          </div>
+
+          {/* Edit Form */}
+          {editing && (
+            <form onSubmit={handleSubmit((d) => updateProfile.mutate(d))} className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="First Name" leftIcon={<User className="w-4 h-4" />} {...register("first_name", { required: true })} />
+                <Input label="Last Name" leftIcon={<User className="w-4 h-4" />} {...register("last_name")} />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-505 dark:text-slate-400 uppercase mb-1">Gender</label>
+                <select
+                  {...register("gender")}
+                  className="input-base px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full focus:outline-none focus:border-emerald-500 text-slate-800 dark:text-white"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <Input label="Email" type="email" leftIcon={<Mail className="w-4 h-4" />} {...register("email")} />
+              <Input label="Phone" type="tel" leftIcon={<Phone className="w-4 h-4" />} {...register("phone")} readOnly hint="Contact support to change phone number" />
+              <Button type="submit" loading={updateProfile.isPending} leftIcon={<Save className="w-4 h-4" />}>Save Changes</Button>
+            </form>
+          )}
+        </div>
       </Card>
 
       {/* Stats */}
