@@ -24,7 +24,14 @@ permissions:
 env:
   API_URL: ${{ github.event.inputs.api_url || 'https://sbjiwala.qzz.io/api/v1' }}
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper shell function injected by every step that needs to copy the shared pkg
+# ─────────────────────────────────────────────────────────────────────────────
+
 jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 1. Version
+  # ═══════════════════════════════════════════════════════════════════════════
   read-version:
     runs-on: ubuntu-latest
     outputs:
@@ -39,28 +46,25 @@ jobs:
         id: get-version
         run: |
           BASE_VERSION=$(jq -r '.version' version.json)
-          
-          # If triggered by a tag push, extract it
+
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             FULL_VERSION=${GITHUB_REF#refs/tags/v}
           else
-            # Triggered by push to main or workflow_dispatch
-            # Format: v{base_version}.{run_number}
             FULL_VERSION="${BASE_VERSION}.${{ github.run_number }}"
-            
-            # Configure Git
             git config --global user.name "github-actions[bot]"
             git config --global user.email "github-actions[bot]@users.noreply.github.com"
-            
             TAG_NAME="v${FULL_VERSION}"
             echo "Creating and pushing tag $TAG_NAME"
             git tag "$TAG_NAME"
             git push origin "$TAG_NAME"
           fi
-          
+
           echo "version=$FULL_VERSION" >> $GITHUB_OUTPUT
           echo "Release version: $FULL_VERSION"
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 2. Docker — backend / web / complete (multi-arch)
+  # ═══════════════════════════════════════════════════════════════════════════
   build-push-docker:
     needs: read-version
     runs-on: ubuntu-latest
@@ -81,7 +85,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry (GHCR)
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -93,20 +97,18 @@ jobs:
         run: |
           PLATFORM_CLEAN=$(echo "${{ matrix.platform }}" | sed 's/\//-/g')
           echo "PLATFORM_CLEAN=$PLATFORM_CLEAN" >> $GITHUB_ENV
-          
-          # Setup Context and Dockerfile
+
           if [ "${{ matrix.image_type }}" = "backend" ]; then
-            echo "CONTEXT=apps/backend" >> $GITHUB_ENV
+            echo "CONTEXT=apps/backend"          >> $GITHUB_ENV
             echo "DOCKERFILE=infrastructure/docker/Dockerfile.backend" >> $GITHUB_ENV
           elif [ "${{ matrix.image_type }}" = "complete" ]; then
-            echo "CONTEXT=." >> $GITHUB_ENV
+            echo "CONTEXT=."                      >> $GITHUB_ENV
             echo "DOCKERFILE=infrastructure/docker/Dockerfile.complete" >> $GITHUB_ENV
           else
-            echo "CONTEXT=." >> $GITHUB_ENV
+            echo "CONTEXT=."                      >> $GITHUB_ENV
             echo "DOCKERFILE=infrastructure/docker/Dockerfile.web" >> $GITHUB_ENV
           fi
 
-          # Generate tags (GHCR only)
           TAGS="ghcr.io/${{ github.repository }}/${{ matrix.image_type }}:${{ needs.read-version.outputs.version }}-${PLATFORM_CLEAN}"
           echo "TAGS=$TAGS" >> $GITHUB_ENV
 
@@ -121,6 +123,9 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image_type }}-${{ env.PLATFORM_CLEAN }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image_type }}-${{ env.PLATFORM_CLEAN }}
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 3. Docker manifests
+  # ═══════════════════════════════════════════════════════════════════════════
   release-docker-manifests:
     needs: [read-version, build-push-docker]
     runs-on: ubuntu-latest
@@ -128,7 +133,7 @@ jobs:
       matrix:
         image_type: [backend, web, complete]
     steps:
-      - name: Log in to GitHub Container Registry (GHCR)
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -143,6 +148,9 @@ jobs:
             ghcr.io/${{ github.repository }}/${{ matrix.image_type }}:${{ needs.read-version.outputs.version }}-linux-amd64 \
             ghcr.io/${{ github.repository }}/${{ matrix.image_type }}:${{ needs.read-version.outputs.version }}-linux-arm64
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 4. Web apps — sbjiwala-web + agent-app (Next.js static zips)
+  # ═══════════════════════════════════════════════════════════════════════════
   build-web-zip:
     needs: read-version
     runs-on: ubuntu-latest
@@ -156,75 +164,89 @@ jobs:
           node-version: 24
           cache: 'npm'
           cache-dependency-path: |
-            apps/sbjiwala-web/package.json
-            shared/package.json
+            apps/sbjiwala-web/package-lock.json
+            apps/agent-app/package-lock.json
+            shared/package-lock.json
 
+      # ── Shared package ────────────────────────────────────────────────────
       - name: Build Shared Package
         run: |
           cd shared
-          npm install
+          npm ci
           npm run build
 
-      - name: Setup Web App
-        env:
-          API_URL: ${{ env.API_URL }}
+      # ── sbjiwala-web ──────────────────────────────────────────────────────
+      - name: Install & Patch sbjiwala-web
         run: |
           cd apps/sbjiwala-web
-          
-          # Create .env.production with API URL if provided
-          # if [ -n "$API_URL" ]; then
-          #   echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
-          #   echo "API URL configured: $API_URL"
-          # fi
-          
-          npm install
-          
-          # Replace symlink with physical copy of shared package to satisfy Turbopack
+          npm ci
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
-          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
-          cp -r ../../shared/src node_modules/@sbjiwala/shared/
+          cp -r ../../shared/dist     node_modules/@sbjiwala/shared/
+          cp -r ../../shared/src      node_modules/@sbjiwala/shared/
           cp ../../shared/package.json node_modules/@sbjiwala/shared/
           cp ../../shared/tsconfig.json node_modules/@sbjiwala/shared/
 
-      - name: Copy Dashboard Views to Web App
+      - name: Sync sub-app pages into sbjiwala-web
         run: |
-          mkdir -p apps/sbjiwala-web/src/app/vendor apps/sbjiwala-web/src/app/delivery apps/sbjiwala-web/src/app/admin
-          cp apps/customer-app/src/app/page.tsx apps/sbjiwala-web/src/app/page.tsx
-          cp apps/vendor-app/src/app/page.tsx apps/sbjiwala-web/src/app/vendor/page.tsx
-          cp -r apps/vendor-app/src/app/kyc apps/sbjiwala-web/src/app/
-          cp apps/delivery-app/src/app/page.tsx apps/sbjiwala-web/src/app/delivery/page.tsx
-          cp apps/admin-app/src/app/page.tsx apps/sbjiwala-web/src/app/admin/page.tsx
-          cp -r apps/admin-app/src/app/users apps/sbjiwala-web/src/app/
+          mkdir -p apps/sbjiwala-web/src/app/vendor \
+                   apps/sbjiwala-web/src/app/delivery \
+                   apps/sbjiwala-web/src/app/admin
+          cp apps/customer-app/src/app/page.tsx  apps/sbjiwala-web/src/app/page.tsx
+          cp apps/vendor-app/src/app/page.tsx    apps/sbjiwala-web/src/app/vendor/page.tsx
+          cp -r apps/vendor-app/src/app/kyc      apps/sbjiwala-web/src/app/
+          cp apps/delivery-app/src/app/page.tsx  apps/sbjiwala-web/src/app/delivery/page.tsx
+          cp apps/admin-app/src/app/page.tsx     apps/sbjiwala-web/src/app/admin/page.tsx
+          cp -r apps/admin-app/src/app/users     apps/sbjiwala-web/src/app/
 
-      - name: Build Web App Static Export
-        env:
-          API_URL: ${{ env.API_URL }}
+      - name: Build sbjiwala-web Static Export
         run: |
           cd apps/sbjiwala-web
-          
-          # Build with NEXT_PUBLIC_API_URL if provided
-          # if [ -n "$API_URL" ]; then
-          #   NEXT_PUBLIC_API_URL="$API_URL" npm run build
-          # else
-          #   npm run build
-          # fi
           npm run build
 
-      - name: Zip Web App Static Export
+      - name: Zip sbjiwala-web Static Export
         run: |
           cd apps/sbjiwala-web/out
           zip -r ../../../sbjiwala-web-static.zip .
 
-      - name: Upload Web App Artifact
+      # ── agent-app (Next.js only — no Capacitor) ───────────────────────────
+      - name: Install & Patch agent-app
+        run: |
+          cd apps/agent-app
+          npm ci
+          rm -rf node_modules/@sbjiwala/shared
+          mkdir -p node_modules/@sbjiwala/shared
+          cp -r ../../shared/dist      node_modules/@sbjiwala/shared/
+          cp -r ../../shared/src       node_modules/@sbjiwala/shared/
+          cp ../../shared/package.json node_modules/@sbjiwala/shared/
+          cp ../../shared/tsconfig.json node_modules/@sbjiwala/shared/
+
+      - name: Build agent-app Static Export
+        run: |
+          cd apps/agent-app
+          npm run build
+
+      - name: Zip agent-app Static Export
+        run: |
+          cd apps/agent-app/out
+          zip -r ../../../sbjiwala-agent-v${{ needs.read-version.outputs.version }}-web.zip .
+
+      - name: Upload Web Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: web-static
-          path: sbjiwala-web-static.zip
+          path: |
+            sbjiwala-web-static.zip
+            sbjiwala-agent-v${{ needs.read-version.outputs.version }}-web.zip
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 5. Android — customer, vendor, delivery, admin  (one runner, sequential)
+  # ═══════════════════════════════════════════════════════════════════════════
   build-android:
     needs: read-version
     runs-on: ubuntu-latest
+    env:
+      VER: ${{ needs.read-version.outputs.version }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -243,83 +265,102 @@ jobs:
       - name: Build Shared Package
         run: |
           cd shared
-          npm install
+          npm ci
           npm run build
 
+      # ── Keystore setup ────────────────────────────────────────────────────
       - name: Setup Android Keystore
-        id: android_keystore
         run: |
           if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
             echo "Using production keystore from secrets."
             echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > $GITHUB_WORKSPACE/release.keystore
-            echo "HAS_PROD_KEYSTORE=true" >> $GITHUB_ENV
+            echo "HAS_PROD_KEYSTORE=true"                        >> $GITHUB_ENV
             echo "KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore" >> $GITHUB_ENV
             echo "STORE_PASS=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
-            echo "KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
-            echo "KEY_PASS=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
+            echo "KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}"    >> $GITHUB_ENV
+            echo "KEY_PASS=${{ secrets.ANDROID_KEY_PASSWORD }}"  >> $GITHUB_ENV
           else
             echo "Using self-signed fallback keystore."
-            keytool -genkey -v -keystore $GITHUB_WORKSPACE/release.keystore -alias sbjiwala -keyalg RSA -keysize 2048 -validity 10000 \
+            keytool -genkey -v \
+              -keystore $GITHUB_WORKSPACE/release.keystore \
+              -alias sbjiwala -keyalg RSA -keysize 2048 -validity 10000 \
               -dname "CN=sbjiwala.qzz.io, OU=Dev, O=Sbjiwala, L=Mumbai, S=MH, C=IN" \
               -storepass password -keypass password
-            echo "HAS_PROD_KEYSTORE=false" >> $GITHUB_ENV
-            echo "KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore" >> $GITHUB_ENV
-            echo "STORE_PASS=password" >> $GITHUB_ENV
-            echo "KEY_ALIAS=sbjiwala" >> $GITHUB_ENV
-            echo "KEY_PASS=password" >> $GITHUB_ENV
+            echo "HAS_PROD_KEYSTORE=false"                           >> $GITHUB_ENV
+            echo "KEYSTORE_FILE=$GITHUB_WORKSPACE/release.keystore"  >> $GITHUB_ENV
+            echo "STORE_PASS=password"   >> $GITHUB_ENV
+            echo "KEY_ALIAS=sbjiwala"    >> $GITHUB_ENV
+            echo "KEY_PASS=password"     >> $GITHUB_ENV
           fi
-          
+
           if [ -n "${{ secrets.PLAY_STORE_CONFIG_JSON }}" ]; then
-            echo "HAS_PLAY_STORE_CONFIG=true" >> $GITHUB_ENV
+            echo "HAS_PLAY_STORE_CONFIG=true"  >> $GITHUB_ENV
           else
             echo "HAS_PLAY_STORE_CONFIG=false" >> $GITHUB_ENV
           fi
 
-      # ── Customer App ────────────────────────────────────────────────────────
-      - name: Build & Sync Customer App (Android)
-        env:
-          API_URL: ${{ env.API_URL }}
+      # ── Reusable helper ───────────────────────────────────────────────────
+      # Inline shell function used by every app build step below.
+      # Usage: build_next_app <app-dir>
+      - name: Define shared build helper
         run: |
-          cd apps/customer-app
-          
-          # Create .env.production with API URL if provided
-          if [ -n "$API_URL" ]; then
+          cat << 'HELPER' > /tmp/build_next_app.sh
+          #!/usr/bin/env bash
+          set -euo pipefail
+          APP=$1
+          cd "apps/$APP"
+          if [ -n "${API_URL:-}" ]; then
             echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
-            echo "API URL configured: $API_URL"
           fi
-          
-          npm install
+          npm ci
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
-          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
-          cp -r ../../shared/src  node_modules/@sbjiwala/shared/
+          cp -r ../../shared/dist      node_modules/@sbjiwala/shared/
+          cp -r ../../shared/src       node_modules/@sbjiwala/shared/
           cp ../../shared/package.json node_modules/@sbjiwala/shared/
-          
-          # Build with NEXT_PUBLIC_API_URL if provided
-          if [ -n "$API_URL" ]; then
+          if [ -n "${API_URL:-}" ]; then
             NEXT_PUBLIC_API_URL="$API_URL" npm run build
           else
             npm run build
           fi
-          
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          #npx cap add android
           npx cap sync android
-          printf '\nconfigurations.all {\n    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"\n    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"\n}\n' >> android/app/build.gradle
+          printf '\nconfigurations.all {\n  exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"\n  exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"\n}\n' >> android/app/build.gradle
+          HELPER
+          chmod +x /tmp/build_next_app.sh
 
-      - name: Compile & Sign Customer Android App
+      # ── Gradle sign helper ────────────────────────────────────────────────
+      - name: Define Gradle sign helper
         run: |
-          cd apps/customer-app/android
+          cat << 'HELPER' > /tmp/gradle_sign.sh
+          #!/usr/bin/env bash
+          set -euo pipefail
+          APP_DIR=$1   # e.g. apps/customer-app
+          APK_NAME=$2  # e.g. sbjiwala-v1.0.apk
+          AAB_NAME=$3  # e.g. sbjiwala-v1.0.aab
+          cd "$APP_DIR/android"
           chmod +x gradlew
           ./gradlew bundleRelease assembleRelease \
             -Pandroid.injected.signing.store.file=$KEYSTORE_FILE \
             -Pandroid.injected.signing.store.password=$STORE_PASS \
             -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
             -Pandroid.injected.signing.key.password=$KEY_PASS
-          cp app/build/outputs/apk/release/app-release.apk \
-            $GITHUB_WORKSPACE/sbjiwala-v${{ needs.read-version.outputs.version }}.apk
-          cp app/build/outputs/bundle/release/app-release.aab \
-            $GITHUB_WORKSPACE/sbjiwala-v${{ needs.read-version.outputs.version }}.aab
+          cp app/build/outputs/apk/release/app-release.apk    "$GITHUB_WORKSPACE/$APK_NAME"
+          cp app/build/outputs/bundle/release/app-release.aab "$GITHUB_WORKSPACE/$AAB_NAME"
+          HELPER
+          chmod +x /tmp/gradle_sign.sh
+
+      # ── Customer App ──────────────────────────────────────────────────────
+      - name: Build & Sync Customer App (Android)
+        env:
+          API_URL: ${{ env.API_URL }}
+        run: /tmp/build_next_app.sh customer-app
+
+      - name: Compile & Sign Customer Android App
+        run: |
+          /tmp/gradle_sign.sh apps/customer-app \
+            "sbjiwala-v${{ env.VER }}.apk" \
+            "sbjiwala-v${{ env.VER }}.aab"
 
       - name: Upload Customer App to Play Store
         if: env.HAS_PROD_KEYSTORE == 'true' && env.HAS_PLAY_STORE_CONFIG == 'true'
@@ -327,55 +368,21 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
           packageName: com.sbjiwala.customer
-          releaseFiles: sbjiwala-v${{ needs.read-version.outputs.version }}.aab
+          releaseFiles: sbjiwala-v${{ env.VER }}.aab
           track: internal
           status: completed
 
-      # ── Vendor App ──────────────────────────────────────────────────────────
+      # ── Vendor App ────────────────────────────────────────────────────────
       - name: Build & Sync Vendor App (Android)
         env:
           API_URL: ${{ env.API_URL }}
-        run: |
-          cd apps/vendor-app
-          
-          # Create .env.production with API URL if provided
-          if [ -n "$API_URL" ]; then
-            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
-            echo "API URL configured: $API_URL"
-          fi
-          
-          npm install
-          rm -rf node_modules/@sbjiwala/shared
-          mkdir -p node_modules/@sbjiwala/shared
-          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
-          cp -r ../../shared/src  node_modules/@sbjiwala/shared/
-          cp ../../shared/package.json node_modules/@sbjiwala/shared/
-          
-          # Build with NEXT_PUBLIC_API_URL if provided
-          if [ -n "$API_URL" ]; then
-            NEXT_PUBLIC_API_URL="$API_URL" npm run build
-          else
-            npm run build
-          fi
-          
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          #npx cap add android
-          npx cap sync android
-          printf '\nconfigurations.all {\n    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"\n    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"\n}\n' >> android/app/build.gradle
+        run: /tmp/build_next_app.sh vendor-app
 
       - name: Compile & Sign Vendor Android App
         run: |
-          cd apps/vendor-app/android
-          chmod +x gradlew
-          ./gradlew bundleRelease assembleRelease \
-            -Pandroid.injected.signing.store.file=$KEYSTORE_FILE \
-            -Pandroid.injected.signing.store.password=$STORE_PASS \
-            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
-            -Pandroid.injected.signing.key.password=$KEY_PASS
-          cp app/build/outputs/apk/release/app-release.apk \
-            $GITHUB_WORKSPACE/sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
-          cp app/build/outputs/bundle/release/app-release.aab \
-            $GITHUB_WORKSPACE/sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
+          /tmp/gradle_sign.sh apps/vendor-app \
+            "sbjiwala-vendor-v${{ env.VER }}.apk" \
+            "sbjiwala-vendor-v${{ env.VER }}.aab"
 
       - name: Upload Vendor App to Play Store
         if: env.HAS_PROD_KEYSTORE == 'true' && env.HAS_PLAY_STORE_CONFIG == 'true'
@@ -383,55 +390,21 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
           packageName: com.sbjiwala.vendor
-          releaseFiles: sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
+          releaseFiles: sbjiwala-vendor-v${{ env.VER }}.aab
           track: internal
           status: completed
 
-      # ── Delivery App ────────────────────────────────────────────────────────
+      # ── Delivery App ──────────────────────────────────────────────────────
       - name: Build & Sync Delivery App (Android)
         env:
           API_URL: ${{ env.API_URL }}
-        run: |
-          cd apps/delivery-app
-          
-          # Create .env.production with API URL if provided
-          if [ -n "$API_URL" ]; then
-            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
-            echo "API URL configured: $API_URL"
-          fi
-          
-          npm install
-          rm -rf node_modules/@sbjiwala/shared
-          mkdir -p node_modules/@sbjiwala/shared
-          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
-          cp -r ../../shared/src  node_modules/@sbjiwala/shared/
-          cp ../../shared/package.json node_modules/@sbjiwala/shared/
-          
-          # Build with NEXT_PUBLIC_API_URL if provided
-          if [ -n "$API_URL" ]; then
-            NEXT_PUBLIC_API_URL="$API_URL" npm run build
-          else
-            npm run build
-          fi
-          
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          #npx cap add android
-          npx cap sync android
-          printf '\nconfigurations.all {\n    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"\n    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"\n}\n' >> android/app/build.gradle
+        run: /tmp/build_next_app.sh delivery-app
 
       - name: Compile & Sign Delivery Android App
         run: |
-          cd apps/delivery-app/android
-          chmod +x gradlew
-          ./gradlew bundleRelease assembleRelease \
-            -Pandroid.injected.signing.store.file=$KEYSTORE_FILE \
-            -Pandroid.injected.signing.store.password=$STORE_PASS \
-            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
-            -Pandroid.injected.signing.key.password=$KEY_PASS
-          cp app/build/outputs/apk/release/app-release.apk \
-            $GITHUB_WORKSPACE/sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
-          cp app/build/outputs/bundle/release/app-release.aab \
-            $GITHUB_WORKSPACE/sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab
+          /tmp/gradle_sign.sh apps/delivery-app \
+            "sbjiwala-delivery-v${{ env.VER }}.apk" \
+            "sbjiwala-delivery-v${{ env.VER }}.aab"
 
       - name: Upload Delivery App to Play Store
         if: env.HAS_PROD_KEYSTORE == 'true' && env.HAS_PLAY_STORE_CONFIG == 'true'
@@ -439,26 +412,73 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
           packageName: com.sbjiwala.delivery
-          releaseFiles: sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab
+          releaseFiles: sbjiwala-delivery-v${{ env.VER }}.aab
           track: internal
           status: completed
+
+      # ── Admin App (NEW) ───────────────────────────────────────────────────
+      - name: Build & Sync Admin App (Android)
+        env:
+          API_URL: ${{ env.API_URL }}
+        run: /tmp/build_next_app.sh admin-app
+
+      - name: Compile & Sign Admin Android App
+        run: |
+          /tmp/gradle_sign.sh apps/admin-app \
+            "sbjiwala-admin-v${{ env.VER }}.apk" \
+            "sbjiwala-admin-v${{ env.VER }}.aab"
+
+      # Admin APK is internal-only — no Play Store upload (internal tool)
+
+      # ── Package all APKs into per-app zip bundles ─────────────────────────
+      - name: Create per-app zip bundles
+        run: |
+          VER="${{ env.VER }}"
+          cd $GITHUB_WORKSPACE
+
+          zip sbjiwala-customer-v${VER}-android.zip \
+            sbjiwala-v${VER}.apk \
+            sbjiwala-v${VER}.aab
+
+          zip sbjiwala-vendor-v${VER}-android.zip \
+            sbjiwala-vendor-v${VER}.apk \
+            sbjiwala-vendor-v${VER}.aab
+
+          zip sbjiwala-delivery-v${VER}-android.zip \
+            sbjiwala-delivery-v${VER}.apk \
+            sbjiwala-delivery-v${VER}.aab
+
+          zip sbjiwala-admin-v${VER}-android.zip \
+            sbjiwala-admin-v${VER}.apk \
+            sbjiwala-admin-v${VER}.aab
 
       - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-apks
           path: |
-            sbjiwala-v${{ needs.read-version.outputs.version }}.apk
-            sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
-            sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
-            sbjiwala-v${{ needs.read-version.outputs.version }}.aab
-            sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
-            sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab
+            sbjiwala-v${{ env.VER }}.apk
+            sbjiwala-vendor-v${{ env.VER }}.apk
+            sbjiwala-delivery-v${{ env.VER }}.apk
+            sbjiwala-admin-v${{ env.VER }}.apk
+            sbjiwala-v${{ env.VER }}.aab
+            sbjiwala-vendor-v${{ env.VER }}.aab
+            sbjiwala-delivery-v${{ env.VER }}.aab
+            sbjiwala-admin-v${{ env.VER }}.aab
+            sbjiwala-customer-v${{ env.VER }}-android.zip
+            sbjiwala-vendor-v${{ env.VER }}-android.zip
+            sbjiwala-delivery-v${{ env.VER }}-android.zip
+            sbjiwala-admin-v${{ env.VER }}-android.zip
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 6. iOS — customer, vendor, delivery (macOS runner)
+  # ═══════════════════════════════════════════════════════════════════════════
   build-ios:
     needs: read-version
     runs-on: macos-latest
     if: ${{ github.event_name == 'push' && (github.event.inputs.build_ios != 'false' && github.event.inputs.build_ios != false) }}
+    env:
+      VER: ${{ needs.read-version.outputs.version }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -474,9 +494,10 @@ jobs:
       - name: Build Shared Package
         run: |
           cd shared
-          npm install
+          npm ci
           npm run build
 
+      # ── Apple certificates ────────────────────────────────────────────────
       - name: Install Apple Certificate and Provisioning Profiles
         id: apple_cert
         env:
@@ -502,9 +523,9 @@ jobs:
           else
             echo "HAS_APPLE_CERTS=false" >> $GITHUB_ENV
           fi
-          
+
           if [ -n "${{ secrets.APPSTORE_KEY_ID }}" ]; then
-            echo "HAS_APPSTORE_KEY=true" >> $GITHUB_ENV
+            echo "HAS_APPSTORE_KEY=true"  >> $GITHUB_ENV
           else
             echo "HAS_APPSTORE_KEY=false" >> $GITHUB_ENV
           fi
@@ -513,198 +534,142 @@ jobs:
         if: env.HAS_APPLE_CERTS == 'true' && env.HAS_APPSTORE_KEY == 'true'
         run: |
           mkdir -p ~/.appstoreconnect/private_keys/
-          echo "${{ secrets.APPSTORE_PRIVATE_KEY }}" > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8
+          echo "${{ secrets.APPSTORE_PRIVATE_KEY }}" > \
+            ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8
 
-      # ── Customer App ────────────────────────────────────────────────────────
-      - name: Build & Sync Customer App (iOS)
-        env:
-          API_URL: ${{ env.API_URL }}
+      # ── iOS build helper ──────────────────────────────────────────────────
+      - name: Define iOS build helper
         run: |
-          cd apps/customer-app
-          
-          # Create .env.production with API URL if provided
-          if [ -n "$API_URL" ]; then
+          cat << 'HELPER' > /tmp/build_ios_app.sh
+          #!/usr/bin/env bash
+          set -euo pipefail
+          APP=$1
+          cd "apps/$APP"
+          if [ -n "${API_URL:-}" ]; then
             echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
-            echo "API URL configured: $API_URL"
           fi
-          
-          npm install
+          npm ci
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
-          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
-          cp -r ../../shared/src  node_modules/@sbjiwala/shared/
-          cp ../../shared/package.json node_modules/@sbjiwala/shared/
-          
-          # Build with NEXT_PUBLIC_API_URL if provided
-          if [ -n "$API_URL" ]; then
+          cp -r ../../shared/dist       node_modules/@sbjiwala/shared/
+          cp -r ../../shared/src        node_modules/@sbjiwala/shared/
+          cp ../../shared/package.json  node_modules/@sbjiwala/shared/
+          if [ -n "${API_URL:-}" ]; then
             NEXT_PUBLIC_API_URL="$API_URL" npm run build
           else
             npm run build
           fi
-          
           npm install @capacitor/core @capacitor/cli @capacitor/ios
-          #npx cap add ios || true
           sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile || true
           find ios/App/App.xcodeproj -name "project.pbxproj" -exec \
             sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9][0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' {} \; || true
           npx cap sync ios
+          HELPER
+          chmod +x /tmp/build_ios_app.sh
+
+      # ── iOS compile helper ────────────────────────────────────────────────
+      - name: Define iOS compile helper
+        run: |
+          cat << 'HELPER' > /tmp/compile_ios_app.sh
+          #!/usr/bin/env bash
+          set -euo pipefail
+          APP=$1        # customer-app
+          ARCHIVE=$2    # CustomerApp
+          IPA_NAME=$3   # sbjiwala-v1.0-ios.ipa
+          ZIP_NAME=$4   # sbjiwala-v1.0-ios.zip
+
+          cd "apps/$APP/ios/App"
+
+          EXPORT_PLIST="ExportOptions.plist"
+          cat > $EXPORT_PLIST <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict><key>method</key><string>app-store</string></dict></plist>
+          PLIST
+
+          if [ "${HAS_APPLE_CERTS}" = "true" ]; then
+            xcodebuild -workspace App.xcworkspace -scheme App \
+              -sdk iphoneos -configuration Release \
+              archive -archivePath "$GITHUB_WORKSPACE/$ARCHIVE.xcarchive"
+            xcodebuild -exportArchive \
+              -archivePath "$GITHUB_WORKSPACE/$ARCHIVE.xcarchive" \
+              -exportPath "$GITHUB_WORKSPACE/$ARCHIVE" \
+              -exportOptionsPlist $EXPORT_PLIST
+            mv "$GITHUB_WORKSPACE/$ARCHIVE"/*.ipa "$GITHUB_WORKSPACE/$IPA_NAME"
+          else
+            xcodebuild -workspace App.xcworkspace -scheme App \
+              -sdk iphonesimulator -configuration Release \
+              -destination 'generic/platform=iOS Simulator' \
+              CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO build
+            BUILD_DIR=$(xcodebuild -workspace App.xcworkspace -scheme App \
+              -sdk iphonesimulator -configuration Release \
+              -showBuildSettings 2>/dev/null | grep " BUILT_PRODUCTS_DIR " | awk '{print $3}')
+            zip -r "$GITHUB_WORKSPACE/$ZIP_NAME" "$BUILD_DIR/App.app"
+          fi
+          HELPER
+          chmod +x /tmp/compile_ios_app.sh
+
+      # ── Customer iOS ──────────────────────────────────────────────────────
+      - name: Build & Sync Customer App (iOS)
+        env:
+          API_URL: ${{ env.API_URL }}
+        run: /tmp/build_ios_app.sh customer-app
 
       - name: Compile Customer iOS App
         run: |
-          cd apps/customer-app/ios/App
-          if [ "$HAS_APPLE_CERTS" = "true" ]; then
-            cat << EOF > ExportOptions.plist
-            <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-            <plist version="1.0">
-            <dict>
-                <key>method</key>
-                <string>app-store</string>
-            </dict>
-            </plist>
-          EOF
-            xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release archive -archivePath $GITHUB_WORKSPACE/CustomerApp.xcarchive
-            xcodebuild -exportArchive -archivePath $GITHUB_WORKSPACE/CustomerApp.xcarchive -exportPath $GITHUB_WORKSPACE/CustomerApp -exportOptionsPlist ExportOptions.plist
-            mv $GITHUB_WORKSPACE/CustomerApp/*.ipa $GITHUB_WORKSPACE/sbjiwala-v${{ needs.read-version.outputs.version }}-ios.ipa
-          else
-            xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO build
-            BUILD_DIR=$(xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -showBuildSettings 2>/dev/null | grep " BUILT_PRODUCTS_DIR " | awk '{print $3}')
-            zip -r $GITHUB_WORKSPACE/sbjiwala-v${{ needs.read-version.outputs.version }}-ios.zip "$BUILD_DIR/App.app"
-          fi
+          /tmp/compile_ios_app.sh customer-app CustomerApp \
+            "sbjiwala-v${{ env.VER }}-ios.ipa" \
+            "sbjiwala-v${{ env.VER }}-ios.zip"
 
       - name: Upload Customer App to App Store Connect
         if: env.HAS_APPLE_CERTS == 'true' && env.HAS_APPSTORE_KEY == 'true'
         run: |
-          xcrun altool --upload-app -f $GITHUB_WORKSPACE/sbjiwala-v${{ needs.read-version.outputs.version }}-ios.ipa \
-            -t ios --apiKey "${{ secrets.APPSTORE_KEY_ID }}" \
+          xcrun altool --upload-app \
+            -f "$GITHUB_WORKSPACE/sbjiwala-v${{ env.VER }}-ios.ipa" \
+            -t ios \
+            --apiKey "${{ secrets.APPSTORE_KEY_ID }}" \
             --apiIssuer "${{ secrets.APPSTORE_ISSUER_ID }}"
 
-      # ── Vendor App ──────────────────────────────────────────────────────────
+      # ── Vendor iOS ────────────────────────────────────────────────────────
       - name: Build & Sync Vendor App (iOS)
         env:
           API_URL: ${{ env.API_URL }}
-        run: |
-          cd apps/vendor-app
-          
-          # Create .env.production with API URL if provided
-          if [ -n "$API_URL" ]; then
-            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
-            echo "API URL configured: $API_URL"
-          fi
-          
-          npm install
-          rm -rf node_modules/@sbjiwala/shared
-          mkdir -p node_modules/@sbjiwala/shared
-          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
-          cp -r ../../shared/src  node_modules/@sbjiwala/shared/
-          cp ../../shared/package.json node_modules/@sbjiwala/shared/
-          
-          # Build with NEXT_PUBLIC_API_URL if provided
-          if [ -n "$API_URL" ]; then
-            NEXT_PUBLIC_API_URL="$API_URL" npm run build
-          else
-            npm run build
-          fi
-          
-          npm install @capacitor/core @capacitor/cli @capacitor/ios
-          #npx cap add ios || true
-          sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile || true
-          find ios/App/App.xcodeproj -name "project.pbxproj" -exec \
-            sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9][0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' {} \; || true
-          npx cap sync ios
+        run: /tmp/build_ios_app.sh vendor-app
 
       - name: Compile Vendor iOS App
         run: |
-          cd apps/vendor-app/ios/App
-          if [ "$HAS_APPLE_CERTS" = "true" ]; then
-            cat << EOF > ExportOptions.plist
-            <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-            <plist version="1.0">
-            <dict>
-                <key>method</key>
-                <string>app-store</string>
-            </dict>
-            </plist>
-          EOF
-            xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release archive -archivePath $GITHUB_WORKSPACE/VendorApp.xcarchive
-            xcodebuild -exportArchive -archivePath $GITHUB_WORKSPACE/VendorApp.xcarchive -exportPath $GITHUB_WORKSPACE/VendorApp -exportOptionsPlist ExportOptions.plist
-            mv $GITHUB_WORKSPACE/VendorApp/*.ipa $GITHUB_WORKSPACE/sbjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.ipa
-          else
-            xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO build
-            BUILD_DIR=$(xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -showBuildSettings 2>/dev/null | grep " BUILT_PRODUCTS_DIR " | awk '{print $3}')
-            zip -r $GITHUB_WORKSPACE/sbjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.zip "$BUILD_DIR/App.app"
-          fi
+          /tmp/compile_ios_app.sh vendor-app VendorApp \
+            "sbjiwala-vendor-v${{ env.VER }}-ios.ipa" \
+            "sbjiwala-vendor-v${{ env.VER }}-ios.zip"
 
       - name: Upload Vendor App to App Store Connect
         if: env.HAS_APPLE_CERTS == 'true' && env.HAS_APPSTORE_KEY == 'true'
         run: |
-          xcrun altool --upload-app -f $GITHUB_WORKSPACE/sbjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.ipa \
-            -t ios --apiKey "${{ secrets.APPSTORE_KEY_ID }}" \
+          xcrun altool --upload-app \
+            -f "$GITHUB_WORKSPACE/sbjiwala-vendor-v${{ env.VER }}-ios.ipa" \
+            -t ios \
+            --apiKey "${{ secrets.APPSTORE_KEY_ID }}" \
             --apiIssuer "${{ secrets.APPSTORE_ISSUER_ID }}"
 
-      # ── Delivery App ────────────────────────────────────────────────────────
+      # ── Delivery iOS ──────────────────────────────────────────────────────
       - name: Build & Sync Delivery App (iOS)
         env:
           API_URL: ${{ env.API_URL }}
-        run: |
-          cd apps/delivery-app
-          
-          # Create .env.production with API URL if provided
-          if [ -n "$API_URL" ]; then
-            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
-            echo "API URL configured: $API_URL"
-          fi
-          
-          npm install
-          rm -rf node_modules/@sbjiwala/shared
-          mkdir -p node_modules/@sbjiwala/shared
-          cp -r ../../shared/dist node_modules/@sbjiwala/shared/
-          cp -r ../../shared/src  node_modules/@sbjiwala/shared/
-          cp ../../shared/package.json node_modules/@sbjiwala/shared/
-          
-          # Build with NEXT_PUBLIC_API_URL if provided
-          if [ -n "$API_URL" ]; then
-            NEXT_PUBLIC_API_URL="$API_URL" npm run build
-          else
-            npm run build
-          fi
-          
-          npm install @capacitor/core @capacitor/cli @capacitor/ios
-          #npx cap add ios || true
-          sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile || true
-          find ios/App/App.xcodeproj -name "project.pbxproj" -exec \
-            sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9][0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' {} \; || true
-          npx cap sync ios
+        run: /tmp/build_ios_app.sh delivery-app
 
       - name: Compile Delivery iOS App
         run: |
-          cd apps/delivery-app/ios/App
-          if [ "$HAS_APPLE_CERTS" = "true" ]; then
-            cat << EOF > ExportOptions.plist
-            <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-            <plist version="1.0">
-            <dict>
-                <key>method</key>
-                <string>app-store</string>
-            </dict>
-            </plist>
-          EOF
-            xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release archive -archivePath $GITHUB_WORKSPACE/DeliveryApp.xcarchive
-            xcodebuild -exportArchive -archivePath $GITHUB_WORKSPACE/DeliveryApp.xcarchive -exportPath $GITHUB_WORKSPACE/DeliveryApp -exportOptionsPlist ExportOptions.plist
-            mv $GITHUB_WORKSPACE/DeliveryApp/*.ipa $GITHUB_WORKSPACE/sbjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.ipa
-          else
-            xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO build
-            BUILD_DIR=$(xcodebuild -workspace App.xcworkspace -scheme App -sdk iphonesimulator -configuration Release -showBuildSettings 2>/dev/null | grep " BUILT_PRODUCTS_DIR " | awk '{print $3}')
-            zip -r $GITHUB_WORKSPACE/sbjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.zip "$BUILD_DIR/App.app"
-          fi
+          /tmp/compile_ios_app.sh delivery-app DeliveryApp \
+            "sbjiwala-delivery-v${{ env.VER }}-ios.ipa" \
+            "sbjiwala-delivery-v${{ env.VER }}-ios.zip"
 
       - name: Upload Delivery App to App Store Connect
         if: env.HAS_APPLE_CERTS == 'true' && env.HAS_APPSTORE_KEY == 'true'
         run: |
-          xcrun altool --upload-app -f $GITHUB_WORKSPACE/sbjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.ipa \
-            -t ios --apiKey "${{ secrets.APPSTORE_KEY_ID }}" \
+          xcrun altool --upload-app \
+            -f "$GITHUB_WORKSPACE/sbjiwala-delivery-v${{ env.VER }}-ios.ipa" \
+            -t ios \
+            --apiKey "${{ secrets.APPSTORE_KEY_ID }}" \
             --apiIssuer "${{ secrets.APPSTORE_ISSUER_ID }}"
 
       - name: Upload iOS Artifacts
@@ -712,13 +677,18 @@ jobs:
         with:
           name: ios-builds
           path: |
-            sbjiwala-v${{ needs.read-version.outputs.version }}-ios.*
-            sbjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.*
-            sbjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.*
+            sbjiwala-v${{ env.VER }}-ios.*
+            sbjiwala-vendor-v${{ env.VER }}-ios.*
+            sbjiwala-delivery-v${{ env.VER }}-ios.*
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 7. GitHub Release — attach all build artifacts
+  # ═══════════════════════════════════════════════════════════════════════════
   create-release:
     needs: [read-version, release-docker-manifests, build-web-zip, build-android, build-ios]
     runs-on: ubuntu-latest
+    env:
+      VER: ${{ needs.read-version.outputs.version }}
     if: |
       always() &&
       needs.read-version.result == 'success' &&
@@ -730,81 +700,103 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Download Web App Static Export
+      - name: Download Web Artifacts
         uses: actions/download-artifact@v4
         with:
           name: web-static
           path: ./
 
-      - name: Download Android APKS
+      - name: Download Android Artifacts
         uses: actions/download-artifact@v4
         with:
           name: android-apks
           path: ./
 
       - name: Download iOS Builds
-        if: ${{ github.event_name == 'push' && (github.event.inputs.build_ios != 'false' && github.event.inputs.build_ios != false) }}
+        if: ${{ needs.build-ios.result == 'success' }}
         uses: actions/download-artifact@v4
         with:
           name: ios-builds
           path: ./
 
-      - name: Prepare Release Files
-        id: release_files
-        run: |
-          FILES="sbjiwala-web-static.zip
-          sbjiwala-v${{ needs.read-version.outputs.version }}.apk
-          sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.apk
-          sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.apk
-          sbjiwala-v${{ needs.read-version.outputs.version }}.aab
-          sbjiwala-vendor-v${{ needs.read-version.outputs.version }}.aab
-          sbjiwala-delivery-v${{ needs.read-version.outputs.version }}.aab"
-          
-          if [ "${{ github.event_name == 'push' && (github.event.inputs.build_ios != 'false' && github.event.inputs.build_ios != false) }}" = "true" ]; then
-            FILES="$FILES
-            sbjiwala-v${{ needs.read-version.outputs.version }}-ios.*
-            sbjiwala-vendor-v${{ needs.read-version.outputs.version }}-ios.*
-            sbjiwala-delivery-v${{ needs.read-version.outputs.version }}-ios.*"
-          fi
-          
-          # Write multi-line output to GITHUB_OUTPUT
-          echo "files<<EOF" >> $GITHUB_OUTPUT
-          echo "$FILES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Create GitHub Release
-        id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.read-version.outputs.version }}
-          name: Sbjiwala Release v${{ needs.read-version.outputs.version }}
+          tag_name: v${{ env.VER }}
+          name: Sbjiwala Release v${{ env.VER }}
           draft: false
           prerelease: false
-          files: ${{ steps.release_files.outputs.files }}
+          files: |
+            sbjiwala-web-static.zip
+            sbjiwala-agent-v${{ env.VER }}-web.zip
+            sbjiwala-customer-v${{ env.VER }}-android.zip
+            sbjiwala-vendor-v${{ env.VER }}-android.zip
+            sbjiwala-delivery-v${{ env.VER }}-android.zip
+            sbjiwala-admin-v${{ env.VER }}-android.zip
+            sbjiwala-v${{ env.VER }}.apk
+            sbjiwala-vendor-v${{ env.VER }}.apk
+            sbjiwala-delivery-v${{ env.VER }}.apk
+            sbjiwala-admin-v${{ env.VER }}.apk
+            sbjiwala-v${{ env.VER }}.aab
+            sbjiwala-vendor-v${{ env.VER }}.aab
+            sbjiwala-delivery-v${{ env.VER }}.aab
+            sbjiwala-admin-v${{ env.VER }}.aab
+            sbjiwala-v${{ env.VER }}-ios.*
+            sbjiwala-vendor-v${{ env.VER }}-ios.*
+            sbjiwala-delivery-v${{ env.VER }}-ios.*
           body: |
-            # Sbjiwala Platform Release v${{ needs.read-version.outputs.version }}
+            # Sbjiwala Platform Release v${{ env.VER }}
 
-            We are pleased to announce the production release of the Sbjiwala eCommerce Platform, version `${{ needs.read-version.outputs.version }}`. All sub-platforms have been compiled, synced, and packaged.
+            Production release of the Sbjiwala eCommerce Platform. All sub-platforms compiled, signed, and packaged.
 
-            ## Release Contents
-            - **Docker Containers**:
-              - **FastAPI Backend (Multi-Arch AMD64/ARM64)**:
-                - GitHub Packages: `ghcr.io/${{ github.repository }}/backend:v${{ needs.read-version.outputs.version }}`
-              - **Unified Nginx Web Portal (Multi-Arch AMD64/ARM64)**:
-                - GitHub Packages: `ghcr.io/${{ github.repository }}/web:v${{ needs.read-version.outputs.version }}`
-              - **Complete Stack (Backend & Frontend Proxied, Multi-Arch AMD64/ARM64)**:
-                - GitHub Packages: `ghcr.io/${{ github.repository }}/complete:v${{ needs.read-version.outputs.version }}`
-            - **Static Web files**: `sbjiwala-web-static.zip`
-            - **Android Apps (Capacitor/Gradle)**:
-              - [Customer App] `.apk` and `.aab` bundles
-              - [Vendor App] `.apk` and `.aab` bundles
-              - [Delivery App] `.apk` and `.aab` bundles
-            - **iOS Payload Bundles**:
-              - [Customer App] `.ipa` (signed) or `.zip` (simulator)
-              - [Vendor App] `.ipa` (signed) or `.zip` (simulator)
-              - [Delivery App] `.ipa` (signed) or `.zip` (simulator)
+            ## 📦 Release Contents
 
-            ## Deployment instructions
-            1. **Docker Deployment**: Update your orchestrator/k8s manifests to pull the multi-arch images.
-            2. **Android**: Install the signed APKs directly on target Android test devices.
-            3. **iOS**: Code-sign the `.app` bundle from the zip files before deployment to testing devices.
+            ### Docker Images (Multi-Arch AMD64 + ARM64)
+            | Image | GHCR Tag |
+            |---|---|
+            | FastAPI Backend | `ghcr.io/${{ github.repository }}/backend:v${{ env.VER }}` |
+            | Unified Web Portal | `ghcr.io/${{ github.repository }}/web:v${{ env.VER }}` |
+            | Complete Stack | `ghcr.io/${{ github.repository }}/complete:v${{ env.VER }}` |
+
+            ### Web Apps (Static Exports)
+            | App | File |
+            |---|---|
+            | Sbjiwala Web (unified portal) | `sbjiwala-web-static.zip` |
+            | Agent Support App | `sbjiwala-agent-v${{ env.VER }}-web.zip` |
+
+            ### Android Apps (APK + AAB zip bundles)
+            | App | Bundle |
+            |---|---|
+            | Customer App | `sbjiwala-customer-v${{ env.VER }}-android.zip` |
+            | Vendor App | `sbjiwala-vendor-v${{ env.VER }}-android.zip` |
+            | Delivery App | `sbjiwala-delivery-v${{ env.VER }}-android.zip` |
+            | Admin App | `sbjiwala-admin-v${{ env.VER }}-android.zip` |
+
+            ### iOS Builds (if enabled)
+            | App | File |
+            |---|---|
+            | Customer App | `sbjiwala-v${{ env.VER }}-ios.ipa` / `.zip` |
+            | Vendor App | `sbjiwala-vendor-v${{ env.VER }}-ios.ipa` / `.zip` |
+            | Delivery App | `sbjiwala-delivery-v${{ env.VER }}-ios.ipa` / `.zip` |
+
+            ## 🚀 Deployment Instructions
+
+            ### Docker
+            ```bash
+            # Pull and run the complete stack
+            docker pull ghcr.io/${{ github.repository }}/complete:v${{ env.VER }}
+            docker pull ghcr.io/${{ github.repository }}/backend:v${{ env.VER }}
+            ```
+
+            ### Android
+            1. Download the per-app zip, extract APK + AAB.
+            2. Install APK directly: `adb install sbjiwala-v${{ env.VER }}.apk`
+            3. Submit AAB to Google Play Console for store release.
+
+            ### iOS
+            - **Signed `.ipa`**: Submit via App Store Connect.
+            - **Simulator `.zip`**: Unzip and install on simulator via Xcode.
+
+            ### Static Web
+            Extract `sbjiwala-web-static.zip` into your Nginx/CDN web root.
+            Extract `sbjiwala-agent-v${{ env.VER }}-web.zip` to serve the agent support portal at `/agent`.
