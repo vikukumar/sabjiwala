@@ -535,19 +535,26 @@ async def get_nearby_orders(
         else:
             vendor_filter = []
 
-    # Fetch unassigned orders
+    # Fetch unassigned orders (must be accepted/packed and not assigned yet)
     stmt = (
         select(Order)
         .options(selectinload(Order.items))
         .where(
             Order.delivery_boy_id == None,
-            Order.status.in_([OrderStatus.CONFIRMED, OrderStatus.ACCEPTED, OrderStatus.PACKED]),
+            Order.status.in_([OrderStatus.ACCEPTED, OrderStatus.PACKED]),
             Order.is_deleted == False,
             *vendor_filter
         )
     )
     res = await db.execute(stmt)
-    orders = res.scalars().all()
+    all_orders = res.scalars().all()
+    
+    # Filter only auto-delivery (platform rider) orders in Python to avoid raw json SQL typecast bugs
+    orders = []
+    for order in all_orders:
+        meta = order.metadata_json or {}
+        if meta.get("delivery_option") == "auto":
+            orders.append(order)
     
     # Pre-fetch vendor stores
     vendor_ids = [order.vendor_id for order in orders]
@@ -635,6 +642,14 @@ async def accept_order(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found or already assigned")
 
+    # Verify status is accepted/packed and option is auto
+    meta = order.metadata_json or {}
+    if order.status not in [OrderStatus.ACCEPTED, OrderStatus.PACKED] or meta.get("delivery_option") != "auto":
+        raise HTTPException(
+            status_code=400,
+            detail="This order is not ready for platform delivery (requires vendor acceptance & platform delivery option)"
+        )
+
     # If boy is private, verify it belongs to their vendor
     if boy.vendor_id and order.vendor_id != boy.vendor_id:
         raise HTTPException(status_code=403, detail="You can only accept orders from your assigned vendor")
@@ -642,9 +657,9 @@ async def accept_order(
     # Accept the order
     order.delivery_boy_id = boy.user_id
     
-    # If order is in CONFIRMED, update to ASSIGNED
+    # If order is in ACCEPTED, update to ASSIGNED
     old_status = order.status
-    if old_status == OrderStatus.CONFIRMED:
+    if old_status == OrderStatus.ACCEPTED:
         order.status = OrderStatus.ASSIGNED
         
     boy.current_order_count += 1
