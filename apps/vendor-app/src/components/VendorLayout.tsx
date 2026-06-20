@@ -579,7 +579,7 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
     <div className="h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 antialiased font-sans flex transition-colors duration-200">
       {/* Mobile Navigation Drawer */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden font-sans">
+        <div className="fixed inset-0 z-[9999] flex md:hidden font-sans">
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"

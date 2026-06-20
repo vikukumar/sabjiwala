@@ -121,7 +121,7 @@ export default function TrackOrderClient() {
       const initDriverLat = driverLocation?.latitude || storeLat;
       const initDriverLng = driverLocation?.longitude || storeLng;
 
-      map = L.map(mapRef.current!).setView([customerLat, customerLng], 14);
+      map = L.map(mapRef.current!, { attributionControl: false }).setView([customerLat, customerLng], 14);
       const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
       const tileUrl = isDark
         ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"

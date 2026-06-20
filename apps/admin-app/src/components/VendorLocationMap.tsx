@@ -47,7 +47,7 @@ export default function VendorLocationMap({
         className: "leaflet-custom-icon",
       });
 
-      map = L.map(mapRef.current!).setView([lat, lng], 15);
+      map = L.map(mapRef.current!, { attributionControl: false }).setView([lat, lng], 15);
       const isDark = document.documentElement.classList.contains("dark");
       L.tileLayer(
         isDark

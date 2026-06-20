@@ -257,7 +257,7 @@ export default function AdminLayout({ children, title = "Admin Panel" }: AdminLa
     <div className="h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#090d10] text-slate-800 dark:text-slate-100 flex transition-colors duration-200">
       {/* Mobile Drawer */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden">
+        <div className="fixed inset-0 z-[9999] flex md:hidden">
           <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
           <aside className="relative w-64 bg-slate-900 flex flex-col p-5 border-r border-slate-800 h-full">
             <button

@@ -118,7 +118,7 @@ export default function AddAddressPage() {
       const initLat = coords.lat;
       const initLng = coords.lng;
 
-      map = L.map(mapRef.current!).setView([initLat, initLng], 15);
+      map = L.map(mapRef.current!, { attributionControl: false }).setView([initLat, initLng], 15);
       const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
       const tileUrl = isDark
         ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"

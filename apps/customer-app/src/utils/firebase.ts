@@ -41,7 +41,26 @@ export const initFirebaseAnalytics = async () => {
     if (supported) {
       const app = initFirebase();
       if (app) {
-        return getAnalytics(app);
+        // Intercept and suppress the global uncaught promise rejection warning if Firebase Analytics configuration fetch fails.
+        const rejectHandler = (event: PromiseRejectionEvent) => {
+          if (event.reason && (
+            (event.reason.message && event.reason.message.includes("config-fetch-failed")) ||
+            (event.reason.code && event.reason.code.includes("config-fetch-failed"))
+          )) {
+            event.preventDefault(); // Prevents it from bubbling as uncaught exception to browser console
+            console.warn("Firebase Analytics config fetch failed (Analytics not enabled in console or incorrect App ID). Gracefully suppressed.");
+          }
+        };
+        window.addEventListener("unhandledrejection", rejectHandler);
+        
+        const analytics = getAnalytics(app);
+        
+        // Remove handler after 3 seconds, as the dynamic fetch is initiated immediately.
+        setTimeout(() => {
+          window.removeEventListener("unhandledrejection", rejectHandler);
+        }, 3000);
+
+        return analytics;
       }
     } else {
       console.warn("Firebase Analytics is not supported in this environment");

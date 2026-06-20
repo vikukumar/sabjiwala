@@ -326,7 +326,7 @@ export default function VendorDashboard() {
         shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
       });
 
-      map = L.map(mapContainerRef.current!).setView([centerLat, centerLng], 13);
+      map = L.map(mapContainerRef.current!, { attributionControl: false }).setView([centerLat, centerLng], 13);
       const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
       const tileUrl = isDark
         ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"

@@ -420,7 +420,7 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
 
       {/* Mobile Drawer */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-0 z-[9999] md:hidden">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
           <aside className="absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/80 animate-slide-right overflow-hidden shadow-inner">
             {content}

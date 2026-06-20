@@ -23,7 +23,7 @@ function LiveOpsMap({ vendors, deliveryBoys, orders }: {
       if (!mapRef.current) return;
       delete (L.Icon.Default.prototype as any)._getIconUrl;
 
-      const map = L.map(mapRef.current!, { zoomControl: true }).setView([19.076, 72.8777], 12);
+      const map = L.map(mapRef.current!, { zoomControl: true, attributionControl: false }).setView([19.076, 72.8777], 12);
       const isDark = document.documentElement.classList.contains("dark");
       L.tileLayer(
         isDark
