@@ -571,76 +571,101 @@ async def update_vendor_settings(
 @router.get("/delivery-boys", response_model=APIResponse)
 async def list_delivery_boys(
     search: Optional[str] = None,
+    kyc_status: Optional[str] = None,
+    is_online: Optional[bool] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List all delivery boy profiles with vehicle details, active stats, and statuses."""
     await _verify_admin(current_user)
     
-    from app.models.delivery import DeliveryBoy
+    from app.models.delivery import DeliveryBoy, DeliveryWallet, AvailabilityStatus
+    from app.models.payment import Wallet, WalletType
+    from sqlalchemy import select, func
+    
     stmt = select(DeliveryBoy).where(DeliveryBoy.is_deleted == False)
     
+    if kyc_status:
+        # Map frontend kyc_status filter values to DB status values
+        kyc_to_db = {
+            "approved": "active",
+            "rejected": "suspended",
+            "pending": "inactive",
+            "documents_submitted": "documents_submitted",
+        }
+        db_status = kyc_to_db.get(kyc_status, kyc_status)
+        stmt = stmt.where(DeliveryBoy.status == db_status)
+    
+    if is_online is True:
+        stmt = stmt.where(
+            DeliveryBoy.status == "active",
+            DeliveryBoy.availability.in_(["available", "on_delivery", "busy"])
+        )
+    elif is_online is False:
+        stmt = stmt.where(DeliveryBoy.availability == "offline")
+
     result = await db.execute(stmt)
-    boys = result.scalars().all()
+    all_boys = result.scalars().all()
     
     boy_list = []
-    for b in boys:
+    for b in all_boys:
         user_res = await db.execute(select(User).where(User.id == b.user_id))
         user = user_res.scalars().first()
-        
-        if not user:
-            continue
+        if not user: continue
             
         if search:
             search_lower = search.lower()
             full_name = f"{user.first_name} {user.last_name}".lower()
-            if (
-                search_lower not in full_name and
-                search_lower not in (user.email or "").lower() and
-                search_lower not in (user.phone or "").lower() and
-                search_lower not in (b.license_number or "").lower()
-            ):
+            if not any(search_lower in (x or "").lower() for x in [full_name, user.email, user.phone, b.license_number]):
                 continue
-                
-        # Fetch KYC documents for this delivery boy
-        from app.models.storage import FileMetadata
-        doc_res = await db.execute(
-            select(FileMetadata).where(
-                FileMetadata.entity_type == "delivery_kyc",
-                FileMetadata.entity_id == str(b.id)
-            )
-        )
-        docs = doc_res.scalars().all()
-        kyc_docs = [
-            {
-                "id": str(d.id),
-                "document_type": d.custom_metadata.get("document_type") if d.custom_metadata else "Document",
-                "file_url": f"/api/v1/storage/{d.id}",
-                "original_filename": d.original_filename
-            }
-            for d in docs
-        ]
+        
+        # Get Wallet Balance
+        wallet_res = await db.execute(select(Wallet).where(Wallet.user_id == user.id, Wallet.wallet_type == WalletType.DELIVERY))
+        wallet = wallet_res.scalars().first()
+        
+        # Determine KYC status - map DB status to frontend KYC status
+        raw_status = b.status.value if hasattr(b.status, "value") else str(b.status)
+        kyc_status_label = {
+            "active": "approved",
+            "inactive": "pending",
+            "suspended": "rejected",
+            "on_leave": "pending",
+        }.get(raw_status, raw_status)
+
+        availability_val = b.availability.value if hasattr(b.availability, "value") else str(b.availability)
+        is_online = raw_status == "active" and availability_val in ("available", "on_delivery", "busy")
 
         boy_list.append({
             "id": str(b.id),
             "user_id": str(user.id),
             "name": f"{user.first_name} {user.last_name}",
+            "full_name": f"{user.first_name} {user.last_name}",
             "email": user.email,
             "phone": user.phone,
-            "status": b.status.value if hasattr(b.status, "value") else str(b.status),
-            "availability": b.availability.value if hasattr(b.availability, "value") else str(b.availability),
+            "status": raw_status,
+            "kyc_status": kyc_status_label,
+            "is_online": is_online,
+            "availability": availability_val,
+            "wallet_balance": float(wallet.balance) if wallet else 0.0,
+            "current_latitude": b.current_latitude,
+            "current_longitude": b.current_longitude,
+            "latitude": b.current_latitude,
+            "longitude": b.current_longitude,
             "vehicle_type": b.vehicle_type,
             "vehicle_number": b.vehicle_number,
             "license_number": b.license_number,
             "total_deliveries": b.total_deliveries,
             "average_rating": b.average_rating,
-            "latitude": b.current_latitude,
-            "longitude": b.current_longitude,
             "created_at": b.created_at.isoformat() if b.created_at else "",
-            "kyc_documents": kyc_docs
+            "kyc_documents": [],
         })
         
-    return APIResponse(success=True, data=boy_list)
+    # Paginate
+    start = (page - 1) * page_size
+    return APIResponse(success=True, data=boy_list[start:start+page_size])
+
 
 
 @router.patch("/delivery-boys/{delivery_boy_id}/status", response_model=APIResponse)
