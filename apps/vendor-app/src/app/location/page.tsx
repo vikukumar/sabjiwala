@@ -27,12 +27,28 @@ function StoreLocationMap({
     import("leaflet").then((L) => {
       if (!active || !mapRef.current || mapObjRef.current) return;
       delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
 
       const storeIcon = L.divIcon({
-        html: `<div style="background:#3b82f6;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;border:4px solid white;box-shadow:0 4px 15px rgba(59,130,246,0.5);cursor:grab">🏪</div>`,
+        html: `
+          <div style="filter: drop-shadow(0 4px 12px rgba(59,130,246,0.35)); position: relative;">
+            <span style="position: absolute; top: -6px; left: -6px; width: 56px; height: 56px; border-radius: 50%; background: rgba(59,130,246,0.15); animation: ping 1.8s infinite;"></span>
+            <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(59,130,246,0.5); cursor: grab">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                <path d="m2 7 4.41-3.67A2 2 0 0 1 7.73 3h8.54a2 2 0 0 1 1.32.33L22 7"/>
+                <path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
+                <path d="M12 12A4 4 0 0 0 4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a4 4 0 0 0-8 0Z"/>
+              </svg>
+            </div>
+          </div>
+        `,
         iconSize: [44, 44],
         iconAnchor: [22, 22],
-        className: "",
+        className: "leaflet-custom-icon",
       });
 
       const map = L.map(mapRef.current!).setView([lat, lng], 15);

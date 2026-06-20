@@ -419,3 +419,9 @@ input[type="checkbox"], input[type="radio"] {
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
 }
 
+/* Custom Leaflet DivIcon reset to prevent default border/background */
+.leaflet-custom-icon {
+  background: transparent !important;
+  border: none !important;
+}
+

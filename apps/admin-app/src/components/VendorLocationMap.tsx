@@ -30,10 +30,20 @@ export default function VendorLocationMap({
       delete (L.Icon.Default.prototype as any)._getIconUrl;
 
       const storeIcon = L.divIcon({
-        html: `<div style="background:#3b82f6;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid white;box-shadow:0 3px 12px rgba(59,130,246,0.5)">🏪</div>`,
+        html: `
+          <div style="filter: drop-shadow(0 4px 10px rgba(59,130,246,0.35)); position: relative;">
+            <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(59,130,246,0.5)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+                <path d="m2 7 4.41-3.67A2 2 0 0 1 7.73 3h8.54a2 2 0 0 1 1.32.33L22 7"/>
+                <path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
+                <path d="M12 12A4 4 0 0 0 4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a4 4 0 0 0-8 0Z"/>
+              </svg>
+            </div>
+          </div>
+        `,
         iconSize: [38, 38],
         iconAnchor: [19, 19],
-        className: "",
+        className: "leaflet-custom-icon",
       });
 
       map = L.map(mapRef.current!).setView([lat, lng], 15);
