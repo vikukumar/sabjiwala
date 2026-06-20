@@ -26,6 +26,19 @@ const getVehicleDetails = (orderId: string, agentVehicleType?: string) => {
   return { emoji, color };
 };
 
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
 export default function TrackOrderClient() {
   const params = useParams<{ id?: string }>();
   const searchParams = useSearchParams();
@@ -40,16 +53,18 @@ export default function TrackOrderClient() {
 
   const { data: order } = useQuery<any>({
     queryKey: ["order", id],
-    queryFn: async () => { const r = await api.get(`/orders/${id}`); return r.data; },
+    queryFn: async () => { const r = await api.get(`/orders/${id}`); return r.data?.data || r.data; },
     enabled: !!id,
   });
 
   // Seed initial location
   useEffect(() => {
     if (order && !driverLocation) {
+      const storeLat = order.vendor_store?.latitude || 19.0760;
+      const storeLng = order.vendor_store?.longitude || 72.9977;
       setDriverLocation({
-        latitude: order.delivery_agent?.current_latitude || order.delivery_agent?.latitude || 19.076,
-        longitude: order.delivery_agent?.current_longitude || order.delivery_agent?.longitude || 72.877
+        latitude: order.delivery_agent?.latitude || order.delivery_agent?.current_latitude || storeLat,
+        longitude: order.delivery_agent?.longitude || order.delivery_agent?.current_longitude || storeLng
       });
     }
   }, [order]);
@@ -91,8 +106,8 @@ export default function TrackOrderClient() {
         shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
       });
 
-      const customerLat = order.delivery_address?.latitude || 19.0735;
-      const customerLng = order.delivery_address?.longitude || 72.9985;
+      const customerLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
+      const customerLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
       const storeLat = order.vendor_store?.latitude || 19.0760;
       const storeLng = order.vendor_store?.longitude || 72.9977;
 
@@ -167,14 +182,24 @@ export default function TrackOrderClient() {
       const newPos = [driverLocation.latitude, driverLocation.longitude] as [number, number];
       driverMarkerRef.current.setLatLng(newPos);
       if (pathLineRef.current && order) {
-        const customerLat = order.delivery_address?.latitude || 19.0735;
-        const customerLng = order.delivery_address?.longitude || 72.9985;
+        const customerLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
+        const customerLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
         pathLineRef.current.setLatLngs([newPos, [customerLat, customerLng]]);
       }
     }
   }, [driverLocation, mapObj, order]);
 
   const eta = order?.status === "out_for_delivery" ? "~5 min" : order?.status === "packed" ? "~15 min" : null;
+
+  const customerLat = order?.delivery_latitude || order?.delivery_address?.latitude || 19.0735;
+  const customerLng = order?.delivery_longitude || order?.delivery_address?.longitude || 72.9985;
+  const storeLat = order?.vendor_store?.latitude || 19.0760;
+  const storeLng = order?.vendor_store?.longitude || 72.9977;
+
+  const driverLat = driverLocation?.latitude || storeLat;
+  const driverLng = driverLocation?.longitude || storeLng;
+
+  const distance = calculateDistance(customerLat, customerLng, driverLat, driverLng);
 
   if (!id) return <div className="text-center py-20 text-slate-500">Order ID is missing</div>;
 
@@ -201,6 +226,43 @@ export default function TrackOrderClient() {
           <div>
             <p className="font-black text-emerald-800 dark:text-emerald-300">Your order is on the way! 🛵</p>
             <p className="text-sm text-emerald-600 dark:text-emerald-400">Estimated arrival: <span className="font-black">{eta}</span></p>
+          </div>
+        </div>
+      )}
+
+      {/* Live tracking stats card */}
+      {order && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="card p-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200 dark:border-slate-800 flex items-center gap-3">
+            <Clock className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+            <div>
+              <p className="text-[10px] uppercase font-bold text-slate-500">Estimated Time</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">{eta || "~10 min"}</p>
+            </div>
+          </div>
+          <div className="card p-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200 dark:border-slate-800 flex items-center gap-3">
+            <MapPin className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+            <div>
+              <p className="text-[10px] uppercase font-bold text-slate-500">Distance</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">
+                {distance > 0 ? `${distance.toFixed(2)} km` : "Calculating..."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delivery OTP Card */}
+      {!["delivered", "cancelled", "returned", "refunded"].includes(order?.status) && order?.delivery_otp && (
+        <div className="card p-4 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-500/20 rounded-2xl flex items-center justify-between shadow-sm">
+          <div>
+            <p className="text-xs font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider">Delivery OTP</p>
+            <p className="text-xs text-slate-550 dark:text-slate-400 mt-0.5">Share with partner only at delivery time.</p>
+          </div>
+          <div className="flex items-center gap-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-xl border border-emerald-500/30">
+            <span className="font-mono text-lg font-black tracking-widest text-emerald-600 dark:text-emerald-400">
+              {order.delivery_otp}
+            </span>
           </div>
         </div>
       )}

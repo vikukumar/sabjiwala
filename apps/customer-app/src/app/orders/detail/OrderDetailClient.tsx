@@ -213,6 +213,21 @@ export default function OrderDetailClient() {
         </div>
       )}
 
+      {/* Delivery OTP Card */}
+      {!["delivered", "cancelled", "returned", "refunded"].includes(order.status) && order.delivery_otp && (
+        <div className="card p-4 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-between shadow-sm">
+          <div>
+            <p className="text-xs font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider">Delivery OTP</p>
+            <p className="text-xs text-slate-550 dark:text-slate-400 mt-0.5">Share with partner only at delivery time.</p>
+          </div>
+          <div className="flex items-center gap-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-xl border border-emerald-500/30">
+            <span className="font-mono text-lg font-black tracking-widest text-emerald-600 dark:text-emerald-400">
+              {order.delivery_otp}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Timeline */}
       <div className="card p-6">
         <h2 className="font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">

@@ -348,9 +348,10 @@ async def list_orders(
 
 async def enrich_order_response(order: Order, db: AsyncSession) -> OrderResponse:
     res_data = OrderResponse.model_validate(order)
+    res_data.delivery_otp = order.delivery_otp
     
     # Fetch vendor store details
-    from app.models.vendor import VendorStore
+    from app.models.vendor import VendorStore, Vendor
     store_res = await db.execute(select(VendorStore).where(VendorStore.vendor_id == order.vendor_id))
     store = store_res.scalars().first()
     if store:
@@ -375,18 +376,24 @@ async def enrich_order_response(order: Order, db: AsyncSession) -> OrderResponse
         boy = boy_res.scalars().first()
         
         if user:
+            phone_val = user.phone
+            if not phone_val or len(str(phone_val).strip()) < 10:
+                vendor_res = await db.execute(select(Vendor).where(Vendor.id == order.vendor_id))
+                vendor = vendor_res.scalars().first()
+                if vendor and vendor.contact_phone:
+                    phone_val = vendor.contact_phone
+                else:
+                    phone_val = "9876543210"
             res_data.delivery_agent = {
                 "name": f"{user.first_name} {user.last_name}".strip(),
-                "phone": user.phone,
+                "phone": phone_val,
                 "vehicle_type": boy.vehicle_type if boy else "scooty",
                 "vehicle_number": boy.vehicle_number if boy else "MH-43-AB-1234",
                 "latitude": boy.current_latitude if boy else None,
                 "longitude": boy.current_longitude if boy else None,
             }
-            res_data.delivery_otp = order.delivery_otp
     elif delivery_option == "self":
         from app.models.user import User
-        from app.models.vendor import Vendor
         
         vendor_res = await db.execute(select(Vendor).where(Vendor.id == order.vendor_id))
         vendor = vendor_res.scalars().first()
@@ -395,15 +402,17 @@ async def enrich_order_response(order: Order, db: AsyncSession) -> OrderResponse
             user = user_res.scalars().first()
             
             if user and store:
+                phone_val = vendor.contact_phone or user.phone
+                if not phone_val or len(str(phone_val).strip()) < 10:
+                    phone_val = "9876543210"
                 res_data.delivery_agent = {
                     "name": f"{store.store_name} (Self Delivered)".strip(),
-                    "phone": user.phone,
+                    "phone": phone_val,
                     "vehicle_type": "delivery",
                     "vehicle_number": "Store Self Delivery",
                     "latitude": metadata.get("live_latitude") or store.latitude,
                     "longitude": metadata.get("live_longitude") or store.longitude,
                 }
-                res_data.delivery_otp = order.delivery_otp
                 
     return res_data
 
