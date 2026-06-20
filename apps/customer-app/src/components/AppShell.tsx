@@ -1425,6 +1425,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [publicSettings]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleOpenSidebar = () => {
+      setSidebarOpen(true);
+    };
+    window.addEventListener("sw_open_sidebar", handleOpenSidebar);
+    return () => {
+      window.removeEventListener("sw_open_sidebar", handleOpenSidebar);
+    };
+  }, []);
+
   const [showSplash, setShowSplash] = useState(() => {
     if (typeof window === "undefined") return true;
     if (isNative) return false;

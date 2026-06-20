@@ -287,5 +287,140 @@ async def seed_database(db: AsyncSession) -> None:
     #     await db.flush()
     #     await logger.ainfo("Seeded default delivery partner user")
 
+    # 7. Seed/Ensure Customer Users for reviews
+    customer_users = []
+    for email, first, last in [
+        ("customer@sbjiwala.qzz.io", "Rahul", "Sharma"),
+        ("buyer@sbjiwala.qzz.io", "Aman", "Gupta"),
+        ("reviewer@sbjiwala.qzz.io", "Preeti", "Singh")
+    ]:
+        res = await db.execute(select(User).where(User.email == email))
+        usr = res.scalars().first()
+        if not usr:
+            usr = User(
+                email=email,
+                username=email.split("@")[0],
+                password_hash=hash_password("customer123"),
+                first_name=first,
+                last_name=last,
+                user_type=UserType.CUSTOMER,
+                is_active=True,
+                is_verified=True,
+                is_email_verified=True,
+            )
+            db.add(usr)
+            await db.flush()
+            
+            profile = UserProfile(user_id=usr.id)
+            db.add(profile)
+            
+            role_res = await db.execute(select(Role).where(Role.name == "customer"))
+            role = role_res.scalars().first()
+            if role:
+                db.add(UserRole(user_id=usr.id, role_id=role.id))
+            await db.flush()
+            await logger.ainfo(f"Seeded reviewer: {first} {last}")
+        customer_users.append(usr)
+
+    # 8. Seed Ads
+    from app.models.cms import Advertisement
+    # Check if ads already exist
+    ad_check = await db.execute(select(Advertisement))
+    if not ad_check.scalars().first():
+        ads_to_seed = [
+            Advertisement(
+                name="Weekend Super Sale Offer",
+                description="Get 20% flat off on all premium exotic vegetables this Sunday. Use coupon EXOTIC20.",
+                advertiser_name="Sbjiwala SuperAdmin",
+                image_url="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800",
+                click_url="/offers",
+                placement="popup",
+                page_target="home",
+                is_active=True
+            ),
+            Advertisement(
+                name="Zepto Style Floating Pip Video Ad",
+                description="Sourced fresh daily from local farms directly to your doorstep within minutes.",
+                advertiser_name="FarmFresh Partners",
+                image_url="https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&q=80&w=400",
+                click_url="/products",
+                video_url="https://assets.mixkit.co/videos/preview/mixkit-vegetables-in-a-market-stall-4821-large.mp4",
+                placement="pip",
+                page_target="home",
+                is_active=True
+            ),
+            Advertisement(
+                name="Upgrade to Premium Organic Veggies",
+                description="Get an extra 10% cash back on premium organic and leafy greens.",
+                advertiser_name="Organic India Corp",
+                image_url="https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?auto=format&fit=crop&q=80&w=800",
+                click_url="/categories",
+                placement="inline",
+                page_target="product_detail",
+                position="middle",
+                is_active=True
+            ),
+            Advertisement(
+                name="Free Coriander Bundle Offer",
+                description="Add vegetables worth Rs.199 and get a fresh coriander bundle absolutely free!",
+                advertiser_name="Sbjiwala Core Team",
+                image_url="https://images.unsplash.com/photo-1608797178974-15b35a61d121?auto=format&fit=crop&q=80&w=800",
+                click_url="/",
+                placement="inline",
+                page_target="product_detail",
+                position="bottom",
+                is_active=True
+            )
+        ]
+        db.add_all(ads_to_seed)
+        await db.flush()
+        await logger.ainfo("Seeded advertisements successfully")
+
+    # 9. Seed Product Reviews
+    from app.models.product import ProductReview
+    # Check if reviews already exist
+    review_check = await db.execute(select(ProductReview))
+    if not review_check.scalars().first():
+        # Get all products and vendors
+        prod_res = await db.execute(select(Product))
+        all_products = prod_res.scalars().all()
+        
+        vendor_res = await db.execute(select(Vendor).where(Vendor.status == VendorStatus.APPROVED))
+        all_vendors = vendor_res.scalars().all()
+        
+        if all_products and all_vendors and customer_users:
+            mock_comments = [
+                (5, "Extremely fresh and well packaged! Delivered in just 10 mins. Very impressed!"),
+                (4, "Decent quality and taste. The price is also reasonable compared to other apps."),
+                (5, "Highly recommended! Super juicy and fresh. Directly cooked and tasted amazing."),
+                (3, "Decent quality, but a couple of items were a bit small. Overall good experience.")
+            ]
+            reviews_to_seed = []
+            for product in all_products:
+                # Find vendor for this product from inventory or use first vendor
+                from app.models.product import Inventory
+                inv_res = await db.execute(select(Inventory).where(Inventory.product_id == product.id))
+                inv = inv_res.scalars().first()
+                v_id = inv.vendor_id if inv else all_vendors[0].id
+                
+                # Add 3 reviews per product
+                for i in range(3):
+                    rating, comment = mock_comments[(hash(product.name) + i) % len(mock_comments)]
+                    user = customer_users[i % len(customer_users)]
+                    reviews_to_seed.append(
+                        ProductReview(
+                            product_id=product.id,
+                            user_id=user.id,
+                            vendor_id=v_id,
+                            rating=rating,
+                            comment=comment,
+                            is_verified_purchase=True,
+                            is_approved=True
+                        )
+                    )
+            db.add_all(reviews_to_seed)
+            await db.flush()
+            await logger.ainfo(f"Seeded {len(reviews_to_seed)} product reviews successfully")
+
     await db.commit()
     await logger.ainfo("Database seeding completed successfully.")

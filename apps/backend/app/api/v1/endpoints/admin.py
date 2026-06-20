@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.schemas import (
     APIResponse, PaginatedResponse, PaginationMeta, SystemSettingUpdate,
     UpdateUserStatusRequest, UpdateUserRoleRequest, UpdateVendorCommissionRequest,
-    UpdateDeliveryBoyStatusRequest
+    UpdateDeliveryBoyStatusRequest, AdvertisementCreate
 )
 from app.core.rbac.engine import get_current_user
 from app.db.session import get_db
@@ -867,6 +867,90 @@ async def delete_admin_banner(
     return APIResponse(success=True, message="Banner deleted successfully")
 
 
+@router.get("/ads", response_model=APIResponse)
+async def list_admin_ads(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all advertisements and popup modals for admin portal."""
+    await _verify_admin(current_user)
+    from app.models.cms import Advertisement
+    res = await db.execute(select(Advertisement).order_by(Advertisement.created_at.desc()))
+    ads = res.scalars().all()
+    
+    data = [
+        {
+            "id": str(a.id),
+            "name": a.name,
+            "description": a.description,
+            "advertiser_name": a.advertiser_name,
+            "image_url": a.image_url,
+            "click_url": a.click_url,
+            "placement": a.placement,
+            "video_url": getattr(a, "video_url", None),
+            "page_target": a.page_target,
+            "position": getattr(a, "position", None),
+            "is_active": a.is_active,
+            "starts_at": a.starts_at,
+            "expires_at": a.expires_at,
+        }
+        for a in ads
+    ]
+    return APIResponse(success=True, data=data)
+
+
+@router.post("/ads", response_model=APIResponse)
+async def create_admin_ad(
+    body: AdvertisementCreate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new advertisement or popup campaign."""
+    await _verify_admin(current_user)
+    from app.api.schemas import AdvertisementCreate
+    from app.models.cms import Advertisement
+    
+    ad = Advertisement(
+        name=body.name,
+        description=body.description,
+        advertiser_name=body.advertiser_name,
+        image_url=body.image_url,
+        click_url=body.click_url,
+        placement=body.placement,
+        video_url=body.video_url,
+        page_target=body.page_target,
+        position=body.position,
+        target_categories=body.target_categories or [],
+        target_locations=body.target_locations or [],
+        is_active=body.is_active,
+        starts_at=body.starts_at,
+        expires_at=body.expires_at,
+    )
+    db.add(ad)
+    await db.commit()
+    return APIResponse(success=True, message="Advertisement created successfully", data={"id": str(ad.id)})
+
+
+@router.delete("/ads/{ad_id}", response_model=APIResponse)
+async def delete_admin_ad(
+    ad_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete/remove an advertisement."""
+    await _verify_admin(current_user)
+    from app.models.cms import Advertisement
+    
+    res = await db.execute(select(Advertisement).where(Advertisement.id == ad_id))
+    ad = res.scalars().first()
+    if not ad:
+        raise HTTPException(status_code=404, detail="Advertisement not found")
+        
+    await db.delete(ad)
+    await db.commit()
+    return APIResponse(success=True, message="Advertisement deleted successfully")
+
+
 @router.get("/notification-templates", response_model=APIResponse)
 async def list_notification_templates(
     current_user: dict = Depends(get_current_user),
@@ -1090,4 +1174,125 @@ async def reject_return_request(
     ret_req.status = ReturnStatus.REJECTED
     await db.commit()
     return APIResponse(success=True, message="Return request rejected successfully")
+
+
+@router.get("/ads", response_model=APIResponse)
+async def list_admin_ads(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all ads for administration."""
+    await _verify_admin(current_user)
+    from app.models.cms import Advertisement
+    
+    stmt = select(Advertisement).order_by(Advertisement.created_at.desc())
+    res = await db.execute(stmt)
+    ads = res.scalars().all()
+    
+    data = [
+        {
+            "id": str(a.id),
+            "name": a.name,
+            "description": a.description,
+            "advertiser_name": a.advertiser_name,
+            "image_url": a.image_url,
+            "click_url": a.click_url,
+            "placement": a.placement,
+            "video_url": getattr(a, "video_url", None),
+            "page_target": a.page_target,
+            "position": getattr(a, "position", None),
+            "is_active": a.is_active,
+            "starts_at": a.starts_at.isoformat() if a.starts_at else None,
+            "expires_at": a.expires_at.isoformat() if a.expires_at else None,
+        }
+        for a in ads
+    ]
+    return APIResponse(success=True, data=data)
+
+
+@router.post("/ads", response_model=APIResponse)
+async def create_admin_ad(
+    ad_data: AdvertisementCreate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new advertisement."""
+    await _verify_admin(current_user)
+    from app.models.cms import Advertisement
+    
+    ad = Advertisement(
+        name=ad_data.name,
+        description=ad_data.description,
+        advertiser_name=ad_data.advertiser_name,
+        image_url=ad_data.image_url,
+        click_url=ad_data.click_url,
+        placement=ad_data.placement,
+        video_url=ad_data.video_url,
+        page_target=ad_data.page_target,
+        position=ad_data.position,
+        target_categories=ad_data.target_categories,
+        target_locations=ad_data.target_locations,
+        is_active=ad_data.is_active,
+        starts_at=ad_data.starts_at,
+        expires_at=ad_data.expires_at,
+    )
+    db.add(ad)
+    await db.commit()
+    await db.refresh(ad)
+    return APIResponse(success=True, message="Advertisement created successfully", data={"id": str(ad.id)})
+
+
+@router.put("/ads/{ad_id}", response_model=APIResponse)
+async def update_admin_ad(
+    ad_id: UUID,
+    ad_data: AdvertisementCreate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update an existing advertisement."""
+    await _verify_admin(current_user)
+    from app.models.cms import Advertisement
+    
+    res = await db.execute(select(Advertisement).where(Advertisement.id == ad_id))
+    ad = res.scalars().first()
+    if not ad:
+        raise HTTPException(status_code=404, detail="Advertisement not found")
+        
+    ad.name = ad_data.name
+    ad.description = ad_data.description
+    ad.advertiser_name = ad_data.advertiser_name
+    ad.image_url = ad_data.image_url
+    ad.click_url = ad_data.click_url
+    ad.placement = ad_data.placement
+    ad.video_url = ad_data.video_url
+    ad.page_target = ad_data.page_target
+    ad.position = ad_data.position
+    ad.target_categories = ad_data.target_categories
+    ad.target_locations = ad_data.target_locations
+    ad.is_active = ad_data.is_active
+    ad.starts_at = ad_data.starts_at
+    ad.expires_at = ad_data.expires_at
+    
+    await db.commit()
+    return APIResponse(success=True, message="Advertisement updated successfully")
+
+
+@router.delete("/ads/{ad_id}", response_model=APIResponse)
+async def delete_admin_ad(
+    ad_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete an advertisement."""
+    await _verify_admin(current_user)
+    from app.models.cms import Advertisement
+    
+    res = await db.execute(select(Advertisement).where(Advertisement.id == ad_id))
+    ad = res.scalars().first()
+    if not ad:
+        raise HTTPException(status_code=404, detail="Advertisement not found")
+        
+    await db.delete(ad)
+    await db.commit()
+    return APIResponse(success=True, message="Advertisement deleted successfully")
 

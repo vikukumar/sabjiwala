@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Building2, Users, ShoppingBag, Truck,
   Map, BarChart3, Settings, Tag, Image, MessageSquare,
   LogOut, Menu, X, Loader2, ChevronRight, Bell, Shield,
-  Activity, FileText
+  Activity, FileText, Megaphone
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
@@ -30,6 +30,7 @@ const navItems = [
   { id: "categories", label: "Categories", icon: Tag, href: "/categories" },
   { id: "coupons", label: "Coupons", icon: Tag, href: "/coupons" },
   { id: "banners", label: "Banners", icon: Image, href: "/banners" },
+  { id: "ads", label: "Ads & Popups", icon: Megaphone, href: "/ads" },
   { id: "support", label: "Support", icon: MessageSquare, href: "/support" },
   { id: "returns", label: "Returns", icon: FileText, href: "/returns" },
   { id: "settings", label: "Settings", icon: Settings, href: "/settings" },

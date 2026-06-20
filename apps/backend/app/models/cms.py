@@ -71,10 +71,13 @@ class Advertisement(BaseEntity):
     # Creative
     image_url: Mapped[str] = mapped_column(String(500), nullable=False)
     click_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    video_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
     # Placement
     placement: Mapped[str] = mapped_column(String(50), nullable=False, default="sidebar")
-    # placement: sidebar, inline, popup, banner
+    # placement: sidebar, inline, popup, banner, pip
+    page_target: Mapped[str] = mapped_column(String(100), nullable=False, default="home")
+    position: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
     # Targeting
     target_categories: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)

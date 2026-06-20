@@ -459,6 +459,15 @@ async def get_catalog_product(
         p_attrs["quantity"] = float(inv.quantity)
         p_attrs["vendor_id"] = str(inv.vendor_id)
         stock_val = float(inv.quantity)
+        
+        # Enrich with vendor delivery rules
+        from app.models.vendor import VendorDeliveryRule
+        rule_stmt = select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == inv.vendor_id)
+        rule_res = await db.execute(rule_stmt)
+        rule = rule_res.scalars().first()
+        if rule:
+            p_attrs["free_delivery_above"] = float(rule.free_delivery_above) if rule.free_delivery_above is not None else 199.0
+            p_attrs["min_order_amount"] = float(rule.min_order_amount) if rule.min_order_amount is not None else 99.0
     else:
         p_attrs["quantity"] = 0.0
         p_attrs["vendor_id"] = ""
@@ -472,3 +481,80 @@ async def get_catalog_product(
     product_res.stock = stock_val
 
     return APIResponse(success=True, data=product_res)
+
+
+@router.get("/products/{product_id}/reviews", response_model=APIResponse)
+async def get_product_reviews(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve all approved reviews for a specific product, including reviewer details."""
+    from app.models.product import ProductReview
+    from app.models.user import User
+    
+    stmt = (
+        select(ProductReview, User.first_name, User.last_name)
+        .join(User, User.id == ProductReview.user_id)
+        .where(
+            ProductReview.product_id == product_id,
+            ProductReview.is_approved == True
+        )
+        .order_by(ProductReview.created_at.desc())
+    )
+    res = await db.execute(stmt)
+    rows = res.all()
+    
+    data = [
+        {
+            "id": str(row.ProductReview.id),
+            "product_id": str(row.ProductReview.product_id),
+            "user_id": str(row.ProductReview.user_id),
+            "user_name": f"{row.first_name} {row.last_name}".strip() or "Anonymous User",
+            "rating": row.ProductReview.rating,
+            "comment": row.ProductReview.comment,
+            "created_at": row.ProductReview.created_at.isoformat() if row.ProductReview.created_at else None,
+            "is_verified_purchase": row.ProductReview.is_verified_purchase,
+            "vendor_reply": row.ProductReview.vendor_reply,
+        }
+        for row in rows
+    ]
+    return APIResponse(success=True, data=data)
+
+
+@router.get("/ads", response_model=APIResponse)
+async def get_active_ads(
+    page_target: str = "home",
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve active advertisements filtered by page target."""
+    from app.models.cms import Advertisement
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    
+    stmt = (
+        select(Advertisement)
+        .where(
+            Advertisement.is_active == True,
+            Advertisement.page_target == page_target,
+            (Advertisement.starts_at == None) | (Advertisement.starts_at <= now),
+            (Advertisement.expires_at == None) | (Advertisement.expires_at >= now)
+        )
+    )
+    res = await db.execute(stmt)
+    ads = res.scalars().all()
+    
+    data = [
+        {
+            "id": str(a.id),
+            "name": a.name,
+            "description": a.description,
+            "image_url": a.image_url,
+            "click_url": a.click_url,
+            "placement": a.placement,
+            "video_url": getattr(a, "video_url", None),
+            "page_target": a.page_target,
+            "position": getattr(a, "position", None),
+        }
+        for a in ads
+    ]
+    return APIResponse(success=True, data=data)

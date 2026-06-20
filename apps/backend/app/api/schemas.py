@@ -661,6 +661,42 @@ class BannerCreate(BaseModel):
     starts_at: Optional[datetime] = None
     expires_at: Optional[datetime] = None
 
+class AdvertisementCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    advertiser_name: Optional[str] = None
+    image_url: str
+    click_url: Optional[str] = None
+    placement: str = "sidebar"
+    video_url: Optional[str] = None
+    page_target: str = "home"
+    position: Optional[str] = None
+    target_categories: Optional[List[str]] = None
+    target_locations: Optional[List[str]] = None
+    is_active: bool = True
+    starts_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+
+class AdvertisementResponse(BaseModel):
+    id: UUID
+    name: str
+    description: Optional[str] = None
+    advertiser_name: Optional[str] = None
+    image_url: str
+    click_url: Optional[str] = None
+    placement: str
+    video_url: Optional[str] = None
+    page_target: str
+    position: Optional[str] = None
+    target_categories: Optional[List[str]] = None
+    target_locations: Optional[List[str]] = None
+    is_active: bool
+    starts_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
 class CmsPageCreate(BaseModel):
     slug: str
     title: str

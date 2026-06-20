@@ -6,26 +6,10 @@ import { api, resolveImageUrl } from "@sbjiwala/shared";
 import Link from "next/link";
 import { useParams, useRouter, usePathname, useSearchParams } from "next/navigation";
 import { resolveLink } from "@/components/AppShell";
-import { Star, Plus, Minus, Heart, Share2, ChevronLeft, ShoppingCart, Truck, Leaf, ShieldCheck, ArrowRight, Tag } from "lucide-react";
+import { Star, Plus, Minus, Heart, Share2, ChevronLeft, ShoppingCart, Truck, Leaf, ShieldCheck, ArrowRight, Tag, Menu } from "lucide-react";
 import { Button, Badge, Skeleton, EmptyState } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
-
-function StarRating({ value, onChange }: { value: number; onChange?: (v: number) => void }) {
-  return (
-    <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((s) => (
-        <button
-          key={s}
-          type="button"
-          onClick={() => onChange?.(s)}
-          className={`transition-transform hover:scale-110 ${onChange ? "cursor-pointer" : "cursor-default"}`}
-        >
-          <Star className={`w-5 h-5 ${s <= value ? "fill-amber-400 text-amber-400" : "text-slate-300 dark:text-slate-600"}`} />
-        </button>
-      ))}
-    </div>
-  );
-}
+import ProductCard from "@/components/ProductCard";
 
 export default function ProductDetailClient() {
   const params = useParams<{ id?: string }>();
@@ -37,15 +21,60 @@ export default function ProductDetailClient() {
 
   const isGuest = typeof window !== "undefined" && !localStorage.getItem("sw_access_token");
 
+  // Main Product Query
   const { data: product, isLoading } = useQuery<any>({
     queryKey: ["product", id],
-    queryFn: async () => { const r = await api.get(`/catalog/products/${id}`); return r.data; },
+    queryFn: async () => {
+      const r = await api.get(`/catalog/products/${id}`);
+      return r.data;
+    },
     enabled: !!id,
   });
 
+  // Database Reviews Query
+  const { data: reviews = [] } = useQuery<any[]>({
+    queryKey: ["reviews", id],
+    queryFn: async () => {
+      const r = await api.get(`/catalog/products/${id}/reviews`);
+      return r.data || [];
+    },
+    enabled: !!id,
+  });
+
+  // Ads Query (Target page: product_detail)
+  const { data: ads = [] } = useQuery<any[]>({
+    queryKey: ["ads", "product_detail"],
+    queryFn: async () => {
+      const r = await api.get(`/catalog/ads?page_target=product_detail`);
+      return r.data || [];
+    },
+  });
+
+  // Similar Products Query
+  const categoryId = product?.category_id;
+  const { data: similarRes } = useQuery<any>({
+    queryKey: ["similar-products", categoryId],
+    queryFn: async () => {
+      const r = await api.get(`/catalog/products?category_id=${categoryId}&page_size=10`);
+      return r.data;
+    },
+    enabled: !!categoryId,
+  });
+  const similarProducts = (similarRes?.data || []).filter((p: any) => p.id !== id);
+
+  // Recommended Products Query
+  const { data: recommendedRes } = useQuery<any>({
+    queryKey: ["recommended-products"],
+    queryFn: async () => {
+      const r = await api.get(`/catalog/products?is_featured=true&page_size=10`);
+      return r.data;
+    },
+  });
+  const recommendedProducts = (recommendedRes?.data || []).filter((p: any) => p.id !== id);
+
   const pathname = usePathname();
 
-  // Fetch wishlist
+  // Wishlist Query
   const { data: wishlist = [] } = useQuery<any[]>({
     queryKey: ["wishlist"],
     queryFn: async () => {
@@ -58,7 +87,7 @@ export default function ProductDetailClient() {
   const wishlistItem = wishlist.find((w: any) => w.product_id === id);
   const isWishlisted = !!wishlistItem;
 
-  // Toggle wishlist item
+  // Toggle Wishlist Mutation
   const toggleWishlist = useMutation({
     mutationFn: async () => {
       if (isGuest) {
@@ -78,15 +107,18 @@ export default function ProductDetailClient() {
     onError: (err: any) => showError("Failed to update wishlist", err.response?.data?.detail || err.message),
   });
 
-  // Read backend cart
+  // Cart Query
   const { data: cartData } = useQuery<any>({
     queryKey: ["cart"],
-    queryFn: async () => { const r = await api.get("/cart"); return r.data; },
+    queryFn: async () => {
+      const r = await api.get("/cart");
+      return r.data;
+    },
     enabled: typeof window !== "undefined" && !isGuest,
     staleTime: 0,
   });
 
-  // Track guest cart local state
+  // Guest Cart Helpers
   const getLocalGuestCart = () => {
     if (typeof window === "undefined") return { items: [], subtotal: 0 };
     try {
@@ -130,28 +162,36 @@ export default function ProductDetailClient() {
   const isUnlimited = product?.attributes?.is_unlimited ?? false;
   const isOutOfStock = !isUnlimited && stock <= 0;
 
+  const minOrderQty = product?.attributes?.min_order_quantity ?? 1;
+  const maxOrderQty = product?.attributes?.max_order_quantity ?? 10;
+
+  const freeDeliveryAbove = product?.attributes?.free_delivery_above ?? 199;
+  const minOrderAmount = product?.attributes?.min_order_amount ?? 99;
+
+  // Find Inline Ads (Middle / Bottom)
+  const middleAd = ads.find((a: any) => a.placement === "inline" && a.position === "middle");
+  const bottomAd = ads.find((a: any) => a.placement === "inline" && a.position === "bottom");
+
   // Guest actions
   const handleGuestAdd = () => {
     const current = getLocalGuestCart();
     const existing = current.items.find((i: any) => i.product_id === id);
     const vendorId = product?.attributes?.vendor_id || product?.vendor_id;
 
-    const stock = product.stock ?? product.attributes?.quantity ?? 0;
-    const isUnlimited = product.attributes?.is_unlimited ?? false;
     const existingQty = existing ? existing.quantity : 0;
-    if (!isUnlimited && existingQty + 1 > stock) {
+    if (!isUnlimited && existingQty + minOrderQty > stock) {
       showError("Out of stock", `Only ${stock} items available`);
       return;
     }
 
     if (existing) {
-      existing.quantity += 1;
+      existing.quantity += minOrderQty;
     } else {
       current.items.push({
         id: `guest-${id}`,
         product_id: id,
         product_name: product.name,
-        quantity: 1,
+        quantity: minOrderQty,
         unit: product.unit || "500g",
         price: price,
         vendor_id: vendorId,
@@ -163,7 +203,6 @@ export default function ProductDetailClient() {
     saveLocalGuestCart(current);
     success("Added to cart! 🛒");
 
-    // Trigger contextual notification alert benefit on first guest item added
     if (current.items.length === 1) {
       window.dispatchEvent(new Event("trigger-notification-benefit"));
     }
@@ -174,9 +213,17 @@ export default function ProductDetailClient() {
     const idx = current.items.findIndex((i: any) => i.product_id === id);
     if (idx === -1) return;
 
-    const stock = product.stock ?? product.attributes?.quantity ?? 0;
-    const isUnlimited = product.attributes?.is_unlimited ?? false;
-    if (newQty > current.items[idx].quantity && !isUnlimited && newQty > stock) {
+    if (newQty < minOrderQty && newQty > 0) {
+      showError("Minimum Quantity Limit", `Minimum order quantity is ${minOrderQty}`);
+      return;
+    }
+
+    if (newQty > maxOrderQty) {
+      showError("Maximum Quantity Limit", `Maximum order quantity is ${maxOrderQty}`);
+      return;
+    }
+
+    if (!isUnlimited && newQty > stock) {
       showError("Insufficient stock", `Only ${stock} items available in stock.`);
       return;
     }
@@ -192,11 +239,15 @@ export default function ProductDetailClient() {
   };
 
   const addToCart = useMutation({
-    mutationFn: async () => api.post("/cart/items", { product_id: id, vendor_id: product?.attributes?.vendor_id, quantity: 1 }),
+    mutationFn: async () =>
+      api.post("/cart/items", {
+        product_id: id,
+        vendor_id: product?.attributes?.vendor_id,
+        quantity: minOrderQty
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       success("Added to cart! 🛒");
-      // Trigger contextual notification alert benefit on first backend item added
       const currentItems = queryClient.getQueryData<any>(["cart"])?.items || [];
       if (currentItems.length === 0) {
         window.dispatchEvent(new Event("trigger-notification-benefit"));
@@ -241,60 +292,88 @@ export default function ProductDetailClient() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto font-sans">
-      {/* Back button */}
-      <div className="sticky top-16 z-20 bg-transparent px-4 pt-4 pb-2">
+    <div className="max-w-2xl mx-auto font-sans pt-2">
+      {/* Sleek Top Header Bar */}
+      <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between gap-4 rounded-b-2xl shadow-sm">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-400 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-slate-300"
+          className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-850 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all border border-slate-200 dark:border-slate-700 cursor-pointer"
+          aria-label="Go Back"
         >
-          <ChevronLeft className="w-4 h-4" /> Back
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <span className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">
+          {product.name}
+        </span>
+        <button
+          onClick={() => window.dispatchEvent(new Event("sw_open_sidebar"))}
+          className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-850 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all border border-slate-200 dark:border-slate-700 cursor-pointer"
+          aria-label="Open Menu"
+        >
+          <Menu className="w-5 h-5" />
         </button>
       </div>
 
-      <div className="px-4 pb-32 space-y-4">
-        {/* Product Hero */}
+      <div className="px-4 pb-32 mt-4 space-y-4">
+        {/* Flipkart/Swiggy-style Image Gallery */}
         <div className="relative bg-gradient-to-br from-emerald-50 to-teal-50/20 dark:from-slate-800/50 dark:to-slate-900 rounded-3xl p-8 flex flex-col items-center justify-center overflow-hidden" style={{ minHeight: "280px" }}>
           {hasDiscount && (
-            <span className="absolute top-4 left-4 bg-rose-500 text-white text-xs font-black px-2.5 py-1 rounded-full z-10">
+            <span className="absolute top-4 left-4 bg-rose-500 text-white text-xs font-black px-2.5 py-1 rounded-full z-10 shadow-sm">
               -{discountPct}% OFF
             </span>
           )}
-          
+
           <div className="flex-1 w-full flex items-center justify-center h-48">
             {urls.length > 0 ? (
               <img
                 src={urls[activeImageIndex]}
                 alt={product.name}
-                className="max-h-full max-w-full object-contain rounded-2xl transition-all duration-300"
+                className="max-h-full max-w-full object-contain rounded-2xl transition-all duration-300 transform hover:scale-105"
               />
             ) : (
               <span className="text-[110px] leading-none drop-shadow-lg select-none">{emoji}</span>
             )}
           </div>
 
-          <button
-            onClick={() => toggleWishlist.mutate()}
-            disabled={toggleWishlist.isPending}
-            className="absolute top-4 right-4 p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 active:scale-95 transition-all text-slate-455 hover:text-rose-550 cursor-pointer z-10"
-            aria-label={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
-          >
-            <Heart className={`w-4 h-4 transition-colors ${isWishlisted ? "fill-rose-500 text-rose-500" : "text-slate-400"}`} />
-          </button>
-          <button className="absolute top-14 right-4 p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 transition-transform z-10">
-            <Share2 className="w-4 h-4 text-slate-400" />
-          </button>
+          {/* Dot Page Indicators Overlay */}
+          {urls.length > 1 && (
+            <div className="absolute bottom-4 flex gap-1.5 justify-center z-10 bg-black/20 dark:bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm">
+              {urls.map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${
+                    activeImageIndex === idx ? "bg-white scale-125 w-2" : "bg-white/50"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Share & Heart Action Buttons */}
+          <div className="absolute top-4 right-4 flex flex-col gap-2">
+            <button
+              onClick={() => toggleWishlist.mutate()}
+              disabled={toggleWishlist.isPending}
+              className="p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 active:scale-95 transition-all text-slate-500 hover:text-rose-500 cursor-pointer border border-slate-100 dark:border-slate-800"
+              aria-label={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+            >
+              <Heart className={`w-4 h-4 transition-colors ${isWishlisted ? "fill-rose-500 text-rose-500" : "text-slate-400"}`} />
+            </button>
+            <button className="p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 transition-transform cursor-pointer border border-slate-100 dark:border-slate-800">
+              <Share2 className="w-4 h-4 text-slate-400" />
+            </button>
+          </div>
         </div>
 
         {/* Thumbnail Row */}
         {urls.length > 1 && (
-          <div className="flex gap-2 justify-center py-2 overflow-x-auto">
+          <div className="flex gap-2 justify-center py-1 overflow-x-auto">
             {urls.map((url, idx) => (
               <button
                 key={url}
                 onClick={() => setActiveImageIndex(idx)}
-                className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${
-                  activeImageIndex === idx ? "border-emerald-500 scale-105 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
+                className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                  activeImageIndex === idx ? "border-emerald-500 scale-105 shadow-md bg-white dark:bg-slate-800" : "border-transparent opacity-60 hover:opacity-100"
                 }`}
               >
                 <img src={url} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
@@ -303,100 +382,211 @@ export default function ProductDetailClient() {
           </div>
         )}
 
-        {/* Info */}
-        <div className="space-y-2">
+        {/* Product Details Section */}
+        <div className="space-y-2.5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-black text-slate-900 dark:text-white">{product.name}</h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{product.unit || "500g"}</p>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{product.name}</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{product.unit || "500g"}</p>
             </div>
             <div className="text-right flex-shrink-0">
-              <p className="text-2xl font-black text-slate-900 dark:text-white">₹{price.toFixed(2)}</p>
-              {hasDiscount && <p className="text-sm text-slate-400 line-through">₹{mrp?.toFixed(2)}</p>}
+              <p className="text-xl font-bold text-slate-900 dark:text-white">₹{price.toFixed(2)}</p>
+              {hasDiscount && <p className="text-xs text-slate-450 line-through">₹{mrp?.toFixed(2)}</p>}
             </div>
           </div>
 
-          {/* Rating */}
-          <div className="flex items-center gap-2">
-            <StarRating value={Math.round(rating)} />
-            <span className="text-sm font-bold text-amber-600">{rating > 0 ? rating.toFixed(1) : "New"}</span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">
-              {reviewCount > 0 ? `(${reviewCount} reviews)` : "(No reviews yet)"}
-            </span>
+          {/* Chips style Category & Sub-category */}
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            {product.category?.name && (
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-900/30">
+                {product.category.name}
+              </span>
+            )}
+            {product.attributes?.subcategory && (
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350">
+                {product.attributes.subcategory}
+              </span>
+            )}
           </div>
 
-          {/* Stock badge */}
-          {product.stock !== undefined && (
-            <Badge variant={product.stock > 10 ? "success" : product.stock > 0 ? "warning" : "danger"}>
-              {product.stock > 10 ? "In Stock" : product.stock > 0 ? `Only ${product.stock} left` : "Out of Stock"}
-            </Badge>
-          )}
+          {/* Quantity Limits & Stock Status */}
+          <div className="flex items-center justify-between border-t border-b border-slate-100 dark:border-slate-800 py-2 text-xs">
+            <div className="flex gap-4 text-slate-550 dark:text-slate-405">
+              <span>Min Order Qty: <strong className="font-bold text-slate-800 dark:text-slate-205">{minOrderQty}</strong></span>
+              <span>Max Order Qty: <strong className="font-bold text-slate-800 dark:text-slate-205">{maxOrderQty}</strong></span>
+            </div>
+            <div>
+              {isOutOfStock ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400">
+                  Out of Stock
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+                  In Stock
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Features */}
-        <div className="grid grid-cols-3 gap-3">
-          {features.map((f) => {
-            const Icon = f.icon;
-            return (
-              <div key={f.label} className="card p-3 text-center space-y-1">
-                <Icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mx-auto" />
-                <p className="text-xs font-black text-slate-800 dark:text-slate-200">{f.label}</p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">{f.desc}</p>
-              </div>
-            );
-          })}
+        {/* Free Delivery Promo Card */}
+        <div className="card p-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl flex items-start gap-3">
+          <Truck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+              Free Delivery on orders above ₹{freeDeliveryAbove}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+              Minimum order requirement is ₹{minOrderAmount}. 🥬 Fresh vegetables harvested daily. ⚡ Direct from kisan to your kitchen.
+            </p>
+          </div>
         </div>
 
-        {/* Description */}
+        {/* Description Section */}
         {product.description && (
           <div className="card p-5 space-y-2">
-            <h2 className="font-black text-slate-900 dark:text-white">About this product</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{product.description}</p>
+            <h2 className="font-bold text-sm text-slate-900 dark:text-white">Product Description</h2>
+            <p className="text-xs text-slate-650 dark:text-slate-400 leading-relaxed font-normal">{product.description}</p>
           </div>
         )}
 
         {/* Nutritional Info */}
         {product.attributes?.nutritional_info && (
           <div className="card p-5 space-y-3">
-            <h2 className="font-black text-slate-900 dark:text-white">Nutritional Info</h2>
+            <h2 className="font-bold text-sm text-slate-900 dark:text-white">Nutritional Information</h2>
             <div className="grid grid-cols-2 gap-2">
               {Object.entries(product.attributes.nutritional_info).map(([key, val]) => (
-                <div key={key} className="flex justify-between text-xs bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2">
-                  <span className="font-semibold text-slate-600 dark:text-slate-400 capitalize">{key.replace(/_/g, " ")}</span>
-                  <span className="font-black text-slate-900 dark:text-white">{String(val)}</span>
+                <div key={key} className="flex justify-between text-[11px] bg-slate-50 dark:bg-slate-850 rounded-xl px-3 py-2 border border-slate-100 dark:border-slate-800">
+                  <span className="font-medium text-slate-500 dark:text-slate-400 capitalize">{key.replace(/_/g, " ")}</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{String(val)}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Offers */}
-        <div className="card p-4 flex items-center gap-3">
-          <Tag className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-bold text-slate-900 dark:text-white">Available Offers</p>
-            <Link href={resolveLink("/coupons")} className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">View coupons →</Link>
+        {/* Middle Inline Ad Banner */}
+        {middleAd && (
+          <a href={middleAd.click_url || "#"} className="block rounded-2xl overflow-hidden shadow-sm hover:opacity-95 transition-opacity my-4">
+            <img src={resolveImageUrl(middleAd.image_url)} alt={middleAd.name} className="w-full h-auto object-cover max-h-32 rounded-2xl" />
+          </a>
+        )}
+
+        {/* Real Product Reviews Section */}
+        <div className="card p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h2 className="font-bold text-sm text-slate-900 dark:text-white">Ratings & Reviews</h2>
+            <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-lg text-xs font-bold">
+              <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+              {rating > 0 ? rating.toFixed(1) : "New"}
+            </div>
           </div>
+          
+          {reviews.length > 0 ? (
+            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
+              {reviews.map((r: any) => (
+                <div key={r.id} className="space-y-1.5 pb-3 border-b border-slate-100 dark:border-slate-805 last:border-0 last:pb-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-800 dark:text-slate-205">
+                      {r.user_name || "Verified Customer"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`w-3 h-3 ${
+                            star <= r.rating ? "fill-amber-450 text-amber-450" : "text-slate-200 dark:text-slate-700"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    {r.is_verified_purchase && (
+                      <span className="text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded font-bold">
+                        Verified Purchase
+                      </span>
+                    )}
+                  </div>
+                  {r.comment && (
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
+                      {r.comment}
+                    </p>
+                  )}
+                  {r.vendor_reply && (
+                    <div className="mt-2 pl-3 border-l-2 border-emerald-500/30 text-[10px] text-slate-500 dark:text-slate-400 italic bg-slate-50/50 dark:bg-slate-900/50 p-1.5 rounded-r-lg">
+                      <strong className="text-slate-700 dark:text-slate-300 font-bold not-italic">Vendor Response: </strong>
+                      {r.vendor_reply}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 text-center py-4">No reviews yet. Be the first to write a review!</p>
+          )}
         </div>
+
+        {/* Similar Products (2-Row Horizontal Scroll Grid) */}
+        {similarProducts.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white px-1">Similar Products</h3>
+            <div className="flex overflow-x-auto gap-4 pb-4 snap-x scrollbar-thin">
+              <div className="grid grid-rows-2 grid-flow-col gap-4">
+                {similarProducts.map((p: any) => (
+                  <div key={p.id} className="w-[180px] snap-start">
+                    <ProductCard product={p} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Recommended Products (2-Row Horizontal Scroll Grid) */}
+        {recommendedProducts.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white px-1">Recommended Products</h3>
+            <div className="flex overflow-x-auto gap-4 pb-4 snap-x scrollbar-thin">
+              <div className="grid grid-rows-2 grid-flow-col gap-4">
+                {recommendedProducts.map((p: any) => (
+                  <div key={p.id} className="w-[180px] snap-start">
+                    <ProductCard product={p} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bottom Inline Ad Banner */}
+        {bottomAd && (
+          <a href={bottomAd.click_url || "#"} className="block rounded-2xl overflow-hidden shadow-sm hover:opacity-95 transition-opacity my-4">
+            <img src={resolveImageUrl(bottomAd.image_url)} alt={bottomAd.name} className="w-full h-auto object-cover max-h-32 rounded-2xl" />
+          </a>
+        )}
       </div>
 
-      {/* Sticky Add to Cart */}
+      {/* Sticky Bottom Add to Cart Bar */}
       <div className="fixed bottom-16 md:bottom-0 left-0 right-0 md:left-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 z-30">
         <div className="max-w-2xl mx-auto flex items-center gap-4">
           <div>
-            <p className="text-xl font-black text-slate-900 dark:text-white">₹{price.toFixed(2)}</p>
+            <p className="text-lg font-bold text-slate-900 dark:text-white">₹{price.toFixed(2)}</p>
             {hasDiscount && <p className="text-xs text-slate-400 line-through">₹{mrp?.toFixed(2)}</p>}
           </div>
           <div className="flex-1">
             {cartItem ? (
-              <div className="flex items-center justify-center gap-4 bg-emerald-600 text-white rounded-2xl py-3 px-6 shadow-lg">
+              <div className="flex items-center justify-center gap-4 bg-emerald-600 text-white rounded-2xl py-2.5 px-6 shadow-md">
                 <button
                   onClick={() => isGuest ? handleGuestUpdateQty(cartItem.quantity - 1) : updateQty.mutate({ itemId: cartItem.id, qty: cartItem.quantity - 1 })}
                   className="w-8 h-8 flex items-center justify-center bg-emerald-700 hover:bg-emerald-800 rounded-xl transition-colors cursor-pointer"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
-                <span className="text-lg font-black">{cartItem.quantity}</span>
+                <span className="text-base font-bold">{cartItem.quantity}</span>
                 <button
                   onClick={() => {
                     const targetQty = cartItem.quantity + 1;
@@ -422,7 +612,7 @@ export default function ProductDetailClient() {
                 fullWidth
                 size="lg"
                 disabled
-                className="rounded-2xl shadow-lg cursor-not-allowed bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500"
+                className="rounded-2xl shadow-md cursor-not-allowed bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500"
               >
                 Out of Stock
               </Button>
@@ -435,7 +625,7 @@ export default function ProductDetailClient() {
                   const stock = product.stock ?? product.attributes?.quantity ?? 0;
                   const isUnlimited = product.attributes?.is_unlimited ?? false;
                   const existingQty = cartItem ? cartItem.quantity : 0;
-                  if (!isUnlimited && existingQty + 1 > stock) {
+                  if (!isUnlimited && existingQty + minOrderQty > stock) {
                     showError("Insufficient stock", `Only ${stock} items available in stock.`);
                     return;
                   }
@@ -446,7 +636,7 @@ export default function ProductDetailClient() {
                   }
                 }}
                 leftIcon={<ShoppingCart className="w-5 h-5" />}
-                className="rounded-2xl shadow-lg cursor-pointer"
+                className="rounded-2xl shadow-md cursor-pointer"
               >
                 Add to Cart
               </Button>

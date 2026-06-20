@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, ArrowRight, Star, Plus, Minus, ChevronRight, Zap, Truck, Leaf, ShieldCheck, Clock, TrendingUp, Loader2, Bell, X, Navigation } from "lucide-react";
+import { Search, ArrowRight, Star, Plus, Minus, ChevronRight, Zap, Truck, Leaf, ShieldCheck, Clock, TrendingUp, Loader2, Bell, X, Navigation, Volume2, VolumeX } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, useWebSocket, resolveImageUrl } from "@sbjiwala/shared";
 import Link from "next/link";
@@ -819,6 +819,109 @@ function HomeSkeleton() {
   );
 }
 
+// ==================== PROMO POPUP MODAL ====================
+function PromoPopupModal({ ad, onClose }: { ad: any; onClose: () => void }) {
+  if (!ad) return null;
+  return (
+    <div className="fixed inset-0 bg-black/60 dark:bg-black/85 flex items-center justify-center p-4 z-[999] animate-fade-in backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl max-w-sm w-full border border-slate-100 dark:border-slate-800 relative animate-scale-in">
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 p-1.5 rounded-full bg-black/40 hover:bg-black/65 text-white z-10 transition-colors cursor-pointer"
+          aria-label="Close offer modal"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        <img
+          src={resolveImageUrl(ad.image_url)}
+          alt={ad.name}
+          className="w-full h-48 object-cover"
+        />
+        <div className="p-6 text-center space-y-4">
+          <div className="space-y-1.5">
+            <h3 className="font-black text-lg text-slate-900 dark:text-white leading-snug">
+              {ad.name}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+              {ad.description}
+            </p>
+          </div>
+          {ad.click_url && (
+            <Link href={resolveLink(ad.click_url)} onClick={onClose} className="block">
+              <Button fullWidth size="lg" className="rounded-2xl shadow-md">
+                Claim Offer Now
+              </Button>
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== FLOATING PIP VIDEO AD ====================
+function PipVideoAd({ ad }: { ad: any }) {
+  const [closed, setClosed] = useState(false);
+  const [muted, setMuted] = useState(true);
+  
+  if (!ad || closed) return null;
+
+  return (
+    <div className="fixed bottom-24 right-4 z-40 w-40 sm:w-48 aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 bg-black animate-slide-in flex flex-col justify-end">
+      {/* Floating video */}
+      <video
+        src={ad.video_url}
+        autoPlay
+        loop
+        muted={muted}
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+      
+      {/* Overlay gradient */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
+
+      {/* Header controls */}
+      <div className="absolute top-2 left-2 right-2 flex justify-between items-center z-10">
+        <span className="text-[9px] bg-black/40 text-white/95 px-1.5 py-0.5 rounded font-black uppercase tracking-wider backdrop-blur-sm">
+          Ad
+        </span>
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setMuted(!muted)}
+            className="p-1 rounded-full bg-black/50 text-white hover:bg-black/70 cursor-pointer backdrop-blur-sm transition-colors border border-white/10"
+            title={muted ? "Unmute" : "Mute"}
+          >
+            {muted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+          </button>
+          <button
+            onClick={() => setClosed(true)}
+            className="p-1 rounded-full bg-black/50 text-white hover:bg-black/70 cursor-pointer backdrop-blur-sm transition-colors border border-white/10"
+            title="Close Ad"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
+      {/* Description overlay */}
+      <div className="relative p-3 z-10 space-y-1.5 text-white text-left">
+        <p className="text-[10px] font-black leading-tight drop-shadow-sm truncate">{ad.name}</p>
+        <p className="text-[8px] text-white/80 leading-snug line-clamp-2 drop-shadow-sm font-medium">
+          {ad.description}
+        </p>
+        {ad.click_url && (
+          <Link href={resolveLink(ad.click_url)} className="block mt-1">
+            <button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-black py-1.5 rounded-lg transition-all text-center shadow-md cursor-pointer">
+              Shop Now
+            </button>
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ==================== PAGE ====================
 export default function HomePage() {
   useAuthGuard();
@@ -842,6 +945,32 @@ export default function HomePage() {
     window.addEventListener("sw_location_updated", updateLoc);
     return () => window.removeEventListener("sw_location_updated", updateLoc);
   }, []);
+
+  // Ads Query for Home Page
+  const { data: ads = [] } = useQuery<any[]>({
+    queryKey: ["ads", "home"],
+    queryFn: async () => {
+      const res = await api.get("/catalog/ads?page_target=home");
+      return res.data || [];
+    },
+  });
+
+  const [activePopup, setActivePopup] = useState<any>(null);
+
+  useEffect(() => {
+    if (ads.length > 0) {
+      const popupAd = ads.find((a: any) => a.placement === "popup");
+      if (popupAd && typeof window !== "undefined") {
+        const shown = sessionStorage.getItem("sw_promo_modal_shown");
+        if (!shown) {
+          setActivePopup(popupAd);
+          sessionStorage.setItem("sw_promo_modal_shown", "true");
+        }
+      }
+    }
+  }, [ads]);
+
+  const videoPipAd = ads.find((a: any) => a.placement === "pip" && a.video_url);
 
   // Range Check Query
   const { data: rangeCheck, isLoading: checkingRange } = useQuery({
@@ -927,7 +1056,7 @@ export default function HomePage() {
           <div className="px-4 space-y-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-pulse" />
-              <h2 className="text-lg font-black text-slate-900 dark:text-slate-50 tracking-tight">
+              <h2 className="text-lg font-black text-slate-900 dark:text-slate-55 tracking-tight">
                 {selectedCategory === "All" ? "Trending Nearby" : `Fresh ${selectedCategory}`}
               </h2>
             </div>
@@ -937,6 +1066,14 @@ export default function HomePage() {
       )}
 
       <CartFooter />
+
+      {/* Offer Promo Popup Activity Modal */}
+      {activePopup && (
+        <PromoPopupModal ad={activePopup} onClose={() => setActivePopup(null)} />
+      )}
+
+      {/* Zepto-Style Video PIP Ad player */}
+      {videoPipAd && <PipVideoAd ad={videoPipAd} />}
     </div>
   );
 }
