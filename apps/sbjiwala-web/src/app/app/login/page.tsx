@@ -8,6 +8,7 @@ import {
   Loader2, ChevronLeft, Leaf, ShoppingBag, Truck, Shield, Key, Sparkles, AlertCircle
 } from "lucide-react";
 import { api } from "@sbjiwala/shared";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ui/Toast";
 import { Button, Input, Divider } from "@/components/ui/index";
 import { encryptPayload } from "@/components/ui/crypto";
@@ -15,7 +16,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 // ==================== GUEST CART SYNC UTILITY ====================
-const syncGuestCart = async () => {
+const syncGuestCart = async (queryClient?: any) => {
   if (typeof window === "undefined") return;
   try {
     const raw = localStorage.getItem("sw_guest_cart");
@@ -39,6 +40,10 @@ const syncGuestCart = async () => {
     }
     localStorage.removeItem("sw_guest_cart");
     window.dispatchEvent(new Event("sw_cart_updated"));
+    if (queryClient) {
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      queryClient.invalidateQueries({ queryKey: ["cartPreview"] });
+    }
   } catch (err) {
     console.error("Failed to sync guest cart", err);
   }
@@ -89,6 +94,7 @@ const getStoredUserType = () => {
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { success, error: showError, info } = useToast();
   
   const [tab, setTab] = useState<ActiveTab>("otp");
@@ -242,7 +248,7 @@ function LoginPageContent() {
       const { access_token, refresh_token } = res.meta || {};
       api.setTokens(access_token, refresh_token);
       success("Welcome Back!", "Logged in successfully!");
-      await syncGuestCart();
+      await syncGuestCart(queryClient);
 
       // Check if they want to register passkey, otherwise redirect
       setShowPasskeySetup(true);
@@ -292,7 +298,7 @@ function LoginPageContent() {
       const { access_token, refresh_token } = res.meta || res.data || {};
       api.setTokens(access_token, refresh_token);
       success("Welcome Back!", "Logged in successfully!");
-      await syncGuestCart();
+      await syncGuestCart(queryClient);
 
       setShowPasskeySetup(true);
     } catch (err: any) {
@@ -435,7 +441,7 @@ function LoginPageContent() {
       const { access_token, refresh_token } = verifyRes.meta || {};
       api.setTokens(access_token, refresh_token);
       success("Welcome Back!", "Passkey verification successful");
-      await syncGuestCart();
+      await syncGuestCart(queryClient);
       
       redirectBasedOnRole(userType);
     } catch (err: any) {
@@ -545,7 +551,7 @@ function LoginPageContent() {
       const { access_token, refresh_token } = res.meta || {};
       api.setTokens(access_token, refresh_token);
       success("Success", "Logged in via Magic Link!");
-      await syncGuestCart();
+      await syncGuestCart(queryClient);
       
       const userType = res.data?.user_type;
       redirectBasedOnRole(userType);

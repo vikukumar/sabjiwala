@@ -186,11 +186,28 @@ class OrderService:
                 
         packaging_charge = base_packaging
         
+        # Precedence: Vendor limit > Admin limit > Default 0.0
+        free_delivery_limit = 0.0
+        if rule and rule.free_delivery_above is not None:
+            free_delivery_limit = float(rule.free_delivery_above)
+        else:
+            from app.models.system import SystemSetting
+            admin_setting_res = await self.db.execute(
+                select(SystemSetting).where(SystemSetting.key == "free_delivery_above")
+            )
+            admin_setting = admin_setting_res.scalars().first()
+            if admin_setting and admin_setting.value:
+                try:
+                    free_delivery_limit = float(admin_setting.value)
+                except ValueError:
+                    pass
+
         if rule:
             if subtotal < float(rule.min_order_amount):
                 raise ValueError(f"Minimum order amount for this vendor is ₹{rule.min_order_amount}")
-            if rule.free_delivery_above is not None and subtotal >= float(rule.free_delivery_above):
-                delivery_charge = 0.0
+        
+        if subtotal >= free_delivery_limit:
+            delivery_charge = 0.0
                 
         # Apply platform fee exemptions
         exempt_packaging = False

@@ -121,11 +121,28 @@ async def preview_order(
     original_packaging_charge = base_packaging
     packaging_charge = base_packaging
 
+    # Precedence: Vendor limit > Admin limit > Default 0.0
+    free_delivery_limit = 0.0
+    if rule and rule.free_delivery_above is not None:
+        free_delivery_limit = float(rule.free_delivery_above)
+    else:
+        from app.models.system import SystemSetting
+        admin_setting_res = await db.execute(
+            select(SystemSetting).where(SystemSetting.key == "free_delivery_above")
+        )
+        admin_setting = admin_setting_res.scalars().first()
+        if admin_setting and admin_setting.value:
+            try:
+                free_delivery_limit = float(admin_setting.value)
+            except ValueError:
+                pass
+
     if rule:
         if subtotal < float(rule.min_order_amount):
             raise HTTPException(status_code=400, detail=f"Minimum order amount for this vendor is ₹{rule.min_order_amount}")
-        if rule.free_delivery_above is not None and subtotal >= float(rule.free_delivery_above):
-            delivery_charge = 0.0
+    
+    if subtotal >= free_delivery_limit:
+        delivery_charge = 0.0
             
     # Apply platform fee exemptions
     exempt_packaging = False
@@ -196,7 +213,7 @@ async def preview_order(
             "wallet_deduction": round(wallet_amount, 2),
             "total_amount": round(total_amount, 2),
             "distance_km": round(distance_km, 2),
-            "free_delivery_above": round(float(rule.free_delivery_above), 2) if (rule and rule.free_delivery_above is not None) else None,
+            "free_delivery_above": round(free_delivery_limit, 2),
         }
     )
 

@@ -250,6 +250,7 @@ export default function CartPage() {
   const freeDeliveryAbove = previewData?.free_delivery_above ?? 199;
   const hasFreeDelivery = previewData ? (previewData.free_delivery_above !== null && previewData.free_delivery_above !== undefined) : true;
   const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= freeDeliveryAbove ? 0 : 20);
+  const originalDeliveryFee = previewData ? (previewData.original_delivery_charge ?? 20) : 20;
   const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
   const taxAmount = previewData ? previewData.tax_amount : Math.round(subtotal * 0.05 * 100) / 100;
   const discount = previewData ? previewData.coupon_discount : (appliedCoupon?.discount || 0);
@@ -404,9 +405,9 @@ export default function CartPage() {
                 <span className={`font-semibold ${deliveryFee === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
                   {deliveryFee === 0 ? (
                     <>
-                      {previewData?.original_delivery_charge && previewData.original_delivery_charge > 0 && (
+                      {originalDeliveryFee > 0 && (
                         <span className="line-through text-slate-400 mr-1.5 font-normal">
-                          ₹{parseFloat(previewData.original_delivery_charge).toFixed(2)}
+                          ₹{Number(originalDeliveryFee).toFixed(2)}
                         </span>
                       )}
                       FREE
