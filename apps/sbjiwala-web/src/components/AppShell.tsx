@@ -150,13 +150,6 @@ const sidebarSections = [
     ],
   },
   {
-    title: "Partnership",
-    items: [
-      { href: "/vendor/login", icon: Building2, label: "Partner with Us" },
-      { href: "/delivery/login", icon: Truck, label: "Deliver with Us" },
-    ],
-  },
-  {
     title: "More",
     items: [
       { href: "/about", icon: Shield, label: "About Us" },
@@ -221,17 +214,6 @@ function Header({ onMenuOpen, onOpenLocation, onOpenSearch }: { onMenuOpen: () =
     }
   });
   const queryClient = useQueryClient();
-  const [locationName, setLocationName] = useState("Loading...");
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const updateLoc = () => {
-      setLocationName(localStorage.getItem("sw_location_name") || "Mumbai, Maharashtra");
-    };
-    updateLoc();
-    window.addEventListener("sw_location_updated", updateLoc);
-    return () => window.removeEventListener("sw_location_updated", updateLoc);
-  }, []);
 
   const { data: cartData } = useQuery<any>({
     queryKey: ["cart"],
@@ -248,7 +230,7 @@ function Header({ onMenuOpen, onOpenLocation, onOpenSearch }: { onMenuOpen: () =
   return (
     <header className="sticky top-0 z-40 glass-ios-header shadow-sm transition-all duration-300">
       <div className="flex items-center justify-between h-16 px-4 md:px-6 max-w-7xl mx-auto">
-        {/* Left: menu (mobile) + logo + location selector */}
+        {/* Left: menu (mobile) + logo */}
         <div className="flex items-center gap-2 min-w-0 flex-1 md:flex-initial">
           <button
             onClick={onMenuOpen}
@@ -263,26 +245,6 @@ function Header({ onMenuOpen, onOpenLocation, onOpenSearch }: { onMenuOpen: () =
               {publicSettings?.app_name || "Sbjiwala"} Express
             </span>
           </Link>
-
-          {/* Location dropdown display */}
-          <div
-            onClick={onOpenLocation}
-            className="flex items-center gap-1.5 cursor-pointer max-w-[130px] sm:max-w-[200px] md:max-w-[260px] ml-2 text-left hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex-shrink min-w-0"
-          >
-            <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0 animate-bounce" />
-            <div className="min-w-0 leading-none">
-              <span className="text-[8px] text-slate-400 font-extrabold uppercase tracking-wider block">Deliver to</span>
-              <span className="text-xs font-black text-slate-700 dark:text-slate-200 truncate flex items-center gap-0.5">
-                {locationName.split(",")[0]?.trim() || "Select Location"}
-                <span className="text-emerald-500 text-[9px]">▼</span>
-              </span>
-              {locationName.split(",").length > 1 && (
-                <span className="text-[9px] text-slate-500 dark:text-slate-400 truncate block mt-0.5">
-                  {locationName.split(",").slice(1, 3).map(p => p.trim()).join(", ")}
-                </span>
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Center: Empty spacer (Search removed from header) */}
@@ -313,7 +275,7 @@ function Header({ onMenuOpen, onOpenLocation, onOpenSearch }: { onMenuOpen: () =
 }
 
 // ==================== SIDEBAR ====================
-function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isOpen?: boolean; onOpenLocation: () => void }) {
+function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: () => void; isOpen?: boolean; onOpenLocation: () => void; locationName: string }) {
   const { data: publicSettings } = useQuery<any>({
     queryKey: ["publicSettings"],
     queryFn: async () => {
@@ -324,24 +286,9 @@ function Sidebar({ onClose, isOpen, onOpenLocation }: { onClose: () => void; isO
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [locationName, setLocationName] = useState("Mumbai, Maharashtra");
 
   useEffect(() => {
     setIsLoggedIn(!!localStorage.getItem("sw_access_token"));
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const updateLoc = () => {
-      let name = localStorage.getItem("sw_location_name") || "Select Location";
-      if (!name || name === "undefined" || name === "null" || name.startsWith("undefined") || name.includes("undefined, undefined")) {
-        name = "Select Location";
-      }
-      setLocationName(name);
-    };
-    updateLoc();
-    window.addEventListener("sw_location_updated", updateLoc);
-    return () => window.removeEventListener("sw_location_updated", updateLoc);
   }, []);
 
   const isActive = (href: string, exact = false) => {
@@ -519,19 +466,21 @@ function BottomNav({ onOpenSearch }: { onOpenSearch: () => void }) {
                 }`}
               aria-label={item.label}
             >
-              <div className={`relative p-1.5 rounded-xl transition-all ${isActive ? "bg-emerald-55/40 dark:bg-emerald-950/40" : ""}`}>
+              <div className={isActive 
+                ? "w-11 h-11 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(16,185,129,0.3)] -translate-y-5 border-4 border-slate-50 dark:border-[#090d10] transition-all duration-300 scale-110 relative overflow-hidden active-nav-shine"
+                : "relative p-1.5 rounded-xl transition-all"
+              }>
                 <Icon className="w-5 h-5" />
                 {item.cartBadge && cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-emerald-600 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
+                  <span className={`absolute ${isActive ? "-top-0.5 -right-0.5" : "-top-1 -right-1"} min-w-[16px] h-4 bg-emerald-600 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1`}>
                     {cartCount > 9 ? "9+" : cartCount}
                   </span>
                 )}
               </div>
-              <span className={`text-[10px] font-bold transition-all ${isActive ? "opacity-100" : "opacity-70"}`}>
-                {item.label}
-              </span>
-              {isActive && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+              {!isActive && (
+                <span className="text-[10px] font-bold opacity-70">
+                  {item.label}
+                </span>
               )}
             </Link>
           );
@@ -1523,6 +1472,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Network State
   const [isOnline, setIsOnline] = useState(true);
   const [serverAvailable, setServerAvailable] = useState(true);
+  const [locationName, setLocationName] = useState("Mumbai, Maharashtra");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateLoc = () => {
+      let name = localStorage.getItem("sw_location_name") || "Select Location";
+      if (!name || name === "undefined" || name === "null" || name.startsWith("undefined") || name.includes("undefined, undefined")) {
+        name = "Select Location";
+      }
+      setLocationName(name);
+    };
+    updateLoc();
+    window.addEventListener("sw_location_updated", updateLoc);
+    return () => window.removeEventListener("sw_location_updated", updateLoc);
+  }, []);
 
   // pathname and router moved to top of component
 
@@ -1887,13 +1851,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* 1. Force the app to match exact screen height and stop body scrolling */}
       <div className="h-screen md:h-[100dvh] w-full flex overflow-hidden">
 
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenLocation={() => setShowLocationModal(true)} />
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenLocation={() => setShowLocationModal(true)} locationName={locationName} />
 
         {/* Right Column Structure */}
         <div className="flex-1 flex flex-col h-full md:ml-64 min-w-0 max-w-full pt-[env(safe-area-inset-top)]">
 
           {/* Header sits naturally at the top, no absolute/fixed/sticky needed */}
           <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} onOpenSearch={() => setInlineSearchOpen(true)} />
+
+          {/* Flipkart-Style Sub-Header Location Bar */}
+          <div
+            onClick={() => setShowLocationModal(true)}
+            className="w-full bg-emerald-50/50 dark:bg-slate-900/60 backdrop-blur-md border-b border-slate-205 dark:border-slate-800/80 px-4 py-2 flex items-center gap-2 cursor-pointer hover:bg-emerald-55/60 dark:hover:bg-slate-800/80 transition-all flex-shrink-0"
+          >
+            <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0 animate-bounce" />
+            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-350 truncate">
+              Deliver to: <span className="text-slate-900 dark:text-white font-extrabold">{locationName}</span>
+            </span>
+            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold ml-auto flex-shrink-0">Change ▼</span>
+          </div>
 
           {/* 2. THE MAGIC IS HERE: Only this container is allowed to scroll */}
           <main className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0 page-enter max-w-full">
@@ -1913,6 +1889,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               localStorage.setItem("sw_longitude", String(lon));
               localStorage.setItem("sw_location_name", name);
               window.dispatchEvent(new Event("sw_location_updated"));
+              setLocationName(name);
               setShowLocationModal(false);
             }}
           />

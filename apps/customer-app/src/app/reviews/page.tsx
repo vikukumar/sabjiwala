@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Star, Send, Package } from "lucide-react";
 import { Button, EmptyState, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
+import { resolveLink } from "@/components/AppShell";
 
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hover, setHover] = useState(0);
@@ -140,22 +141,36 @@ function ReviewsContent() {
         <div>
           <h2 className="text-lg font-black text-slate-900 dark:text-white mb-3">Your Reviews ({myReviews.length})</h2>
           <div className="space-y-3">
-            {myReviews.map((rev: any) => (
-              <div key={rev.id} className="card p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="font-black text-sm text-slate-900 dark:text-white">{rev.product_name || "Product"}</p>
-                  <div className="flex gap-0.5">
-                    {[1, 2, 3, 4, 5].map(s => (
-                      <Star key={s} className={`w-4 h-4 ${s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-slate-300 dark:text-slate-600"}`} />
-                    ))}
+            {myReviews.map((rev: any) => {
+              const order = orders.find((o: any) => o.id === rev.order_id);
+              return (
+                <div key={rev.id} className="card p-4 space-y-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                    <span>
+                      Order:{" "}
+                      <Link href={resolveLink(`/orders/detail?id=${rev.order_id}`)} className="font-mono text-emerald-600 dark:text-emerald-400 hover:underline font-bold">
+                        #{order?.order_number || (rev.order_id ? rev.order_id.substring(0, 8) : "N/A")}
+                      </Link>
+                    </span>
+                    <span>
+                      {order ? new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : ""}
+                    </span>
                   </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="font-black text-sm text-slate-900 dark:text-white">{rev.product_name || "Product"}</p>
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <Star key={s} className={`w-4 h-4 ${s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-slate-300 dark:text-slate-650"}`} />
+                      ))}
+                    </div>
+                  </div>
+                  {rev.comment && <p className="text-sm text-slate-600 dark:text-slate-400">{rev.comment}</p>}
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                    Reviewed on {new Date(rev.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
                 </div>
-                {rev.comment && <p className="text-sm text-slate-600 dark:text-slate-400">{rev.comment}</p>}
-                <p className="text-xs text-slate-400 dark:text-slate-500">
-                  {new Date(rev.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

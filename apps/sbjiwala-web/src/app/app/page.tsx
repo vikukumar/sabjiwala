@@ -14,7 +14,7 @@ import ProductCard from "@/components/ProductCard";
 const HERO_MESSAGES = [
   { en: "Farm Fresh Vegetables & Fruits", hi: "सीधे खेतों से ताज़ा सब्ज़ी और फल" },
   { en: "Delivered to Your Doorstep", hi: "आपके घर तक सुरक्षित डिलीवरी" },
-  { en: "Express Delivery in 10 Minutes", hi: "मात्र 10 मिनट में सुपरफास्ट डिलीवरी" },
+  { en: "Express Faster Delivery", hi: "सुपरफास्ट डिलीवरी सीधे आपके घर" },
   { en: "Hygienically Washed & Packed", hi: "साफ-सफाई से धुली और पैक की गई" }
 ];
 
@@ -87,7 +87,7 @@ function Hero({ onSelectCategory }: { onSelectCategory: (cat: string) => void })
       <div className="max-w-4xl mx-auto relative z-10 text-center space-y-7">
         <div className="inline-flex items-center gap-2 bg-white/10 dark:bg-black/20 rounded-full px-4.5 py-2 text-white text-xs font-black border border-white/10 backdrop-blur-md shadow-inner animate-fade-in">
           <Zap className="w-4 h-4 text-yellow-300 fill-current animate-bounce" />
-          <span>⚡ EXPRESS DELIVERY IN 10 MINS — FRESH GUARANTEE</span>
+          <span>⚡ EXPRESS FASTER DELIVERY — FRESHNESS GUARANTEE</span>
         </div>
 
         <h1 className={`text-4xl sm:text-6xl font-black text-white leading-none tracking-tight transition-all duration-300 min-h-[120px] sm:min-h-[140px] flex flex-col justify-center ${fade ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"}`}>
@@ -249,7 +249,7 @@ function Hero({ onSelectCategory }: { onSelectCategory: (cat: string) => void })
 // ==================== TRUST BADGES ====================
 function TrustBadges() {
   const badges = [
-    { icon: Clock, label: "10 Min Delivery", sub: "Express service" },
+    { icon: Clock, label: "Faster Delivery", sub: "Express service" },
     { icon: Leaf, label: "Farm Fresh", sub: "Direct from farms" },
     { icon: ShieldCheck, label: "Hygienic Packing", sub: "Quality assured" },
     { icon: Truck, label: "Free Delivery", sub: "On orders ₹199+" },
@@ -419,7 +419,7 @@ function OffersBanner() {
         <div className="relative z-10">
           <Badge variant="outline" size="sm" className="border-white/30 text-white mb-2">Welcome Offer</Badge>
           <p className="text-2xl font-black tracking-tight">Farm-Fresh Delivery</p>
-          <p className="text-sm text-white/80 mt-0.5">Crisp, premium vegetables directly from local farms in 10 minutes.</p>
+          <p className="text-sm text-white/80 mt-0.5">Crisp, premium vegetables directly from local farms with faster delivery.</p>
         </div>
       </div>
     );
@@ -771,7 +771,7 @@ function ComingSoonArea({ currentAddress, onOpenLocation }: { currentAddress: st
       </div>
 
       <div className="text-[10px] text-slate-400/85 font-black uppercase tracking-wider flex items-center justify-center gap-4 mt-6">
-        <span>⚡ 10 Min Delivery</span>
+        <span>⚡ Faster Delivery</span>
         <span>•</span>
         <span>🥬 Farm Fresh</span>
       </div>

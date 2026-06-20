@@ -207,8 +207,8 @@ try {
     copyRecursiveSync(path.join(adminSrc, 'app/profile'), adminProfileDest);
   }
 
-  // Sync additional admin routes: analytics, banners, categories, coupons, delivery, maps, orders, settings, support, vendors
-  ['analytics', 'banners', 'categories', 'coupons', 'delivery', 'maps', 'orders', 'settings', 'support', 'vendors'].forEach((route) => {
+  // Sync additional admin routes: analytics, banners, categories, coupons, delivery, maps, orders, settings, support, vendors, returns
+  ['analytics', 'banners', 'categories', 'coupons', 'delivery', 'maps', 'orders', 'settings', 'support', 'vendors', 'returns'].forEach((route) => {
     const dest = path.join(webAppDir, `admin/${route}`);
     removeRecursiveSync(dest);
     const srcPath = path.join(adminSrc, `app/${route}`);

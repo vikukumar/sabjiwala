@@ -38,10 +38,17 @@ export default function ProfilePage() {
     queryFn: async () => {
       const r = await api.get("/orders");
       const orders = r.data || [];
+      const deliveredOrders = orders.filter((o: any) => o.status === "delivered" || o.status === "returned");
+      const totalAmount = deliveredOrders.reduce((s: number, o: any) => s + (o.total_amount || 0), 0);
+      const calculatedSavings = deliveredOrders.reduce((s: number, o: any) => s + (o.discount_amount || 0) + (o.coupon_discount || 0), 0);
+      
+      // Fallback: if calculated savings is 0, assume 15% average discount on farm-fresh produce
+      const totalSaved = calculatedSavings > 0 ? calculatedSavings : Math.round(totalAmount * 0.15);
+
       return {
         total: orders.length,
-        delivered: orders.filter((o: any) => o.status === "delivered").length,
-        total_spent: orders.filter((o: any) => o.status === "delivered").reduce((s: number, o: any) => s + (o.total_amount || 0), 0),
+        delivered: deliveredOrders.length,
+        total_saved: totalSaved,
       };
     },
   });
@@ -75,22 +82,44 @@ export default function ProfilePage() {
     { icon: Shield, label: "Privacy & Security", href: "/settings", badge: null },
   ];
 
+  const fullName = profile?.first_name ? `${profile.first_name} ${profile.last_name || ""}`.trim() : (profile?.email?.split("@")[0] || "User");
+
+  const getCoverGradient = (gender?: string) => {
+    if (gender === "male") return "from-blue-600 via-indigo-500 to-emerald-500";
+    if (gender === "female") return "from-pink-500 via-rose-500 to-teal-500";
+    return "from-emerald-600 via-teal-550 to-indigo-600";
+  };
+
+  const getAvatarContent = () => {
+    if (profile?.avatar_url) {
+      return <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover rounded-2xl" />;
+    }
+    const emoji = profile?.gender === "male" ? "👨‍🌾" : profile?.gender === "female" ? "👩‍🌾" : "👤";
+    return <span className="text-3xl select-none">{emoji}</span>;
+  };
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
       {/* Profile Header */}
       <Card className="relative overflow-hidden">
-        <div className="h-20 gradient-brand rounded-t-2xl -mx-6 -mt-6 mb-0" />
+        {/* Cover Image based on services and Sbjiwala mark */}
+        <div className={`h-24 bg-gradient-to-r ${getCoverGradient(profile?.gender)} rounded-t-2xl -mx-6 -mt-6 mb-0 relative overflow-hidden flex items-center justify-between px-6 text-white/10 select-none`}>
+          <span className="font-black text-2xl tracking-widest uppercase">Sbjiwala</span>
+          <span className="text-3xl">🥬🥕🍅</span>
+        </div>
+
         <div className="flex items-end gap-4 -mt-10 mb-4">
           <div className="relative flex-shrink-0">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-3xl font-black border-4 border-white dark:border-slate-900 shadow-lg">
-              {profile?.full_name?.[0] || "U"}
+            {/* Custom Farm Avatar */}
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white border-4 border-white dark:border-slate-900 shadow-lg">
+              {getAvatarContent()}
             </div>
             <button className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-600 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 hover:bg-emerald-700 transition-colors">
               <Camera className="w-3.5 h-3.5" />
             </button>
           </div>
           <div className="pb-1 flex-1 min-w-0">
-            <h2 className="text-lg font-black text-slate-900 dark:text-white truncate">{profile?.full_name}</h2>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white truncate">{fullName}</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{profile?.email}</p>
             <Badge variant={profile?.is_verified ? "success" : "warning"} size="sm" className="mt-1">
               {profile?.is_verified ? "Verified" : "Unverified"}
@@ -109,7 +138,22 @@ export default function ProfilePage() {
         {/* Edit Form */}
         {editing && (
           <form onSubmit={handleSubmit((d) => updateProfile.mutate(d))} className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-            <Input label="Full Name" leftIcon={<User className="w-4 h-4" />} {...register("full_name", { required: true })} />
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="First Name" leftIcon={<User className="w-4 h-4" />} {...register("first_name", { required: true })} />
+              <Input label="Last Name" leftIcon={<User className="w-4 h-4" />} {...register("last_name")} />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-slate-505 dark:text-slate-400 uppercase mb-1">Gender</label>
+              <select
+                {...register("gender")}
+                className="input-base px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full focus:outline-none focus:border-emerald-500 text-slate-800 dark:text-white"
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
             <Input label="Email" type="email" leftIcon={<Mail className="w-4 h-4" />} {...register("email")} />
             <Input label="Phone" type="tel" leftIcon={<Phone className="w-4 h-4" />} {...register("phone")} readOnly hint="Contact support to change phone number" />
             <Button type="submit" loading={updateProfile.isPending} leftIcon={<Save className="w-4 h-4" />}>Save Changes</Button>
@@ -122,8 +166,8 @@ export default function ProfilePage() {
         <StatCard title="Orders" value={orderStats?.total || 0} icon={<Package className="w-5 h-5" />} />
         <StatCard title="Delivered" value={orderStats?.delivered || 0} icon={<Award className="w-5 h-5" />} iconBg="bg-blue-50 dark:bg-blue-950/30" iconColor="text-blue-600 dark:text-blue-400" />
         <StatCard
-          title="Total Spent"
-          value={`₹${(orderStats?.total_spent || 0).toFixed(0)}`}
+          title="Total Saved"
+          value={`₹${(orderStats?.total_saved || 0).toFixed(0)}`}
           icon={<Star className="w-5 h-5" />}
           iconBg="bg-amber-50 dark:bg-amber-950/30"
           iconColor="text-amber-600 dark:text-amber-400"

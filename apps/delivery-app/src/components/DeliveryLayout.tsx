@@ -566,35 +566,42 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
           <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 pb-24 md:pb-6">
             {children}
           </main>
-        </div>
 
-        {/* Bottom Navigation (Mobile Only) */}
-        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 safe-area-pb md:hidden">
-          <div className="max-w-md mx-auto flex">
-            {navItems.map((item) => {
-              const active = isActive(item.href);
-              const resolvedHref = resolveLink(item.href);
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.href}
-                  onClick={() => router.push(resolvedHref)}
-                  className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 relative transition-colors cursor-pointer border-0 bg-transparent ${
-                    active
-                      ? "text-emerald-600 dark:text-emerald-450"
-                      : "text-slate-400 dark:text-slate-500"
-                  }`}
-                >
-                  <Icon className={`w-5 h-5 ${active ? "stroke-[2.5]" : ""}`} />
-                  <span className="text-[9px] font-bold">{item.label}</span>
-                  {active && (
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-emerald-600 dark:bg-emerald-455 rounded-full" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
+          {/* Bottom Navigation (Mobile Only) */}
+          <nav className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl bg-white/60 dark:bg-[#090d10]/60 border-t border-slate-200/40 dark:border-slate-800/80 safe-area-pb md:hidden rounded-t-[20px] shadow-lg">
+            <div className="max-w-md mx-auto flex items-center justify-around h-16 px-1">
+              {navItems.map((item) => {
+                const active = isActive(item.href);
+                const resolvedHref = resolveLink(item.href);
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => router.push(resolvedHref)}
+                    className={`relative flex flex-col items-center justify-center flex-1 h-full transition-all active:scale-95 border-0 bg-transparent ${
+                      active
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-slate-400 dark:text-slate-500"
+                    }`}
+                    aria-label={item.label}
+                  >
+                    <div className={active 
+                      ? "w-11 h-11 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(16,185,129,0.3)] -translate-y-5 border-4 border-slate-50 dark:border-[#090d10] transition-all duration-300 scale-110 relative overflow-hidden active-nav-shine"
+                      : "relative p-1.5 rounded-xl transition-all"
+                    }>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    {!active && (
+                      <span className="text-[10px] font-bold opacity-70">
+                        {item.label}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        </div>
 
         {/* Geolocation Request Modal */}
         {showPermissionModal && (

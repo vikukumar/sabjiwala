@@ -92,6 +92,10 @@ class User(BaseEntity):
     sessions: Mapped[List["UserSession"]] = relationship(back_populates="user", lazy="noload")
     user_roles: Mapped[List["UserRole"]] = relationship(back_populates="user", lazy="selectin")
 
+    @property
+    def gender(self) -> Optional[str]:
+        return self.profile.gender if self.profile else None
+
     __table_args__ = (
         Index("ix_users_email_active", "email", "is_active", "is_deleted"),
         Index("ix_users_phone_active", "phone", "is_active", "is_deleted"),

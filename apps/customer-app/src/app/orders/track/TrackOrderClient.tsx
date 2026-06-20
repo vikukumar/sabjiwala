@@ -130,17 +130,37 @@ export default function TrackOrderClient() {
 
       // Delivery address marker
       const homeIcon = L.divIcon({
-        html: '<div style="background:#059669;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏠</div>',
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
+        html: `
+          <div style="filter: drop-shadow(0 4px 12px rgba(16,185,129,0.35)); position: relative;">
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.15)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </div>
+            <span style="position: absolute; top: -2px; left: -2px; width: 38px; height: 38px; border-radius: 50%; border: 2px dashed rgba(16,185,129,0.4); animation: spin 8s linear infinite;"></span>
+          </div>
+        `,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
       });
       L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
 
       // Store marker
       const storeIcon = L.divIcon({
-        html: '<div style="background:#3b82f6;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏪</div>',
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
+        html: `
+          <div style="filter: drop-shadow(0 4px 12px rgba(59,130,246,0.35));">
+            <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.15)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+                <path d="m2 7 4.41-3.67A2 2 0 0 1 7.73 3h8.54a2 2 0 0 1 1.32.33L22 7"/>
+                <path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
+                <path d="M12 12A4 4 0 0 0 4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a4 4 0 0 0-8 0Z"/>
+              </svg>
+            </div>
+          </div>
+        `,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
       });
       L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup("Pickup Store");
 
@@ -148,13 +168,15 @@ export default function TrackOrderClient() {
       const { emoji, color } = getVehicleDetails(order.id, order.delivery_agent?.vehicle_type);
       const agentIcon = L.divIcon({
         html: `
-          <div style="background:${color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);position:relative;">
-            ${emoji}
-            <span style="position:absolute;bottom:-4px;width:12px;height:12px;background:#10b981;border:2px solid white;border-radius:50%;animation:ping 1s infinite;"></span>
+          <div style="filter: drop-shadow(0 6px 16px rgba(0,0,0,0.25)); position: relative;">
+            <div style="background: ${color}; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15)">
+              ${emoji}
+            </div>
+            <span style="position: absolute; bottom: -2px; right: -2px; width: 12px; height: 12px; background: #10b981; border: 2px solid white; border-radius: 50%; animation: ping 1.2s infinite;"></span>
           </div>
         `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
+        iconSize: [38, 38],
+        iconAnchor: [19, 19],
       });
 
       const driverMarker = L.marker([initDriverLat, initDriverLng], { icon: agentIcon }).addTo(map).bindPopup("Delivery Partner");

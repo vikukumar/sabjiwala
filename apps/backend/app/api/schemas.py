@@ -194,6 +194,7 @@ class UserResponse(BaseModel):
     mfa_enabled: bool = False
     created_at: datetime
     active_role: Optional[str] = None
+    gender: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -499,6 +500,7 @@ class ReturnRequestCreate(BaseModel):
     order_id: UUID
     reason: str
     images: Optional[List[str]] = None
+    return_items: Optional[List[dict]] = None
 
 
 # ===== Payment Schemas =====

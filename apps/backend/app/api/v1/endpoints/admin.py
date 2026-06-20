@@ -1005,3 +1005,89 @@ async def update_system_setting(
     await db.commit()
     return APIResponse(success=True, message=f"Setting '{key}' updated successfully")
 
+
+@router.get("/returns", response_model=APIResponse)
+async def list_admin_returns(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all customer return requests."""
+    await _verify_admin(current_user)
+    
+    from app.models.order import ReturnRequest, Order
+    
+    result = await db.execute(select(ReturnRequest).order_by(desc(ReturnRequest.created_at)))
+    return_reqs = result.scalars().all()
+    
+    data = []
+    for r in return_reqs:
+        user_res = await db.execute(select(User).where(User.id == r.user_id))
+        user = user_res.scalars().first()
+        
+        order_res = await db.execute(select(Order).where(Order.id == r.order_id))
+        order = order_res.scalars().first()
+        
+        data.append({
+            "id": str(r.id),
+            "order_id": str(r.order_id),
+            "order_number": order.order_number if order else "Unknown",
+            "customer_name": f"{user.first_name} {user.last_name}" if user else "Customer",
+            "customer_phone": user.phone if user else "",
+            "reason": r.reason,
+            "images": r.images or [],
+            "return_items": r.return_items or [],
+            "refund_amount": float(r.refund_amount) if r.refund_amount is not None else 0.0,
+            "status": r.status.value if hasattr(r.status, "value") else str(r.status),
+            "created_at": r.created_at.isoformat() if r.created_at else "",
+        })
+        
+    return APIResponse(success=True, data=data)
+
+
+@router.post("/returns/{return_id}/approve", response_model=APIResponse)
+async def approve_return_request(
+    return_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Approve a return request, processing refund."""
+    await _verify_admin(current_user)
+    
+    from app.models.order import ReturnRequest, ReturnStatus, Order, OrderStatus
+    
+    res = await db.execute(select(ReturnRequest).where(ReturnRequest.id == return_id))
+    ret_req = res.scalars().first()
+    if not ret_req:
+        raise HTTPException(status_code=404, detail="Return request not found")
+        
+    ret_req.status = ReturnStatus.APPROVED
+    
+    order_res = await db.execute(select(Order).where(Order.id == ret_req.order_id))
+    order = order_res.scalars().first()
+    if order:
+        order.status = OrderStatus.RETURNED
+        
+    await db.commit()
+    return APIResponse(success=True, message="Return request approved successfully")
+
+
+@router.post("/returns/{return_id}/reject", response_model=APIResponse)
+async def reject_return_request(
+    return_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reject a return request."""
+    await _verify_admin(current_user)
+    
+    from app.models.order import ReturnRequest, ReturnStatus
+    
+    res = await db.execute(select(ReturnRequest).where(ReturnRequest.id == return_id))
+    ret_req = res.scalars().first()
+    if not ret_req:
+        raise HTTPException(status_code=404, detail="Return request not found")
+        
+    ret_req.status = ReturnStatus.REJECTED
+    await db.commit()
+    return APIResponse(success=True, message="Return request rejected successfully")
+

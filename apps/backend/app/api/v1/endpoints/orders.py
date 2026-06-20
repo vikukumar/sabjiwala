@@ -510,6 +510,7 @@ async def request_order_return(
         reason=body.reason,
         images=body.images or [],
         refund_amount=order.total_amount,
+        return_items=body.return_items or [],
     )
     db.add(ret_req)
     await db.flush()

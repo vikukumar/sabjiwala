@@ -7,7 +7,7 @@ import { api } from "@sbjiwala/shared";
 import Link from "next/link";
 import {
   Package, MapPin, Clock, CheckCircle2, Truck, XCircle,
-  CreditCard, Star, ChevronLeft, Phone, Copy, MessageSquare, ArrowRight
+  CreditCard, Star, ChevronLeft, Phone, Copy, MessageSquare, ArrowRight, RotateCcw
 } from "lucide-react";
 import { Button, Badge, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
@@ -245,9 +245,14 @@ export default function OrderDetailClient() {
             </Link>
           )}
           {isDelivered && (
-            <Link href={resolveLink(`/reviews?order=${id}`)} className="flex-1">
-              <Button fullWidth variant="secondary" leftIcon={<Star className="w-4 h-4" />}>Rate Order</Button>
-            </Link>
+            <>
+              <Link href={resolveLink(`/reviews?order=${id}`)} className="flex-1">
+                <Button fullWidth variant="secondary" leftIcon={<Star className="w-4 h-4" />}>Rate Order</Button>
+              </Link>
+              <Link href={resolveLink(`/orders/return?id=${id}`)} className="flex-1">
+                <Button fullWidth variant="outline" leftIcon={<RotateCcw className="w-4 h-4" />}>Return Items</Button>
+              </Link>
+            </>
           )}
           {canCancel && (
             <Button variant="danger" onClick={() => setShowCancelModal(true)} leftIcon={<XCircle className="w-4 h-4" />}>

@@ -31,6 +31,7 @@ const navItems = [
   { id: "coupons", label: "Coupons", icon: Tag, href: "/coupons" },
   { id: "banners", label: "Banners", icon: Image, href: "/banners" },
   { id: "support", label: "Support", icon: MessageSquare, href: "/support" },
+  { id: "returns", label: "Returns", icon: FileText, href: "/returns" },
   { id: "settings", label: "Settings", icon: Settings, href: "/settings" },
 ];
 
