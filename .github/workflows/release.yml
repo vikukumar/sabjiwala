@@ -391,7 +391,22 @@ jobs:
           fi
           npm install @capacitor/core @capacitor/cli @capacitor/android --no-audit --no-fund
           npx cap sync android
-          printf '\nconfigurations.all {\n  exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"\n  exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"\n}\n' >> android/app/build.gradle
+          
+          # Fix Kotlin Version Mismatch warnings by explicitly enforcing 1.9.24
+          echo "ext.kotlin_version = '1.9.24'" >> android/variables.gradle
+          
+          # Add ProGuard rules for StreamCall and WebRTC to prevent R8 minification failures
+          cat << 'PROGUARD' >> android/app/proguard-rules.pro
+
+# Capacitor Stream Call & WebRTC ProGuard Rules
+-dontwarn ee.forgr.capacitor.streamcall.**
+-keep class ee.forgr.capacitor.streamcall.** { *; }
+-dontwarn io.getstream.**
+-keep class io.getstream.** { *; }
+-dontwarn org.webrtc.**
+-keep class org.webrtc.** { *; }
+-dontwarn org.jetbrains.kotlin.**
+PROGUARD
           HELPER
           chmod +x /tmp/build_next_app.sh
 
