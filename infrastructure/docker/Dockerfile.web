@@ -1,5 +1,5 @@
 # Stage 1: Build the Next.js applications
-FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -13,6 +13,7 @@ COPY apps/customer-app ./apps/customer-app
 COPY apps/vendor-app ./apps/vendor-app
 COPY apps/delivery-app ./apps/delivery-app
 COPY apps/admin-app ./apps/admin-app
+COPY apps/agent-app ./apps/agent-app
 COPY apps/sbjiwala-web ./apps/sbjiwala-web
 COPY tmp ./tmp
 
@@ -29,18 +30,6 @@ RUN cd apps/sbjiwala-web && \
     cp -r ../../shared/src node_modules/@sbjiwala/shared/ && \
     cp ../../shared/package.json node_modules/@sbjiwala/shared/ && \
     cp ../../shared/tsconfig.json node_modules/@sbjiwala/shared/ && \
-    cp -r ../customer-app/src/components src/ && \
-    cp -r ../customer-app/src/app/about src/app/ && \
-    cp -r ../customer-app/src/app/how-it-works src/app/ && \
-    cp -r ../customer-app/src/app/privacy src/app/ && \
-    cp -r ../customer-app/src/app/terms src/app/ && \
-    cp -r ../customer-app/src/app/refund-policy src/app/ && \
-    cp ../customer-app/src/app/page.tsx src/app/page.tsx && \
-    cp ../vendor-app/src/app/page.tsx src/app/vendor/page.tsx && \
-    cp -r ../vendor-app/src/app/kyc src/app/ && \
-    cp ../delivery-app/src/app/page.tsx src/app/delivery/page.tsx && \
-    cp ../admin-app/src/app/page.tsx src/app/admin/page.tsx && \
-    cp -r ../admin-app/src/app/users src/app/ && \
     # Build Next.js
     npm run build
 

@@ -161,25 +161,25 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: |
-            apps/sbjiwala-web/package-lock.json
-            apps/agent-app/package-lock.json
-            shared/package-lock.json
+            apps/sbjiwala-web/package.json
+            apps/agent-app/package.json
+            shared/package.json
 
       # ── Shared package ────────────────────────────────────────────────────
       - name: Build Shared Package
         run: |
           cd shared
-          npm ci
+          npm install --no-audit --no-fund
           npm run build
 
       # ── sbjiwala-web ──────────────────────────────────────────────────────
       - name: Install & Patch sbjiwala-web
         run: |
           cd apps/sbjiwala-web
-          npm ci
+          npm install --no-audit --no-fund
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
           cp -r ../../shared/dist     node_modules/@sbjiwala/shared/
@@ -203,10 +203,8 @@ jobs:
         run: |
           VER="${{ needs.read-version.outputs.version }}"
           cd apps/sbjiwala-web
-          # Inject build-time version
           echo "NEXT_PUBLIC_APP_VERSION=$VER" > .env.production
           echo "{\"version\": \"$VER\"}" > src/app/version.json
-          npm version "$VER" --no-git-tag-version --allow-same-version 2>/dev/null || true
           NEXT_PUBLIC_APP_VERSION="$VER" npm run build
 
       - name: Zip sbjiwala-web Static Export
@@ -218,7 +216,7 @@ jobs:
       - name: Install & Patch agent-app
         run: |
           cd apps/agent-app
-          npm ci
+          npm install --no-audit --no-fund
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
           cp -r ../../shared/dist      node_modules/@sbjiwala/shared/
@@ -230,10 +228,8 @@ jobs:
         run: |
           VER="${{ needs.read-version.outputs.version }}"
           cd apps/agent-app
-          # Inject build-time version
           echo "NEXT_PUBLIC_APP_VERSION=$VER" > .env.production
           echo "{\"version\": \"$VER\"}" > src/app/version.json
-          npm version "$VER" --no-git-tag-version --allow-same-version 2>/dev/null || true
           NEXT_PUBLIC_APP_VERSION="$VER" npm run build
 
       - name: Zip agent-app Static Export
@@ -270,12 +266,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: '24'
 
       - name: Build Shared Package
         run: |
           cd shared
-          npm ci
+          npm install --no-audit --no-fund
           npm run build
 
       # ── Keystore setup ────────────────────────────────────────────────────
@@ -379,24 +375,21 @@ jobs:
           mkdir -p src/app
           echo "{\"version\": \"$FULL_VER\"}" > src/app/version.json
 
-          # ── Shared package patch ────────────────────────────────────────────
-          npm ci
+          # ── Shared package install (─ npm install, not npm ci: no lock file in CI) ─
+          npm install --prefer-offline --no-audit --no-fund
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
           cp -r ../../shared/dist      node_modules/@sbjiwala/shared/
           cp -r ../../shared/src       node_modules/@sbjiwala/shared/
           cp ../../shared/package.json node_modules/@sbjiwala/shared/
 
-          # ── Stamp version into package.json (for npm version metadata) ──────
-          npm version "$FULL_VER" --no-git-tag-version --allow-same-version 2>/dev/null || true
-
-          # ── Build ───────────────────────────────────────────────────────────
+          # ── Build (version injected via env, not npm version which requires semver) ─
           if [ -n "${API_URL:-}" ]; then
             NEXT_PUBLIC_API_URL="$API_URL" NEXT_PUBLIC_APP_VERSION="$FULL_VER" npm run build
           else
             NEXT_PUBLIC_APP_VERSION="$FULL_VER" npm run build
           fi
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install @capacitor/core @capacitor/cli @capacitor/android --no-audit --no-fund
           npx cap sync android
           printf '\nconfigurations.all {\n  exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"\n  exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"\n}\n' >> android/app/build.gradle
           HELPER
@@ -605,7 +598,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: '24'
 
       - name: Install CocoaPods
         run: sudo gem install cocoapods
@@ -613,7 +606,7 @@ jobs:
       - name: Build Shared Package
         run: |
           cd shared
-          npm ci
+          npm install --no-audit --no-fund
           npm run build
 
       # ── Apple certificates ────────────────────────────────────────────────
@@ -667,7 +660,7 @@ jobs:
           if [ -n "${API_URL:-}" ]; then
             echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
           fi
-          npm ci
+          npm install --no-audit --no-fund
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
           cp -r ../../shared/dist       node_modules/@sbjiwala/shared/

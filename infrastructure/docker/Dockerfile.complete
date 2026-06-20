@@ -1,5 +1,5 @@
 # Stage 1: Build Next.js Static Portals
-FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:24-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache rsync
 COPY version.json ./
@@ -8,6 +8,7 @@ COPY apps/customer-app ./apps/customer-app
 COPY apps/vendor-app ./apps/vendor-app
 COPY apps/delivery-app ./apps/delivery-app
 COPY apps/admin-app ./apps/admin-app
+COPY apps/agent-app ./apps/agent-app
 COPY apps/sbjiwala-web ./apps/sbjiwala-web
 COPY tmp ./tmp
 

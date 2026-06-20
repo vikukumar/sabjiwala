@@ -2,14 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  ShoppingBag, MessageSquare, Phone, Settings, LogOut,
-  Clock, Menu, X, Loader2, Bell, Radio, User
+  MessageSquare, Phone, LogOut,
+  Clock, Menu, X, Loader2, Radio, User
 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, useWebSocket } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import versionInfo from "../app/version.json";
 
 export const resolveAgentLink = (href: string) => {
   const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
@@ -33,7 +32,6 @@ interface AgentLayoutProps {
 
 export default function AgentLayout({ children, title = "Agent Portal", isAvailable = true, onAvailabilityToggle }: AgentLayoutProps) {
   const { success, error: showError } = useToast();
-  const queryClient = useQueryClient();
   const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -76,15 +74,6 @@ export default function AgentLayout({ children, title = "Agent Portal", isAvaila
     localStorage.removeItem("sw_refresh_token");
     router.replace(resolveAgentLink("/login"));
   };
-
-  const { data: agentProfile, isLoading: isProfileLoading } = useQuery<any>({
-    queryKey: ["agentProfile"],
-    queryFn: async () => {
-      const res = await api.get("/support/agent/profile");
-      return res.data;
-    },
-    enabled: !!isAuthed
-  });
 
   const getActiveTab = () => {
     if (typeof window === "undefined") return "dashboard";
@@ -171,6 +160,9 @@ export default function AgentLayout({ children, title = "Agent Portal", isAvaila
           <LogOut className="w-4 h-4" />
           <span>Sign Out</span>
         </button>
+        <p className="text-[10px] text-center text-slate-500 font-mono mt-2">
+          Sbjiwala Agent v{versionInfo.version}
+        </p>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import {
 import { useToast } from "@/components/ui/Toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import versionInfo from "../app/version.json";
 
 export const resolveAgentLink = (href: string) => {
   const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
@@ -159,6 +160,9 @@ export default function AgentLayout({ children, title = "Agent Portal", isAvaila
           <LogOut className="w-4 h-4" />
           <span>Sign Out</span>
         </button>
+        <p className="text-[10px] text-center text-slate-500 font-mono mt-2">
+          Sbjiwala Agent v{versionInfo.version}
+        </p>
       </div>
     </div>
   );
