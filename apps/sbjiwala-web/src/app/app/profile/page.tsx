@@ -59,6 +59,12 @@ export default function ProfilePage() {
     }
   }, [router, error]);
 
+  useEffect(() => {
+    if (profile && !profile.first_name?.trim()) {
+      setEditing(true);
+    }
+  }, [profile]);
+
   const { data: orderStats } = useQuery<any>({
     queryKey: ["orderStats"],
     queryFn: async () => {
@@ -131,10 +137,16 @@ export default function ProfilePage() {
       {/* Profile Header */}
       <Card className="relative overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md">
         {/* Cover Image based on services and Sbjiwala mark */}
-        <div className={`h-32 bg-gradient-to-br ${getCoverGradient(profile?.gender)} rounded-t-2xl -mx-6 -mt-6 mb-0 relative overflow-hidden flex items-center justify-between px-6 text-white/5 select-none border-b border-emerald-950/20`}>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.1),transparent_50%)]" />
-          <span className="font-black text-3xl tracking-widest uppercase text-white/20 relative z-10">Sbjiwala</span>
-          <span className="text-4xl opacity-40 relative z-10">🥬🥕🍅</span>
+        <div 
+          className="h-36 rounded-t-2xl -mx-6 -mt-6 mb-0 relative overflow-hidden flex items-center justify-between px-6 text-white select-none border-b border-slate-200 dark:border-slate-805 bg-cover bg-center"
+          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800')` }}
+        >
+          <div className="absolute inset-0 bg-slate-950/45 dark:bg-slate-950/60 backdrop-blur-[1px]" />
+          <div className="relative z-10 flex flex-col justify-end h-full pb-4">
+            <span className="font-black text-xl tracking-wider uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">Sbjiwala Express</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">Farm to Fork ⚡</span>
+          </div>
+          <span className="text-4xl opacity-80 relative z-10 drop-shadow-md">🥬🥕🍅</span>
         </div>
 
         <div className="flex items-end gap-4 -mt-12 mb-4 relative z-10">

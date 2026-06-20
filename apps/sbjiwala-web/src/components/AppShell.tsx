@@ -449,7 +449,7 @@ function BottomNav({ onOpenSearch }: { onOpenSearch: () => void }) {
   const cartCount = cartData?.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0;
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-ios shadow-lg bottom-nav-safe rounded-t-[20px]">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 amoled:bg-black border-t border-slate-200 dark:border-slate-800/80 shadow-lg bottom-nav-safe rounded-t-[20px]">
       <div className="flex items-center justify-around px-1 h-16">
         {mainNavItems.map((item) => {
           const resolvedHref = resolveLink(item.href);
@@ -463,6 +463,9 @@ function BottomNav({ onOpenSearch }: { onOpenSearch: () => void }) {
                 if (isProtectedRoute(resolvedHref) && !localStorage.getItem("sw_access_token")) {
                   e.preventDefault();
                   router.push(`${resolveLink("/login")}?redirect=${encodeURIComponent(resolvedHref)}`);
+                } else {
+                  e.preventDefault();
+                  router.push(resolvedHref);
                 }
               }}
               className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all btn-spring active:scale-95 ${isActive

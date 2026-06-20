@@ -297,7 +297,7 @@ export default function CustomerSupportWidget() {
   // Submit Ticket message mutation
   const submitMessageMutation = useMutation({
     mutationFn: async () => {
-      if (!activeTicketId) {
+      if (!activeTicketId || activeTicketId === "new") {
         // Create new ticket first
         const tRes = await api.post("/support/tickets", {
           subject: "Live Assistance Query",

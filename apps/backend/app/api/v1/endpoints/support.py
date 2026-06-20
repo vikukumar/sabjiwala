@@ -24,8 +24,15 @@ async def create_ticket(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new support assistance request ticket."""
+    import random
+    from datetime import datetime, timezone
+    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    rand_digits = "".join(str(random.randint(0, 9)) for _ in range(5))
+    ticket_num = f"TKT-{date_str}-{rand_digits}"
+
     ticket = SupportTicket(
         user_id=current_user["user_id"],
+        ticket_number=ticket_num,
         subject=body.subject,
         category=body.category,
         order_id=body.order_id,

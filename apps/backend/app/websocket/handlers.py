@@ -73,8 +73,9 @@ async def websocket_endpoint(
                     )
                     available_profiles = agent_res.scalars().all()
                     
-                if available_profiles:
-                    for ap in available_profiles:
+                active_agents = [ap for ap in available_profiles if ap.user_id in ws_manager.active_connections]
+                if active_agents:
+                    for ap in active_agents:
                         await ws_manager.send_to_user(
                             ap.user_id,
                             {
