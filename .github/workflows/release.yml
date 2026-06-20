@@ -397,16 +397,16 @@ jobs:
           
           # Add ProGuard rules for StreamCall and WebRTC to prevent R8 minification failures
           cat << 'PROGUARD' >> android/app/proguard-rules.pro
-
-# Capacitor Stream Call & WebRTC ProGuard Rules
--dontwarn ee.forgr.capacitor.streamcall.**
--keep class ee.forgr.capacitor.streamcall.** { *; }
--dontwarn io.getstream.**
--keep class io.getstream.** { *; }
--dontwarn org.webrtc.**
--keep class org.webrtc.** { *; }
--dontwarn org.jetbrains.kotlin.**
-PROGUARD
+          
+          # Capacitor Stream Call & WebRTC ProGuard Rules
+          -dontwarn ee.forgr.capacitor.streamcall.**
+          -keep class ee.forgr.capacitor.streamcall.** { *; }
+          -dontwarn io.getstream.**
+          -keep class io.getstream.** { *; }
+          -dontwarn org.webrtc.**
+          -keep class org.webrtc.** { *; }
+          -dontwarn org.jetbrains.kotlin.**
+          PROGUARD
           HELPER
           chmod +x /tmp/build_next_app.sh
 
