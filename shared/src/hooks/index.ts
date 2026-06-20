@@ -83,7 +83,12 @@ export function useAuth() {
     if (typeof window !== "undefined") {
       localStorage.removeItem("sw_access_token");
       localStorage.removeItem("sw_refresh_token");
-      window.location.href = "/login";
+      const isCapacitor = window.location.hostname === 'localhost' && (window.location.port === '' || window.location.protocol.startsWith('capacitor'));
+      if (isCapacitor) {
+        window.location.reload();
+      } else {
+        window.location.href = "/login";
+      }
     }
   };
 

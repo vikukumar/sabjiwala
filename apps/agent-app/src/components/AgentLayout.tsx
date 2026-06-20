@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import {
   MessageSquare, Phone, LogOut,
-  Clock, Menu, X, Loader2, Radio, User
+  Clock, Menu, X, Loader2, Radio, User,
+  RotateCcw, ShoppingBag, ShieldCheck
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { useRouter } from "next/navigation";
@@ -79,6 +80,9 @@ export default function AgentLayout({ children, title = "Agent Portal", isAvaila
     if (typeof window === "undefined") return "dashboard";
     const path = window.location.pathname;
     if (path.includes("/calls")) return "calls";
+    if (path.includes("/orders")) return "orders";
+    if (path.includes("/returns")) return "returns";
+    if (path.includes("/kyc")) return "kyc";
     if (path.includes("/settings")) return "settings";
     return "dashboard";
   };
@@ -96,6 +100,9 @@ export default function AgentLayout({ children, title = "Agent Portal", isAvaila
   const navItems = [
     { id: "dashboard", label: "Agent Console", icon: MessageSquare, href: resolveAgentLink("/") },
     { id: "calls", label: "Call Logs", icon: Phone, href: resolveAgentLink("/calls") },
+    { id: "orders", label: "Active Orders", icon: ShoppingBag, href: resolveAgentLink("/orders") },
+    { id: "returns", label: "Customer Returns", icon: RotateCcw, href: resolveAgentLink("/returns") },
+    { id: "kyc", label: "KYC Onboarding", icon: ShieldCheck, href: resolveAgentLink("/kyc") },
   ];
 
   const sidebarContent = (

@@ -241,11 +241,15 @@ try {
   removeRecursiveSync(agentLoginDest);
   copyRecursiveSync(path.join(agentSrc, 'app/login'), agentLoginDest);
 
-  const agentCallsDest = path.join(webAppDir, 'agent/calls');
-  removeRecursiveSync(agentCallsDest);
-  if (fs.existsSync(path.join(agentSrc, 'app/calls'))) {
-    copyRecursiveSync(path.join(agentSrc, 'app/calls'), agentCallsDest);
-  }
+  // Sync additional agent routes: calls, orders, returns, kyc
+  ['calls', 'orders', 'returns', 'kyc'].forEach((route) => {
+    const dest = path.join(webAppDir, `agent/${route}`);
+    removeRecursiveSync(dest);
+    const srcPath = path.join(agentSrc, `app/${route}`);
+    if (fs.existsSync(srcPath)) {
+      copyRecursiveSync(srcPath, dest);
+    }
+  });
 
   // 8. Sync public assets from customer-app to sbjiwala-web
   console.log(`Syncing public assets...`);

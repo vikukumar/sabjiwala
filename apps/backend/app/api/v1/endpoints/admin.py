@@ -24,9 +24,9 @@ router = APIRouter()
 
 
 async def _verify_admin(current_user: dict):
-    """Ensure user is an administrator."""
-    if current_user.get("user_type") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Permission denied. Administrator access required.")
+    """Ensure user is an administrator or support agent."""
+    if current_user.get("user_type") not in ["admin", "super_admin", "support_agent"]:
+        raise HTTPException(status_code=403, detail="Permission denied. Administrator or support agent access required.")
 
 
 @router.get("/metrics", response_model=APIResponse)
@@ -702,6 +702,79 @@ async def update_delivery_boy_status(
         
     await db.commit()
     return APIResponse(success=True, message=f"Delivery boy status updated to {body.status}")
+
+
+@router.post("/delivery-boys/{delivery_boy_id}/approve", response_model=APIResponse)
+async def approve_delivery_boy_kyc(
+    delivery_boy_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Approve a delivery boy's KYC registration."""
+    await _verify_admin(current_user)
+    
+    from app.models.delivery import DeliveryBoy, DeliveryBoyStatus
+    res = await db.execute(select(DeliveryBoy).where(DeliveryBoy.id == delivery_boy_id, DeliveryBoy.is_deleted == False))
+    boy = res.scalars().first()
+    if not boy:
+        raise HTTPException(status_code=404, detail="Delivery boy profile not found")
+        
+    boy.status = DeliveryBoyStatus.ACTIVE
+    
+    # Verify associated user
+    user_res = await db.execute(select(User).where(User.id == boy.user_id))
+    user = user_res.scalars().first()
+    if user:
+        user.is_verified = True
+        
+        # Assign delivery_boy role if not done
+        from sqlalchemy import select as sa_select
+        from app.models.user import Role, UserRole
+        role_result = await db.execute(sa_select(Role).where(Role.name == "delivery_boy"))
+        db_role = role_result.scalars().first()
+        if db_role:
+            existing_role_res = await db.execute(
+                sa_select(UserRole).where(
+                    UserRole.user_id == user.id,
+                    UserRole.role_id == db_role.id
+                )
+            )
+            existing_user_role = existing_role_res.scalars().first()
+            if existing_user_role:
+                if existing_user_role.is_deleted:
+                    existing_user_role.is_deleted = False
+                    existing_user_role.deleted_at = None
+                    existing_user_role.deleted_by = None
+            else:
+                db.add(UserRole(user_id=user.id, role_id=db_role.id))
+                
+    await db.commit()
+    return APIResponse(success=True, message="Delivery boy KYC approved successfully")
+
+
+@router.post("/delivery-boys/{delivery_boy_id}/reject", response_model=APIResponse)
+async def reject_delivery_boy_kyc(
+    delivery_boy_id: UUID,
+    body: Optional[dict] = None,
+    reason: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reject a delivery boy's KYC registration."""
+    await _verify_admin(current_user)
+    
+    from app.models.delivery import DeliveryBoy, DeliveryBoyStatus
+    res = await db.execute(select(DeliveryBoy).where(DeliveryBoy.id == delivery_boy_id, DeliveryBoy.is_deleted == False))
+    boy = res.scalars().first()
+    if not boy:
+        raise HTTPException(status_code=404, detail="Delivery boy profile not found")
+        
+    boy.status = DeliveryBoyStatus.SUSPENDED
+    
+    rej_reason = (body or {}).get("reason") or reason or "Documents verification failed"
+    await db.commit()
+    return APIResponse(success=True, message=f"Delivery boy KYC rejected: {rej_reason}")
+
 
 
 # ---- Coupon & Banner CMS Management ----

@@ -31,6 +31,7 @@ async def browse_products(
     sort_by: Optional[str] = None,
     search: Optional[str] = None,
     is_featured: Optional[bool] = None,
+    include_out_of_stock: Optional[bool] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     """Browse products with filters, sorting, and pagination."""
@@ -47,9 +48,9 @@ async def browse_products(
             Inventory.vendor_id == vendor_id,
             Inventory.is_deleted == False
         )
-        if not is_search:
+        if not is_search and not include_out_of_stock:
             query = query.where(Inventory.quantity > 0)
-    elif not is_search:
+    elif not is_search and not include_out_of_stock:
         from sqlalchemy import exists
         query = query.where(
             exists().where(

@@ -21,8 +21,13 @@ const REASONS = [
 export default function ReturnOrderClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const orderId = searchParams?.get("id") || "";
+  const orderId = searchParams?.get("id") || searchParams?.get("order_id") || "";
   const { success, error: showError } = useToast();
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [selectedItems, setSelectedItems] = useState<Record<string, {
     selected: boolean;
@@ -52,12 +57,16 @@ export default function ReturnOrderClient() {
     }
   });
 
-  if (isLoading) {
+  if (!mounted || isLoading) {
     return (
       <div className="flex justify-center items-center py-32">
         <Spinner size="lg" />
       </div>
     );
+  }
+
+  if (!orderId) {
+    return <div className="text-center py-20 text-slate-500">Order ID is missing</div>;
   }
 
   if (!order) {

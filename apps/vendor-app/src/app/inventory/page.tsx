@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Plus, Trash2, ArrowLeft, Loader2, Search, Star, Edit } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Loader2, Search, Star, Edit, AlertCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, resolveImageUrl } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
@@ -87,6 +87,7 @@ export default function VendorInventoryPage() {
           search: searchQuery || undefined,
           category_id: selectedCategoryFilter || undefined,
           page_size: 100,
+          include_out_of_stock: true,
         }
       });
       return res.data || [];
@@ -589,7 +590,9 @@ export default function VendorInventoryPage() {
                     <tbody className="divide-y divide-slate-150 dark:divide-slate-850">
                       {products.map((p: any) => {
                         const attrs = p.attributes || {};
-                        const isLowStock = parseFloat(attrs.quantity || 0) < 10;
+                        const qty = parseFloat(attrs.quantity || 0);
+                        const isOutOfStock = qty <= 0;
+                        const isLowStock = qty < 10;
                         return (
                           <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/10 transition-colors">
                             <td className="p-4 text-center">
@@ -615,11 +618,22 @@ export default function VendorInventoryPage() {
                               )}
                             </td>
                             <td className="p-4 text-center">
-                              <span className={`inline-block px-3 py-1 rounded-full font-black text-[10px] ${
-                                isLowStock ? "bg-rose-500/10 text-rose-550 border border-rose-500/20" : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                              }`}>
-                                {attrs.quantity || 0} {p.unit}
-                              </span>
+                              {isOutOfStock ? (
+                                <div className="flex flex-col items-center gap-1">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-black text-[9px] bg-red-500/10 text-red-650 border border-red-500/20">
+                                    <AlertCircle className="w-3.5 h-3.5 text-red-500" /> Out of stock
+                                  </span>
+                                  <span className="text-[9px] font-extrabold text-rose-600 dark:text-rose-400 animate-pulse">
+                                    Please increase stock
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className={`inline-block px-3 py-1 rounded-full font-black text-[10px] ${
+                                  isLowStock ? "bg-amber-500/10 text-amber-600 border border-amber-500/20" : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                                }`}>
+                                  {qty} {p.unit}
+                                </span>
+                              )}
                             </td>
                             <td className="p-4 text-right space-x-2">
                               <Link
