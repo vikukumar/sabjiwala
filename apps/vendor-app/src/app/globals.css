@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url("https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css");
 
 @variant dark (&:where(.dark, .dark *));
 
@@ -415,7 +416,6 @@ input[type="checkbox"], input[type="radio"] {
 
 /* Markers styles for modern flat map */
 .map-3d-wrapper .leaflet-marker-icon {
-  transform: none !important;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
 }
 

@@ -474,22 +474,27 @@ function BottomNav({ onOpenSearch }: { onOpenSearch: () => void }) {
                 }`}
               aria-label={item.label}
             >
-              <div className={isActive
-                ? "w-11 h-11 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(16,185,129,0.3)] -translate-y-5 border-4 border-slate-50 dark:border-[#090d10] transition-all duration-300 scale-110 relative overflow-hidden active-nav-shine"
-                : "relative p-1.5 rounded-xl transition-all"
-              }>
-                <Icon className="w-5 h-5" />
+              <div className="relative">
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  isActive
+                    ? "bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)] relative overflow-hidden active-nav-shine"
+                    : "text-slate-400 dark:text-slate-500 hover:text-slate-650 dark:hover:text-slate-350"
+                }`}>
+                  <Icon className="w-5 h-5" />
+                </div>
                 {item.cartBadge && cartCount > 0 && (
-                  <span className={`absolute ${isActive ? "-top-0.5 -right-0.5" : "-top-1 -right-1"} min-w-[16px] h-4 bg-emerald-600 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1`}>
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-emerald-600 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 z-10">
                     {cartCount > 9 ? "9+" : cartCount}
                   </span>
                 )}
               </div>
-              {!isActive && (
-                <span className="text-[10px] font-bold opacity-70">
-                  {item.label}
-                </span>
-              )}
+              <span className={`text-[10px] font-bold transition-all duration-300 ${
+                isActive
+                  ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                  : "text-slate-400 dark:text-slate-500 opacity-70"
+              }`}>
+                {item.label}
+              </span>
             </Link>
           );
         })}
@@ -1315,7 +1320,7 @@ function LocationSelectionModal({ onClose, onSelect }: LocationSelectionModalPro
               <button
                 onClick={() => {
                   onClose();
-                  router.push("/addresses/add");
+                  router.push(resolveLink("/addresses/add"));
                 }}
                 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 uppercase tracking-wider cursor-pointer"
               >

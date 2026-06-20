@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { resolveLink } from "@/components/AppShell";
 import { MessageSquare, Send, Phone, Mail, ArrowRight, ChevronRight, HelpCircle, Package, RefreshCcw, Truck, CreditCard, Loader2 } from "lucide-react";
 import { Button, Input, Card, Badge, EmptyState, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
@@ -142,11 +143,11 @@ function SupportContent() {
           <ChevronRight className="w-4 h-4 text-slate-400" />
         </button>
       ) : (
-        <NewTicketForm orderId={orderId} onCreated={() => { setShowForm(false); router.push("/support/tickets"); }} />
+        <NewTicketForm orderId={orderId} onCreated={() => { setShowForm(false); router.push(resolveLink("/support/tickets")); }} />
       )}
 
       {/* My tickets link */}
-      <Link href="/support/tickets" className="flex items-center justify-between card p-4 hover:border-emerald-400 transition-colors">
+      <Link href={resolveLink("/support/tickets")} className="flex items-center justify-between card p-4 hover:border-emerald-400 transition-colors">
         <div className="flex items-center gap-3">
           <MessageSquare className="w-5 h-5 text-slate-500 dark:text-slate-400" />
           <span className="font-bold text-sm text-slate-800 dark:text-slate-200">View My Tickets</span>
@@ -155,7 +156,7 @@ function SupportContent() {
       </Link>
 
       {/* FAQ link */}
-      <Link href="/faq" className="flex items-center justify-between card p-4 hover:border-emerald-400 transition-colors">
+      <Link href={resolveLink("/faq")} className="flex items-center justify-between card p-4 hover:border-emerald-400 transition-colors">
         <div className="flex items-center gap-3">
           <HelpCircle className="w-5 h-5 text-slate-500 dark:text-slate-400" />
           <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Frequently Asked Questions</span>

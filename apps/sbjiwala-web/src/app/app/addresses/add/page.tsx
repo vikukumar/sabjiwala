@@ -7,6 +7,7 @@ import { MapPin, Navigation, Home, Briefcase, ChevronRight, ArrowLeft, Loader2, 
 import { Button } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 import { useForm } from "react-hook-form";
+import { resolveLink } from "@/components/AppShell";
 
 export default function AddAddressPage() {
   const router = useRouter();
@@ -205,6 +206,14 @@ export default function AddAddressPage() {
     };
   }, [step]);
 
+  // Synchronize map center and marker when coords change (e.g. loaded from localStorage or edit API)
+  useEffect(() => {
+    if (mapObj && markerRef.current) {
+      mapObj.setView([coords.lat, coords.lng]);
+      markerRef.current.setLatLng([coords.lat, coords.lng]);
+    }
+  }, [coords.lat, coords.lng, mapObj]);
+
   const handleLocateMe = () => {
     if (typeof window === "undefined" || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition((pos) => {
@@ -255,7 +264,7 @@ export default function AddAddressPage() {
         success("Success", "Address saved successfully!");
       }
       
-      router.push("/addresses");
+      router.push(resolveLink("/addresses"));
     } catch (err: any) {
       showError("Failed to save address", err.response?.data?.detail || err.message);
     } finally {
@@ -265,7 +274,6 @@ export default function AddAddressPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6 font-sans">
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 
       {/* Top Header */}
       <div className="flex items-center gap-3">
@@ -274,7 +282,7 @@ export default function AddAddressPage() {
             if (step === 2) {
               setStep(1);
             } else {
-              router.push("/addresses");
+              router.push(resolveLink("/addresses"));
             }
           }}
           className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all cursor-pointer"

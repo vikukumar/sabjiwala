@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useForm } from "react-hook-form";
 
 import { useRouter } from "next/navigation";
+import { resolveLink } from "@/components/AppShell";
 
 function AddressCard({ addr, onEdit, onDelete, onDefault }: {
   addr: any;
@@ -119,7 +120,7 @@ export default function AddressesPage() {
           <h1 className="text-2xl font-black text-slate-900 dark:text-white">Saved Addresses</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">Manage your exact geolocated delivery addresses</p>
         </div>
-        <Button size="sm" leftIcon={<Plus className="w-3.5 h-3.5" />} onClick={() => router.push("/addresses/add")}>Add New</Button>
+        <Button size="sm" leftIcon={<Plus className="w-3.5 h-3.5" />} onClick={() => router.push(resolveLink("/addresses/add"))}>Add New</Button>
       </div>
 
       {isLoading ? (
@@ -129,7 +130,7 @@ export default function AddressesPage() {
           emoji="📍"
           title="No saved addresses"
           description="Add a precise delivery address for rapid 10-minute order routing."
-          action={<Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => router.push("/addresses/add")}>Add Address</Button>}
+          action={<Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => router.push(resolveLink("/addresses/add"))}>Add Address</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -137,7 +138,7 @@ export default function AddressesPage() {
             <AddressCard
               key={addr.id}
               addr={addr}
-              onEdit={a => router.push(`/addresses/add?id=${a.id}`)}
+              onEdit={a => router.push(resolveLink(`/addresses/add?id=${a.id}`))}
               onDelete={id => setConfirmDeleteId(id)}
               onDefault={id => setDefault.mutate(id)}
             />
