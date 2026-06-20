@@ -201,8 +201,13 @@ jobs:
 
       - name: Build sbjiwala-web Static Export
         run: |
+          VER="${{ needs.read-version.outputs.version }}"
           cd apps/sbjiwala-web
-          npm run build
+          # Inject build-time version
+          echo "NEXT_PUBLIC_APP_VERSION=$VER" > .env.production
+          echo "{\"version\": \"$VER\"}" > src/app/version.json
+          npm version "$VER" --no-git-tag-version --allow-same-version 2>/dev/null || true
+          NEXT_PUBLIC_APP_VERSION="$VER" npm run build
 
       - name: Zip sbjiwala-web Static Export
         run: |
@@ -223,8 +228,13 @@ jobs:
 
       - name: Build agent-app Static Export
         run: |
+          VER="${{ needs.read-version.outputs.version }}"
           cd apps/agent-app
-          npm run build
+          # Inject build-time version
+          echo "NEXT_PUBLIC_APP_VERSION=$VER" > .env.production
+          echo "{\"version\": \"$VER\"}" > src/app/version.json
+          npm version "$VER" --no-git-tag-version --allow-same-version 2>/dev/null || true
+          NEXT_PUBLIC_APP_VERSION="$VER" npm run build
 
       - name: Zip agent-app Static Export
         run: |
@@ -356,20 +366,35 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
           APP=$1
+          FULL_VER=${2:-"1.0"}
           cd "apps/$APP"
+
+          # ── Inject build-time version into .env.production ─────────────────
+          echo "NEXT_PUBLIC_APP_VERSION=$FULL_VER" > .env.production
           if [ -n "${API_URL:-}" ]; then
-            echo "NEXT_PUBLIC_API_URL=$API_URL" > .env.production
+            echo "NEXT_PUBLIC_API_URL=$API_URL" >> .env.production
           fi
+
+          # ── Write full version into src/app/version.json (read by all apps) ─
+          mkdir -p src/app
+          echo "{\"version\": \"$FULL_VER\"}" > src/app/version.json
+
+          # ── Shared package patch ────────────────────────────────────────────
           npm ci
           rm -rf node_modules/@sbjiwala/shared
           mkdir -p node_modules/@sbjiwala/shared
           cp -r ../../shared/dist      node_modules/@sbjiwala/shared/
           cp -r ../../shared/src       node_modules/@sbjiwala/shared/
           cp ../../shared/package.json node_modules/@sbjiwala/shared/
+
+          # ── Stamp version into package.json (for npm version metadata) ──────
+          npm version "$FULL_VER" --no-git-tag-version --allow-same-version 2>/dev/null || true
+
+          # ── Build ───────────────────────────────────────────────────────────
           if [ -n "${API_URL:-}" ]; then
-            NEXT_PUBLIC_API_URL="$API_URL" npm run build
+            NEXT_PUBLIC_API_URL="$API_URL" NEXT_PUBLIC_APP_VERSION="$FULL_VER" npm run build
           else
-            npm run build
+            NEXT_PUBLIC_APP_VERSION="$FULL_VER" npm run build
           fi
           npm install @capacitor/core @capacitor/cli @capacitor/android
           npx cap sync android
@@ -398,14 +423,31 @@ jobs:
           HELPER
           chmod +x /tmp/gradle_sign.sh
 
+      # ── Compute Android version numbers from pipeline tag ─────────────────
+      # ANDROID_VERSION_NAME = full tag e.g. 0.1.0.23
+      # ANDROID_VERSION_CODE = numeric build number (must be monotonically increasing integer)
+      #   derived from the last numeric segment of the tag (the run_number)
+      - name: Compute Android Version Numbers
+        run: |
+          VER="${{ env.VER }}"
+          # Last segment of the version (e.g. "23" from "0.1.0.23") becomes versionCode
+          LAST_SEGMENT=$(echo "$VER" | awk -F. '{print $NF}')
+          # versionCode must be a plain integer — use last segment directly
+          echo "ANDROID_VERSION_CODE=$LAST_SEGMENT" >> $GITHUB_ENV
+          echo "ANDROID_VERSION_NAME=$VER"          >> $GITHUB_ENV
+          echo "Android versionCode: $LAST_SEGMENT"
+          echo "Android versionName: $VER"
+
       # ── Customer App ──────────────────────────────────────────────────────
       - name: Build & Sync Customer App (Android)
         env:
           API_URL: ${{ env.API_URL }}
-        run: /tmp/build_next_app.sh customer-app
+        run: /tmp/build_next_app.sh customer-app "${{ env.VER }}"
 
       - name: Compile & Sign Customer Android App
         run: |
+          ANDROID_VERSION_CODE="${{ env.ANDROID_VERSION_CODE }}" \
+          ANDROID_VERSION_NAME="${{ env.ANDROID_VERSION_NAME }}" \
           /tmp/gradle_sign.sh apps/customer-app \
             "sbjiwala-v${{ env.VER }}.apk" \
             "sbjiwala-v${{ env.VER }}.aab"
@@ -415,7 +457,7 @@ jobs:
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
-          packageName: com.sbjiwala.customer
+          packageName: in.sbjiwala.customer
           releaseFiles: sbjiwala-v${{ env.VER }}.aab
           track: internal
           status: completed
@@ -424,10 +466,12 @@ jobs:
       - name: Build & Sync Vendor App (Android)
         env:
           API_URL: ${{ env.API_URL }}
-        run: /tmp/build_next_app.sh vendor-app
+        run: /tmp/build_next_app.sh vendor-app "${{ env.VER }}"
 
       - name: Compile & Sign Vendor Android App
         run: |
+          ANDROID_VERSION_CODE="${{ env.ANDROID_VERSION_CODE }}" \
+          ANDROID_VERSION_NAME="${{ env.ANDROID_VERSION_NAME }}" \
           /tmp/gradle_sign.sh apps/vendor-app \
             "sbjiwala-vendor-v${{ env.VER }}.apk" \
             "sbjiwala-vendor-v${{ env.VER }}.aab"
@@ -446,10 +490,12 @@ jobs:
       - name: Build & Sync Delivery App (Android)
         env:
           API_URL: ${{ env.API_URL }}
-        run: /tmp/build_next_app.sh delivery-app
+        run: /tmp/build_next_app.sh delivery-app "${{ env.VER }}"
 
       - name: Compile & Sign Delivery Android App
         run: |
+          ANDROID_VERSION_CODE="${{ env.ANDROID_VERSION_CODE }}" \
+          ANDROID_VERSION_NAME="${{ env.ANDROID_VERSION_NAME }}" \
           /tmp/gradle_sign.sh apps/delivery-app \
             "sbjiwala-delivery-v${{ env.VER }}.apk" \
             "sbjiwala-delivery-v${{ env.VER }}.aab"
@@ -468,10 +514,12 @@ jobs:
       - name: Build & Sync Admin App (Android)
         env:
           API_URL: ${{ env.API_URL }}
-        run: /tmp/build_next_app.sh admin-app
+        run: /tmp/build_next_app.sh admin-app "${{ env.VER }}"
 
       - name: Compile & Sign Admin Android App
         run: |
+          ANDROID_VERSION_CODE="${{ env.ANDROID_VERSION_CODE }}" \
+          ANDROID_VERSION_NAME="${{ env.ANDROID_VERSION_NAME }}" \
           /tmp/gradle_sign.sh apps/admin-app \
             "sbjiwala-admin-v${{ env.VER }}.apk" \
             "sbjiwala-admin-v${{ env.VER }}.aab"
@@ -482,10 +530,12 @@ jobs:
       - name: Build & Sync Agent App (Android)
         env:
           API_URL: ${{ env.API_URL }}
-        run: /tmp/build_next_app.sh agent-app
+        run: /tmp/build_next_app.sh agent-app "${{ env.VER }}"
 
       - name: Compile & Sign Agent Android App
         run: |
+          ANDROID_VERSION_CODE="${{ env.ANDROID_VERSION_CODE }}" \
+          ANDROID_VERSION_NAME="${{ env.ANDROID_VERSION_NAME }}" \
           /tmp/gradle_sign.sh apps/agent-app \
             "sbjiwala-agent-v${{ env.VER }}.apk" \
             "sbjiwala-agent-v${{ env.VER }}.aab"

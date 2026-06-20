@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "prebuild": "node ../../tmp/fix_node_modules.js && node sync-subapps.js && node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json'); fs.copyFileSync('../../version.json', 'src/app/admin/version.json'); fs.copyFileSync('../../version.json', 'src/app/vendor/version.json'); fs.copyFileSync('../../version.json', 'src/app/delivery/version.json');\"",
-    "predev": "node ../../tmp/fix_node_modules.js && node sync-subapps.js && node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json'); fs.copyFileSync('../../version.json', 'src/app/admin/version.json'); fs.copyFileSync('../../version.json', 'src/app/vendor/version.json'); fs.copyFileSync('../../version.json', 'src/app/delivery/version.json');\""
+    "prebuild": "node ../../tmp/fix_node_modules.js && node sync-subapps.js && node -e \"const fs=require('fs'),path=require('path'); if(!process.env.NEXT_PUBLIC_APP_VERSION){const rv=fs.readFileSync('../../version.json','utf8'); ['src/app/version.json','src/app/admin/version.json','src/app/vendor/version.json','src/app/delivery/version.json'].forEach(p=>{fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,rv);})}\"",
+    "predev": "node ../../tmp/fix_node_modules.js && node sync-subapps.js && node -e \"const fs=require('fs'),path=require('path'); if(!process.env.NEXT_PUBLIC_APP_VERSION){const rv=fs.readFileSync('../../version.json','utf8'); ['src/app/version.json','src/app/admin/version.json','src/app/vendor/version.json','src/app/delivery/version.json'].forEach(p=>{fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,rv);})}\""
   },
   "dependencies": {
     "@capacitor/local-notifications": "^8.2.0",
