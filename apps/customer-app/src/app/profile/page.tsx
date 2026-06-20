@@ -106,14 +106,14 @@ export default function ProfilePage() {
     { icon: Award, label: "Referrals", href: "/referrals", badge: "Earn ₹50" },
     { icon: Bell, label: "Notifications", href: "/notifications", badge: null },
     { icon: Shield, label: "Privacy & Security", href: "/settings", badge: null },
-  ];
-
-  const fullName = profile?.first_name ? `${profile.first_name} ${profile.last_name || ""}`.trim() : (profile?.email?.split("@")[0] || "User");
+  ];  const fullName = (profile?.first_name?.trim() || profile?.last_name?.trim())
+    ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim()
+    : (profile?.email?.split("@")[0] || profile?.phone || "User");
 
   const getCoverGradient = (gender?: string) => {
-    if (gender === "male") return "from-blue-600 via-indigo-500 to-emerald-500";
-    if (gender === "female") return "from-pink-500 via-rose-500 to-teal-500";
-    return "from-emerald-600 via-teal-550 to-indigo-600";
+    if (gender === "male") return "from-slate-900 via-indigo-950 to-emerald-950";
+    if (gender === "female") return "from-slate-900 via-rose-950 to-emerald-950";
+    return "from-emerald-950 via-teal-950 to-slate-900";
   };
 
   const getAvatarContent = () => {
@@ -124,20 +124,23 @@ export default function ProfilePage() {
     return <span className="text-3xl select-none">{emoji}</span>;
   };
 
+  const isNameMissing = !profile?.first_name?.trim();
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
       {/* Profile Header */}
-      <Card className="relative overflow-hidden">
+      <Card className="relative overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md">
         {/* Cover Image based on services and Sbjiwala mark */}
-        <div className={`h-24 bg-gradient-to-r ${getCoverGradient(profile?.gender)} rounded-t-2xl -mx-6 -mt-6 mb-0 relative overflow-hidden flex items-center justify-between px-6 text-white/10 select-none`}>
-          <span className="font-black text-2xl tracking-widest uppercase">Sbjiwala</span>
-          <span className="text-3xl">🥬🥕🍅</span>
+        <div className={`h-32 bg-gradient-to-br ${getCoverGradient(profile?.gender)} rounded-t-2xl -mx-6 -mt-6 mb-0 relative overflow-hidden flex items-center justify-between px-6 text-white/5 select-none border-b border-emerald-950/20`}>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.1),transparent_50%)]" />
+          <span className="font-black text-3xl tracking-widest uppercase text-white/20 relative z-10">Sbjiwala</span>
+          <span className="text-4xl opacity-40 relative z-10">🥬🥕🍅</span>
         </div>
 
-        <div className="flex items-end gap-4 -mt-10 mb-4">
+        <div className="flex items-end gap-4 -mt-12 mb-4 relative z-10">
           <div className="relative flex-shrink-0">
             {/* Custom Farm Avatar */}
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white border-4 border-white dark:border-slate-900 shadow-lg relative overflow-hidden">
+            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white border-4 border-white dark:border-slate-900 shadow-xl relative overflow-hidden">
               {uploadingAvatar ? <Spinner size="sm" className="text-white" /> : getAvatarContent()}
             </div>
             <input
@@ -152,16 +155,23 @@ export default function ProfilePage() {
               type="button"
               onClick={() => avatarInputRef.current?.click()}
               disabled={uploadingAvatar}
-              className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-600 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 hover:bg-emerald-700 transition-colors cursor-pointer"
+              className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 hover:bg-emerald-700 transition-all shadow-md cursor-pointer hover:scale-105 active:scale-95"
             >
-              <Camera className="w-3.5 h-3.5" />
+              <Camera className="w-4 h-4" />
             </button>
           </div>
           <div className="pb-1 flex-1 min-w-0">
-            <h2 className="text-lg font-black text-slate-900 dark:text-white truncate">{fullName}</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{profile?.email}</p>
-            <Badge variant={profile?.is_verified ? "success" : "warning"} size="sm" className="mt-1">
-              {profile?.is_verified ? "Verified" : "Unverified"}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white truncate leading-tight">{fullName}</h2>
+              {isNameMissing && (
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/50 animate-pulse">
+                  ✏️ Set Name
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{profile?.email || profile?.phone}</p>
+            <Badge variant={profile?.is_verified ? "success" : "warning"} size="sm" className="mt-1.5">
+              {profile?.is_verified ? "Verified Profile" : "Unverified Profile"}
             </Badge>
           </div>
           <Button
@@ -170,7 +180,7 @@ export default function ProfilePage() {
             leftIcon={<Edit2 className="w-3.5 h-3.5" />}
             onClick={() => setEditing(!editing)}
           >
-            {editing ? "Cancel" : "Edit"}
+            {editing ? "Cancel" : "Edit Profile"}
           </Button>
         </div>
 

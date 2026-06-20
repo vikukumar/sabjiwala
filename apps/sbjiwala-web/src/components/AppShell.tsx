@@ -460,11 +460,6 @@ function BottomNav({ onOpenSearch }: { onOpenSearch: () => void }) {
               key={item.href}
               href={resolvedHref}
               onClick={(e) => {
-                if (item.label === "Search") {
-                  e.preventDefault();
-                  onOpenSearch();
-                  return;
-                }
                 if (isProtectedRoute(resolvedHref) && !localStorage.getItem("sw_access_token")) {
                   e.preventDefault();
                   router.push(`${resolveLink("/login")}?redirect=${encodeURIComponent(resolvedHref)}`);
