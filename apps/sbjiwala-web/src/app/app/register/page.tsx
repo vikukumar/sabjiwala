@@ -11,6 +11,7 @@ import { api } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import { Button, Input } from "@/components/ui/index";
 import { useForm } from "react-hook-form";
+import { resolveLink } from "@/components/AppShell";
 
 function RegisterPageContent() {
   const router = useRouter();
@@ -359,7 +360,7 @@ function RegisterPageContent() {
             {otpMode === "register" && (
               <div className="text-center text-xs font-semibold text-slate-550 dark:text-slate-400 mt-6">
                 Already have an account?{" "}
-                <Link href="/login" className="text-emerald-650 dark:text-emerald-400 hover:underline font-extrabold">
+                <Link href={resolveLink("/login")} className="text-emerald-650 dark:text-emerald-400 hover:underline font-extrabold">
                   Login here
                 </Link>
               </div>

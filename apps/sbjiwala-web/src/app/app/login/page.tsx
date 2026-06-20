@@ -15,6 +15,7 @@ import { Button, Input, Divider } from "@/components/ui/index";
 import { encryptPayload } from "@/components/ui/crypto";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { resolveLink } from "@/components/AppShell";
 
 // ==================== GUEST CART SYNC UTILITY ====================
 const syncGuestCart = async (queryClient?: any) => {
@@ -949,7 +950,7 @@ function LoginPageContent() {
 
             <div className="text-center text-xs font-semibold text-slate-500 dark:text-slate-450 mt-6">
               Don't have an account?{" "}
-              <Link href="/register" className="text-emerald-655 dark:text-emerald-400 hover:underline font-extrabold">
+              <Link href={resolveLink("/register")} className="text-emerald-655 dark:text-emerald-400 hover:underline font-extrabold">
                 Register here
               </Link>
             </div>

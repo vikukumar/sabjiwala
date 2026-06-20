@@ -111,3 +111,89 @@ async def top_up_wallet(
         message="Wallet top-up transaction initiated",
         data=payment_info
     )
+
+
+# Alias endpoints for frontend compatibility
+from pydantic import BaseModel, Field
+
+class WalletTopUpAlias(BaseModel):
+    amount: float = Field(..., gt=0)
+    source: str = "razorpay"
+
+@router.get("/me", response_model=APIResponse)
+async def get_wallet_details_alias(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_wallet_details(current_user=current_user, db=db)
+
+@router.get("/me/transactions", response_model=APIResponse)
+async def get_wallet_transactions_alias(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_wallet_transactions(page=page, page_size=page_size, current_user=current_user, db=db)
+
+@router.post("/me/add", response_model=APIResponse)
+async def top_up_wallet_alias(
+    body: WalletTopUpAlias,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Map 'source' from frontend to 'gateway' on the backend top-up schema
+    gateway_param = body.source
+    if gateway_param == "manual":
+        service = PaymentService(db)
+        from app.models.payment import WalletType, WalletTransactionType
+        role = current_user.get("role", "customer")
+        w_type = WalletType.CUSTOMER
+        if role in ["vendor", "vendor_manager"]:
+            w_type = WalletType.VENDOR
+        elif role == "delivery_boy":
+            w_type = WalletType.DELIVERY
+        
+        wallet = await service.get_or_create_wallet(current_user["user_id"], wallet_type=w_type)
+        balance_before = float(wallet.balance)
+        wallet.balance = float(wallet.balance) + body.amount
+        db.add(wallet)
+        
+        txn = WalletTransaction(
+            wallet_id=wallet.id,
+            user_id=current_user["user_id"],
+            transaction_type=WalletTransactionType.TOP_UP,
+            amount=body.amount,
+            balance_before=balance_before,
+            balance_after=float(wallet.balance),
+            reference_type="top_up",
+            description="Manual wallet top-up"
+        )
+        db.add(txn)
+        await db.commit()
+        
+        return APIResponse(
+            success=True,
+            message="Wallet successfully topped up (manual)",
+            data={
+                "id": str(wallet.id),
+                "balance": float(wallet.balance)
+            }
+        )
+        
+    from app.models.payment import PaymentGateway
+    service = PaymentService(db)
+    
+    payment_info = await service.initiate_payment(
+        order_id=None,
+        user_id=current_user["user_id"],
+        amount=body.amount,
+        gateway=PaymentGateway(gateway_param)
+    )
+    
+    await db.commit()
+    return APIResponse(
+        success=True,
+        message="Wallet top-up transaction initiated",
+        data=payment_info
+    )
