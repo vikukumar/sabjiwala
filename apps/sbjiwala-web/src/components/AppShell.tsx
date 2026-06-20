@@ -150,9 +150,17 @@ const sidebarSections = [
     ],
   },
   {
-    title: "More",
+    title: "Platform & Pricing",
     items: [
-      { href: "/about", icon: Shield, label: "About Us" },
+      { href: "/about", icon: Shield, label: "Our Story" },
+      { href: "/pricing", icon: Wallet, label: "Hosting & Pricing" },
+      { href: "/blogs", icon: FileText, label: "Developer Blogs" },
+      { href: "/contactus", icon: MessageSquare, label: "Contact Us" },
+    ],
+  },
+  {
+    title: "Legal & Settings",
+    items: [
       { href: "/how-it-works", icon: Zap, label: "How It Works" },
       { href: "/privacy", icon: FileText, label: "Privacy Policy" },
       { href: "/terms", icon: FileText, label: "Terms of Service" },
