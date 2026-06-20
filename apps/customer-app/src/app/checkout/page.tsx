@@ -119,7 +119,8 @@ function AddressForm({ onSave, onCancel, existing }: {
           </div>
         `,
         iconSize: [32, 32],
-        iconAnchor: [16, 16]
+        iconAnchor: [16, 16],
+        className: "leaflet-custom-icon"
       });
 
       const marker = L.marker([coords.lat, coords.lng], { draggable: true, icon: pinIcon }).addTo(map);

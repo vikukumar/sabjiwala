@@ -150,6 +150,7 @@ export default function TrackOrderClient() {
         `,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
+        className: "leaflet-custom-icon",
       });
       L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
 
@@ -167,7 +168,8 @@ export default function TrackOrderClient() {
           </div>
         `,
         iconSize: [34, 34],
-        iconAnchor: [17, 17]
+        iconAnchor: [17, 17],
+        className: "leaflet-custom-icon",
       });
       L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup("Pickup Store");
 
@@ -187,6 +189,7 @@ export default function TrackOrderClient() {
         `,
         iconSize: [38, 38],
         iconAnchor: [19, 19],
+        className: "leaflet-custom-icon",
       });
 
       const driverMarker = L.marker([initDriverLat, initDriverLng], { icon: agentIcon }).addTo(map).bindPopup("Delivery Partner");

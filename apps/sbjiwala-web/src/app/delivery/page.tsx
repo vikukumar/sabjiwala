@@ -225,7 +225,8 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
           </div>
         `,
         iconSize: [32, 32],
-        iconAnchor: [16, 16]
+        iconAnchor: [16, 16],
+        className: "leaflet-custom-icon"
       });
       L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
 
@@ -242,7 +243,8 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
           </div>
         `,
         iconSize: [32, 32],
-        iconAnchor: [16, 16]
+        iconAnchor: [16, 16],
+        className: "leaflet-custom-icon"
       });
       L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup(order.vendor_store?.store_name || "Store");
 
@@ -261,7 +263,8 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
           </div>
         `,
         iconSize: [36, 36],
-        iconAnchor: [18, 18]
+        iconAnchor: [18, 18],
+        className: "leaflet-custom-icon"
       });
       const driverMarker = L.marker(currentPos, { icon: driverIcon }).addTo(map);
       driverMarkerRef.current = driverMarker;

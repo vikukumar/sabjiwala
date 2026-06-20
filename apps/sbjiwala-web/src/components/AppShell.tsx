@@ -26,7 +26,7 @@ const AppShellContext = createContext(false);
 // ==================== ROUTE PROTECTION helper ====================
 export const resolveLink = (href: string) => {
   const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
-  
+
   let formattedHref = href;
   if (href.startsWith("/orders/detail") || href.startsWith("/orders/track")) {
     // Already query-param formatted, do nothing
@@ -320,7 +320,7 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
       <div className="flex items-center justify-between p-6 border-b border-slate-200/40 dark:border-slate-800/80">
         <div className="flex items-center gap-2">
           <img src={publicSettings?.app_logo_url || "/logo_horizontal.png"} alt={publicSettings?.app_name || "Sbjiwala"} className="h-7 w-auto object-contain dark:brightness-0 dark:invert" />
-          <span className="text-slate-900 dark:text-white font-black text-sm">{publicSettings?.app_name || "Sbjiwala"}</span>
+          {/* <span className="text-slate-900 dark:text-white font-black text-sm">{publicSettings?.app_name || "Sbjiwala"}</span> */}
         </div>
         {onClose && (
           <button
@@ -476,7 +476,7 @@ function BottomNav({ onOpenSearch }: { onOpenSearch: () => void }) {
                 }`}
               aria-label={item.label}
             >
-              <div className={isActive 
+              <div className={isActive
                 ? "w-11 h-11 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(16,185,129,0.3)] -translate-y-5 border-4 border-slate-50 dark:border-[#090d10] transition-all duration-300 scale-110 relative overflow-hidden active-nav-shine"
                 : "relative p-1.5 rounded-xl transition-all"
               }>
@@ -1823,8 +1823,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isBypassRoute = isNative
     ? (pathname === "/login" || pathname === "/register" || pathname?.startsWith("/login/") || pathname?.startsWith("/register/"))
     : (isUnified
-        ? (!isCustomerAppPath || pathname === "/app/login" || pathname === "/app/register")
-        : ["/login", "/register", "/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r)));
+      ? (!isCustomerAppPath || pathname === "/app/login" || pathname === "/app/register")
+      : ["/login", "/register", "/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r)));
   if (isBypassRoute) return <>{children}</>;
 
   if (showSplash) {

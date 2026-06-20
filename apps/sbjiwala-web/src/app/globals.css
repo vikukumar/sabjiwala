@@ -586,3 +586,8 @@ input[type="checkbox"], input[type="radio"] {
   animation: shine-sweep 3s infinite ease-in-out;
 }
 
+/* Custom Leaflet DivIcon reset to prevent default border/background */
+.leaflet-custom-icon {
+  background: transparent !important;
+  border: none !important;
+}

@@ -80,6 +80,7 @@ function VendorLocatorMapContent() {
         `,
         iconSize: [36, 36],
         iconAnchor: [18, 18],
+        className: "leaflet-custom-icon",
       });
       const driverMarker = L.marker(globalPos, { icon: driverIcon }).addTo(map);
       driverMarkerRef.current = driverMarker;
@@ -99,6 +100,7 @@ function VendorLocatorMapContent() {
         `,
         iconSize: [32, 32],
         iconAnchor: [16, 16],
+        className: "leaflet-custom-icon",
       });
 
       const bounds: any[] = [globalPos];
