@@ -53,18 +53,8 @@ async function registerCapacitorPush(apiClient: typeof api) {
   try {
     const PushNotifications = (window as any).Capacitor.Plugins.PushNotifications;
     
-    let permStatus = await PushNotifications.checkPermissions();
-    if (permStatus.receive === "prompt") {
-      permStatus = await PushNotifications.requestPermissions();
-    }
-    if (permStatus.receive !== "granted") {
-      console.warn("User denied push notifications permission");
-      return;
-    }
-
-    await PushNotifications.register();
-
-    PushNotifications.addListener("registration", async (token: any) => {
+    // Add listeners first (as recommended by Capacitor docs to ensure no event is missed)
+    await PushNotifications.addListener("registration", async (token: any) => {
       console.log("Capacitor Push token:", token.value);
       try {
         await apiClient.post("/notifications/subscriptions", {
@@ -79,13 +69,24 @@ async function registerCapacitorPush(apiClient: typeof api) {
       }
     });
 
-    PushNotifications.addListener("registrationError", (err: any) => {
+    await PushNotifications.addListener("registrationError", (err: any) => {
       console.error("Capacitor Push registration error:", err);
     });
 
-    PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
+    await PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
       console.log("Push received:", notification);
     });
+
+    let permStatus = await PushNotifications.checkPermissions();
+    if (permStatus.receive === "prompt") {
+      permStatus = await PushNotifications.requestPermissions();
+    }
+    if (permStatus.receive !== "granted") {
+      console.warn("User denied push notifications permission");
+      return;
+    }
+
+    await PushNotifications.register();
   } catch (err) {
     console.error("Error setting up Capacitor push notifications:", err);
   }

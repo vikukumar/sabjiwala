@@ -133,7 +133,7 @@ export class ApiClient {
               if (typeof window !== 'undefined') {
                 const isCapacitor = window.location.hostname === 'localhost' && (window.location.port === '' || window.location.protocol.startsWith('capacitor'));
                 if (isCapacitor) {
-                  window.location.reload();
+                  window.location.href = '/';
                 } else {
                   const pathname = window.location.pathname;
                   // Never redirect if the user is on the root main page '/'
