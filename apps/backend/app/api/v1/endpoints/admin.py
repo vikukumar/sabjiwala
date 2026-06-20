@@ -360,7 +360,7 @@ async def update_user_role(
         raise HTTPException(status_code=404, detail="User not found")
         
     new_role = body.role
-    if new_role not in ["customer", "vendor", "delivery_boy", "admin"]:
+    if new_role not in ["customer", "vendor", "delivery_boy", "admin", "support_agent"]:
         raise HTTPException(status_code=400, detail="Invalid role type specified")
         
     # Map to UserType enum
@@ -369,7 +369,8 @@ async def update_user_role(
         "customer": UserType.CUSTOMER,
         "vendor": UserType.VENDOR,
         "delivery_boy": UserType.DELIVERY_BOY,
-        "admin": UserType.ADMIN
+        "admin": UserType.ADMIN,
+        "support_agent": UserType.SUPPORT_AGENT
     }
     user.user_type = role_map[new_role]
     
@@ -386,7 +387,14 @@ async def update_user_role(
             
     # Initialize missing profiles/wallets as requested by user
     import secrets
+    if user.user_type == UserType.SUPPORT_AGENT:
+        from app.models.support import SupportAgentProfile
+        ap_res = await db.execute(select(SupportAgentProfile).where(SupportAgentProfile.user_id == user.id))
+        if not ap_res.scalars().first():
+            db.add(SupportAgentProfile(user_id=user.id, is_available=True))
+            
     if user.user_type == UserType.VENDOR:
+
         from app.models.vendor import Vendor, VendorWallet, VendorStatus, VendorStore
         
         # Check if Vendor profile exists
@@ -1295,4 +1303,70 @@ async def delete_admin_ad(
     await db.delete(ad)
     await db.commit()
     return APIResponse(success=True, message="Advertisement deleted successfully")
+
+
+@router.post("/agents", response_model=APIResponse)
+async def create_support_agent(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new Support Agent account directly."""
+    await _verify_admin(current_user)
+    
+    email = body.get("email")
+    phone = body.get("phone")
+    password = body.get("password")
+    first_name = body.get("first_name", "Support")
+    last_name = body.get("last_name", "Agent")
+    
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+        
+    # Check existing user
+    exist_res = await db.execute(select(User).where(User.email == email))
+    if exist_res.scalars().first():
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+        
+    from app.core.security.password import hash_password
+    from app.models.user import Role, UserRole, UserProfile
+    from app.models.support import SupportAgentProfile
+    
+    agent_user = User(
+        email=email,
+        phone=phone,
+        username=email.split("@")[0],
+        password_hash=hash_password(password),
+        first_name=first_name,
+        last_name=last_name,
+        user_type=UserType.SUPPORT_AGENT,
+        is_active=True,
+        is_verified=True,
+        is_email_verified=True,
+    )
+    db.add(agent_user)
+    await db.flush()
+    
+    profile = UserProfile(user_id=agent_user.id)
+    db.add(profile)
+    
+    role_res = await db.execute(select(Role).where(Role.name == "support_agent"))
+    role = role_res.scalars().first()
+    if role:
+        db.add(UserRole(user_id=agent_user.id, role_id=role.id))
+        
+    agent_profile = SupportAgentProfile(
+        user_id=agent_user.id,
+        is_available=True,
+        voicemails=[]
+    )
+    db.add(agent_profile)
+    
+    await db.commit()
+    return APIResponse(
+        success=True,
+        message="Support Agent created successfully",
+        data={"id": str(agent_user.id), "email": agent_user.email}
+    )
+
 

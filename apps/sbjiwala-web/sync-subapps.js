@@ -7,6 +7,7 @@ const customerSrc = path.join(rootDir, 'apps/customer-app/src');
 const vendorSrc = path.join(rootDir, 'apps/vendor-app/src');
 const deliverySrc = path.join(rootDir, 'apps/delivery-app/src');
 const adminSrc = path.join(rootDir, 'apps/admin-app/src');
+const agentSrc = path.join(rootDir, 'apps/agent-app/src');
 
 console.log('=== Sbjiwala Sub-Apps Path-Based Synchronization Started ===');
 
@@ -223,6 +224,27 @@ try {
     fs.readdirSync(path.join(adminSrc, 'components')).forEach((child) => {
       copyRecursiveSync(path.join(adminSrc, 'components', child), path.join(webSrc, 'components', child));
     });
+  }
+
+  // 7.5. Clean and Copy Agent app specific pages under /agent/
+  console.log(`Syncing agent-app pages...`);
+  const agentLayoutSrc = path.join(agentSrc, 'components/AgentLayout.tsx');
+  const agentLayoutDest = path.join(webSrc, 'components/AgentLayout.tsx');
+  if (fs.existsSync(agentLayoutSrc)) {
+    copyRecursiveSync(agentLayoutSrc, agentLayoutDest);
+  }
+
+  const agentPageDest = path.join(webAppDir, 'agent/page.tsx');
+  copyRecursiveSync(path.join(agentSrc, 'app/page.tsx'), agentPageDest);
+
+  const agentLoginDest = path.join(webAppDir, 'agent/login');
+  removeRecursiveSync(agentLoginDest);
+  copyRecursiveSync(path.join(agentSrc, 'app/login'), agentLoginDest);
+
+  const agentCallsDest = path.join(webAppDir, 'agent/calls');
+  removeRecursiveSync(agentCallsDest);
+  if (fs.existsSync(path.join(agentSrc, 'app/calls'))) {
+    copyRecursiveSync(path.join(agentSrc, 'app/calls'), agentCallsDest);
   }
 
   // 8. Sync public assets from customer-app to sbjiwala-web

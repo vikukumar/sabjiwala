@@ -32,6 +32,7 @@ const navItems = [
   { id: "banners", label: "Banners", icon: Image, href: "/banners" },
   { id: "ads", label: "Ads & Popups", icon: Megaphone, href: "/ads" },
   { id: "support", label: "Support", icon: MessageSquare, href: "/support" },
+  { id: "support_agents", label: "Support Agents", icon: Shield, href: "/support-agents" },
   { id: "returns", label: "Returns", icon: FileText, href: "/returns" },
   { id: "settings", label: "Settings", icon: Settings, href: "/settings" },
 ];

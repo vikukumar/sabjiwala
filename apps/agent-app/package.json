@@ -1,0 +1,35 @@
+{
+  "name": "agent-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "prebuild": "node ../../tmp/fix_node_modules.js && node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json');\"",
+    "predev": "node ../../tmp/fix_node_modules.js && node -e \"const fs = require('fs'); fs.copyFileSync('../../version.json', 'src/app/version.json');\""
+  },
+  "dependencies": {
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "@sbjiwala/shared": "file:../../shared",
+    "axios": "^1.16.1",
+    "@tanstack/react-query": "^5.100.14",
+    "zustand": "^5.0.14",
+    "zod": "^4.4.3",
+    "react-hook-form": "^7.76.1",
+    "lucide-react": "^1.17.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^25",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^10",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^6"
+  }
+}

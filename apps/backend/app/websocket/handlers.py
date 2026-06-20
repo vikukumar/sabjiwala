@@ -65,6 +65,108 @@ async def websocket_endpoint(
             if event_type == "ping":
                 await websocket.send_json({"type": "pong"})
 
+            elif event_type == "call_initiate":
+                from app.models.support import SupportAgentProfile
+                async with async_session_factory() as db:
+                    agent_res = await db.execute(
+                        select(SupportAgentProfile).where(SupportAgentProfile.is_available == True)
+                    )
+                    available_profiles = agent_res.scalars().all()
+                    
+                if available_profiles:
+                    for ap in available_profiles:
+                        await ws_manager.send_to_user(
+                            ap.user_id,
+                            {
+                                "type": "incoming_call",
+                                "data": {
+                                    "caller_id": str(user_id),
+                                    "caller_role": role,
+                                    "caller_name": payload.get("caller_name", "Valued User"),
+                                    "caller_phone": payload.get("caller_phone", ""),
+                                }
+                            }
+                        )
+                else:
+                    await websocket.send_json({
+                        "type": "call_rejected",
+                        "data": {"reason": "no_agents_available"}
+                    })
+
+            elif event_type in ["call_offer", "call_answer", "ice_candidate"]:
+                target_id = payload.get("target_id")
+                if target_id:
+                    await ws_manager.send_to_user(
+                        UUID(target_id),
+                        {
+                            "type": event_type,
+                            "data": {
+                                "sender_id": str(user_id),
+                                "sdp": payload.get("sdp"),
+                                "candidate": payload.get("candidate")
+                            }
+                        }
+                    )
+
+            elif event_type == "call_hangup":
+                target_id = payload.get("target_id")
+                duration = payload.get("duration", 0)
+                status = payload.get("status", "completed")
+                
+                async with async_session_factory() as db:
+                    from app.models.support import SupportCallLog
+                    is_agent = (role == "support_agent")
+                    caller_id_val = UUID(target_id) if is_agent else user_id
+                    agent_id_val = user_id if is_agent else (UUID(target_id) if target_id else None)
+                    
+                    call_log = SupportCallLog(
+                        caller_id=caller_id_val,
+                        agent_id=agent_id_val,
+                        status=status,
+                        duration_seconds=int(duration)
+                    )
+                    db.add(call_log)
+                    await db.commit()
+
+                if target_id:
+                    await ws_manager.send_to_user(
+                        UUID(target_id),
+                        {
+                            "type": "call_disconnected",
+                            "data": {"sender_id": str(user_id)}
+                        }
+                    )
+
+            elif event_type == "call_voicemail":
+                audio_url = payload.get("audio_url")
+                caller_name = payload.get("caller_name", "Anonymous")
+                
+                async with async_session_factory() as db:
+                    from app.models.support import SupportAgentProfile
+                    agent_res = await db.execute(select(SupportAgentProfile))
+                    profiles = agent_res.scalars().all()
+                    
+                    for ap in profiles:
+                        vmails = list(ap.voicemails) if ap.voicemails else []
+                        vmails.append({
+                            "caller_id": str(user_id),
+                            "caller_name": caller_name,
+                            "audio_url": audio_url,
+                            "created_at": datetime.now(timezone.utc).isoformat()
+                        })
+                        ap.voicemails = vmails
+                    await db.commit()
+
+            elif event_type == "agent_status":
+                is_available = payload.get("is_available", True)
+                async with async_session_factory() as db:
+                    from app.models.support import SupportAgentProfile
+                    ap_res = await db.execute(select(SupportAgentProfile).where(SupportAgentProfile.user_id == user_id))
+                    ap = ap_res.scalars().first()
+                    if ap:
+                        ap.is_available = is_available
+                        await db.commit()
+
             # Handle live GPS tracking updates from delivery boys or vendors (for self delivery)
             elif event_type == "location_update" and role in ["delivery_boy", "vendor", "vendor_manager"]:
                 latitude = payload.get("latitude")

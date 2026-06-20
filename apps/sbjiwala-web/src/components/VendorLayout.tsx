@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ShoppingBag, TrendingUp, MapPin, Settings, LogOut,
-  Clock, Menu, X, Loader2, IndianRupee, BarChart2, Bell, Navigation
+  Clock, Menu, X, Loader2, IndianRupee, BarChart2, Bell, Navigation,
+  Phone, Mic, Square, Radio
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useWebSocket } from "@sbjiwala/shared";
@@ -58,14 +59,208 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
   });
 
   const { sendMessage } = useWebSocket((message) => {
-    if (message.type === "order_status_update") {
+    const { type, data } = message;
+    if (type === "order_status_update") {
       queryClient.invalidateQueries({ queryKey: ["vendorOrders"] });
       queryClient.invalidateQueries({ queryKey: ["vendorMetrics"] });
-      if (message.data?.status === "confirmed" || message.data?.status === "assigned") {
-        success("New Order! 🔔", `Order #${message.data?.order_number || ""} received. Click to Accept.`);
+      if (data?.status === "confirmed" || data?.status === "assigned") {
+        success("New Order! 🔔", `Order #${data?.order_number || ""} received. Click to Accept.`);
+      }
+    } else if (type === "call_answer") {
+      stopCallerTune();
+      handleCallAnswer(data.sdp, data.sender_id);
+    } else if (type === "call_disconnected") {
+      stopCallerTune();
+      cleanupWebRTC();
+      setCallStatus("idle");
+      success("Call Ended", "Voice support session closed.");
+    } else if (type === "call_rejected") {
+      stopCallerTune();
+      if (data.reason === "no_agents_available") {
+        setCallStatus("ivr");
+        setIvrMessage("All support agents are busy. Please select automated options or leave a voicemail:");
+      }
+    } else if (type === "ice_candidate") {
+      if (rtcConnRef.current && data.candidate) {
+        rtcConnRef.current.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(e => console.warn(e));
       }
     }
   }, !!isAuthed);
+
+  const [callStatus, setCallStatus] = useState<"idle" | "dialing" | "connected" | "ivr" | "voicemail">("idle");
+  const [callDuration, setCallDuration] = useState(0);
+  const [ivrMessage, setIvrMessage] = useState("");
+  const [isRecordingVoicemail, setIsRecordingVoicemail] = useState(false);
+  const rtcConnRef = useRef<RTCPeerConnection | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const tuneIntervalRef = useRef<any>(null);
+  const callTimerRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const playCallerTune = (role: string) => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") {
+        ctx.resume();
+      }
+      const playMelody = () => {
+        let notes = [293.66, 349.23, 440.00, 587.33];
+        let speed = 180;
+        notes.forEach((freq, idx) => {
+          setTimeout(() => {
+            if (callStatus !== "dialing" && tuneIntervalRef.current) return;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.15, ctx.currentTime + 0.2);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.25);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.3);
+          }, idx * speed);
+        });
+      };
+      playMelody();
+      tuneIntervalRef.current = setInterval(playMelody, 2000);
+    } catch (e) {
+      console.warn("Could not play synthesized caller tune:", e);
+    }
+  };
+
+  const stopCallerTune = () => {
+    if (tuneIntervalRef.current) {
+      clearInterval(tuneIntervalRef.current);
+      tuneIntervalRef.current = null;
+    }
+  };
+
+  const initiateCall = async () => {
+    setCallStatus("dialing");
+    playCallerTune("vendor");
+    sendMessage({
+      type: "call_initiate",
+      data: {
+        caller_name: businessName,
+        caller_phone: vendorProfile?.contact_phone || ""
+      }
+    });
+  };
+
+  const handleCallAnswer = async (sdp: any, agentId: string) => {
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+    });
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendMessage({
+          type: "ice_candidate",
+          data: { target_id: agentId, candidate: event.candidate }
+        });
+      }
+    };
+    pc.ontrack = (event) => {
+      const audio = document.getElementById("vendorRemoteAudio") as HTMLAudioElement;
+      if (audio) {
+        audio.srcObject = event.streams[0];
+        audio.play().catch(() => {});
+      }
+    };
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = stream;
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    } catch (e) {
+      console.warn("Failed to get audio stream:", e);
+    }
+    rtcConnRef.current = pc;
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    setCallStatus("connected");
+    setCallDuration(0);
+    callTimerRef.current = setInterval(() => {
+      setCallDuration(prev => prev + 1);
+    }, 1000);
+  };
+
+  const disconnectCall = () => {
+    stopCallerTune();
+    sendMessage({
+      type: "call_hangup",
+      data: {
+        target_id: "",
+        duration: callDuration,
+        status: "completed"
+      }
+    });
+    cleanupWebRTC();
+    setCallStatus("idle");
+  };
+
+  const cleanupWebRTC = () => {
+    if (callTimerRef.current) clearInterval(callTimerRef.current);
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
+    }
+    if (rtcConnRef.current) {
+      rtcConnRef.current.close();
+      rtcConnRef.current = null;
+    }
+  };
+
+  const startRecordingVoicemail = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        sendMessage({
+          type: "call_voicemail",
+          data: {
+            audio_url: audioUrl,
+            caller_name: businessName
+          }
+        });
+        success("Voicemail Saved", "Your message was sent to the support agent.");
+        setCallStatus("idle");
+        setIsRecordingVoicemail(false);
+      };
+      mediaRecorder.start();
+      setIsRecordingVoicemail(true);
+    } catch (e) {
+      showError("Mic Denied", "Mic access is needed to record a voicemail.");
+    }
+  };
+
+  const stopRecordingVoicemail = () => {
+    if (mediaRecorderRef.current && isRecordingVoicemail) {
+      mediaRecorderRef.current.stop();
+    }
+  };
+
+  const handleIvrOption = (option: number) => {
+    if (option === 1) {
+      setIvrMessage("Payout schedule: Vendor payouts are processed automatically every Monday morning at 08:00 AM.");
+    } else if (option === 2) {
+      setIvrMessage("Commission policy: Sbjiwala operates at 0% commission cartels to empower street vendors.");
+    } else if (option === 3) {
+      setCallStatus("voicemail");
+    }
+  };
 
   // Geolocation tracking for active self-delivery orders
   useEffect(() => {
@@ -280,6 +475,13 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
           </span>
         </div>
         <button
+          onClick={initiateCall}
+          className="w-full flex items-center gap-2 px-4 py-2 rounded-xl text-xs hover:bg-emerald-950/20 text-emerald-400 hover:text-emerald-300 font-bold transition-all cursor-pointer border-0 bg-transparent"
+        >
+          <Phone className="w-4 h-4" />
+          <span>Call Support</span>
+        </button>
+        <button
           onClick={handleLogout}
           className="w-full flex items-center gap-2 px-4 py-2 rounded-xl text-xs hover:bg-rose-950/20 text-rose-400 hover:text-rose-300 font-bold transition-all cursor-pointer"
         >
@@ -422,6 +624,118 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
           })()}
         </main>
       </div>
+      
+      {callStatus !== "idle" && (
+        <div className="fixed bottom-6 right-6 z-50 w-80 bg-slate-900 border border-slate-800 text-white rounded-3xl p-5 shadow-2xl space-y-4 font-sans">
+          <audio id="vendorRemoteAudio" autoPlay className="hidden" />
+          <div className="flex justify-between items-center">
+            <span className="text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded">
+              {callStatus.toUpperCase()} Mode
+            </span>
+            {callStatus === "connected" && (
+              <span className="font-mono text-xs text-emerald-400 font-bold">
+                {Math.floor(callDuration / 60)}:{(callDuration % 60).toString().padStart(2, "0")}
+              </span>
+            )}
+          </div>
+
+          {callStatus === "dialing" && (
+            <div className="text-center space-y-1">
+              <p className="text-xs font-bold animate-pulse text-emerald-400">Connecting to Support...</p>
+              <p className="text-[9px] text-slate-500">Playing Sbjiwala Caller Tune</p>
+              <button
+                onClick={disconnectCall}
+                className="w-full bg-rose-650 hover:bg-rose-600 text-white font-extrabold text-[10px] py-2.5 rounded-xl mt-2 cursor-pointer border-0"
+              >
+                Cancel Call
+              </button>
+            </div>
+          )}
+
+          {callStatus === "connected" && (
+            <div className="text-center space-y-1">
+              <p className="text-xs font-bold text-emerald-400">Support Connected</p>
+              <p className="text-[9px] text-slate-500">Call is encrypted</p>
+              <button
+                onClick={disconnectCall}
+                className="w-full bg-rose-650 hover:bg-rose-600 text-white font-extrabold text-[10px] py-2.5 rounded-xl mt-2 cursor-pointer border-0"
+              >
+                Hang Up
+              </button>
+            </div>
+          )}
+
+          {callStatus === "ivr" && (
+            <div className="space-y-3">
+              <p className="text-[11px] text-slate-350 leading-relaxed font-medium">{ivrMessage}</p>
+              
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => handleIvrOption(1)}
+                  className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-[9px] py-2 px-1 rounded-lg border-0 cursor-pointer"
+                >
+                  Payouts Info
+                </button>
+                <button
+                  onClick={() => handleIvrOption(2)}
+                  className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-[9px] py-2 px-1 rounded-lg border-0 cursor-pointer"
+                >
+                  Commission
+                </button>
+                <button
+                  onClick={() => handleIvrOption(3)}
+                  className="bg-emerald-600 hover:bg-emerald-550 text-white font-bold text-[9px] py-2 px-1 rounded-lg border-0 cursor-pointer"
+                >
+                  Voicemail
+                </button>
+              </div>
+
+              <div className="text-center pt-1 border-t border-slate-800/80">
+                <button
+                  onClick={() => setCallStatus("idle")}
+                  className="text-[10px] text-slate-500 hover:text-slate-400 font-bold uppercase tracking-wider bg-transparent border-0 cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+
+          {callStatus === "voicemail" && (
+            <div className="text-center space-y-3">
+              <p className="text-xs font-bold text-amber-500 uppercase tracking-wider">Leave a Voicemail</p>
+              <p className="text-[10px] text-slate-400">Record a voice memo and support agents will review it.</p>
+
+              <div className="flex justify-center gap-3">
+                {!isRecordingVoicemail ? (
+                  <button
+                    onClick={startRecordingVoicemail}
+                    className="bg-emerald-600 hover:bg-emerald-550 text-white font-bold text-[10px] py-2 px-4 rounded-xl flex items-center gap-1.5 border-0 cursor-pointer shadow-md"
+                  >
+                    <Mic className="w-4 h-4" /> Start
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopRecordingVoicemail}
+                    className="bg-rose-650 hover:bg-rose-600 text-white font-bold text-[10px] py-2 px-4 rounded-xl flex items-center gap-1.5 border-0 cursor-pointer shadow-md"
+                  >
+                    <Square className="w-4 h-4" /> Save
+                  </button>
+                )}
+              </div>
+
+              <div className="text-center pt-1 border-t border-slate-800/80">
+                <button
+                  onClick={() => setCallStatus("idle")}
+                  className="text-[10px] text-slate-500 hover:text-slate-400 font-bold uppercase tracking-wider bg-transparent border-0 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

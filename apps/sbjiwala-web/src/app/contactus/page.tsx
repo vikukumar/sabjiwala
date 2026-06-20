@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { Mail, PhoneCall, MapPin, Loader2, Send, CheckCircle2, MessageSquare } from "lucide-react";
 import { Button, Card } from "@/components/ui/index";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import { useSearchParams } from "next/navigation";
 
-export default function ContactUsPage() {
+function ContactForm() {
   const { data: publicSettings } = useQuery<any>({
     queryKey: ["publicSettings"],
     queryFn: async () => {
@@ -209,5 +209,17 @@ export default function ContactUsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ContactUsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-emerald-550 animate-spin" />
+      </div>
+    }>
+      <ContactForm />
+    </Suspense>
   );
 }

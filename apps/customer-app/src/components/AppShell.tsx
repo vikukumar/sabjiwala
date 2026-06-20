@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
+import CustomerSupportWidget from "./CustomerSupportWidget";
+
 
 // Default is false, meaning no AppShell is currently active
 const AppShellContext = createContext(false);
@@ -1908,6 +1910,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <BottomNav onOpenSearch={() => setInlineSearchOpen(true)} />
+        <CustomerSupportWidget />
 
         {/* Location Selection Modal */}
         {showLocationModal && (

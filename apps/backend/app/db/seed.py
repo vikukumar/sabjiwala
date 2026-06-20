@@ -422,5 +422,44 @@ async def seed_database(db: AsyncSession) -> None:
             await db.flush()
             await logger.ainfo(f"Seeded {len(reviews_to_seed)} product reviews successfully")
 
+    # Seed default support agent if not exists
+    agent_email = "agent@sbjiwala.qzz.io"
+    agent_res = await db.execute(select(User).where(User.email == agent_email))
+    agent_user = agent_res.scalars().first()
+    if not agent_user:
+        agent_user = User(
+            email=agent_email,
+            username="support_agent",
+            password_hash=hash_password("agent123"),
+            first_name="Support",
+            last_name="Agent",
+            user_type=UserType.SUPPORT_AGENT,
+            is_active=True,
+            is_verified=True,
+            is_email_verified=True,
+        )
+        db.add(agent_user)
+        await db.flush()
+
+        profile = UserProfile(user_id=agent_user.id)
+        db.add(profile)
+
+        role_res = await db.execute(select(Role).where(Role.name == "support_agent"))
+        role = role_res.scalars().first()
+        if role:
+            db.add(UserRole(user_id=agent_user.id, role_id=role.id))
+        
+        # Support Agent Profile
+        from app.models.support import SupportAgentProfile
+        agent_profile = SupportAgentProfile(
+            user_id=agent_user.id,
+            is_available=True,
+            voicemails=[]
+        )
+        db.add(agent_profile)
+        await db.flush()
+        await logger.ainfo("Seeded default support agent")
+
     await db.commit()
     await logger.ainfo("Database seeding completed successfully.")
+

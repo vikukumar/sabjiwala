@@ -97,6 +97,7 @@ class SupportMessage(BaseEntity):
         PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
+    sender_type: Mapped[str] = mapped_column(String(50), nullable=False, default="customer")
     message: Mapped[str] = mapped_column(Text, nullable=False, default="")
     attachments: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True, default=list)
     is_internal: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # Internal notes
@@ -150,3 +151,35 @@ class Dispute(BaseEntity):
     __table_args__ = (
         Index("ix_disputes_status", "status", "created_at"),
     )
+
+
+class SupportAgentProfile(BaseEntity):
+    __tablename__ = "support_agent_profiles"
+
+    user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False, unique=True, index=True
+    )
+    is_available: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    voicemails: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True, default=list)
+
+    user: Mapped["User"] = relationship(foreign_keys=[user_id], lazy="selectin")
+
+
+class SupportCallLog(BaseEntity):
+    __tablename__ = "support_call_logs"
+
+    caller_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False, index=True
+    )
+    agent_id: Mapped[Optional[UUID]] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(String(50), nullable=False)  # completed, missed, voicemail
+    duration_seconds: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    caller: Mapped["User"] = relationship(foreign_keys=[caller_id], lazy="selectin")
+    agent: Mapped[Optional["User"]] = relationship(foreign_keys=[agent_id], lazy="selectin")
+
