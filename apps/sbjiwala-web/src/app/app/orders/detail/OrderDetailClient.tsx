@@ -24,7 +24,11 @@ const TIMELINE_STEPS = [
 const STATUS_ORDER = ["pending", "confirmed", "accepted", "packed", "out_for_delivery", "delivered"];
 
 function OrderTimeline({ status }: { status: string }) {
-  const currentIdx = STATUS_ORDER.indexOf(status);
+  let currentIdx = STATUS_ORDER.indexOf(status);
+  if (["returned", "refunded"].includes(status)) {
+    currentIdx = STATUS_ORDER.indexOf("delivered");
+  }
+  
   if (status === "cancelled") {
     return (
       <div className="flex items-center gap-3 p-4 bg-rose-50 dark:bg-rose-950/30 rounded-2xl border border-rose-200 dark:border-rose-900/50">
@@ -42,8 +46,9 @@ function OrderTimeline({ status }: { status: string }) {
         {TIMELINE_STEPS.map((step, i) => {
           const stepIdx = STATUS_ORDER.indexOf(step.status);
           const isDone = currentIdx >= stepIdx;
-          const isCurrent = STATUS_ORDER[currentIdx] === step.status ||
-            (step.status === "confirmed" && (status === "confirmed" || status === "accepted"));
+          const isCurrent = (STATUS_ORDER[currentIdx] === step.status ||
+            (step.status === "confirmed" && (status === "confirmed" || status === "accepted"))) && 
+            !["delivered", "returned", "refunded"].includes(status);
           const Icon = step.icon;
           const isLast = i === TIMELINE_STEPS.length - 1;
           return (
