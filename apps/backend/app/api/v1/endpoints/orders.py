@@ -548,7 +548,7 @@ async def request_order_return(
         return_items=body.return_items or [],
     )
     db.add(ret_req)
-    await db.flush()
+    await db.commit()
 
     return APIResponse(success=True, message="Return request submitted", data={"return_request_id": str(ret_req.id)})
 
