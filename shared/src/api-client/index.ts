@@ -122,8 +122,15 @@ export class ApiClient {
         if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
           originalRequest._retry = true;
 
-          if (!this.refreshToken && typeof window !== 'undefined') {
-            this.loadTokensFromStorage();
+          const oldAccessToken = this.accessToken;
+          if (typeof window !== 'undefined') {
+            this.loadTokensFromStorage(); // Load latest tokens from other tabs
+          }
+
+          // If the access token changed in another tab, just retry with the new one
+          if (this.accessToken && this.accessToken !== oldAccessToken) {
+            originalRequest.headers.Authorization = `Bearer ${this.accessToken}`;
+            return this.client(originalRequest);
           }
 
           if (this.isRefreshing) {

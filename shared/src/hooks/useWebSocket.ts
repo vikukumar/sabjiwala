@@ -22,9 +22,6 @@ export function useWebSocket(onMessage?: (msg: any) => void, enabled: boolean = 
       return;
     }
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
-    if (!token) return;
-
     let reconnectTimeout: any;
     let pingInterval: any;
 
@@ -32,6 +29,9 @@ export function useWebSocket(onMessage?: (msg: any) => void, enabled: boolean = 
       if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
         return;
       }
+
+      const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
+      if (!token) return;
 
       const apiBase = api.client.defaults.baseURL || "/api/v1";
       let baseHost = window.location.host;

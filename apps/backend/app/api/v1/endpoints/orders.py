@@ -124,6 +124,30 @@ async def preview_order(
     original_packaging_charge = base_packaging
     packaging_charge = base_packaging
 
+    # Platform Fee
+    platform_fee = 0.0
+    if rule and rule.platform_fee is not None:
+        platform_fee = float(rule.platform_fee)
+    else:
+        from app.models.system import SystemSetting
+        setting_res = await db.execute(
+            select(SystemSetting).where(SystemSetting.key == "default_platform_fee")
+        )
+        setting = setting_res.scalars().first()
+        platform_fee = float(setting.value) if (setting and setting.value) else 0.0
+
+    # Convenience Fee
+    convenience_fee = 0.0
+    if rule and rule.convenience_fee is not None:
+        convenience_fee = float(rule.convenience_fee)
+    else:
+        from app.models.system import SystemSetting
+        setting_res = await db.execute(
+            select(SystemSetting).where(SystemSetting.key == "default_convenience_fee")
+        )
+        setting = setting_res.scalars().first()
+        convenience_fee = float(setting.value) if (setting and setting.value) else 0.0
+
     # Precedence: Vendor limit > Admin limit > Default 0.0
     free_delivery_limit = 0.0
     if rule and rule.free_delivery_above is not None:
@@ -144,7 +168,7 @@ async def preview_order(
         if subtotal < float(rule.min_order_amount):
             raise HTTPException(status_code=400, detail=f"Minimum order amount for this vendor is ₹{rule.min_order_amount}")
     
-    if subtotal >= free_delivery_limit:
+    if free_delivery_limit > 0 and subtotal >= free_delivery_limit:
         delivery_charge = 0.0
             
     # Apply platform fee exemptions
@@ -167,16 +191,9 @@ async def preview_order(
                 
     if exempt_packaging:
         packaging_charge = 0.0
+        platform_fee = 0.0
 
-    # Round individual components first to prevent floating point/off-by-one errors
-    subtotal = round(subtotal, 2)
-    delivery_charge = round(delivery_charge, 2)
-    packaging_charge = round(packaging_charge, 2)
-
-    # Tax calculation (standard 5%)
-    tax_amount = round(subtotal * 0.05, 2)
-
-    # Coupon discount
+    # Coupon discount (must calculate earlier to use in tax, but let's decouple coupon from tax for now, wait: GST should be calculated AFTER discount. Let's compute coupon_discount first)
     coupon_discount = 0.0
     applied_coupon_code = body.coupon_code or cart.coupon_code
     if applied_coupon_code:
@@ -190,17 +207,27 @@ async def preview_order(
             if validation.get("coupon_type") == "free_delivery":
                 delivery_charge = 0.0
 
+    # Round individual components first to prevent floating point/off-by-one errors
+    subtotal = round(subtotal, 2)
+    delivery_charge = round(delivery_charge, 2)
+    packaging_charge = round(packaging_charge, 2)
+    platform_fee = round(platform_fee, 2)
+    convenience_fee = round(convenience_fee, 2)
+
+    # Tax calculation (standard 5% applied to everything after discount)
+    taxable_amount = max(0.0, subtotal + delivery_charge + packaging_charge + platform_fee + convenience_fee - coupon_discount)
+    tax_amount = round(taxable_amount * 0.05, 2)
+
     # Wallet deduction
     wallet_amount = 0.0
     wallet_balance = 0.0
     if body.use_wallet:
         wallet = await service.payment_service.get_or_create_wallet(current_user["user_id"])
         wallet_balance = float(wallet.balance)
-        total_before_wallet = round(subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount, 2)
+        total_before_wallet = round(subtotal + delivery_charge + tax_amount + packaging_charge + platform_fee + convenience_fee - coupon_discount, 2)
         wallet_amount = round(min(wallet_balance, total_before_wallet), 2)
 
-    total_amount = round(subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount - wallet_amount, 2)
-
+    total_amount = round(subtotal + delivery_charge + tax_amount + packaging_charge + platform_fee + convenience_fee - coupon_discount - wallet_amount, 2)
 
     return APIResponse(
         success=True,
@@ -208,6 +235,8 @@ async def preview_order(
             "subtotal": round(subtotal, 2),
             "delivery_charge": round(delivery_charge, 2),
             "original_delivery_charge": round(original_delivery_charge, 2),
+            "platform_fee": round(platform_fee, 2),
+            "convenience_fee": round(convenience_fee, 2),
             "tax_amount": round(tax_amount, 2),
             "packaging_charge": round(packaging_charge, 2),
             "original_packaging_charge": round(original_packaging_charge, 2),

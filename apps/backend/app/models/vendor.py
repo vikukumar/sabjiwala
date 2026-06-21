@@ -235,6 +235,8 @@ class VendorDeliveryRule(BaseEntity):
     per_km_charge: Mapped[float] = mapped_column(Numeric(10, 2), default=0.0, nullable=False)
     max_delivery_distance_km: Mapped[float] = mapped_column(Float, default=10.0, nullable=False)
     packaging_fee: Mapped[float] = mapped_column(Numeric(10, 2), default=0.0, nullable=False)
+    platform_fee: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
+    convenience_fee: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
     free_platform_fee_above: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
 
     # Distance slabs (JSON: [{from_km: 0, to_km: 3, charge: 20}, ...])

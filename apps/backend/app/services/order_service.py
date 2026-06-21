@@ -159,6 +159,7 @@ class OrderService:
 
         # 2. Calculate charges
         delivery_charge, distance_km = await self.calculate_delivery_charges(vendor_id, address)
+        original_delivery_charge = delivery_charge
 
         # Apply vendor delivery rule minima and custom packaging fee
         rules_result = await self.db.execute(
@@ -185,6 +186,30 @@ class OrderService:
                 base_packaging = 5.0
                 
         packaging_charge = base_packaging
+
+        # Platform Fee
+        platform_fee = 0.0
+        if rule and rule.platform_fee is not None:
+            platform_fee = float(rule.platform_fee)
+        else:
+            from app.models.system import SystemSetting
+            setting_res = await self.db.execute(
+                select(SystemSetting).where(SystemSetting.key == "default_platform_fee")
+            )
+            setting = setting_res.scalars().first()
+            platform_fee = float(setting.value) if (setting and setting.value) else 0.0
+
+        # Convenience Fee
+        convenience_fee = 0.0
+        if rule and rule.convenience_fee is not None:
+            convenience_fee = float(rule.convenience_fee)
+        else:
+            from app.models.system import SystemSetting
+            setting_res = await self.db.execute(
+                select(SystemSetting).where(SystemSetting.key == "default_convenience_fee")
+            )
+            setting = setting_res.scalars().first()
+            convenience_fee = float(setting.value) if (setting and setting.value) else 0.0
         
         # Precedence: Vendor limit > Admin limit > Default 0.0
         free_delivery_limit = 0.0
@@ -206,7 +231,7 @@ class OrderService:
             if subtotal < float(rule.min_order_amount):
                 raise ValueError(f"Minimum order amount for this vendor is ₹{rule.min_order_amount}")
         
-        if subtotal >= free_delivery_limit:
+        if free_delivery_limit > 0 and subtotal >= free_delivery_limit:
             delivery_charge = 0.0
                 
         # Apply platform fee exemptions
@@ -229,9 +254,7 @@ class OrderService:
                     
         if exempt_packaging:
             packaging_charge = 0.0
-
-        # Tax calculation (standard 5%)
-        tax_amount = round(subtotal * 0.05, 2)
+            platform_fee = 0.0
 
         # 3. Apply coupon if any
         coupon_discount = 0.0
@@ -252,19 +275,27 @@ class OrderService:
             else:
                 raise ValueError(f"Coupon validation failed: {validation['message']}")
 
+        # Round individual components first
+        subtotal = round(subtotal, 2)
+        delivery_charge = round(delivery_charge, 2)
+        packaging_charge = round(packaging_charge, 2)
+        platform_fee = round(platform_fee, 2)
+        convenience_fee = round(convenience_fee, 2)
+        coupon_discount = round(coupon_discount, 2)
+
+        # Tax calculation (standard 5% applied to everything after discount)
+        taxable_amount = max(0.0, subtotal + delivery_charge + packaging_charge + platform_fee + convenience_fee - coupon_discount)
+        tax_amount = round(taxable_amount * 0.05, 2)
+
         # 4. Wallet deduction
         wallet_amount = 0.0
         if use_wallet:
             wallet = await self.payment_service.get_or_create_wallet(user_id)
             wallet_balance = float(wallet.balance)
-            total_before_wallet = round(subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount, 2)
+            total_before_wallet = round(subtotal + delivery_charge + tax_amount + packaging_charge + platform_fee + convenience_fee - coupon_discount, 2)
             wallet_amount = round(min(wallet_balance, total_before_wallet), 2)
 
-        subtotal = round(subtotal, 2)
-        delivery_charge = round(delivery_charge, 2)
-        packaging_charge = round(packaging_charge, 2)
-        coupon_discount = round(coupon_discount, 2)
-        total_amount = round(subtotal + delivery_charge + tax_amount + packaging_charge - coupon_discount - wallet_amount, 2)
+        total_amount = round(subtotal + delivery_charge + tax_amount + packaging_charge + platform_fee + convenience_fee - coupon_discount - wallet_amount, 2)
 
         # 5. Create Order
         delivery_address_dict = {
@@ -289,7 +320,10 @@ class OrderService:
             delivery_latitude=address.latitude,
             delivery_longitude=address.longitude,
             subtotal=subtotal,
+            original_delivery_charge=original_delivery_charge,
             delivery_charge=delivery_charge,
+            platform_fee=platform_fee,
+            convenience_fee=convenience_fee,
             tax_amount=tax_amount,
             discount_amount=coupon_discount,
             coupon_discount=coupon_discount,

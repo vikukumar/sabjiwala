@@ -3,7 +3,7 @@ Order domain models — carts, orders, order items, status history, split orders
 """
 import enum
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID
 
 from sqlalchemy import (
@@ -14,6 +14,9 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import BaseEntity
+
+if TYPE_CHECKING:
+    from app.models.product import Product
 
 
 class OrderStatus(str, enum.Enum):
@@ -130,7 +133,10 @@ class Order(BaseEntity):
 
     # Amounts
     subtotal: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0.0)
+    original_delivery_charge: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
     delivery_charge: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
+    platform_fee: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
+    convenience_fee: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
     tax_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
     discount_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)
     coupon_discount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0.0)

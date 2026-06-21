@@ -455,13 +455,17 @@ export default function CheckoutPage() {
   const subtotal = previewData ? previewData.subtotal : localSubtotal;
   const freeDeliveryAbove = previewData?.free_delivery_above ?? 199;
   const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= freeDeliveryAbove ? 0 : 20);
-  const taxAmount = previewData ? previewData.tax_amount : Math.round(subtotal * 0.05 * 100) / 100;
   const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
+  const platformFee = previewData ? previewData.platform_fee || 0 : 0.0;
+  const convenienceFee = previewData ? previewData.convenience_fee || 0 : 0.0;
+  
   const couponDiscount = previewData ? previewData.coupon_discount : 0.0;
+  const taxableAmount = Math.max(0, subtotal + deliveryFee + packagingCharge + platformFee + convenienceFee - couponDiscount);
+  const taxAmount = previewData ? previewData.tax_amount : Math.round(taxableAmount * 0.05 * 100) / 100;
+  
   const walletBalance = walletData?.balance || 0;
-  const walletDeduction = previewData ? previewData.wallet_deduction : (useWallet ? Math.round(Math.min(walletBalance, subtotal + deliveryFee + taxAmount + packagingCharge - couponDiscount) * 100) / 100 : 0);
-  const finalTotal = previewData ? previewData.total_amount : Math.round(Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - couponDiscount - walletDeduction) * 100) / 100;
-
+  const walletDeduction = previewData ? previewData.wallet_deduction : (useWallet ? Math.round(Math.min(walletBalance, subtotal + deliveryFee + taxAmount + packagingCharge + platformFee + convenienceFee - couponDiscount) * 100) / 100 : 0);
+  const finalTotal = previewData ? previewData.total_amount : Math.round(Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge + platformFee + convenienceFee - couponDiscount - walletDeduction) * 100) / 100;
 
   const savings = React.useMemo(() => {
     let itemSavings = 0;
@@ -484,8 +488,12 @@ export default function CheckoutPage() {
     if (packagingCharge === 0) {
       itemSavings += parseFloat(previewData?.original_packaging_charge ?? 10.0);
     }
+    // Also consider if platform fee is exempted
+    if (platformFee === 0 && previewData?.original_platform_fee) {
+       // Wait, we didn't add original_platform_fee to backend, so we skip it.
+    }
     return Math.max(0, itemSavings);
-  }, [cartData?.items, couponDiscount, deliveryFee, packagingCharge, previewData, subtotal]);
+  }, [cartData?.items, couponDiscount, deliveryFee, packagingCharge, previewData, subtotal, platformFee]);
 
   const launchCashfree = async (orderData: any) => {
     const { payment_session_id, cashfree_order_id } = orderData;
@@ -763,6 +771,18 @@ export default function CheckoutPage() {
                   ) : `₹${packagingCharge.toFixed(2)}`}
                 </span>
               </div>
+              {platformFee > 0 && (
+                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                  <span>Platform Fee</span>
+                  <span>₹{platformFee.toFixed(2)}</span>
+                </div>
+              )}
+              {convenienceFee > 0 && (
+                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                  <span>Convenience Fee</span>
+                  <span>₹{convenienceFee.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-slate-600 dark:text-slate-400"><span>Taxes (5%)</span><span>₹{taxAmount.toFixed(2)}</span></div>
               {couponDiscount > 0 && <div className="flex justify-between text-emerald-600"><span className="font-semibold">Coupon</span><span className="font-bold">-₹{couponDiscount.toFixed(2)}</span></div>}
               {walletDeduction > 0 && <div className="flex justify-between text-emerald-600 dark:text-emerald-400"><span className="font-bold">Wallet</span><span className="font-bold">-₹{walletDeduction.toFixed(2)}</span></div>}

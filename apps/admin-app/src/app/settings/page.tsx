@@ -8,6 +8,7 @@ import AdminLayout from "@/components/AdminLayout";
 
 const SECTIONS = [
   { id: "general", label: "General & Branding", icon: Globe },
+  { id: "fees", label: "Order & Fees", icon: Shield },
   { id: "oauth", label: "Social Logins & OAuth", icon: Shield },
   { id: "smtp", label: "SMTP Email Server", icon: Mail },
   { id: "sms", label: "SMS Gateway Config", icon: MessageSquare },
@@ -418,6 +419,17 @@ export default function AdminSettingsPage() {
               {getSettingControl("sms_gateway_url", "Gateway REST API Endpoint", "HTTP URL (e.g., local gateway URL or Docker SMS server API endpoint)", "text")}
               {getSettingControl("sms_gateway_key", "Bearer Authorization Key", "API key or token passed in request authorization headers", "password")}
               {getSettingControl("sms_sender_id", "Sender ID / Header Code", "Branded header code for SMS", "text")}
+            </div>
+          )}
+
+          {activeSection === "fees" && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-black text-slate-800 dark:text-white">Default Order Fees & Conditions</h3>
+              <p className="text-xs text-slate-500 mb-4">These default values are used globally unless a Vendor configures their own specific overrides.</p>
+              {getSettingControl("delivery_fee", "Default Delivery Fee", "Base delivery charge per order", "text")}
+              {getSettingControl("platform_fee", "Platform Fee", "Fixed fee charged per order", "text")}
+              {getSettingControl("convenience_fee", "Convenience Fee", "Fixed fee for online orders", "text")}
+              {getSettingControl("free_delivery_above", "Free Delivery Threshold", "Waive delivery fee if subtotal exceeds this amount", "text")}
             </div>
           )}
         </div>

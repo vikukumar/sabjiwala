@@ -327,6 +327,8 @@ class DeliveryRuleCreate(BaseModel):
     per_km_charge: float = 0.0
     max_delivery_distance_km: float = 10.0
     packaging_fee: float = 0.0
+    platform_fee: Optional[float] = None
+    convenience_fee: Optional[float] = None
     free_platform_fee_above: Optional[float] = None
     distance_slabs: Optional[list] = None
 
@@ -468,6 +470,9 @@ class OrderResponse(BaseModel):
     status: str
     subtotal: float
     delivery_charge: float
+    original_delivery_charge: float = 0.0
+    platform_fee: float = 0.0
+    convenience_fee: float = 0.0
     tax_amount: float
     discount_amount: float
     coupon_discount: float
@@ -645,6 +650,8 @@ class UpdateVendorCommissionRequest(BaseModel):
     per_km_charge: Optional[float] = None
     max_delivery_distance_km: Optional[float] = None
     packaging_fee: Optional[float] = None
+    platform_fee: Optional[float] = None
+    convenience_fee: Optional[float] = None
     free_platform_fee_above: Optional[float] = None
 
 class UpdateDeliveryBoyStatusRequest(BaseModel):
