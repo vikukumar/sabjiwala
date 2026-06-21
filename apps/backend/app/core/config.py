@@ -77,8 +77,8 @@ class Settings(BaseSettings):
     # ---- JWT ----
     JWT_SECRET_KEY: str = "change-this-jwt-secret"
     JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
-    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     # ---- Storage ----
     STORAGE_ROOT: str = "/app/storage"

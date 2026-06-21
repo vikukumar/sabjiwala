@@ -8,6 +8,19 @@ export class ApiClient {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
   private onTokenRefreshed: ((token: string) => void) | null = null;
+  private isRefreshing = false;
+  private failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: any) => void }[] = [];
+
+  private processQueue(error: any, token: string | null = null) {
+    this.failedQueue.forEach(prom => {
+      if (error) {
+        prom.reject(error);
+      } else {
+        prom.resolve(token);
+      }
+    });
+    this.failedQueue = [];
+  }
 
   constructor(baseURL: string = '/api/v1') {
     let finalBaseURL = baseURL;
@@ -111,7 +124,21 @@ export class ApiClient {
             this.loadTokensFromStorage();
           }
 
+          if (this.isRefreshing) {
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject });
+            })
+              .then((token) => {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+                return this.client(originalRequest);
+              })
+              .catch((err) => {
+                return Promise.reject(err);
+              });
+          }
+
           if (this.refreshToken) {
+            this.isRefreshing = true;
             try {
               // Call token refresh endpoint
               const res = await axios.post<APIResponse>(`${this.client.defaults.baseURL}/auth/refresh`, {
@@ -122,12 +149,14 @@ export class ApiClient {
                 const newAccess = res.data.meta.access_token;
                 const newRefresh = res.data.meta.refresh_token;
                 this.setTokens(newAccess, newRefresh);
+                this.processQueue(null, newAccess);
 
                 // Retry original request
                 originalRequest.headers.Authorization = `Bearer ${newAccess}`;
                 return this.client(originalRequest);
               }
             } catch (refreshError) {
+              this.processQueue(refreshError, null);
               this.clearTokens();
               // Trigger redirect to login in frontend if handler registered
               if (typeof window !== 'undefined') {
@@ -156,6 +185,8 @@ export class ApiClient {
                   }
                 }
               }
+            } finally {
+              this.isRefreshing = false;
             }
           }
         }
