@@ -26,6 +26,7 @@ from app.api.v1.endpoints.maps import router as maps_router
 from app.api.v1.endpoints.wallets import router as wallets_router
 from app.api.v1.endpoints.reviews import router as reviews_router
 from app.api.v1.endpoints.pages import router as pages_router
+from app.api.v1.endpoints.chat import router as chat_router
 
 api_router = APIRouter()
 
@@ -52,3 +53,4 @@ api_router.include_router(wallets_router, prefix="/wallets", tags=["Wallets"])
 api_router.include_router(admin_router, prefix="/admin", tags=["Admin"])
 api_router.include_router(reviews_router, prefix="/reviews", tags=["Reviews"])
 api_router.include_router(pages_router, prefix="/pages", tags=["CMS Pages"])
+api_router.include_router(chat_router, prefix="/chat", tags=["Live Chat"])
