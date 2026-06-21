@@ -9,6 +9,7 @@ import { ChevronLeft, Phone, MessageSquare, MapPin, Truck, Clock, CheckCircle2 }
 import { Badge, Button, Spinner } from "@/components/ui/index";
 import { resolveLink } from "@/components/AppShell";
 import { createCustomerIcon, createStoreIcon, createDeliveryAgentIcon } from "@sbjiwala/shared";
+import "leaflet/dist/leaflet.css";
 
 const VEHICLES = [
   { type: "scooty" },
@@ -191,6 +192,13 @@ export default function TrackOrderClient() {
       }
 
       map.fitBounds([[customerLat, customerLng], [storeLat, storeLng], [initDriverLat, initDriverLng]], { padding: [50, 50] });
+
+      // Fix Leaflet gray map issue by forcing a resize calculation after rendering
+      setTimeout(() => {
+        if (active && map) {
+          map.invalidateSize();
+        }
+      }, 500);
 
       setMapObj(map);
       setMapLoaded(true);
