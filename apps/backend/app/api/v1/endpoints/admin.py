@@ -1198,6 +1198,7 @@ async def list_admin_returns(
             "return_items": r.return_items or [],
             "refund_amount": float(r.refund_amount) if r.refund_amount is not None else 0.0,
             "status": r.status.value if hasattr(r.status, "value") else str(r.status),
+            "admin_notes": r.admin_notes,
             "created_at": r.created_at.isoformat() if r.created_at else "",
         })
         
@@ -1210,7 +1211,7 @@ async def approve_return_request(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Approve a return request, processing refund."""
+    """Approve a return request (assigns for pickup)."""
     await _verify_admin(current_user)
     
     from app.models.order import ReturnRequest, ReturnStatus, Order, OrderStatus
@@ -1222,22 +1223,84 @@ async def approve_return_request(
         
     ret_req.status = ReturnStatus.APPROVED
     
+    await db.commit()
+    return APIResponse(success=True, message="Return request approved for pickup successfully")
+
+@router.post("/returns/{return_id}/mark-picked-up", response_model=APIResponse)
+async def mark_return_picked_up(
+    return_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Mark a return request as picked up by agent."""
+    await _verify_admin(current_user)
+    
+    from app.models.order import ReturnRequest, ReturnStatus
+    
+    res = await db.execute(select(ReturnRequest).where(ReturnRequest.id == return_id))
+    ret_req = res.scalars().first()
+    if not ret_req:
+        raise HTTPException(status_code=404, detail="Return request not found")
+        
+    ret_req.status = ReturnStatus.PICKED_UP
+    
+    await db.commit()
+    return APIResponse(success=True, message="Return request marked as picked up")
+
+@router.post("/returns/{return_id}/initiate-refund", response_model=APIResponse)
+async def initiate_return_refund(
+    return_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Initiate refund for a picked up return request."""
+    await _verify_admin(current_user)
+    
+    from app.models.order import ReturnRequest, ReturnStatus, Order, OrderStatus
+    from app.services.payment_service import PaymentService, WalletTransactionType
+    
+    res = await db.execute(select(ReturnRequest).where(ReturnRequest.id == return_id))
+    ret_req = res.scalars().first()
+    if not ret_req:
+        raise HTTPException(status_code=404, detail="Return request not found")
+        
+    if ret_req.status == ReturnStatus.REFUNDED:
+        raise HTTPException(status_code=400, detail="Return request is already refunded")
+
+    ret_req.status = ReturnStatus.REFUNDED
+    
     order_res = await db.execute(select(Order).where(Order.id == ret_req.order_id))
     order = order_res.scalars().first()
     if order:
         order.status = OrderStatus.RETURNED
         
+        # Issue wallet refund
+        payment_service = PaymentService(db)
+        await payment_service.credit_wallet(
+            user_id=order.user_id,
+            amount=float(ret_req.refund_amount or 0.0),
+            txn_type=WalletTransactionType.REFUND,
+            reference_type="return",
+            reference_id=str(ret_req.id),
+            description=f"Refund for return of order #{order.order_number}"
+        )
+        
     await db.commit()
-    return APIResponse(success=True, message="Return request approved successfully")
+    return APIResponse(success=True, message="Refund initiated and wallet credited successfully")
+
+
+class RejectReturnRequestSchema(BaseModel):
+    reason: str
 
 
 @router.post("/returns/{return_id}/reject", response_model=APIResponse)
 async def reject_return_request(
     return_id: UUID,
+    body: RejectReturnRequestSchema,
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Reject a return request."""
+    """Reject a return request with a reason."""
     await _verify_admin(current_user)
     
     from app.models.order import ReturnRequest, ReturnStatus
@@ -1248,6 +1311,7 @@ async def reject_return_request(
         raise HTTPException(status_code=404, detail="Return request not found")
         
     ret_req.status = ReturnStatus.REJECTED
+    ret_req.admin_notes = body.reason
     await db.commit()
     return APIResponse(success=True, message="Return request rejected successfully")
 

@@ -352,6 +352,7 @@ async def list_orders(
 async def enrich_order_response(order: Order, db: AsyncSession) -> OrderResponse:
     res_data = OrderResponse.model_validate(order)
     res_data.delivery_otp = order.delivery_otp
+    res_data.actual_delivery_time = order.actual_delivery_time
     
     # Fetch vendor store details
     from app.models.vendor import VendorStore, Vendor
@@ -417,6 +418,20 @@ async def enrich_order_response(order: Order, db: AsyncSession) -> OrderResponse
                     "longitude": metadata.get("live_longitude") or store.longitude,
                 }
                 
+    # Fetch Return Request if exists
+    from app.models.order import ReturnRequest
+    return_res = await db.execute(select(ReturnRequest).where(ReturnRequest.order_id == order.id))
+    return_req = return_res.scalars().first()
+    if return_req:
+        res_data.return_request = {
+            "id": str(return_req.id),
+            "status": return_req.status.value if hasattr(return_req.status, 'value') else str(return_req.status),
+            "reason": return_req.reason,
+            "refund_amount": float(return_req.refund_amount) if return_req.refund_amount else 0,
+            "admin_notes": return_req.admin_notes,
+            "created_at": return_req.created_at.isoformat() if return_req.created_at else None
+        }
+
     return res_data
 
 
@@ -503,6 +518,23 @@ async def request_order_return(
     order = order_res.scalars().first()
     if not order or order.status != OrderStatus.DELIVERED:
         raise HTTPException(status_code=400, detail="Only delivered orders can be returned")
+
+    # Check for existing ReturnRequest
+    from app.models.order import ReturnRequest
+    existing_res = await db.execute(select(ReturnRequest).where(ReturnRequest.order_id == order_id))
+    if existing_res.scalars().first():
+        raise HTTPException(status_code=400, detail="A return request already exists for this order")
+
+    # Check 4-hour window
+    from datetime import datetime, timezone, timedelta
+    reference_time = order.actual_delivery_time or order.updated_at
+    if reference_time:
+        # ensure timezone aware
+        if reference_time.tzinfo is None:
+            reference_time = reference_time.replace(tzinfo=timezone.utc)
+        now_utc = datetime.now(timezone.utc)
+        if now_utc > reference_time + timedelta(hours=4):
+            raise HTTPException(status_code=400, detail="Return requests are only allowed within 4 hours of delivery")
 
     # Create return request record
     ret_req = ReturnRequest(

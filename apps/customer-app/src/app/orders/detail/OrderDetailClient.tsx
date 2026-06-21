@@ -179,6 +179,11 @@ export default function OrderDetailClient() {
   const canTrack = ["packed", "out_for_delivery"].includes(order.status);
   const isDelivered = order.status === "delivered";
 
+  const hasReturnRequest = !!order.return_request;
+  const deliveryTime = order.actual_delivery_time ? new Date(order.actual_delivery_time) : new Date(order.created_at);
+  const isWithinReturnWindow = (new Date().getTime() - deliveryTime.getTime()) <= 4 * 60 * 60 * 1000;
+  const canReturn = isDelivered && !hasReturnRequest && isWithinReturnWindow;
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 font-sans">
       {/* Back + Title */}
@@ -249,9 +254,11 @@ export default function OrderDetailClient() {
               <Link href={resolveLink(`/reviews?order=${id}`)} className="flex-1">
                 <Button fullWidth variant="secondary" leftIcon={<Star className="w-4 h-4" />}>Rate Order</Button>
               </Link>
-              <Link href={resolveLink(`/orders/return?id=${id}`)} className="flex-1">
-                <Button fullWidth variant="outline" leftIcon={<RotateCcw className="w-4 h-4" />}>Return Items</Button>
-              </Link>
+              {canReturn && (
+                <Link href={resolveLink(`/orders/return?id=${id}`)} className="flex-1">
+                  <Button fullWidth variant="outline" leftIcon={<RotateCcw className="w-4 h-4" />}>Return Items</Button>
+                </Link>
+              )}
             </>
           )}
           {canCancel && (
@@ -302,6 +309,30 @@ export default function OrderDetailClient() {
               {order.delivery_address.city}, {order.delivery_address.postal_code}
             </p>
             <p className="text-xs text-slate-550 dark:text-slate-400 mt-1">📞 {order.delivery_address.phone}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Return Request Status */}
+      {hasReturnRequest && (
+        <div className="card p-5 border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 shadow-sm">
+          <h2 className="font-black text-sm text-amber-900 dark:text-amber-400 uppercase tracking-wide flex items-center gap-2 mb-2">
+            <RotateCcw className="w-4 h-4" /> Return Status
+          </h2>
+          <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-3 rounded-xl border border-amber-100 dark:border-amber-900/40">
+            <div className="flex-1 pr-3">
+              <p className="font-bold text-sm text-slate-800 dark:text-slate-200 capitalize">
+                {order.return_request.status.replace(/_/g, " ")}
+              </p>
+              {order.return_request.status === "requested" && <p className="text-xs text-slate-500 mt-1">Awaiting Admin Approval.</p>}
+              {order.return_request.status === "approved" && <p className="text-xs text-emerald-600 mt-1 font-semibold">Approved. A pickup agent will be assigned shortly.</p>}
+              {order.return_request.status === "picked_up" && <p className="text-xs text-blue-600 mt-1 font-semibold">Items picked up. Refund processing.</p>}
+              {order.return_request.status === "refunded" && <p className="text-xs text-purple-600 mt-1 font-semibold">Refund of ₹{order.return_request.refund_amount?.toFixed(2)} added to your wallet.</p>}
+              {order.return_request.status === "rejected" && <p className="text-xs text-rose-500 font-semibold mt-1">Reason: {order.return_request.admin_notes || "Contact Support."}</p>}
+            </div>
+            <Badge variant={order.return_request.status === "rejected" ? "danger" : order.return_request.status === "refunded" ? "success" : "warning"}>
+               {order.return_request.status.replace(/_/g, " ")}
+            </Badge>
           </div>
         </div>
       )}

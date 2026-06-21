@@ -485,7 +485,8 @@ class OrderResponse(BaseModel):
     delivery_latitude: Optional[float] = None
     delivery_longitude: Optional[float] = None
     delivery_address: Optional[dict] = None  # JSONB with full_name, address_line_1, city, postal_code, phone
-
+    actual_delivery_time: Optional[datetime] = None
+    return_request: Optional[dict] = None
     class Config:
         from_attributes = True
 
