@@ -279,7 +279,7 @@ export default function ProductDetailClient() {
   const features = [
     { icon: Leaf, label: "Farm Fresh", desc: "Directly sourced" },
     { icon: ShieldCheck, label: "Quality Assured", desc: "Hand-picked" },
-    { icon: Truck, label: "Fast Delivery", desc: "10 minutes" },
+    { icon: Truck, label: "Fast Delivery", desc: "Instant" },
   ];
 
   const imgs = product?.images || [];
@@ -429,12 +429,12 @@ export default function ProductDetailClient() {
           </div>
         </div>
 
-        {/* Free Delivery Promo Card */}
+        {/* Instant Delivery Promo Card */}
         <div className="card p-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl flex items-start gap-3">
           <Truck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
           <div>
             <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-              Free Delivery on orders above ₹{freeDeliveryAbove}
+              Instant Delivery on orders above ₹{freeDeliveryAbove}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
               Minimum order requirement is ₹{minOrderAmount}. 🥬 Fresh vegetables harvested daily. ⚡ Direct from kisan to your kitchen.

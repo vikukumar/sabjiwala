@@ -52,7 +52,7 @@ export default function BlogsPage() {
     },
     {
       id: "3",
-      title: "Building Hyper-local Delivery Routing in Under 10 Minutes",
+      title: "Building Hyper-local Delivery Routing in Under Instant",
       excerpt: "A deep dive into our decentralized routing architecture, using client-side geolocation to dispatch drivers automatically.",
       category: "Logistics",
       date: "June 05, 2026",
@@ -66,7 +66,7 @@ export default function BlogsPage() {
       excerpt: "Step-by-step tutorial on launching the FastAPI backend with PostgreSQL, Redis, and deploying Next.js portals on Vercel.",
       category: "Technology",
       date: "May 28, 2026",
-      readTime: "10 min read",
+      readTime: "Instant read",
       image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=600",
       author: "System Admin",
     }

@@ -469,7 +469,7 @@ export default function CategoriesPage() {
           <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full text-slate-850 dark:text-white space-y-4 shadow-2xl animate-scale-in">
             <h3 className="text-lg font-black tracking-tight">Replace Cart Items? 🛒</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Your cart contains items from a different store. Since we offer 10-minute transit, orders must be sourced from a single vendor. Would you like to empty your cart and add this item?
+              Your cart contains items from a different store. Since we offer Instant transit, orders must be sourced from a single vendor. Would you like to empty your cart and add this item?
             </p>
             <div className="flex gap-3 pt-2">
               <button

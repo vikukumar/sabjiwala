@@ -35,7 +35,7 @@ export default function ReferralsPage() {
   const share = async () => {
     if (navigator.share) {
       await navigator.share({
-        title: "Join Sbjiwala — Fresh Veggies in 10 Min!",
+        title: "Join Sbjiwala — Fresh Veggies in Instant!",
         text: `Use my code ${referralCode} and get ₹50 off your first order! 🥦🍅`,
         url: referralLink,
       });

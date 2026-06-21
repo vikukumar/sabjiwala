@@ -696,8 +696,8 @@ export default function CheckoutPage() {
           <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/30 rounded-2xl p-4 flex items-center gap-3">
             <Truck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
             <div>
-              <p className="text-sm font-black text-emerald-900 dark:text-emerald-100">10-Minute Delivery Guarantee</p>
-              <p className="text-xs text-emerald-700 dark:text-emerald-300">Fresh vegetables delivered in 10 mins or free!</p>
+              <p className="text-sm font-black text-emerald-900 dark:text-emerald-100">Instant Delivery Guarantee</p>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300">Fresh vegetables delivered in Instant guaranteed!</p>
             </div>
           </div>
         </div>

@@ -671,9 +671,9 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
             <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
               <Leaf className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-black text-white">10-Minute Freshness</h2>
+            <h2 className="text-xl font-black text-white">Instant Freshness</h2>
             <p className="text-sm text-slate-400 leading-relaxed px-4">
-              Our products are washed, hygienically packed, and delivered to your doorstep in 10 minutes flat with guaranteed safety.
+              Our products are washed, hygienically packed, and delivered to your doorstep in Instant flat with guaranteed safety.
             </p>
           </div>
         )}
@@ -1042,7 +1042,7 @@ function UnifiedPermissionsModal({ onClose, onPermissionGranted }: UnifiedPermis
         <div className="space-y-1">
           <h3 className="text-lg font-black tracking-tight">Essential App Permissions 🛡️</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Sbjiwala requires location, alerts, and camera/file permissions to provide a seamless 10-minute shopping and support experience.
+            Sbjiwala requires location, alerts, and camera/file permissions to provide a seamless Instant shopping and support experience.
           </p>
         </div>
 
@@ -1394,7 +1394,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (typeof document === "undefined") return;
     const brandName = publicSettings?.app_name || "Sbjiwala";
     const title = publicSettings?.seo_title || `${brandName} - Kisan ke Ghar Se Apke Ghar tak`;
-    const desc = publicSettings?.seo_description || "direct-to-home hyper-local quick commerce platform delivering fresh farm vegetables and fruits straight from local farms to your home in 10 minutes.";
+    const desc = publicSettings?.seo_description || "direct-to-home hyper-local quick commerce platform delivering fresh farm vegetables and fruits straight from local farms to your home in Instant.";
     const keywords = publicSettings?.seo_keywords || "vegetables, fruits, organic, quick commerce, delivery";
 
     document.title = title;

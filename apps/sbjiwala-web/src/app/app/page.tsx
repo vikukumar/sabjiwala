@@ -252,7 +252,7 @@ function TrustBadges() {
     { icon: Clock, label: "Faster Delivery", sub: "Express service" },
     { icon: Leaf, label: "Farm Fresh", sub: "Direct from farms" },
     { icon: ShieldCheck, label: "Hygienic Packing", sub: "Quality assured" },
-    { icon: Truck, label: "Free Delivery", sub: "On orders ₹199+" },
+    { icon: Truck, label: "Instant Delivery", sub: "On orders ₹199+" },
   ];
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-6xl mx-auto px-4 -mt-6 relative z-10">

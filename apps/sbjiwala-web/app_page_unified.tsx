@@ -123,7 +123,7 @@ export default function UnifiedLandingPage() {
 
   const faqs = [
     {
-      question: "How does Sbjiwala deliver in under 10 minutes?",
+      question: "How does Sbjiwala deliver in under Instant?",
       answer: "We operate a network of hyper-local dark stores (micro-fulfillment sourcing hubs) stocked with fresh produce. When you order, our automated packing line selects items in seconds, and local delivery partners dispatch immediately."
     },
     {
@@ -250,7 +250,7 @@ export default function UnifiedLandingPage() {
                 Apke Ghar tak
               </span><br />
               <span className="text-emerald-600 dark:text-emerald-450 font-black relative">
-                Fresh in 10 Minutes
+                Fresh in Instant
               </span>
             </h1>
 
@@ -389,9 +389,9 @@ export default function UnifiedLandingPage() {
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                   <Zap className="w-6 h-6 animate-bounce" />
                 </div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">10-Minute Dispatch</h3>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Instant Dispatch</h3>
                 <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-medium">
-                  Our hyper-local micro dark stores ensure quick fulfillment. Couriers load and deliver orders immediately to reach your home in under 10 minutes.
+                  Our hyper-local micro dark stores ensure quick fulfillment. Couriers load and deliver orders immediately to reach your home in under Instant.
                 </p>
               </div>
               <div className="pt-6 border-t border-slate-100/20 dark:border-slate-850 mt-6 flex items-center gap-1 text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider">
@@ -531,7 +531,7 @@ export default function UnifiedLandingPage() {
                 </div>
                 
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-1">
-                  <p className="text-3xl font-black text-emerald-400">10 Mins</p>
+                  <p className="text-3xl font-black text-emerald-400">Instant</p>
                   <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">Avg Delivery</p>
                 </div>
 
@@ -669,7 +669,7 @@ export default function UnifiedLandingPage() {
           <div className="md:col-span-5 space-y-4 text-center md:text-left">
             <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-10 w-auto object-contain dark:brightness-110 mx-auto md:mx-0" />
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold max-w-sm mx-auto md:mx-0">
-              Procuring certified organic produce directly from family farms, cleaned in 3-stage ozone rinses, and delivered to your doorstep in Navi Mumbai in 10 minutes flat.
+              Procuring certified organic produce directly from family farms, cleaned in 3-stage ozone rinses, and delivered to your doorstep in Navi Mumbai in Instant flat.
             </p>
             <div className="flex justify-center md:justify-start gap-4">
               <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-550 dark:text-slate-400">

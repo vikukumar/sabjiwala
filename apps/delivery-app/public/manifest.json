@@ -1,7 +1,7 @@
 {
   "name": "Sbjiwala Delivery — Courier Console",
   "short_name": "Sbjiwala Delivery",
-  "description": "Manage assignments, locate customers, and complete fast 10-minute vegetable deliveries.",
+  "description": "Manage assignments, locate customers, and complete fast Instant vegetable deliveries.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#090d10",

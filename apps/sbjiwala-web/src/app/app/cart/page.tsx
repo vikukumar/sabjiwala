@@ -247,9 +247,9 @@ export default function CartPage() {
   }, [items, isGuest]);
 
   const subtotal = previewData ? previewData.subtotal : localSubtotal;
-  const freeDeliveryAbove = previewData?.free_delivery_above ?? 199;
-  const hasFreeDelivery = previewData ? (previewData.free_delivery_above !== null && previewData.free_delivery_above !== undefined) : true;
-  const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= freeDeliveryAbove ? 0 : 20);
+  const freeDeliveryAbove = previewData?.free_delivery_above ?? 999999;
+  const hasFreeDelivery = false;
+  const deliveryFee = previewData ? previewData.delivery_charge : 20;
   const originalDeliveryFee = previewData ? (previewData.original_delivery_charge ?? 20) : 20;
   const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
   const taxAmount = previewData ? previewData.tax_amount : Math.round(subtotal * 0.05 * 100) / 100;
@@ -352,21 +352,11 @@ export default function CartPage() {
               <Truck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <div>
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                  {deliveryFee === 0 
-                    ? "🎉 Free Delivery!" 
-                    : hasFreeDelivery 
-                      ? `Add ₹${Math.max(0, freeDeliveryAbove - subtotal).toFixed(2)} more for free delivery`
-                      : "Standard delivery charge is calculated based on distance"
-                  }
+                  Instant Delivery Guarantee
                 </p>
-                <p className="text-xs text-slate-555 dark:text-slate-400">Estimated delivery in 10–15 minutes</p>
+                <p className="text-xs text-slate-555 dark:text-slate-400">Standard delivery charge is calculated based on distance</p>
               </div>
             </div>
-            {deliveryFee > 0 && hasFreeDelivery && (
-              <div className="mt-3 bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${Math.min(100, (subtotal / freeDeliveryAbove) * 100)}%` }} />
-              </div>
-            )}
           </div>
 
           {/* Coupon */}

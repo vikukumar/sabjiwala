@@ -113,7 +113,7 @@ export default function AdminCouponsPage() {
                 >
                   <option value="percentage">Percentage (%)</option>
                   <option value="fixed">Fixed Amount (₹)</option>
-                  <option value="free_delivery">Free Delivery</option>
+                  <option value="free_delivery">Instant Delivery</option>
                 </select>
               </div>
             </div>

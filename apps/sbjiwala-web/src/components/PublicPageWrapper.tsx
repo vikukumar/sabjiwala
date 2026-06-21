@@ -193,7 +193,7 @@ export default function PublicPageWrapper({ children }: { children: React.ReactN
           <div className="md:col-span-5 space-y-4 text-center md:text-left">
             <img src="/logo_horizontal.png" alt="Sbjiwala Logo" className="h-10 w-auto object-contain dark:brightness-110 mx-auto md:mx-0" />
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold max-w-sm mx-auto md:mx-0">
-              Procuring certified organic produce directly from family farms, cleaned in 3-stage ozone rinses, and delivered to your doorstep in Navi Mumbai in 10 minutes flat.
+              Procuring certified organic produce directly from family farms, cleaned in 3-stage ozone rinses, and delivered to your doorstep in Navi Mumbai in Instant flat.
             </p>
             <div className="flex justify-center md:justify-start gap-4">
               <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-550 dark:text-slate-400"><Phone className="w-4 h-4" /></div>

@@ -23,7 +23,7 @@ export default function HowItWorksPage() {
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        publicSettings?.seo_description || "Step-by-step walkthrough of Sbjiwala's express fulfillment cycle. From field harvesting at 4 AM to multi-stage ozone cleaning and 10-minute drop-offs."
+        publicSettings?.seo_description || "Step-by-step walkthrough of Sbjiwala's express fulfillment cycle. From field harvesting at 4 AM to multi-stage ozone cleaning and Instant drop-offs."
       );
     }
   }, [publicSettings]);
@@ -52,8 +52,8 @@ export default function HowItWorksPage() {
     },
     {
       time: "Your Order",
-      title: "10-Minute Express Dispatch",
-      desc: "Once you place an order, our staff picks and packs items in 60 seconds. A delivery agent picks it up and delivers to your home within 10 minutes.",
+      title: "Instant Express Dispatch",
+      desc: "Once you place an order, our staff picks and packs items in 60 seconds. A delivery agent picks it up and delivers to your home within Instant.",
       icon: Truck,
       color: "bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-450",
     },
@@ -105,7 +105,7 @@ export default function HowItWorksPage() {
       <div className="text-center bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-3xl p-6 space-y-4">
         <h4 className="font-black text-lg text-slate-900 dark:text-white">Taste the Sourced Difference Today</h4>
         <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto font-semibold">
-          Order clean and fresh spinach, tomatoes, herbs, or seasonal mangoes and watch it arrive in 10 minutes flat!
+          Order clean and fresh spinach, tomatoes, herbs, or seasonal mangoes and watch it arrive in Instant flat!
         </p>
         <div>
           <Link href="/categories">

@@ -129,7 +129,7 @@ export default function AddressesPage() {
         <EmptyState
           emoji="📍"
           title="No saved addresses"
-          description="Add a precise delivery address for rapid 10-minute order routing."
+          description="Add a precise delivery address for rapid Instant order routing."
           action={<Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => router.push(resolveLink("/addresses/add"))}>Add Address</Button>}
         />
       ) : (

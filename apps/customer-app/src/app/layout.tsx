@@ -7,11 +7,11 @@ import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
   title: {
-    default: "Sbjiwala - Kisan ke Ghar Se Apke Ghar tak — Fresh Vegetables & Fruits in 10 Minutes",
+    default: "Sbjiwala - Kisan ke Ghar Se Apke Ghar tak — Fresh Vegetables & Fruits Instantly",
     template: "%s | Sbjiwala - Kisan ke Ghar Se Apke Ghar tak",
   },
   description:
-    "Order fresh farm vegetables & fruits online. Get hygienic, cleaned produce delivered at your doorstep in 10 minutes. Direct from local farms.",
+    "Order fresh farm vegetables & fruits online. Get hygienic, cleaned produce delivered at your doorstep instantly. Direct from local farms.",
   keywords: ["vegetables", "fruits", "grocery", "fresh produce", "online vegetables", "home delivery", "Sbjiwala"],
   authors: [{ name: "Sbjiwala", url: "https://sbjiwala.qzz.io" }],
   metadataBase: new URL("https://sbjiwala.qzz.io"),
@@ -20,14 +20,14 @@ export const metadata: Metadata = {
     locale: "en_IN",
     url: "https://sbjiwala.qzz.io",
     siteName: "Sbjiwala - Kisan ke Ghar Se Apke Ghar tak",
-    title: "Sbjiwala - Kisan ke Ghar Se Apke Ghar tak — Fresh Vegetables & Fruits in 10 Minutes",
-    description: "Get fresh farm produce delivered at your doorstep in 10 minutes.",
+    title: "Sbjiwala - Kisan ke Ghar Se Apke Ghar tak — Fresh Vegetables & Fruits Instantly",
+    description: "Get fresh farm produce delivered at your doorstep instantly.",
     images: [{ url: "/logo_horizontal.png", width: 1200, height: 630, alt: "Sbjiwala - Kisan ke Ghar Se Apke Ghar tak" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sbjiwala - Kisan ke Ghar Se Apke Ghar tak — Fresh Vegetables & Fruits in 10 Minutes",
-    description: "Get fresh farm produce delivered at your doorstep in 10 minutes.",
+    title: "Sbjiwala - Kisan ke Ghar Se Apke Ghar tak — Fresh Vegetables & Fruits Instantly",
+    description: "Get fresh farm produce delivered at your doorstep instantly.",
     images: ["/logo_horizontal.png"],
   },
   robots: { index: true, follow: true },

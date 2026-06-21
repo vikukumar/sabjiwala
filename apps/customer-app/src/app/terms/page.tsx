@@ -80,7 +80,7 @@ export default function TermsPage() {
             <h2 className="text-lg font-black text-slate-900 dark:text-white">Acceptance of Terms</h2>
           </div>
           <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-medium">
-            {publicSettings?.policy_terms || "Welcome to Sbjiwala - Kisan ke Ghar Se Apke Ghar tak. These Terms of Service govern your use of the Sbjiwala web portals, mobile applications, and local 10-minute fresh delivery services. By accessing, browsing, or placing an order, you agree to comply with and be bound by these Terms. If you do not agree, please discontinue use immediately."}
+            {publicSettings?.policy_terms || "Welcome to Sbjiwala - Kisan ke Ghar Se Apke Ghar tak. These Terms of Service govern your use of the Sbjiwala web portals, mobile applications, and local Instant fresh delivery services. By accessing, browsing, or placing an order, you agree to comply with and be bound by these Terms. If you do not agree, please discontinue use immediately."}
           </p>
         </Card>
 
@@ -99,10 +99,10 @@ export default function TermsPage() {
           <section className="space-y-2">
             <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
               <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-455" />
-              2. 10-Minute Sourcing & Availability
+              2. Instant Sourcing & Availability
             </h3>
             <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-medium pl-6">
-              We target 10-minute deliveries based on the physical distance from our nearest dark stores. However, extreme traffic, severe weather storms, or sudden local road blockades may cause delays. Catalog item availability is seasonal, and we reserve the right to modify prices or mark items as out of stock based on agricultural supply limits.
+              We target Instant deliveries based on the physical distance from our nearest dark stores. However, extreme traffic, severe weather storms, or sudden local road blockades may cause delays. Catalog item availability is seasonal, and we reserve the right to modify prices or mark items as out of stock based on agricultural supply limits.
             </p>
           </section>
 

@@ -352,7 +352,7 @@ export default function TrackOrderClient() {
             <Clock className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
             <div>
               <p className="text-[10px] uppercase font-bold text-slate-500">Estimated Time</p>
-              <p className="text-sm font-black text-slate-900 dark:text-white">{eta || "~10 min"}</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">{eta || "~Instant"}</p>
             </div>
           </div>
           <div className="card p-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200 dark:border-slate-800 flex items-center gap-3">

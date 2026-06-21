@@ -206,7 +206,7 @@ function RegisterPageContent() {
           <div className="text-5xl">🥦🍅🥕</div>
           <h1 className="text-4xl font-black leading-tight">
             Farm-Fresh Produce<br />Delivered to Your Door<br />
-            <span className="text-yellow-300">In 10 Minutes</span>
+            <span className="text-yellow-300">In Instant</span>
           </h1>
           <p className="text-emerald-100 text-lg max-w-xs">
             Join thousands of happy customers eating fresh every single day.
