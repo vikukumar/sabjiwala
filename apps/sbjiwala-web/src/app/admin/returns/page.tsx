@@ -30,6 +30,7 @@ interface ReturnRequest {
   return_items: ReturnItem[];
   refund_amount: number;
   status: string;
+  admin_notes?: string;
   created_at: string;
 }
 
@@ -38,6 +39,8 @@ export default function AdminReturnsPage() {
   const queryClient = useQueryClient();
   const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   // Fetch return requests
   const { data: response, isLoading } = useQuery<any>({
@@ -57,21 +60,51 @@ export default function AdminReturnsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminReturnsList"] });
-      success("Return request approved successfully! Refund processed.");
+      success("Return request approved! It is now assigned for pickup.");
     },
     onError: (err: any) => {
       showError("Approve Failed", err.response?.data?.detail || err.message);
     }
   });
 
+  // Mark Picked Up mutation
+  const markPickedUpMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.post(`/admin/returns/${id}/mark-picked-up`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminReturnsList"] });
+      success("Return marked as picked up!");
+    },
+    onError: (err: any) => {
+      showError("Action Failed", err.response?.data?.detail || err.message);
+    }
+  });
+
+  // Initiate Refund mutation
+  const initiateRefundMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.post(`/admin/returns/${id}/initiate-refund`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminReturnsList"] });
+      success("Refund initiated and wallet credited successfully.");
+    },
+    onError: (err: any) => {
+      showError("Action Failed", err.response?.data?.detail || err.message);
+    }
+  });
+
   // Reject mutation
   const rejectMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return api.post(`/admin/returns/${id}/reject`);
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      return api.post(`/admin/returns/${id}/reject`, { reason });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminReturnsList"] });
       success("Return request rejected.");
+      setRejectingId(null);
+      setRejectReason("");
     },
     onError: (err: any) => {
       showError("Reject Failed", err.response?.data?.detail || err.message);
@@ -148,7 +181,9 @@ export default function AdminReturnsPage() {
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {returnRequests.map((req) => {
                 const isExpanded = expandedRequestId === req.id;
-                const isPending = req.status.toLowerCase() === "pending";
+                const isPending = req.status.toLowerCase() === "requested" || req.status.toLowerCase() === "pending";
+                const isApproved = req.status.toLowerCase() === "approved";
+                const isPickedUp = req.status.toLowerCase() === "picked_up";
                 
                 return (
                   <div key={req.id} className="transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
@@ -209,6 +244,12 @@ export default function AdminReturnsPage() {
                           <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 font-semibold leading-relaxed">
                             {req.reason || "No notes provided."}
                           </p>
+                          {req.status.toLowerCase() === "rejected" && req.admin_notes && (
+                            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                              <p className="text-[10px] text-rose-500 font-black uppercase tracking-wider">Rejection Reason</p>
+                              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1 font-semibold">{req.admin_notes}</p>
+                            </div>
+                          )}
                         </div>
 
                         {/* Items Grid */}
@@ -270,7 +311,7 @@ export default function AdminReturnsPage() {
                         )}
 
                         {/* Actions */}
-                        {isPending && (
+                        {isPending && !rejectingId && (
                           <div className="flex items-center gap-3 pt-3 border-t border-slate-100 dark:border-slate-850">
                             <button
                               onClick={() => approveMutation.mutate(req.id)}
@@ -282,15 +323,77 @@ export default function AdminReturnsPage() {
                               ) : (
                                 <Check className="w-4 h-4" />
                               )}
-                              Approve & Refund
+                              Approve for Pickup
                             </button>
                             <button
-                              onClick={() => rejectMutation.mutate(req.id)}
+                              onClick={() => setRejectingId(req.id)}
                               disabled={approveMutation.isPending || rejectMutation.isPending}
                               className="bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 text-rose-600 dark:text-rose-400 font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 cursor-pointer transition-all border border-rose-500/25"
                             >
                               <X className="w-4 h-4" />
                               Reject Claim
+                            </button>
+                          </div>
+                        )}
+
+                        {rejectingId === req.id && (
+                          <div className="pt-3 border-t border-slate-100 dark:border-slate-850 space-y-3">
+                            <textarea
+                              value={rejectReason}
+                              onChange={(e) => setRejectReason(e.target.value)}
+                              placeholder="Enter reason for rejection..."
+                              className="w-full text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              rows={2}
+                            />
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => rejectMutation.mutate({ id: req.id, reason: rejectReason || "Rejected by Admin" })}
+                                disabled={rejectMutation.isPending}
+                                className="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 cursor-pointer transition-all border-0 shadow-sm shadow-rose-500/10"
+                              >
+                                {rejectMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                Confirm Reject
+                              </button>
+                              <button
+                                onClick={() => { setRejectingId(null); setRejectReason(""); }}
+                                className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs px-5 py-2.5 rounded-xl flex items-center cursor-pointer transition-all border-0"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {isApproved && (
+                          <div className="flex items-center gap-3 pt-3 border-t border-slate-100 dark:border-slate-850">
+                            <button
+                              onClick={() => markPickedUpMutation.mutate(req.id)}
+                              disabled={markPickedUpMutation.isPending}
+                              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 cursor-pointer transition-all border-0 shadow-sm shadow-blue-500/10"
+                            >
+                              {markPickedUpMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Check className="w-4 h-4" />
+                              )}
+                              Mark as Picked Up
+                            </button>
+                          </div>
+                        )}
+
+                        {isPickedUp && (
+                          <div className="flex items-center gap-3 pt-3 border-t border-slate-100 dark:border-slate-850">
+                            <button
+                              onClick={() => initiateRefundMutation.mutate(req.id)}
+                              disabled={initiateRefundMutation.isPending}
+                              className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 cursor-pointer transition-all border-0 shadow-sm shadow-purple-500/10"
+                            >
+                              {initiateRefundMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Check className="w-4 h-4" />
+                              )}
+                              Initiate Refund
                             </button>
                           </div>
                         )}
@@ -305,7 +408,7 @@ export default function AdminReturnsPage() {
 
         {/* Lightbox / Modal for Image Preview */}
         {selectedImage && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 md:left-64 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-fade-in">
             <button 
               onClick={() => setSelectedImage(null)}
               className="absolute top-4 right-4 text-white/80 hover:text-white p-2 hover:bg-white/10 rounded-full transition-all border-0 bg-transparent cursor-pointer"

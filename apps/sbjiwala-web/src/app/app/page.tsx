@@ -249,10 +249,10 @@ function Hero({ onSelectCategory }: { onSelectCategory: (cat: string) => void })
 // ==================== TRUST BADGES ====================
 function TrustBadges() {
   const badges = [
-    { icon: Clock, label: "Faster Delivery", sub: "Express service" },
-    { icon: Leaf, label: "Farm Fresh", sub: "Direct from farms" },
-    { icon: ShieldCheck, label: "Hygienic Packing", sub: "Quality assured" },
-    { icon: Truck, label: "Instant Delivery", sub: "On orders ₹199+" },
+    { icon: Clock, label: "Instant Dispatch", sub: "From dark store" },
+    { icon: Leaf, label: "100% Fresh", sub: "Handpicked daily" },
+    { icon: ShieldCheck, label: "Ozone Cleaned", sub: "Ready to cook" },
+    { icon: Truck, label: "Instant Delivery", sub: "To your doorstep" },
   ];
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-6xl mx-auto px-4 -mt-6 relative z-10">

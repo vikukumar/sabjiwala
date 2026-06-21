@@ -152,10 +152,8 @@ export default function ProfilePage() {
       {/* Profile Header */}
       <Card padding="none" className="relative overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md">
         {/* Cover Image based on services and Sbjiwala mark */}
-        <div 
-          className="h-36 rounded-t-2xl mb-0 relative overflow-hidden flex items-center justify-between px-6 text-white select-none border-b border-slate-200 dark:border-slate-800 bg-cover bg-center"
-          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800')` }}
-        >
+        <div className="h-36 rounded-t-2xl relative overflow-hidden flex items-center justify-between px-6 text-white select-none border-b border-slate-200 dark:border-slate-800">
+          <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800" alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-slate-950/45 dark:bg-slate-950/60 backdrop-blur-[1px]" />
           <div className="relative z-10 flex flex-col justify-end h-full pb-4">
             <span className="font-black text-xl tracking-wider uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">Sbjiwala Express</span>
@@ -189,10 +187,10 @@ export default function ProfilePage() {
               </button>
             </div>
             <div className="pb-1 flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-xl font-black text-slate-900 dark:text-white truncate leading-tight">{fullName}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white break-words">{fullName}</h2>
                 {isNameMissing && (
-                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/50 animate-pulse">
+                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/50 animate-pulse whitespace-nowrap">
                     ✏️ Set Name
                   </span>
                 )}

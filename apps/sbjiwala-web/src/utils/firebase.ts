@@ -36,6 +36,21 @@ export const initFirebase = () => {
 // Initialize Firebase Analytics
 export const initFirebaseAnalytics = async () => {
   if (typeof window === "undefined") return null;
+
+  if ((window as any).Capacitor?.isNative) {
+    try {
+      const capAnalytics = await import("@capacitor-firebase/analytics");
+      // @ts-ignore
+      await capAnalytics.FirebaseAnalytics.setCollectionEnabled({ enabled: true });
+      console.log("Capacitor Firebase Analytics initialized");
+      return capAnalytics.FirebaseAnalytics;
+    } catch (err) {
+      console.warn("Capacitor Firebase Analytics error", err);
+      return null;
+    }
+  }
+
+  // Handle Web Analytics
   try {
     const supported = await isSupported();
     if (supported) {

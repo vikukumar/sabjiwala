@@ -1,7 +1,5 @@
-import L from "leaflet";
-
 // Customer/Home Delivery Location Marker (Blue)
-export const createCustomerIcon = () => {
+export const createCustomerIcon = (L: any) => {
   return L.divIcon({
     html: `
       <div class="relative flex items-center justify-center w-[34px] h-[34px] drop-shadow-md">
@@ -19,7 +17,7 @@ export const createCustomerIcon = () => {
 };
 
 // Store/Vendor Location Marker (Red)
-export const createStoreIcon = () => {
+export const createStoreIcon = (L: any) => {
   return L.divIcon({
     html: `
       <div class="relative flex items-center justify-center w-[34px] h-[34px] drop-shadow-md">
@@ -37,7 +35,7 @@ export const createStoreIcon = () => {
 };
 
 // Delivery Boy / Agent Marker (Orange)
-export const createDeliveryAgentIcon = (vehicleType: string = "bike") => {
+export const createDeliveryAgentIcon = (L: any, vehicleType: string = "bike") => {
   let svgPath = "";
   
   if (vehicleType === "truck") {
@@ -68,7 +66,7 @@ export const createDeliveryAgentIcon = (vehicleType: string = "bike") => {
 };
 
 // Generic Pin Icon for Location Selection (Indigo)
-export const createLocationPinIcon = () => {
+export const createLocationPinIcon = (L: any) => {
   return L.divIcon({
     html: `
       <div class="relative flex items-center justify-center w-[40px] h-[40px] drop-shadow-lg">

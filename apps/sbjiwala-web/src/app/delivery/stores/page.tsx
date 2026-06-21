@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
 import DeliveryLayout, { useDelivery } from "@/components/DeliveryLayout";
 import { MapPin } from "lucide-react";
+import { createDeliveryAgentIcon, createStoreIcon } from "@sbjiwala/shared";
 
 // Haversine Distance helper
 function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -64,46 +65,12 @@ function VendorLocatorMapContent() {
       });
 
       // Rider Marker
-      const driverIcon = L.divIcon({
-        html: `
-          <div style="filter: drop-shadow(0 6px 16px rgba(16, 185, 129, 0.4)); position: relative; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px;">
-            <span style="position: absolute; width: 46px; height: 46px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); animation: ping 1.5s infinite; display: block; box-sizing: border-box;"></span>
-            <div style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 2; box-sizing: border-box;">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
-                <circle cx="18.5" cy="17.5" r="2.5"></circle>
-                <circle cx="5.5" cy="17.5" r="2.5"></circle>
-                <path d="M15 5h1a2 2 0 0 1 2 2v2"></path>
-                <path d="M12 17.5V14l-3-3 4-3 2 3h2"></path>
-              </svg>
-            </div>
-            <span style="position: absolute; bottom: -2px; right: -2px; width: 10px; height: 10px; background: #10b981; border: 2px solid white; border-radius: 50%; z-index: 3; display: block; box-sizing: border-box;"></span>
-          </div>
-        `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-        className: "leaflet-custom-icon",
-      });
+      const driverIcon = createDeliveryAgentIcon(L, "bike");
       const driverMarker = L.marker(globalPos, { icon: driverIcon }).addTo(map);
       driverMarkerRef.current = driverMarker;
 
       // Store Markers
-      const storeIcon = L.divIcon({
-        html: `
-          <div style="filter: drop-shadow(0 4px 10px rgba(239, 68, 68, 0.4)); position: relative; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;">
-            <span style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); animation: ping 1.8s infinite; display: block; box-sizing: border-box;"></span>
-            <div style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2.5px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 2; box-sizing: border-box;">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
-                <path d="m2 7 4.41-3.67A2 2 0 0 1 7.73 3h8.54a2 2 0 0 1 1.32.33L22 7"/>
-                <path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
-                <path d="M12 12A4 4 0 0 0 4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a4 4 0 0 0-8 0Z"/>
-              </svg>
-            </div>
-          </div>
-        `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        className: "leaflet-custom-icon",
-      });
+      const storeIcon = createStoreIcon(L);
 
       const bounds: any[] = [globalPos];
 

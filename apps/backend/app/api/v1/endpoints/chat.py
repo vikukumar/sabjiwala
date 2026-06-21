@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import APIResponse
-from app.core.rbac.engine import get_current_user
+from app.core.rbac.engine import get_current_user, require_permissions
 from app.db.session import get_db
 from app.models.chat import LiveChatSession, LiveChatMessage, ChatSessionStatus, ChatMessageSender, FAQ, FAQCategory
 from app.services.chat_service import allocate_agent, get_faqs_for_bot, handle_bot_interaction

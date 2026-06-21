@@ -325,18 +325,18 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
       });
 
       // Delivery address marker (Customer) - Backgroundless Swiggy Style
-      const homeIcon = createCustomerIcon();
+      const homeIcon = createCustomerIcon(L);
       L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
 
       // Store marker - Backgroundless Swiggy Style
-      const storeIcon = createStoreIcon();
+      const storeIcon = createStoreIcon(L);
       L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup(order.vendor_store?.store_name || "Store");
 
       // Delivery agent marker - Backgroundless Swiggy Style
       const hash = (order.id || "agent").split("").reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
       const types = ["scooty", "bike", "bicycle", "truck"];
       const type = order.delivery_agent?.vehicle_type || types[hash % types.length];
-      const driverIcon = createDeliveryAgentIcon(type);
+      const driverIcon = createDeliveryAgentIcon(L, type);
       const driverMarker = L.marker(currentPos, { icon: driverIcon }).addTo(map);
       driverMarkerRef.current = driverMarker;
 
@@ -449,7 +449,7 @@ function ActiveOrdersDashboard() {
 
   const rejectItemsMutation = useMutation({
     mutationFn: async ({ orderId, payload }: { orderId: string; payload: any }) =>
-      api.post(`/orders/${orderId}/reject-items`, payload),
+      api.post(`/delivery/orders/${orderId}/reject-items`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] });
       success("Success", "Items rejected and prices updated successfully!");

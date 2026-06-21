@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 import { useForm } from "react-hook-form";
 import { resolveLink } from "@/components/AppShell";
+import { createLocationPinIcon } from "@sbjiwala/shared";
 
 export default function AddAddressPage() {
   const router = useRouter();
@@ -132,22 +133,7 @@ export default function AddAddressPage() {
         tiles.setUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
       });
 
-      const pinIcon = L.divIcon({
-        html: `
-          <div style="filter: drop-shadow(0 4px 10px rgba(79, 70, 229, 0.4)); position: relative; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;">
-            <span style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background: rgba(79, 70, 229, 0.15); animation: ping 2s infinite; display: block; box-sizing: border-box;"></span>
-            <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2.5px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 2; box-sizing: border-box;">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
-              </svg>
-            </div>
-          </div>
-        `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        className: "leaflet-custom-icon"
-      });
+      const pinIcon = createLocationPinIcon(L);
 
       const marker = L.marker([initLat, initLng], { draggable: true, icon: pinIcon }).addTo(map);
       markerRef.current = marker;

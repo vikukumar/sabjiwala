@@ -12,6 +12,7 @@ import {
 import { Button, Badge, Spinner, EmptyState } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 import { useForm } from "react-hook-form";
+import { createLocationPinIcon } from "@sbjiwala/shared";
 
 // ==================== CONFIG CHECK ====================
 // Cashfree is enabled only when NEXT_PUBLIC_CASHFREE_APP_ID is set in env
@@ -106,22 +107,7 @@ function AddressForm({ onSave, onCancel, existing }: {
         tiles.setUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
       });
 
-      const pinIcon = L.divIcon({
-        html: `
-          <div style="filter: drop-shadow(0 4px 10px rgba(79, 70, 229, 0.4)); position: relative; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;">
-            <span style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background: rgba(79, 70, 229, 0.15); animation: ping 2s infinite; display: block; box-sizing: border-box;"></span>
-            <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2.5px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 2; box-sizing: border-box;">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
-              </svg>
-            </div>
-          </div>
-        `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        className: "leaflet-custom-icon"
-      });
+      const pinIcon = createLocationPinIcon(L);
 
       const marker = L.marker([coords.lat, coords.lng], { draggable: true, icon: pinIcon }).addTo(map);
       markerRef.current = marker;
@@ -469,13 +455,17 @@ export default function CheckoutPage() {
   const subtotal = previewData ? previewData.subtotal : localSubtotal;
   const freeDeliveryAbove = previewData?.free_delivery_above ?? 199;
   const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= freeDeliveryAbove ? 0 : 20);
-  const taxAmount = previewData ? previewData.tax_amount : Math.round(subtotal * 0.05 * 100) / 100;
   const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
+  const platformFee = previewData ? previewData.platform_fee || 0 : 0.0;
+  const convenienceFee = previewData ? previewData.convenience_fee || 0 : 0.0;
+  
   const couponDiscount = previewData ? previewData.coupon_discount : 0.0;
+  const taxableAmount = Math.max(0, subtotal + deliveryFee + packagingCharge + platformFee + convenienceFee - couponDiscount);
+  const taxAmount = previewData ? previewData.tax_amount : Math.round(taxableAmount * 0.05 * 100) / 100;
+  
   const walletBalance = walletData?.balance || 0;
-  const walletDeduction = previewData ? previewData.wallet_deduction : (useWallet ? Math.round(Math.min(walletBalance, subtotal + deliveryFee + taxAmount + packagingCharge - couponDiscount) * 100) / 100 : 0);
-  const finalTotal = previewData ? previewData.total_amount : Math.round(Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - couponDiscount - walletDeduction) * 100) / 100;
-
+  const walletDeduction = previewData ? previewData.wallet_deduction : (useWallet ? Math.round(Math.min(walletBalance, subtotal + deliveryFee + taxAmount + packagingCharge + platformFee + convenienceFee - couponDiscount) * 100) / 100 : 0);
+  const finalTotal = previewData ? previewData.total_amount : Math.round(Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge + platformFee + convenienceFee - couponDiscount - walletDeduction) * 100) / 100;
 
   const savings = React.useMemo(() => {
     let itemSavings = 0;
@@ -498,8 +488,12 @@ export default function CheckoutPage() {
     if (packagingCharge === 0) {
       itemSavings += parseFloat(previewData?.original_packaging_charge ?? 10.0);
     }
+    // Also consider if platform fee is exempted
+    if (platformFee === 0 && previewData?.original_platform_fee) {
+       // Wait, we didn't add original_platform_fee to backend, so we skip it.
+    }
     return Math.max(0, itemSavings);
-  }, [cartData?.items, couponDiscount, deliveryFee, packagingCharge, previewData, subtotal]);
+  }, [cartData?.items, couponDiscount, deliveryFee, packagingCharge, previewData, subtotal, platformFee]);
 
   const launchCashfree = async (orderData: any) => {
     const { payment_session_id, cashfree_order_id } = orderData;
@@ -777,6 +771,18 @@ export default function CheckoutPage() {
                   ) : `₹${packagingCharge.toFixed(2)}`}
                 </span>
               </div>
+              {platformFee > 0 && (
+                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                  <span>Platform Fee</span>
+                  <span>₹{platformFee.toFixed(2)}</span>
+                </div>
+              )}
+              {convenienceFee > 0 && (
+                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                  <span>Convenience Fee</span>
+                  <span>₹{convenienceFee.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-slate-600 dark:text-slate-400"><span>Taxes (5%)</span><span>₹{taxAmount.toFixed(2)}</span></div>
               {couponDiscount > 0 && <div className="flex justify-between text-emerald-600"><span className="font-semibold">Coupon</span><span className="font-bold">-₹{couponDiscount.toFixed(2)}</span></div>}
               {walletDeduction > 0 && <div className="flex justify-between text-emerald-600 dark:text-emerald-400"><span className="font-bold">Wallet</span><span className="font-bold">-₹{walletDeduction.toFixed(2)}</span></div>}

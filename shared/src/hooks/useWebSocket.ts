@@ -1,139 +1,185 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "../api-client";
 
+// Global WebSocket Singleton State
+let globalWs: WebSocket | null = null;
+let globalIsConnected = false;
+let globalReconnectTimeout: any = null;
+let globalPingInterval: any = null;
+let capacitorListener: any = null;
+
+// Subscribers for pub/sub pattern
+const subscribers = new Set<(msg: any) => void>();
+const connectionSubscribers = new Set<(connected: boolean) => void>();
+
+function notifySubscribers(message: any) {
+  subscribers.forEach(sub => {
+    try {
+      sub(message);
+    } catch (err) {
+      console.error("Error in WS subscriber:", err);
+    }
+  });
+}
+
+function notifyConnectionSubscribers(connected: boolean) {
+  globalIsConnected = connected;
+  connectionSubscribers.forEach(sub => sub(connected));
+}
+
+function connectGlobalWS() {
+  if (typeof window === "undefined") return;
+  if (globalWs?.readyState === WebSocket.OPEN || globalWs?.readyState === WebSocket.CONNECTING) {
+    return;
+  }
+
+  const token = localStorage.getItem("sw_access_token");
+  if (!token) return;
+
+  const apiBase = api.client.defaults.baseURL || "/api/v1";
+  let baseHost = window.location.host;
+  let protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+  if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
+    try {
+      const url = new URL(apiBase);
+      baseHost = url.host;
+      protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    } catch (e) {
+      console.error("Invalid API URL", e);
+    }
+  }
+
+  const ws = new WebSocket(`${protocol}//${baseHost}/api/v1/ws?token=${token}`);
+  globalWs = ws;
+
+  ws.onopen = () => {
+    notifyConnectionSubscribers(true);
+    if (globalPingInterval) clearInterval(globalPingInterval);
+    globalPingInterval = setInterval(() => {
+      if (globalWs?.readyState === WebSocket.OPEN) {
+        globalWs.send(JSON.stringify({ type: "ping" }));
+      }
+    }, 15000);
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const message = JSON.parse(event.data);
+      if (message.type === "pong") return;
+      notifySubscribers(message);
+    } catch (err) {
+      console.error("Error parsing WS message:", err);
+    }
+  };
+
+  ws.onclose = () => {
+    notifyConnectionSubscribers(false);
+    globalWs = null;
+    if (globalPingInterval) clearInterval(globalPingInterval);
+    if (globalReconnectTimeout) clearTimeout(globalReconnectTimeout);
+    
+    // Only reconnect if we still have a token
+    if (localStorage.getItem("sw_access_token")) {
+      globalReconnectTimeout = setTimeout(connectGlobalWS, 5000);
+    }
+  };
+
+  ws.onerror = (err) => {
+    console.warn("WS connection error:", err);
+    ws.close();
+  };
+}
+
+function handleResumeGlobal() {
+  if (!globalWs || globalWs.readyState !== WebSocket.OPEN) {
+    connectGlobalWS();
+  }
+}
+
+// Initialize Global Listeners exactly once on first use
+let isGlobalInitialized = false;
+function initGlobalWS() {
+  if (isGlobalInitialized || typeof window === "undefined") return;
+  isGlobalInitialized = true;
+
+  window.addEventListener("sw_auth_changed", () => {
+    if (!localStorage.getItem("sw_access_token")) {
+      disconnectGlobalWS();
+    } else {
+      connectGlobalWS();
+    }
+  });
+
+  window.addEventListener("focus", handleResumeGlobal);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      handleResumeGlobal();
+    }
+  });
+
+  if ((window as any).Capacitor?.Plugins?.App) {
+    try {
+      const App = (window as any).Capacitor.Plugins.App;
+      App.addListener("appStateChange", (state: any) => {
+        if (state.isActive) handleResumeGlobal();
+      }).then((listener: any) => {
+        capacitorListener = listener;
+      }).catch(() => {});
+    } catch (err) {
+      console.warn("Failed to attach Capacitor app state listener", err);
+    }
+  }
+
+  // Initial connection attempt
+  connectGlobalWS();
+}
+
+function disconnectGlobalWS() {
+  if (globalWs) {
+    globalWs.onclose = null;
+    globalWs.close();
+    globalWs = null;
+  }
+  if (globalReconnectTimeout) clearTimeout(globalReconnectTimeout);
+  if (globalPingInterval) clearInterval(globalPingInterval);
+  notifyConnectionSubscribers(false);
+}
+
 export function useWebSocket(onMessage?: (msg: any) => void, enabled: boolean = true) {
-  const [isConnected, setIsConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
-  const [authTrigger, setAuthTrigger] = useState(0);
+  const [isConnected, setIsConnected] = useState(globalIsConnected);
 
   useEffect(() => {
-    const handleAuthChange = () => setAuthTrigger(v => v + 1);
-    window.addEventListener("sw_auth_changed", handleAuthChange);
-    return () => window.removeEventListener("sw_auth_changed", handleAuthChange);
-  }, []);
+    if (!enabled) return;
 
-  useEffect(() => {
-    if (!enabled) {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-        setIsConnected(false);
-      }
-      return;
+    initGlobalWS();
+
+    // Subscribe to connection state
+    const connSub = (connected: boolean) => setIsConnected(connected);
+    connectionSubscribers.add(connSub);
+    setIsConnected(globalIsConnected);
+
+    // Subscribe to messages
+    if (onMessage) {
+      subscribers.add(onMessage);
     }
 
-    let reconnectTimeout: any;
-    let pingInterval: any;
-
-    const connectWS = () => {
-      if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
-        return;
-      }
-
-      const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
-      if (!token) return;
-
-      const apiBase = api.client.defaults.baseURL || "/api/v1";
-      let baseHost = window.location.host;
-      let protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-
-      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
-        try {
-          const url = new URL(apiBase);
-          baseHost = url.host;
-          protocol = url.protocol === "https:" ? "wss:" : "ws:";
-        } catch (e) {
-          console.error("Invalid API URL", e);
-        }
-      }
-      
-      const ws = new WebSocket(`${protocol}//${baseHost}/api/v1/ws?token=${token}`);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        setIsConnected(true);
-        // Start ping interval to keep connection alive
-        pingInterval = setInterval(() => {
-          if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type: "ping" }));
-          }
-        }, 15000);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          if (message.type === "pong") return; // Ignore pongs
-          if (onMessage) onMessage(message);
-        } catch (err) {
-          console.error("Error parsing WS message:", err);
-        }
-      };
-
-      ws.onclose = () => {
-        setIsConnected(false);
-        wsRef.current = null;
-        if (pingInterval) clearInterval(pingInterval);
-        reconnectTimeout = setTimeout(connectWS, 5000); // Reconnect in 5s
-      };
-
-      ws.onerror = (err) => {
-        console.warn("WS connection error:", err);
-        ws.close();
-      };
-    };
-
-    const handleResume = () => {
-      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-        connectWS();
-      }
-    };
-
-    window.addEventListener("focus", handleResume);
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        handleResume();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    let capacitorListener: any = null;
-    if (typeof window !== "undefined" && (window as any).Capacitor?.Plugins?.App) {
-      try {
-        const App = (window as any).Capacitor.Plugins.App;
-        App.addListener("appStateChange", (state: any) => {
-          if (state.isActive) {
-            handleResume();
-          }
-        }).then((listener: any) => {
-          capacitorListener = listener;
-        }).catch(() => {});
-      } catch (err) {
-        console.warn("Failed to attach Capacitor app state listener", err);
-      }
+    // Force connection attempt if not connected
+    if (!globalWs || globalWs.readyState === WebSocket.CLOSED) {
+      connectGlobalWS();
     }
-
-    connectWS();
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.onclose = null; // Prevent reconnect logic on unmount
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      if (pingInterval) clearInterval(pingInterval);
-      window.removeEventListener("focus", handleResume);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      if (capacitorListener) {
-        capacitorListener.remove();
+      connectionSubscribers.delete(connSub);
+      if (onMessage) {
+        subscribers.delete(onMessage);
       }
     };
-  }, [onMessage, enabled, authTrigger]);
+  }, [onMessage, enabled]);
 
   const sendMessage = (msg: any) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(msg));
+    if (globalWs && globalWs.readyState === WebSocket.OPEN) {
+      globalWs.send(JSON.stringify(msg));
     }
   };
 

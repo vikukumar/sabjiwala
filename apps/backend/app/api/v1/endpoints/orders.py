@@ -124,45 +124,43 @@ async def preview_order(
     original_packaging_charge = base_packaging
     packaging_charge = base_packaging
 
+    # Fetch System Settings for Admin Overrides
+    from app.models.system import SystemSetting
+    
+    admin_pf_res = await db.execute(select(SystemSetting).where(SystemSetting.key == "default_platform_fee"))
+    admin_pf = admin_pf_res.scalars().first()
+    
+    admin_cf_res = await db.execute(select(SystemSetting).where(SystemSetting.key == "default_convenience_fee"))
+    admin_cf = admin_cf_res.scalars().first()
+    
+    admin_fd_res = await db.execute(select(SystemSetting).where(SystemSetting.key == "free_delivery_above"))
+    admin_fd = admin_fd_res.scalars().first()
+
+    # Precedence: Admin Overrides > Vendor > Default 0.0
+    
     # Platform Fee
     platform_fee = 0.0
-    if rule and rule.platform_fee is not None:
+    if admin_pf and admin_pf.value is not None:
+        platform_fee = float(admin_pf.value)
+    elif rule and rule.platform_fee is not None:
         platform_fee = float(rule.platform_fee)
-    else:
-        from app.models.system import SystemSetting
-        setting_res = await db.execute(
-            select(SystemSetting).where(SystemSetting.key == "default_platform_fee")
-        )
-        setting = setting_res.scalars().first()
-        platform_fee = float(setting.value) if (setting and setting.value) else 0.0
 
     # Convenience Fee
     convenience_fee = 0.0
-    if rule and rule.convenience_fee is not None:
+    if admin_cf and admin_cf.value is not None:
+        convenience_fee = float(admin_cf.value)
+    elif rule and rule.convenience_fee is not None:
         convenience_fee = float(rule.convenience_fee)
-    else:
-        from app.models.system import SystemSetting
-        setting_res = await db.execute(
-            select(SystemSetting).where(SystemSetting.key == "default_convenience_fee")
-        )
-        setting = setting_res.scalars().first()
-        convenience_fee = float(setting.value) if (setting and setting.value) else 0.0
 
-    # Precedence: Vendor limit > Admin limit > Default 0.0
+    # Free Delivery Above
     free_delivery_limit = 0.0
-    if rule and rule.free_delivery_above is not None:
+    if admin_fd and admin_fd.value is not None:
+        try:
+            free_delivery_limit = float(admin_fd.value)
+        except ValueError:
+            pass
+    elif rule and rule.free_delivery_above is not None:
         free_delivery_limit = float(rule.free_delivery_above)
-    else:
-        from app.models.system import SystemSetting
-        admin_setting_res = await db.execute(
-            select(SystemSetting).where(SystemSetting.key == "free_delivery_above")
-        )
-        admin_setting = admin_setting_res.scalars().first()
-        if admin_setting and admin_setting.value:
-            try:
-                free_delivery_limit = float(admin_setting.value)
-            except ValueError:
-                pass
 
     if rule:
         if subtotal < float(rule.min_order_amount):

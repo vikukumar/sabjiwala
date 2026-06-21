@@ -207,8 +207,8 @@ export default function OrderDetailClient() {
             {new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
-        <Badge variant={order.status === "delivered" ? "success" : order.status === "cancelled" ? "danger" : "warning"}>
-          {order.status?.replace(/_/g, " ").toUpperCase()}
+        <Badge variant={order.status === "delivered" && !hasReturnRequest ? "success" : order.status === "cancelled" ? "danger" : "warning"}>
+          {hasReturnRequest ? "RETURN REQUESTED" : order.status?.replace(/_/g, " ").toUpperCase()}
         </Badge>
       </div>
 
@@ -354,6 +354,16 @@ export default function OrderDetailClient() {
           {Number(order.packaging_charge || 0) > 0 && (
             <div className="flex justify-between text-slate-600 dark:text-slate-400">
               <span>Packaging & Handling</span><span>₹{Number(order.packaging_charge).toFixed(2)}</span>
+            </div>
+          )}
+          {Number(order.platform_fee || 0) > 0 && (
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
+              <span>Platform Fee</span><span>₹{Number(order.platform_fee).toFixed(2)}</span>
+            </div>
+          )}
+          {Number(order.convenience_fee || 0) > 0 && (
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
+              <span>Convenience Fee</span><span>₹{Number(order.convenience_fee).toFixed(2)}</span>
             </div>
           )}
           {Number(order.tax_amount || 0) > 0 && (

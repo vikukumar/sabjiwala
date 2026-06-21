@@ -130,18 +130,18 @@ export default function TrackOrderClient() {
       });
 
       // Delivery address marker (Customer) - Backgroundless Swiggy Style
-      const homeIcon = createCustomerIcon();
+      const homeIcon = createCustomerIcon(L);
       L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
 
       // Store marker - Backgroundless Swiggy Style
-      const storeIcon = createStoreIcon();
+      const storeIcon = createStoreIcon(L);
       L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup("Pickup Store");
 
       // Delivery agent marker - Backgroundless Swiggy Style
       const hash = (order.id || "agent").split("").reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
       const types = ["scooty", "bike", "bicycle", "truck"];
       const type = order.delivery_agent?.vehicle_type || types[hash % types.length];
-      const agentIcon = createDeliveryAgentIcon(type);
+      const agentIcon = createDeliveryAgentIcon(L, type);
 
       const driverMarker = L.marker([initDriverLat, initDriverLng], { icon: agentIcon }).addTo(map).bindPopup("Delivery Partner");
       driverMarkerRef.current = driverMarker;

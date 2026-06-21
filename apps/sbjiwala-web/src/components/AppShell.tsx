@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@sbjiwala/shared";
-import CustomerSupportWidget from "./CustomerSupportWidget";
+import LiveChatWidget from "./LiveChatWidget";
 
 
 // Default is false, meaning no AppShell is currently active
@@ -1483,9 +1483,33 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     enabled: typeof window !== "undefined" && !!token,
   });
 
-  // Removed default address override to ensure it takes real-time user end coordinates
   useEffect(() => {
-    // Geolocation is fetched real-time from user end
+    if (typeof window === "undefined") return;
+    const manualLocation = localStorage.getItem("sw_location_manually_set");
+    if (!manualLocation && "geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            const res = await api.get("/maps/reverse-geocode", {
+              params: { lat: latitude, lon: longitude }
+            });
+            if (res.success && res.data) {
+              const name = res.data.display_name || res.data.address?.city || res.data.name || "Current Location";
+              setLocationName(name);
+              localStorage.setItem("sw_location_manually_set", "true");
+              window.dispatchEvent(new CustomEvent("sw_location_changed", {
+                detail: { lat: latitude, lon: longitude, name }
+              }));
+            }
+          } catch (err) {
+            console.warn("Auto geocode failed:", err);
+          }
+        },
+        (err) => console.warn("Auto geolocation failed:", err),
+        { enableHighAccuracy: false, timeout: 5000 }
+      );
+    }
   }, []);
 
   // Initialize push notifications on authentication
@@ -1903,7 +1927,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col h-full md:ml-64 min-w-0 max-w-full pt-[env(safe-area-inset-top)]">
 
           {/* Header sits naturally at the top, no absolute/fixed/sticky needed */}
-          <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} onOpenSearch={() => setInlineSearchOpen(true)} />
+          <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} onOpenSearch={() => router.push('/search')} />
 
           {/* Flipkart-Style Sub-Header Location Bar */}
           <div
@@ -1924,8 +1948,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         </div>
 
-        <BottomNav onOpenSearch={() => setInlineSearchOpen(true)} />
-        <CustomerSupportWidget />
+        <BottomNav onOpenSearch={() => router.push('/search')} />
+        <LiveChatWidget />
 
         {/* Location Selection Modal */}
         {showLocationModal && (

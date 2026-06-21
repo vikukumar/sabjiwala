@@ -107,7 +107,7 @@ function AddressForm({ onSave, onCancel, existing }: {
         tiles.setUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
       });
 
-      const pinIcon = createLocationPinIcon();
+      const pinIcon = createLocationPinIcon(L);
 
       const marker = L.marker([coords.lat, coords.lng], { draggable: true, icon: pinIcon }).addTo(map);
       markerRef.current = marker;

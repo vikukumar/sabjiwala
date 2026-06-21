@@ -959,7 +959,7 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
           </main>
 
           {/* Bottom Navigation (Mobile Only) */}
-          <nav className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl bg-white/60 dark:bg-[#090d10]/60 border-t border-slate-200/40 dark:border-slate-800/80 safe-area-pb md:hidden rounded-t-[20px] shadow-lg">
+          <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-[#090d10] amoled:bg-black border-t border-slate-200 dark:border-slate-800 safe-area-pb md:hidden rounded-t-[20px] shadow-lg">
             <div className="max-w-md mx-auto flex items-center justify-around h-16 px-1">
               {navItems.map((item) => {
                 const active = isActive(item.href);

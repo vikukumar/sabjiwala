@@ -15,8 +15,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import BaseEntity
 
-if TYPE_CHECKING:
-    from app.models.product import Product
+from app.models.product import Product
 
 
 class OrderStatus(str, enum.Enum):

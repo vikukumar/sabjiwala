@@ -65,12 +65,12 @@ function VendorLocatorMapContent() {
       });
 
       // Rider Marker
-      const driverIcon = createDeliveryAgentIcon("bike");
+      const driverIcon = createDeliveryAgentIcon(L, "bike");
       const driverMarker = L.marker(globalPos, { icon: driverIcon }).addTo(map);
       driverMarkerRef.current = driverMarker;
 
       // Store Markers
-      const storeIcon = createStoreIcon();
+      const storeIcon = createStoreIcon(L);
 
       const bounds: any[] = [globalPos];
 

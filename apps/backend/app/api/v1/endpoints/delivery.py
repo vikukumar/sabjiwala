@@ -697,3 +697,143 @@ async def accept_order(
         pass
 
     return APIResponse(success=True, message="Order accepted successfully")
+
+
+from app.api.schemas import ItemRejectionRequest
+from app.models.product import Inventory, InventoryLog
+
+@router.post("/orders/{order_id}/reject-items", response_model=APIResponse)
+async def reject_order_items(
+    order_id: UUID,
+    body: ItemRejectionRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Allow delivery agent to partially reject items at the doorstep.
+    Calculates refunded amount and adjusts the total order value and COD.
+    """
+    # Verify assignment
+    res = await db.execute(
+        select(Order)
+        .options(selectinload(Order.items))
+        .where(Order.id == order_id, Order.delivery_boy_id == current_user["user_id"], Order.is_deleted == False)
+    )
+    order = res.scalars().first()
+    if not order:
+        raise HTTPException(status_code=403, detail="Order not found or not assigned to you")
+
+    if order.status not in [OrderStatus.OUT_FOR_DELIVERY, OrderStatus.PICKED]:
+        raise HTTPException(status_code=400, detail="Items can only be rejected when the order is out for delivery")
+
+    total_refund_amount = 0.0
+    rejected_log = []
+
+    # Process each rejected item
+    for rejection in body.rejected_items:
+        # Find the order item
+        item = next((i for i in order.items if i.product_id == rejection.product_id and i.variant_id == rejection.variant_id), None)
+        if not item:
+            raise HTTPException(status_code=400, detail=f"Item with product_id {rejection.product_id} not found in order")
+
+        if rejection.rejected_quantity > item.quantity:
+            raise HTTPException(status_code=400, detail=f"Cannot reject more than ordered quantity for {item.product_name}")
+
+        # Calculate value of rejected items
+        rejected_value = float(item.unit_price) * rejection.rejected_quantity
+        total_refund_amount += rejected_value
+
+        # Update order item quantity and total price
+        item.quantity -= rejection.rejected_quantity
+        item.total_price = float(item.unit_price) * item.quantity
+
+        # Restore inventory
+        inv_res = await db.execute(
+            select(Inventory).where(
+                Inventory.vendor_id == order.vendor_id,
+                Inventory.product_id == item.product_id,
+                Inventory.variant_id == item.variant_id,
+                Inventory.is_deleted == False
+            )
+        )
+        inventory = inv_res.scalars().first()
+        if inventory:
+            inventory.quantity += rejection.rejected_quantity
+            
+            # Create InventoryLog
+            inv_log = InventoryLog(
+                inventory_id=inventory.id,
+                vendor_id=order.vendor_id,
+                change_type="rejection_refund",
+                quantity_change=rejection.rejected_quantity,
+                quantity_before=inventory.quantity - rejection.rejected_quantity,
+                quantity_after=inventory.quantity,
+                reference_type="order",
+                reference_id=str(order.id),
+                notes=f"Item rejected at delivery. Reason: {rejection.reason}"
+            )
+            db.add(inv_log)
+
+        rejected_log.append({
+            "product_name": item.product_name,
+            "quantity": rejection.rejected_quantity,
+            "value": rejected_value,
+            "reason": rejection.reason
+        })
+
+    if total_refund_amount <= 0:
+        return APIResponse(success=True, message="No changes made to the order")
+
+    # Update order totals
+    order.subtotal = float(order.subtotal) - total_refund_amount
+    
+    # Recalculate tax proportionally (simple approach, assumes uniform tax rate)
+    original_subtotal = float(order.subtotal) + total_refund_amount
+    tax_ratio = float(order.tax_amount) / original_subtotal if original_subtotal > 0 else 0
+    tax_reduction = total_refund_amount * tax_ratio
+    order.tax_amount = float(order.tax_amount) - tax_reduction
+
+    # The new total amount is reduced by the refund and tax reduction
+    order.total_amount = float(order.total_amount) - (total_refund_amount + tax_reduction)
+
+    # Process refund or COD adjustment
+    refund_message = ""
+    if order.payment_method == "cod":
+        refund_message = f"COD amount reduced by ₹{total_refund_amount + tax_reduction:.2f}."
+    else:
+        # If paid online, initiate wallet refund
+        from app.services.wallet_service import WalletService
+        wallet_service = WalletService(db)
+        await wallet_service.add_funds(
+            user_id=order.user_id,
+            amount=total_refund_amount + tax_reduction,
+            transaction_type="refund",
+            description=f"Refund for rejected items in order {order.order_number}",
+            reference_id=str(order.id)
+        )
+        refund_message = f"₹{total_refund_amount + tax_reduction:.2f} refunded to customer's wallet."
+
+    # Update metadata
+    meta = dict(order.metadata_json) if order.metadata_json else {}
+    existing_rejections = meta.get("rejected_items", [])
+    existing_rejections.extend(rejected_log)
+    meta["rejected_items"] = existing_rejections
+    meta["partial_rejection"] = True
+    order.metadata_json = meta
+
+    # Add system note
+    from app.models.order import OrderStatusHistory
+    history = OrderStatusHistory(
+        order_id=order_id,
+        from_status=order.status.value,
+        to_status=order.status.value,
+        changed_by=current_user["user_id"],
+        changed_by_type="delivery_boy",
+        notes=f"Customer rejected items worth ₹{total_refund_amount:.2f}. {refund_message}",
+    )
+    db.add(history)
+
+    await db.flush()
+    await db.commit()
+
+    return APIResponse(success=True, message=f"Order updated successfully. {refund_message}")

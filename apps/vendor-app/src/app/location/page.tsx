@@ -33,7 +33,7 @@ function StoreLocationMap({
       if (!active || !mapRef.current || mapObjRef.current) return;
       delete (L.Icon.Default.prototype as any)._getIconUrl;
 
-      const storeIcon = createStoreIcon();
+      const storeIcon = createStoreIcon(L);
 
       const map = L.map(mapRef.current!, { attributionControl: false }).setView([lat, lng], 15);
       const isDark = document.documentElement.classList.contains("dark");

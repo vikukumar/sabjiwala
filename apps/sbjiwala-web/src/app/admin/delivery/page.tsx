@@ -49,7 +49,7 @@ function DeliveryBoyModal({ boy, onClose }: { boy: any; onClose: () => void }) {
   const statusCfg = KYC_STATUS[kycStatus] || KYC_STATUS.pending;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 md:left-64 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl">
         <div className="p-6 space-y-5">
