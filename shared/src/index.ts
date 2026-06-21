@@ -4,3 +4,4 @@ export * from './hooks';
 export * from './utils/push';
 export * from './utils/streamCall';
 
+export * from './utils/mapIcons';  

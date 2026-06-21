@@ -10,6 +10,7 @@ import { api } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/index";
 import DeliveryLayout, { useDelivery } from "@/components/DeliveryLayout";
+import { createCustomerIcon, createStoreIcon, createDeliveryAgentIcon } from "@sbjiwala/shared";
 
 // =========== OTP MODAL ===========
 function OtpPromptModal({
@@ -261,56 +262,7 @@ function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: nu
 }
 
 // =========== DELIVERY TRACKING MAP helpers ===========
-const VEHICLES = [
-  { type: "scooty" },
-  { type: "bike" },
-  { type: "truck" },
-  { type: "bicycle" }
-];
 
-const getVehicleDetails = (orderId: string, agentVehicleType?: string) => {
-  const hash = (orderId || "agent").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const types = ["scooty", "bike", "bicycle", "truck"];
-  const type = agentVehicleType || types[hash % types.length];
-  
-  let svg = "";
-  if (type === "truck") {
-    svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ea580c" stroke="#ffffff" stroke-width="1.5" style="width: 36px; height: 36px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3)); flex-shrink: 0;">
-        <rect x="1" y="3" width="15" height="13" rx="2" ry="2"></rect>
-        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
-        <circle cx="5.5" cy="18.5" r="2.5"></circle>
-        <circle cx="18.5" cy="18.5" r="2.5"></circle>
-      </svg>
-    `;
-  } else if (type === "bicycle") {
-    svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 36px; height: 36px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3)); flex-shrink: 0;">
-        <circle cx="5.5" cy="17.5" r="2.5"></circle>
-        <circle cx="18.5" cy="17.5" r="2.5"></circle>
-        <path d="M15 5h1M12 17.5V14l-3-3 4-3 2 3h2" stroke="#ea580c" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
-      </svg>
-    `;
-  } else if (type === "scooty") {
-    svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ea580c" stroke="#ffffff" stroke-width="1.5" style="width: 36px; height: 36px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3)); flex-shrink: 0;">
-        <circle cx="6" cy="18" r="2.5"></circle>
-        <circle cx="18" cy="18" r="2.5"></circle>
-        <path d="M6 18h4l2-5h5l1.5 2.5h1.5l1-2.5v-2h-3l-1.5-3H13v2.5l-2 2.5H8l-2-5H3v2h2l1 5.5z"></path>
-      </svg>
-    `;
-  } else {
-    // bike
-    svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ea580c" stroke="#ffffff" stroke-width="1.5" style="width: 36px; height: 36px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3)); flex-shrink: 0;">
-        <circle cx="6" cy="18" r="3"></circle>
-        <circle cx="18" cy="18" r="3"></circle>
-        <path d="M6 18h4.5l2-6h4l1.5 6H21v-2l-2-4h-4.5L12 8H8L6 18z"></path>
-      </svg>
-    `;
-  }
-  return { svg };
-};
 
 const fetchRoute = async (start: [number, number], end: [number, number]): Promise<[number, number][]> => {
   try {
@@ -373,47 +325,18 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
       });
 
       // Delivery address marker (Customer) - Backgroundless Swiggy Style
-      const homeIcon = L.divIcon({
-        html: `
-          <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3b82f6" stroke="#ffffff" stroke-width="1.5" style="width: 30px; height: 30px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); flex-shrink: 0;">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 11.2c-2.67 0-8 1.34-8 4v1.8h16v-1.8c0-2.66-5.33-4-8-4z"/>
-            </svg>
-          </div>
-        `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        className: "leaflet-custom-icon"
-      });
+      const homeIcon = createCustomerIcon();
       L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Delivery Address");
 
       // Store marker - Backgroundless Swiggy Style
-      const storeIcon = L.divIcon({
-        html: `
-          <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" style="width: 30px; height: 30px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); flex-shrink: 0;">
-              <path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/>
-            </svg>
-          </div>
-        `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        className: "leaflet-custom-icon"
-      });
+      const storeIcon = createStoreIcon();
       L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup(order.vendor_store?.store_name || "Store");
 
       // Delivery agent marker - Backgroundless Swiggy Style
-      const { svg } = getVehicleDetails(order.id, order.delivery_agent?.vehicle_type);
-      const driverIcon = L.divIcon({
-        html: `
-          <div style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex-shrink: 0;">
-            ${svg}
-          </div>
-        `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-        className: "leaflet-custom-icon"
-      });
+      const hash = (order.id || "agent").split("").reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
+      const types = ["scooty", "bike", "bicycle", "truck"];
+      const type = order.delivery_agent?.vehicle_type || types[hash % types.length];
+      const driverIcon = createDeliveryAgentIcon(type);
       const driverMarker = L.marker(currentPos, { icon: driverIcon }).addTo(map);
       driverMarkerRef.current = driverMarker;
 
