@@ -57,6 +57,7 @@ export class ApiClient {
     if (typeof window !== 'undefined') {
       localStorage.setItem('sw_access_token', access);
       localStorage.setItem('sw_refresh_token', refresh);
+      window.dispatchEvent(new CustomEvent('sw_auth_changed'));
     }
   }
 
@@ -66,6 +67,7 @@ export class ApiClient {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('sw_access_token');
       localStorage.removeItem('sw_refresh_token');
+      window.dispatchEvent(new CustomEvent('sw_auth_changed'));
     }
   }
 

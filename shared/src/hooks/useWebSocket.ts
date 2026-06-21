@@ -4,6 +4,13 @@ import { api } from "../api-client";
 export function useWebSocket(onMessage?: (msg: any) => void, enabled: boolean = true) {
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const [authTrigger, setAuthTrigger] = useState(0);
+
+  useEffect(() => {
+    const handleAuthChange = () => setAuthTrigger(v => v + 1);
+    window.addEventListener("sw_auth_changed", handleAuthChange);
+    return () => window.removeEventListener("sw_auth_changed", handleAuthChange);
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -122,7 +129,7 @@ export function useWebSocket(onMessage?: (msg: any) => void, enabled: boolean = 
         capacitorListener.remove();
       }
     };
-  }, [onMessage, enabled]);
+  }, [onMessage, enabled, authTrigger]);
 
   const sendMessage = (msg: any) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
