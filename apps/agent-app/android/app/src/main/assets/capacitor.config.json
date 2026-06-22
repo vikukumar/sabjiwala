@@ -1,0 +1,33 @@
+{
+	"appId": "in.sbjiwala.agent",
+	"appName": "Sbjiwala Agent",
+	"webDir": "out",
+	"server": {
+		"cleartext": false,
+		"androidScheme": "https",
+		"allowNavigation": [
+			"*.sbjiwala.qzz.io",
+			"sbjiwala.qzz.io"
+		]
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 2000,
+			"launchAutoHide": true,
+			"backgroundColor": "#090d10",
+			"androidSplashResourceName": "splash",
+			"showSpinner": false
+		},
+		"PushNotifications": {
+			"presentationOptions": [
+				"badge",
+				"sound",
+				"alert"
+			]
+		},
+		"LocalNotifications": {
+			"smallIcon": "ic_stat_icon_config_sample",
+			"iconColor": "#10b981"
+		}
+	}
+}

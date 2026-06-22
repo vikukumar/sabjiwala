@@ -2,8 +2,7 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
 // All Firebase credentials MUST come from environment variables.
-// Never hardcode API keys here — they are public and will be exposed in the browser bundle.
-// Copy .env.example to .env.local and fill in your Firebase project values.
+declare const process: any;
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -33,8 +32,8 @@ export const initFirebase = () => {
   return app;
 };
 
-// Initialize Firebase Analytics
-export const initFirebaseAnalytics = async () => {
+// Initialize Firebase Analytics and Crashlytics
+export const initFirebaseAnalyticsAndCrashlytics = async () => {
   if (typeof window === "undefined") return null;
 
   if ((window as any).Capacitor?.isNative) {
@@ -43,9 +42,28 @@ export const initFirebaseAnalytics = async () => {
       // @ts-ignore
       await capAnalytics.FirebaseAnalytics.setCollectionEnabled({ enabled: true });
       console.log("Capacitor Firebase Analytics initialized");
+
+      // Initialize Crashlytics for JS errors
+      const capCrashlytics = await import("@capacitor-firebase/crashlytics");
+      // Native crashes are caught automatically. Here we add global listeners for JS errors.
+      window.addEventListener('error', (event) => {
+        capCrashlytics.FirebaseCrashlytics.recordException({
+          message: event.error?.message || event.message || "Unknown error",
+          stacktrace: event.error?.stack,
+        }).catch(e => console.warn("Crashlytics error:", e));
+      });
+      window.addEventListener('unhandledrejection', (event) => {
+        const error = event.reason;
+        capCrashlytics.FirebaseCrashlytics.recordException({
+          message: error?.message || (typeof error === "string" ? error : "Unhandled Promise Rejection"),
+          stacktrace: error?.stack,
+        }).catch(e => console.warn("Crashlytics error:", e));
+      });
+      console.log("Capacitor Firebase Crashlytics JS listeners registered");
+
       return capAnalytics.FirebaseAnalytics;
     } catch (err) {
-      console.warn("Capacitor Firebase Analytics error", err);
+      console.warn("Capacitor Firebase plugins error", err);
       return null;
     }
   }

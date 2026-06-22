@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { ToastProvider } from "@/components/ui/Toast";
 import AppShell from "@/components/AppShell";
-import { initFirebaseAnalytics } from "@/utils/firebase";
+import { initFirebaseAnalyticsAndCrashlytics } from "@sbjiwala/shared";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -23,8 +23,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    initFirebaseAnalytics().catch(err => {
-      console.warn("Failed to initialize Firebase Analytics on mount:", err);
+    initFirebaseAnalyticsAndCrashlytics().catch(err => {
+      console.warn("Failed to initialize Firebase Analytics/Crashlytics on mount:", err);
     });
   }, []);
 

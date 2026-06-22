@@ -17,11 +17,11 @@ project(':capacitor-dialog').projectDir = new File('../node_modules/@capacitor/d
 include ':capacitor-filesystem'
 project(':capacitor-filesystem').projectDir = new File('../node_modules/@capacitor/filesystem/android')
 
-include ':capacitor-network'
-project(':capacitor-network').projectDir = new File('../node_modules/@capacitor/network/android')
-
 include ':capacitor-local-notifications'
 project(':capacitor-local-notifications').projectDir = new File('../node_modules/@capacitor/local-notifications/android')
+
+include ':capacitor-network'
+project(':capacitor-network').projectDir = new File('../node_modules/@capacitor/network/android')
 
 include ':capacitor-push-notifications'
 project(':capacitor-push-notifications').projectDir = new File('../node_modules/@capacitor/push-notifications/android')
@@ -31,6 +31,9 @@ project(':capacitor-toast').projectDir = new File('../node_modules/@capacitor/to
 
 include ':capgo-capacitor-android-sms-retriever'
 project(':capgo-capacitor-android-sms-retriever').projectDir = new File('../node_modules/@capgo/capacitor-android-sms-retriever/android')
+
+include ':capgo-capacitor-stream-call'
+project(':capgo-capacitor-stream-call').projectDir = new File('../node_modules/@capgo/capacitor-stream-call/android')
 
 include ':capgo-capacitor-updater'
 project(':capgo-capacitor-updater').projectDir = new File('../node_modules/@capgo/capacitor-updater/android')
