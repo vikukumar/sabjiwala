@@ -38,26 +38,28 @@ export const initFirebaseAnalyticsAndCrashlytics = async () => {
 
   if ((window as any).Capacitor?.isNative) {
     try {
+      // @ts-ignore
       const capAnalytics = await import("@capacitor-firebase/analytics");
       // @ts-ignore
       await capAnalytics.FirebaseAnalytics.setCollectionEnabled({ enabled: true });
       console.log("Capacitor Firebase Analytics initialized");
 
       // Initialize Crashlytics for JS errors
+      // @ts-ignore
       const capCrashlytics = await import("@capacitor-firebase/crashlytics");
       // Native crashes are caught automatically. Here we add global listeners for JS errors.
       window.addEventListener('error', (event) => {
         capCrashlytics.FirebaseCrashlytics.recordException({
           message: event.error?.message || event.message || "Unknown error",
           stacktrace: event.error?.stack,
-        }).catch(e => console.warn("Crashlytics error:", e));
+        }).catch((e: any) => console.warn("Crashlytics error:", e));
       });
       window.addEventListener('unhandledrejection', (event) => {
         const error = event.reason;
         capCrashlytics.FirebaseCrashlytics.recordException({
           message: error?.message || (typeof error === "string" ? error : "Unhandled Promise Rejection"),
           stacktrace: error?.stack,
-        }).catch(e => console.warn("Crashlytics error:", e));
+        }).catch((e: any) => console.warn("Crashlytics error:", e));
       });
       console.log("Capacitor Firebase Crashlytics JS listeners registered");
 
