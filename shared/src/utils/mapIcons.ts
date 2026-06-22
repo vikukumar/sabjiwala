@@ -2,8 +2,8 @@
 export const createCustomerIcon = (L: any) => {
   return L.divIcon({
     html: `
-      <div class="relative flex items-center justify-center w-[34px] h-[34px] drop-shadow-md">
-        <div class="absolute inset-0 flex items-center justify-center shadow-sm" style="background-color: #3b82f6; border-radius: 50%; border: 2px solid white;">
+      <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #3b82f6; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" width="18" height="18">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 11.2c-2.67 0-8 1.34-8 4v1.8h16v-1.8c0-2.66-5.33-4-8-4z"/>
           </svg>
@@ -12,7 +12,7 @@ export const createCustomerIcon = (L: any) => {
     `,
     iconSize: [34, 34],
     iconAnchor: [17, 17],
-    className: "leaflet-custom-icon",
+    className: "",
   });
 };
 
@@ -20,8 +20,8 @@ export const createCustomerIcon = (L: any) => {
 export const createStoreIcon = (L: any) => {
   return L.divIcon({
     html: `
-      <div class="relative flex items-center justify-center w-[34px] h-[34px] drop-shadow-md">
-        <div class="absolute inset-0 flex items-center justify-center shadow-sm" style="background-color: #ef4444; border-radius: 50%; border: 2px solid white;">
+      <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #ef4444; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" width="18" height="18">
             <path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/>
           </svg>
@@ -30,7 +30,7 @@ export const createStoreIcon = (L: any) => {
     `,
     iconSize: [34, 34],
     iconAnchor: [17, 17],
-    className: "leaflet-custom-icon",
+    className: "",
   });
 };
 
@@ -51,8 +51,8 @@ export const createDeliveryAgentIcon = (L: any, vehicleType: string = "bike") =>
 
   return L.divIcon({
     html: `
-      <div class="relative flex items-center justify-center w-[38px] h-[38px] drop-shadow-md">
-        <div class="absolute inset-0 flex items-center justify-center shadow-sm" style="background-color: #f97316; border-radius: 50%; border: 2px solid white;">
+      <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #f97316; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${vehicleType === 'bicycle' ? 'none' : '#ffffff'}" stroke="#ffffff" stroke-width="1.5" width="22" height="22">
             ${svgPath}
           </svg>
@@ -61,7 +61,7 @@ export const createDeliveryAgentIcon = (L: any, vehicleType: string = "bike") =>
     `,
     iconSize: [38, 38],
     iconAnchor: [19, 19],
-    className: "leaflet-custom-icon",
+    className: "",
   });
 };
 
@@ -69,9 +69,8 @@ export const createDeliveryAgentIcon = (L: any, vehicleType: string = "bike") =>
 export const createLocationPinIcon = (L: any) => {
   return L.divIcon({
     html: `
-      <div class="relative flex items-center justify-center w-[40px] h-[40px] drop-shadow-lg">
-        <span class="absolute w-full h-full rounded-full animate-ping" style="background-color: rgba(99, 102, 241, 0.3);"></span>
-        <div class="relative w-[32px] h-[32px] rounded-full flex items-center justify-center shadow-md z-10" style="background: linear-gradient(135deg, #6366f1 0%, #9333ea 100%); border: 2.5px solid white;">
+      <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));">
+        <div style="position: absolute; width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1 0%, #9333ea 100%); border-radius: 50%; border: 2.5px solid white; display: flex; align-items: center; justify-content: center; z-index: 10;">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
             <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
             <polyline points="9 22 9 12 15 12 15 22"/>
@@ -81,6 +80,6 @@ export const createLocationPinIcon = (L: any) => {
     `,
     iconSize: [40, 40],
     iconAnchor: [20, 20],
-    className: "leaflet-custom-icon",
+    className: "",
   });
 };

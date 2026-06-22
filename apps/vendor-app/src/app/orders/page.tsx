@@ -319,15 +319,17 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
       // Store Pin - Backgroundless Swiggy Style
       const storeIcon = L.divIcon({
         html: `
-          <div style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" style="width: 32px; height: 32px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); flex-shrink: 0;">
-              <path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/>
-            </svg>
+          <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #ef4444; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" stroke="#ffffff" stroke-width="1.5" style="width: 20px; height: 20px; flex-shrink: 0;">
+                <path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/>
+              </svg>
+            </div>
           </div>
         `,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
-        className: "leaflet-custom-icon",
+        className: "",
       });
       const storeMarker = L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup("Store Pickup Location");
       storeMarkerRef.current = storeMarker;
@@ -335,15 +337,17 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
       // Customer Pin - Backgroundless Swiggy Style
       const homeIcon = L.divIcon({
         html: `
-          <div style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3b82f6" stroke="#ffffff" stroke-width="1.5" style="width: 32px; height: 32px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); flex-shrink: 0;">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 11.2c-2.67 0-8 1.34-8 4v1.8h16v-1.8c0-2.66-5.33-4-8-4z"/>
-            </svg>
+          <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #3b82f6; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" stroke="#ffffff" stroke-width="1.5" style="width: 20px; height: 20px; flex-shrink: 0;">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 11.2c-2.67 0-8 1.34-8 4v1.8h16v-1.8c0-2.66-5.33-4-8-4z"/>
+              </svg>
+            </div>
           </div>
         `,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
-        className: "leaflet-custom-icon",
+        className: "",
       });
       const customerMarker = L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Customer Delivery Location");
       customerMarkerRef.current = customerMarker;
@@ -365,16 +369,18 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
       // GPS Marker Setup
       const gpsIcon = L.divIcon({
         html: `
-          <div style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#eab308" stroke="#ffffff" stroke-width="1.5" style="width: 32px; height: 32px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); flex-shrink: 0;">
-              <circle cx="12" cy="12" r="10" fill="#eab308" stroke="#ffffff" stroke-width="1.5"></circle>
-              <circle cx="12" cy="12" r="3" fill="#ffffff"></circle>
-            </svg>
+          <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #f97316; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" stroke="#ffffff" stroke-width="1.5" style="width: 22px; height: 22px; flex-shrink: 0;">
+                <circle cx="12" cy="12" r="10" fill="#f97316" stroke="#ffffff" stroke-width="1.5"></circle>
+                <circle cx="12" cy="12" r="3" fill="#ffffff"></circle>
+              </svg>
+            </div>
           </div>
         `,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
-        className: "leaflet-custom-icon",
+        iconSize: [38, 38],
+        iconAnchor: [19, 19],
+        className: "",
       });
       
       const gpsMarker = L.marker([storeLat, storeLng], { icon: gpsIcon }).addTo(map).bindPopup("Live GPS Device Position");
