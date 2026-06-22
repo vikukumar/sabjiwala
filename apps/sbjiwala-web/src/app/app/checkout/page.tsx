@@ -12,7 +12,7 @@ import {
 import { Button, Badge, Spinner, EmptyState } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 import { useForm } from "react-hook-form";
-import { createLocationPinIcon } from "@sbjiwala/shared";
+import { createLocationPinIcon, createGPSLocationIcon } from "@sbjiwala/shared";
 
 // ==================== CONFIG CHECK ====================
 // Cashfree is enabled only when NEXT_PUBLIC_CASHFREE_APP_ID is set in env
@@ -32,8 +32,9 @@ function AddressForm({ onSave, onCancel, existing }: {
   const [resolvedAddressText, setResolvedAddressText] = useState("");
 
   const mapRef = useRef<HTMLDivElement>(null);
-  const [mapObj, setMapObj] = useState<any>(null);
+  const mapObj = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const gpsMarkerRef = useRef<any>(null);
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm({
     defaultValues: existing || {
@@ -124,7 +125,17 @@ function AddressForm({ onSave, onCancel, existing }: {
         reverseGeocode(e.latlng.lat, e.latlng.lng);
       });
 
-      setMapObj(map);
+      // Watermark
+      const watermarkControl = (L.control as any)({ position: 'bottomright' });
+      watermarkControl.onAdd = function () {
+        const div = L.DomUtil.create('div', 'watermark-overlay');
+        div.innerHTML = '<span style="font-weight: 900; font-size: 2.5rem; opacity: 0.15; user-select: none; pointer-events: none; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">SBJIWALA</span>';
+        div.style.padding = '10px';
+        return div;
+      };
+      watermarkControl.addTo(map);
+
+      mapObj.current = map;
 
       // Auto locate immediately on mount
       if (navigator.geolocation && !existing) {
@@ -136,6 +147,14 @@ function AddressForm({ onSave, onCancel, existing }: {
             setCoords({ lat: latitude, lng: longitude });
             map.setView([latitude, longitude], 16);
             marker.setLatLng([latitude, longitude]);
+            
+            const gpsIcon = createGPSLocationIcon(L);
+            if (!gpsMarkerRef.current) {
+               gpsMarkerRef.current = L.marker([latitude, longitude], { icon: gpsIcon }).addTo(map);
+            } else {
+               gpsMarkerRef.current.setLatLng([latitude, longitude]);
+            }
+
             reverseGeocode(latitude, longitude);
             setIsLocating(false);
           },
@@ -166,12 +185,22 @@ function AddressForm({ onSave, onCancel, existing }: {
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setCoords({ lat: latitude, lng: longitude });
-        if (mapObj) {
-          mapObj.setView([latitude, longitude], 16);
+        if (mapObj.current) {
+          mapObj.current.setView([latitude, longitude], 16);
         }
         if (markerRef.current) {
           markerRef.current.setLatLng([latitude, longitude]);
         }
+        
+        import("leaflet").then((L) => {
+          const gpsIcon = createGPSLocationIcon(L);
+          if (!gpsMarkerRef.current && mapObj.current) {
+             gpsMarkerRef.current = L.marker([latitude, longitude], { icon: gpsIcon }).addTo(mapObj.current);
+          } else if (gpsMarkerRef.current) {
+             gpsMarkerRef.current.setLatLng([latitude, longitude]);
+          }
+        });
+
         reverseGeocode(latitude, longitude);
         setIsLocating(false);
       },

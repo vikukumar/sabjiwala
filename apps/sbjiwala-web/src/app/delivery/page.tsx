@@ -264,18 +264,20 @@ function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: nu
 // =========== DELIVERY TRACKING MAP helpers ===========
 
 
-const fetchRoute = async (start: [number, number], end: [number, number]): Promise<[number, number][]> => {
+const fetchRoute = async (start: [number, number], end: [number, number]): Promise<{coords: [number, number][], distance: number, duration: number}> => {
   try {
     const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`);
     const data = await res.json();
     if (data.routes && data.routes.length > 0) {
       const coords = data.routes[0].geometry.coordinates; // Array of [lng, lat]
-      return coords.map((c: any) => [c[1], c[0]]); // Convert to [lat, lng]
+      const distance = data.routes[0].distance; // in meters
+      const duration = data.routes[0].duration; // in seconds
+      return { coords: coords.map((c: any) => [c[1], c[0]]), distance, duration }; // Convert to [lat, lng]
     }
   } catch (error) {
     console.error("OSRM Route API failed, falling back to straight line:", error);
   }
-  return [start, end];
+  return { coords: [start, end], distance: 0, duration: 0 };
 };
 
 // =========== DELIVERY TRACKING MAP ===========
@@ -288,6 +290,7 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
   const driverMarkerRef = useRef<any>(null);
   const agentToStoreLineRef = useRef<any>(null);
   const storeToCustomerLineRef = useRef<any>(null);
+  const [routeInfo, setRouteInfo] = useState<{distance: number, duration: number} | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined" || !mapContainerRef.current || !order) return;
@@ -310,11 +313,11 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
       const destLat = isPicked ? customerLat : storeLat;
       const destLng = isPicked ? customerLng : storeLng;
 
-      map = L.map(mapContainerRef.current!, { attributionControl: false }).setView([destLat, destLng], 14);
-      const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
-      const tileUrl = isDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+      map = L.map(mapContainerRef.current!, { attributionControl: false, zoomControl: false }).setView([destLat, destLng], 14);
+      L.control.zoom({ position: 'topright' }).addTo(map);
+
+      // Google Maps Voyager Style
+      const tileUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
       const tiles = L.tileLayer(tileUrl, {
         attribution: "",
         subdomains: "abcd",
@@ -358,9 +361,9 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
       storeToCustomerLineRef.current = storeToCustomerPolyline;
 
       // Fetch Leg 2: Store to Customer (dashed green / grey)
-      fetchRoute([storeLat, storeLng], [customerLat, customerLng]).then((coords) => {
+      fetchRoute([storeLat, storeLng], [customerLat, customerLng]).then((data) => {
         if (!active) return;
-        storeToCustomerPolyline.setLatLngs(coords);
+        storeToCustomerPolyline.setLatLngs(data.coords);
         if (isPicked) {
           storeToCustomerPolyline.setStyle({ color: "#cbd5e1", weight: 3, dashArray: "5 5" });
         } else {
@@ -370,16 +373,18 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
 
       // Fetch Leg 1: Driver to current target (Store or Customer)
       if (!isPicked) {
-        fetchRoute(currentPos, [storeLat, storeLng]).then((coords) => {
+        fetchRoute(currentPos, [storeLat, storeLng]).then((data) => {
           if (!active) return;
-          agentToStorePolyline.setLatLngs(coords);
+          agentToStorePolyline.setLatLngs(data.coords);
           agentToStorePolyline.setStyle({ color: "#f97316", weight: 5 });
+          setRouteInfo({ distance: data.distance, duration: data.duration });
         });
       } else {
-        fetchRoute(currentPos, [customerLat, customerLng]).then((coords) => {
+        fetchRoute(currentPos, [customerLat, customerLng]).then((data) => {
           if (!active) return;
-          agentToStorePolyline.setLatLngs(coords);
+          agentToStorePolyline.setLatLngs(data.coords);
           agentToStorePolyline.setStyle({ color: "#10b981", weight: 5 });
+          setRouteInfo({ distance: data.distance, duration: data.duration });
         });
       }
 
@@ -401,29 +406,41 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
       const isPicked = ["picked", "out_for_delivery"].includes(order.status);
       
       if (isPicked) {
-        fetchRoute(currentPos, [customerLat, customerLng]).then((coords) => {
+        fetchRoute(currentPos, [customerLat, customerLng]).then((data) => {
           if (agentToStoreLineRef.current) {
-            agentToStoreLineRef.current.setLatLngs(coords);
+            agentToStoreLineRef.current.setLatLngs(data.coords);
             agentToStoreLineRef.current.setStyle({ color: "#10b981", weight: 5 });
           }
+          setRouteInfo({ distance: data.distance, duration: data.duration });
         });
       } else {
-        fetchRoute(currentPos, [storeLat, storeLng]).then((coords) => {
+        fetchRoute(currentPos, [storeLat, storeLng]).then((data) => {
           if (agentToStoreLineRef.current) {
-            agentToStoreLineRef.current.setLatLngs(coords);
+            agentToStoreLineRef.current.setLatLngs(data.coords);
             agentToStoreLineRef.current.setStyle({ color: "#f97316", weight: 5 });
           }
+          setRouteInfo({ distance: data.distance, duration: data.duration });
         });
       }
     }
   }, [currentPos, mapObj, order]);
+
+  const handleLocateMe = () => {
+    if (mapObj) {
+      mapObj.flyTo(currentPos, 16, { animate: true, duration: 1.5 });
+    }
+  };
 
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 p-3 flex-wrap gap-2 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs">
         <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-100">
           <Navigation className="w-4 h-4 text-emerald-600 dark:text-emerald-450 animate-bounce" />
-          <span>{distanceInfo}</span>
+          <span>
+            {routeInfo ? (
+              <>ETA: {Math.round(routeInfo.duration / 60)} mins • {(routeInfo.distance / 1000).toFixed(1)} km</>
+            ) : distanceInfo}
+          </span>
         </div>
         <button onClick={() => setSimulationMode(!simulationMode)}
           className={`px-3 py-1 rounded-xl font-bold transition-all border cursor-pointer ${simulationMode
@@ -433,8 +450,23 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
           {simulationMode ? "Simulated GPS 🛰️" : "Device GPS 📍"}
         </button>
       </div>
-      <div className="map-3d-wrapper overflow-hidden border border-slate-200 dark:border-slate-800 relative shadow-inner" style={{ zIndex: 1 }}>
+      <div className="map-3d-wrapper overflow-hidden border border-slate-200 dark:border-slate-800 relative shadow-inner rounded-2xl" style={{ zIndex: 1 }}>
         <div ref={mapContainerRef} className="h-48 md:h-80 w-full relative" />
+        
+        {/* Sabjiwala Watermark */}
+        <div className="absolute bottom-2 left-2 pointer-events-none opacity-50 font-bold text-slate-800 tracking-widest text-[10px]" style={{ zIndex: 1000 }}>
+          SABJIWALA
+        </div>
+
+        {/* Locate Me FAB */}
+        <button 
+          onClick={handleLocateMe}
+          className="absolute bottom-4 right-4 bg-white dark:bg-slate-800 p-3 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+          style={{ zIndex: 1000 }}
+          title="Locate Me"
+        >
+          <Navigation className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+        </button>
       </div>
     </div>
   );
@@ -449,7 +481,7 @@ function ActiveOrdersDashboard() {
 
   const rejectItemsMutation = useMutation({
     mutationFn: async ({ orderId, payload }: { orderId: string; payload: any }) =>
-      api.post(`/orders/${orderId}/reject-items`, payload),
+      api.post(`/delivery/orders/${orderId}/reject-items`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] });
       success("Success", "Items rejected and prices updated successfully!");

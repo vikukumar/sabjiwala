@@ -309,43 +309,45 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
       const storeLat = parseFloat(store.latitude || "19.0760");
       const storeLng = parseFloat(store.longitude || "72.8777");
 
-      const map = L.map(mapRef.current!, { attributionControl: false }).setView([customerLat, customerLng], 14);
-      const isDark = document.documentElement.classList.contains("dark");
-      L.tileLayer(
-        isDark
-          ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        { attribution: "", subdomains: "abcd", maxZoom: 20 }
-      ).addTo(map);
+      const map = L.map(mapRef.current!, { attributionControl: false, zoomControl: false }).setView([customerLat, customerLng], 14);
+      L.control.zoom({ position: 'topright' }).addTo(map);
+
+      // Google Maps Voyager Style
+      const tileUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+      L.tileLayer(tileUrl, { attribution: "", subdomains: "abcd", maxZoom: 20 }).addTo(map);
 
       // Store Pin - Backgroundless Swiggy Style
       const storeIcon = L.divIcon({
+        className: "",
         html: `
-          <div style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" style="width: 32px; height: 32px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); flex-shrink: 0;">
-              <path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/>
-            </svg>
+          <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #ef4444; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" stroke="#ffffff" stroke-width="1.5" style="width: 20px; height: 20px; flex-shrink: 0;">
+                <path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/>
+              </svg>
+            </div>
           </div>
         `,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
-        className: "leaflet-custom-icon",
       });
       const storeMarker = L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup("Store Pickup Location");
       storeMarkerRef.current = storeMarker;
 
       // Customer Pin - Backgroundless Swiggy Style
       const homeIcon = L.divIcon({
+        className: "",
         html: `
-          <div style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3b82f6" stroke="#ffffff" stroke-width="1.5" style="width: 32px; height: 32px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); flex-shrink: 0;">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 11.2c-2.67 0-8 1.34-8 4v1.8h16v-1.8c0-2.66-5.33-4-8-4z"/>
-            </svg>
+          <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #3b82f6; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" stroke="#ffffff" stroke-width="1.5" style="width: 20px; height: 20px; flex-shrink: 0;">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 11.2c-2.67 0-8 1.34-8 4v1.8h16v-1.8c0-2.66-5.33-4-8-4z"/>
+              </svg>
+            </div>
           </div>
         `,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
-        className: "leaflet-custom-icon",
       });
       const customerMarker = L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Customer Delivery Location");
       customerMarkerRef.current = customerMarker;
@@ -366,17 +368,19 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
 
       // GPS Marker Setup
       const gpsIcon = L.divIcon({
+        className: "",
         html: `
-          <div style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#eab308" stroke="#ffffff" stroke-width="1.5" style="width: 32px; height: 32px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); flex-shrink: 0;">
-              <circle cx="12" cy="12" r="10" fill="#eab308" stroke="#ffffff" stroke-width="1.5"></circle>
-              <circle cx="12" cy="12" r="3" fill="#ffffff"></circle>
-            </svg>
+          <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #f97316; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" stroke="#ffffff" stroke-width="1.5" style="width: 22px; height: 22px; flex-shrink: 0;">
+                <circle cx="12" cy="12" r="10" fill="#f97316" stroke="#ffffff" stroke-width="1.5"></circle>
+                <circle cx="12" cy="12" r="3" fill="#ffffff"></circle>
+              </svg>
+            </div>
           </div>
         `,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
-        className: "leaflet-custom-icon",
+        iconSize: [38, 38],
+        iconAnchor: [19, 19],
       });
       
       const gpsMarker = L.marker([storeLat, storeLng], { icon: gpsIcon }).addTo(map).bindPopup("Live GPS Device Position");
@@ -392,7 +396,7 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
     };
   }, [order, store]);
 
-  // Update GPS position reactively
+  // Update GPS position reactively and push to backend
   useEffect(() => {
     if (mapObjRef.current && gpsCoords && gpsMarkerRef.current && order && store) {
       gpsMarkerRef.current.setLatLng(gpsCoords);
@@ -406,6 +410,15 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
           routeLineRef.current.setLatLngs(coords);
         }
       });
+
+      // Push to backend
+      if (order.status === "out_for_delivery") {
+        api.post("/vendors/me/location", {
+          latitude: gpsCoords[0],
+          longitude: gpsCoords[1],
+          order_id: order.id
+        }).catch(err => console.warn("Failed to push vendor location", err));
+      }
     }
   }, [gpsCoords]);
 
@@ -420,6 +433,25 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
       </div>
       <div className="w-full h-64 rounded-2xl border border-slate-205 dark:border-slate-800 overflow-hidden shadow-inner relative z-10">
         <div ref={mapRef} className="w-full h-full" />
+        
+        {/* Sabjiwala Watermark */}
+        <div className="absolute bottom-2 left-2 pointer-events-none opacity-50 font-bold text-slate-800 tracking-widest text-[10px]" style={{ zIndex: 1000 }}>
+          SABJIWALA
+        </div>
+
+        {/* Locate Me FAB */}
+        <button 
+          onClick={() => {
+            if (mapObjRef.current && gpsCoords) {
+              mapObjRef.current.flyTo(gpsCoords, 16, { animate: true, duration: 1.5 });
+            }
+          }}
+          className="absolute bottom-4 right-4 bg-white dark:bg-slate-800 p-3 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+          style={{ zIndex: 1000 }}
+          title="Locate Me"
+        >
+          <Navigation className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+        </button>
       </div>
     </div>
   );

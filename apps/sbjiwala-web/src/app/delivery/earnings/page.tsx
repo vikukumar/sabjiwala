@@ -18,7 +18,9 @@ function EarningsTabContent() {
     queryKey: ["deliveryEarnings"],
     queryFn: async () => {
       const res = await api.get("/delivery/earnings");
-      return res.data || [];
+      const data = res.data?.data || res.data || {};
+      const txns = data.transactions;
+      return Array.isArray(txns) ? txns : [];
     },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("sw_access_token"),
   });

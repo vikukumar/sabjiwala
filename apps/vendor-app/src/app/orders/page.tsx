@@ -330,7 +330,6 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
         `,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
-        className: "",
       });
       const storeMarker = L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup("Store Pickup Location");
       storeMarkerRef.current = storeMarker;
@@ -349,7 +348,6 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
         `,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
-        className: "",
       });
       const customerMarker = L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Customer Delivery Location");
       customerMarkerRef.current = customerMarker;
@@ -383,7 +381,6 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
         `,
         iconSize: [38, 38],
         iconAnchor: [19, 19],
-        className: "",
       });
       
       const gpsMarker = L.marker([storeLat, storeLng], { icon: gpsIcon }).addTo(map).bindPopup("Live GPS Device Position");
