@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from app.api.schemas import (
     APIResponse, DeliveryRuleCreate, PaginatedResponse, PaginationMeta,
     ServiceAreaCreate, StoreTimingsUpdate, VendorRegisterRequest, VendorResponse,
+    VendorLocationUpdate
 )
 from app.core.rbac.engine import get_current_user, rbac_engine
 from app.db.session import get_db
@@ -728,3 +729,61 @@ async def mark_all_vendor_notifications_read(
     except Exception:
         pass
     return APIResponse(success=True, message="All notifications marked as read")
+
+
+@router.post("/me/location", response_model=APIResponse)
+async def update_vendor_location(
+    body: VendorLocationUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update vendor's current location during self-delivery and broadcast."""
+    vendor = await Vendor.get_by_user_id(db, current_user["user_id"])
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    from app.models.vendor import VendorLocation
+    from datetime import datetime, timezone
+
+    # Save to history
+    location_log = VendorLocation(
+        vendor_id=vendor.id,
+        order_id=body.order_id,
+        latitude=body.latitude,
+        longitude=body.longitude,
+        accuracy=body.accuracy,
+        speed=body.speed,
+        heading=body.heading,
+        recorded_at=datetime.now(timezone.utc)
+    )
+    db.add(location_log)
+    await db.flush()
+    await db.commit()
+
+    # Broadcast to customer if order_id is provided
+    if body.order_id:
+        try:
+            from app.models.order import Order
+            from app.websocket.manager import ws_manager
+            import structlog
+            logger = structlog.get_logger()
+
+            res = await db.execute(select(Order).where(Order.id == body.order_id))
+            order = res.scalars().first()
+            if order and order.user_id:
+                ws_payload = {
+                    "type": "live_location_update",
+                    "data": {
+                        "order_id": str(order.id),
+                        "latitude": body.latitude,
+                        "longitude": body.longitude,
+                        "speed": body.speed,
+                        "heading": body.heading,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }
+                }
+                await ws_manager.send_to_user(order.user_id, ws_payload)
+        except Exception as e:
+            pass
+
+    return APIResponse(success=True, message="Location tracked")

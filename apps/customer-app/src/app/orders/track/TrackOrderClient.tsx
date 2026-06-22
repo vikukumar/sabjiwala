@@ -9,6 +9,7 @@ import { ChevronLeft, Phone, MessageSquare, MapPin, Truck, Clock, CheckCircle2 }
 import { Badge, Button, Spinner } from "@/components/ui/index";
 import { resolveLink } from "@/components/AppShell";
 import { createCustomerIcon, createStoreIcon, createDeliveryAgentIcon } from "@sbjiwala/shared";
+import { Navigation } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
 const VEHICLES = [
@@ -20,18 +21,20 @@ const VEHICLES = [
 const COLORS = ["#ea580c"];
 
 
-const fetchRoute = async (start: [number, number], end: [number, number]): Promise<[number, number][]> => {
+const fetchRoute = async (start: [number, number], end: [number, number]): Promise<{coords: [number, number][], distance: number, duration: number}> => {
   try {
     const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`);
     const data = await res.json();
     if (data.routes && data.routes.length > 0) {
       const coords = data.routes[0].geometry.coordinates; // Array of [lng, lat]
-      return coords.map((c: any) => [c[1], c[0]]); // Convert to [lat, lng]
+      const distance = data.routes[0].distance; // in meters
+      const duration = data.routes[0].duration; // in seconds
+      return { coords: coords.map((c: any) => [c[1], c[0]]), distance, duration }; // Convert to [lat, lng]
     }
   } catch (error) {
     console.error("OSRM Route API failed, falling back to straight line:", error);
   }
-  return [start, end];
+  return { coords: [start, end], distance: 0, duration: 0 };
 };
 
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -59,6 +62,7 @@ export default function TrackOrderClient() {
   const driverMarkerRef = useRef<any>(null);
   const agentToStoreLineRef = useRef<any>(null);
   const storeToCustomerLineRef = useRef<any>(null);
+  const [routeInfo, setRouteInfo] = useState<{distance: number, duration: number} | null>(null);
 
   const { data: order } = useQuery<any>({
     queryKey: ["order", id],
@@ -115,11 +119,11 @@ export default function TrackOrderClient() {
       const initDriverLat = driverLocation?.latitude || storeLat;
       const initDriverLng = driverLocation?.longitude || storeLng;
 
-      map = L.map(mapRef.current!, { attributionControl: false }).setView([customerLat, customerLng], 14);
-      const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
-      const tileUrl = isDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+      map = L.map(mapRef.current!, { attributionControl: false, zoomControl: false }).setView([customerLat, customerLng], 14);
+      L.control.zoom({ position: 'topright' }).addTo(map);
+
+      // Google Maps Voyager Style
+      const tileUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
       const tiles = L.tileLayer(tileUrl, {
         attribution: "",
         subdomains: "abcd",
@@ -166,9 +170,9 @@ export default function TrackOrderClient() {
       storeToCustomerLineRef.current = storeToCustomerPolyline;
 
       // Fetch Leg 2: Store to Customer (dashed green / grey)
-      fetchRoute([storeLat, storeLng], [customerLat, customerLng]).then((coords) => {
+      fetchRoute([storeLat, storeLng], [customerLat, customerLng]).then((data) => {
         if (!active) return;
-        storeToCustomerPolyline.setLatLngs(coords);
+        storeToCustomerPolyline.setLatLngs(data.coords);
         if (isPicked) {
           storeToCustomerPolyline.setStyle({ color: "#cbd5e1", weight: 3, dashArray: "5 5" });
         } else {
@@ -178,16 +182,18 @@ export default function TrackOrderClient() {
 
       // Fetch Leg 1: Driver to current target (Store or Customer)
       if (!isPicked) {
-        fetchRoute([initDriverLat, initDriverLng], [storeLat, storeLng]).then((coords) => {
+        fetchRoute([initDriverLat, initDriverLng], [storeLat, storeLng]).then((data) => {
           if (!active) return;
-          agentToStorePolyline.setLatLngs(coords);
+          agentToStorePolyline.setLatLngs(data.coords);
           agentToStorePolyline.setStyle({ color: "#f97316", weight: 5 });
+          setRouteInfo({ distance: data.distance, duration: data.duration });
         });
       } else {
-        fetchRoute([initDriverLat, initDriverLng], [customerLat, customerLng]).then((coords) => {
+        fetchRoute([initDriverLat, initDriverLng], [customerLat, customerLng]).then((data) => {
           if (!active) return;
-          agentToStorePolyline.setLatLngs(coords);
+          agentToStorePolyline.setLatLngs(data.coords);
           agentToStorePolyline.setStyle({ color: "#10b981", weight: 5 });
+          setRouteInfo({ distance: data.distance, duration: data.duration });
         });
       }
 
@@ -224,24 +230,29 @@ export default function TrackOrderClient() {
       const isPicked = ["picked", "out_for_delivery"].includes(order.status);
       
       if (isPicked) {
-        fetchRoute(newPos, [customerLat, customerLng]).then((coords) => {
+        fetchRoute(newPos, [customerLat, customerLng]).then((data) => {
           if (agentToStoreLineRef.current) {
-            agentToStoreLineRef.current.setLatLngs(coords);
+            agentToStoreLineRef.current.setLatLngs(data.coords);
             agentToStoreLineRef.current.setStyle({ color: "#10b981", weight: 5 });
           }
+          setRouteInfo({ distance: data.distance, duration: data.duration });
         });
       } else {
-        fetchRoute(newPos, [storeLat, storeLng]).then((coords) => {
+        fetchRoute(newPos, [storeLat, storeLng]).then((data) => {
           if (agentToStoreLineRef.current) {
-            agentToStoreLineRef.current.setLatLngs(coords);
+            agentToStoreLineRef.current.setLatLngs(data.coords);
             agentToStoreLineRef.current.setStyle({ color: "#f97316", weight: 5 });
           }
+          setRouteInfo({ distance: data.distance, duration: data.duration });
         });
       }
     }
   }, [driverLocation, mapObj, order]);
 
-  const eta = order?.status === "out_for_delivery" ? "~5 min" : order?.status === "packed" ? "~15 min" : null;
+  let eta = order?.status === "out_for_delivery" ? "~5 min" : order?.status === "packed" ? "~15 min" : null;
+  if (routeInfo && routeInfo.duration > 0) {
+    eta = `~${Math.ceil(routeInfo.duration / 60)} min`;
+  }
 
   const customerLat = order?.delivery_latitude || order?.delivery_address?.latitude || 19.0735;
   const customerLng = order?.delivery_longitude || order?.delivery_address?.longitude || 72.9985;
@@ -297,7 +308,7 @@ export default function TrackOrderClient() {
             <div>
               <p className="text-[10px] uppercase font-bold text-slate-500">Distance</p>
               <p className="text-sm font-black text-slate-900 dark:text-white">
-                {distance > 0 ? `${distance.toFixed(2)} km` : "Calculating..."}
+                {routeInfo ? `${(routeInfo.distance / 1000).toFixed(1)} km` : distance > 0 ? `${distance.toFixed(2)} km` : "Calculating..."}
               </p>
             </div>
           </div>
@@ -320,7 +331,7 @@ export default function TrackOrderClient() {
       )}
 
       {/* Map */}
-      <div className="map-3d-wrapper card overflow-hidden" style={{ height: "360px" }}>
+      <div className="map-3d-wrapper card overflow-hidden relative" style={{ height: "360px" }}>
         <div ref={mapRef} className="w-full h-full" style={{ zIndex: 1 }} />
         {!mapLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
@@ -330,6 +341,32 @@ export default function TrackOrderClient() {
             </div>
           </div>
         )}
+        
+        {/* Sabjiwala Watermark */}
+        <div className="absolute bottom-2 left-2 pointer-events-none opacity-50 font-bold text-slate-800 tracking-widest text-[10px]" style={{ zIndex: 1000 }}>
+          SABJIWALA
+        </div>
+
+        {/* Locate Me FAB */}
+        <button 
+          onClick={() => {
+            if (mapObj) {
+              if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => mapObj.flyTo([pos.coords.latitude, pos.coords.longitude], 16, { animate: true, duration: 1.5 }),
+                  () => mapObj.flyTo([driverLat, driverLng], 15)
+                );
+              } else {
+                mapObj.flyTo([driverLat, driverLng], 15);
+              }
+            }
+          }}
+          className="absolute bottom-4 right-4 bg-white dark:bg-slate-800 p-3 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+          style={{ zIndex: 1000 }}
+          title="Locate Me"
+        >
+          <Navigation className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+        </button>
       </div>
 
       {/* Delivery Agent Info */}

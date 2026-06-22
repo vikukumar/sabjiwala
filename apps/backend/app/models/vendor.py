@@ -321,3 +321,29 @@ class VendorPayout(BaseEntity):
     __table_args__ = (
         Index("ix_vendor_payouts_status", "vendor_id", "status", "created_at"),
     )
+
+
+class VendorLocation(BaseEntity):
+    __tablename__ = "vendor_locations"
+
+    vendor_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    order_id: Mapped[Optional[UUID]] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"),
+        nullable=True, index=True,
+    )
+    latitude: Mapped[float] = mapped_column(Float, nullable=False)
+    longitude: Mapped[float] = mapped_column(Float, nullable=False)
+    accuracy: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    speed: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    heading: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    __table_args__ = (
+        Index("ix_vendor_locations_time", "vendor_id", "recorded_at"),
+    )

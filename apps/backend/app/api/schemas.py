@@ -809,5 +809,15 @@ class EmailTemplateTestRequest(BaseModel):
 
 class DeliveryPayoutRequest(BaseModel):
     amount: float = Field(..., gt=0)
-    payout_method: str
+    payout_method: str = "bank_transfer"
+    bank_account_id: Optional[UUID] = None
     notes: Optional[str] = None
+
+
+class VendorLocationUpdate(BaseModel):
+    latitude: float
+    longitude: float
+    accuracy: Optional[float] = None
+    speed: Optional[float] = None
+    heading: Optional[float] = None
+    order_id: Optional[UUID] = None

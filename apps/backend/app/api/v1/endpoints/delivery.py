@@ -144,7 +144,7 @@ async def update_location(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update delivery agent's current location via REST API."""
+    """Update delivery agent's current location via REST API and broadcast to customers."""
     boy = await _get_delivery_boy(current_user["user_id"], db)
     
     boy.current_latitude = body.latitude
@@ -163,6 +163,46 @@ async def update_location(
     db.add(location_log)
     await db.flush()
     await db.commit()
+
+    # Broadcast to customer of any active orders
+    try:
+        from app.websocket.manager import ws_manager
+        res = await db.execute(
+            select(Order).where(
+                Order.delivery_boy_id == current_user["user_id"],
+                Order.status.in_([OrderStatus.OUT_FOR_DELIVERY, OrderStatus.PICKED]),
+                Order.is_deleted == False
+            )
+        )
+        active_orders = res.scalars().all()
+        for order in active_orders:
+            ws_payload = {
+                "type": "live_location_update",
+                "data": {
+                    "order_id": str(order.id),
+                    "latitude": body.latitude,
+                    "longitude": body.longitude,
+                    "speed": body.speed,
+                    "heading": body.heading,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+            # Send to customer
+            await ws_manager.send_to_user(order.user_id, ws_payload)
+            # Send to vendor
+            if order.vendor_id:
+                from app.models.vendor import Vendor, VendorStaff
+                vendor_res = await db.execute(select(Vendor.user_id).where(Vendor.id == order.vendor_id))
+                main_v_user = vendor_res.scalar_one_or_none()
+                if main_v_user:
+                    await ws_manager.send_to_user(main_v_user, ws_payload)
+                
+                staff_users = await db.execute(select(VendorStaff.user_id).where(VendorStaff.vendor_id == order.vendor_id))
+                for (v_user_id,) in staff_users:
+                    await ws_manager.send_to_user(v_user_id, ws_payload)
+    except Exception as e:
+        logger.error("Failed to broadcast delivery location", error=str(e))
+
     return APIResponse(success=True, message="Location updated successfully")
 
 

@@ -309,14 +309,12 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
       const storeLat = parseFloat(store.latitude || "19.0760");
       const storeLng = parseFloat(store.longitude || "72.8777");
 
-      const map = L.map(mapRef.current!, { attributionControl: false }).setView([customerLat, customerLng], 14);
-      const isDark = document.documentElement.classList.contains("dark");
-      L.tileLayer(
-        isDark
-          ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        { attribution: "", subdomains: "abcd", maxZoom: 20 }
-      ).addTo(map);
+      const map = L.map(mapRef.current!, { attributionControl: false, zoomControl: false }).setView([customerLat, customerLng], 14);
+      L.control.zoom({ position: 'topright' }).addTo(map);
+
+      // Google Maps Voyager Style
+      const tileUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+      L.tileLayer(tileUrl, { attribution: "", subdomains: "abcd", maxZoom: 20 }).addTo(map);
 
       // Store Pin - Backgroundless Swiggy Style
       const storeIcon = L.divIcon({
@@ -392,7 +390,7 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
     };
   }, [order, store]);
 
-  // Update GPS position reactively
+  // Update GPS position reactively and push to backend
   useEffect(() => {
     if (mapObjRef.current && gpsCoords && gpsMarkerRef.current && order && store) {
       gpsMarkerRef.current.setLatLng(gpsCoords);
@@ -406,6 +404,15 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
           routeLineRef.current.setLatLngs(coords);
         }
       });
+
+      // Push to backend
+      if (order.status === "out_for_delivery") {
+        api.post("/vendors/me/location", {
+          latitude: gpsCoords[0],
+          longitude: gpsCoords[1],
+          order_id: order.id
+        }).catch(err => console.warn("Failed to push vendor location", err));
+      }
     }
   }, [gpsCoords]);
 
@@ -420,6 +427,25 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
       </div>
       <div className="w-full h-64 rounded-2xl border border-slate-205 dark:border-slate-800 overflow-hidden shadow-inner relative z-10">
         <div ref={mapRef} className="w-full h-full" />
+        
+        {/* Sabjiwala Watermark */}
+        <div className="absolute bottom-2 left-2 pointer-events-none opacity-50 font-bold text-slate-800 tracking-widest text-[10px]" style={{ zIndex: 1000 }}>
+          SABJIWALA
+        </div>
+
+        {/* Locate Me FAB */}
+        <button 
+          onClick={() => {
+            if (mapObjRef.current && gpsCoords) {
+              mapObjRef.current.flyTo(gpsCoords, 16, { animate: true, duration: 1.5 });
+            }
+          }}
+          className="absolute bottom-4 right-4 bg-white dark:bg-slate-800 p-3 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+          style={{ zIndex: 1000 }}
+          title="Locate Me"
+        >
+          <Navigation className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+        </button>
       </div>
     </div>
   );
