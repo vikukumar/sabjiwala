@@ -482,6 +482,28 @@ async def get_e2ee_public_key(request: Request, response: Response):
     return APIResponse(success=True, data={"public_key": pem})
 
 
+from fastapi.security import OAuth2PasswordRequestForm
+
+@router.post("/token", include_in_schema=True)
+async def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    request: Request = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """OAuth2 compatible token login, required for Swagger UI."""
+    body = LoginRequest(
+        identifier=form_data.username,
+        password=form_data.password,
+    )
+    response = await login(body=body, request=request, db=db)
+    
+    if response.success and response.meta:
+        return {
+            "access_token": response.meta["access_token"],
+            "token_type": response.meta["token_type"]
+        }
+    raise HTTPException(status_code=400, detail="Login failed")
+
 @router.post("/login", response_model=APIResponse[UserResponse])
 async def login(
     body: LoginRequest,

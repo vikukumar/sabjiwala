@@ -38,7 +38,7 @@ class RBACEngine:
         # Try cache
         if redis:
             cache_key = f"{PERMISSION_CACHE_PREFIX}{user_id}"
-            cached = await redis.smembers(cache_key)
+            cached = await redis.smembers(cache_key)  # type: ignore
             if cached:
                 return {p.decode() if isinstance(p, bytes) else p for p in cached}
 
@@ -63,7 +63,7 @@ class RBACEngine:
         # Cache in Redis
         if redis and permissions:
             cache_key = f"{PERMISSION_CACHE_PREFIX}{user_id}"
-            await redis.sadd(cache_key, *permissions)
+            await redis.sadd(cache_key, *permissions)  # type: ignore
             await redis.expire(cache_key, PERMISSION_CACHE_TTL)
 
         return permissions
@@ -172,7 +172,10 @@ rbac_engine = RBACEngine()
 
 # ===== FastAPI Dependencies =====
 
-async def get_current_user(request: Request) -> dict:
+from fastapi.security import OAuth2PasswordBearer
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
+
+async def get_current_user(request: Request, token: Optional[str] = Depends(oauth2_scheme)) -> dict:
     """
     Extract and validate the current user from the JWT token in the Authorization header.
     Returns a dict with user_id, user_type, permissions, device_id.
@@ -180,15 +183,15 @@ async def get_current_user(request: Request) -> dict:
     from app.core.security.jwt import decode_token, is_token_blacklisted
     import jwt as pyjwt
 
-    auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid authorization header",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    token = auth_header.split(" ", 1)[1]
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid authorization header",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        token = auth_header.split(" ", 1)[1]
 
     try:
         payload = decode_token(token)

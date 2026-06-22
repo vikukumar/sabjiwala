@@ -842,3 +842,178 @@ async def reject_order_items(
     await db.commit()
 
     return APIResponse(success=True, message=f"Order updated successfully. {refund_message}")
+
+
+@router.get("/history", response_model=APIResponse)
+async def get_delivery_history(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve the delivery boy's past orders (delivered, cancelled, or rejected)."""
+    # Authenticate and get delivery boy
+    boy = await _get_delivery_boy(current_user["user_id"], db)
+
+    # Fetch orders assigned to this user that are completed
+    res = await db.execute(
+        select(Order)
+        .options(selectinload(Order.items))
+        .where(
+            Order.delivery_boy_id == current_user["user_id"],
+            Order.status.in_([
+                OrderStatus.DELIVERED,
+                OrderStatus.CANCELLED,
+                OrderStatus.RETURNED
+            ]),
+            Order.is_deleted == False
+        )
+        .order_by(Order.created_at.desc())
+        .limit(50)
+    )
+    orders = res.scalars().all()
+    
+    # Pre-fetch vendor stores
+    vendor_ids = [order.vendor_id for order in orders]
+    vendor_stores = {}
+    if vendor_ids:
+        store_res = await db.execute(
+            select(VendorStore).where(VendorStore.vendor_id.in_(vendor_ids))
+        )
+        for store in store_res.scalars().all():
+            vendor_stores[store.vendor_id] = store
+
+    data = []
+    for order in orders:
+        store = vendor_stores.get(order.vendor_id)
+        store_data = {
+            "store_name": store.store_name,
+            "address_line_1": store.address_line_1,
+            "city": store.city,
+        } if store else None
+
+        data.append({
+            "id": str(order.id),
+            "order_number": order.order_number,
+            "status": order.status.value,
+            "delivery_address": order.delivery_address,
+            "total_amount": float(order.total_amount),
+            "payment_method": order.payment_method,
+            "created_at": order.created_at.isoformat(),
+            "vendor_store": store_data,
+        })
+
+    return APIResponse(success=True, data=data)
+
+
+@router.get("/earnings", response_model=APIResponse)
+async def get_delivery_earnings(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve delivery agent's wallet balance, total earnings, and cash collected."""
+    boy = await _get_delivery_boy(current_user["user_id"], db)
+    
+    from app.models.delivery import DeliveryWallet
+    vw_res = await db.execute(select(DeliveryWallet).where(DeliveryWallet.delivery_boy_id == boy.id))
+    wallet = vw_res.scalars().first()
+
+    # If no wallet exists, return empty structure
+    if not wallet:
+        return APIResponse(success=True, data={
+            "balance": 0.0,
+            "pending_balance": 0.0,
+            "total_earned": 0.0,
+            "cash_in_hand": 0.0,
+            "total_collected_cash": 0.0,
+            "transactions": []
+        })
+
+    # Fetch recent transactions
+    from app.models.payment import WalletTransaction
+    tx_res = await db.execute(
+        select(WalletTransaction)
+        .where(WalletTransaction.user_id == current_user["user_id"])
+        .order_by(WalletTransaction.created_at.desc())
+        .limit(20)
+    )
+    transactions = tx_res.scalars().all()
+
+    tx_data = []
+    for tx in transactions:
+        tx_data.append({
+            "id": str(tx.id),
+            "amount": float(tx.amount),
+            "transaction_type": tx.transaction_type.value,
+            "description": tx.description,
+            "created_at": tx.created_at.isoformat()
+        })
+
+    data = {
+        "balance": float(wallet.balance),
+        "pending_balance": float(wallet.pending_balance),
+        "total_earned": float(wallet.total_earned),
+        "cash_in_hand": float(wallet.cash_in_hand),
+        "total_collected_cash": float(wallet.total_collected_cash),
+        "transactions": tx_data
+    }
+    
+    return APIResponse(success=True, data=data)
+
+
+from app.api.schemas import DeliveryPayoutRequest
+from app.models.delivery import DeliverySettlement
+
+@router.post("/payout", response_model=APIResponse)
+async def request_payout(
+    body: DeliveryPayoutRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Request a payout/withdrawal of earnings."""
+    boy = await _get_delivery_boy(current_user["user_id"], db)
+    
+    from app.models.delivery import DeliveryWallet
+    vw_res = await db.execute(select(DeliveryWallet).where(DeliveryWallet.delivery_boy_id == boy.id))
+    wallet = vw_res.scalars().first()
+
+    if not wallet or wallet.balance < body.amount:
+        raise HTTPException(status_code=400, detail="Insufficient wallet balance for this payout request")
+
+    # Deduct from available, add to pending
+    wallet.balance -= body.amount
+    wallet.pending_balance += body.amount
+
+    # Create settlement request
+    now = datetime.now(timezone.utc)
+    settlement = DeliverySettlement(
+        delivery_boy_id=boy.id,
+        period_start=now,
+        period_end=now,
+        delivery_earnings=0.0,
+        tips=0.0,
+        cash_collected=0.0,
+        cash_deposited=0.0,
+        net_amount=body.amount,
+        status="pending"
+    )
+    db.add(settlement)
+
+    # Log wallet transaction
+    from app.models.payment import WalletTransaction, WalletTransactionType
+    tx = WalletTransaction(
+        user_id=current_user["user_id"],
+        amount=body.amount,
+        transaction_type=WalletTransactionType.PAYOUT,
+        reference_type="payout",
+        reference_id=str(settlement.id), # Will use placeholder or we can leave None and update later
+        description=f"Payout requested via {body.payout_method}",
+    )
+    db.add(tx)
+
+    await db.flush()
+    # Update reference ID
+    tx.reference_id = str(settlement.id)
+    
+    await db.commit()
+
+    return APIResponse(success=True, message="Payout requested successfully. It will be processed within 1-2 business days.")
+

@@ -492,6 +492,17 @@ class OrderResponse(BaseModel):
     delivery_address: Optional[dict] = None  # JSONB with full_name, address_line_1, city, postal_code, phone
     actual_delivery_time: Optional[datetime] = None
     return_request: Optional[dict] = None
+
+    from pydantic import field_validator
+    @field_validator(
+        'subtotal', 'delivery_charge', 'original_delivery_charge', 'platform_fee',
+        'convenience_fee', 'tax_amount', 'discount_amount', 'coupon_discount',
+        'total_amount', 'packaging_charge', mode='before'
+    )
+    @classmethod
+    def none_to_zero(cls, v):
+        return 0.0 if v is None else v
+
     class Config:
         from_attributes = True
 
@@ -794,3 +805,9 @@ class EmailTemplateTestRequest(BaseModel):
     variables: Optional[dict] = {}
 
 
+# ===== Delivery App Schemas =====
+
+class DeliveryPayoutRequest(BaseModel):
+    amount: float = Field(..., gt=0)
+    payout_method: str
+    notes: Optional[str] = None

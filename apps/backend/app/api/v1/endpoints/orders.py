@@ -325,7 +325,11 @@ async def list_orders(
                 OrderStatus.OUT_FOR_DELIVERY
             ]))
         else:
-            query = query.where(Order.status == status_filter)
+            try:
+                valid_status = OrderStatus(status_filter)
+                query = query.where(Order.status == valid_status)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid status filter: {status_filter}")
 
     # Count
     count_query = select(func.count()).select_from(query.subquery())
