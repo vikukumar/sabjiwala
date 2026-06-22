@@ -1972,7 +1972,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             onClose={() => setShowPermissionsModal(false)}
             onPermissionGranted={() => {
               // refresh page state/items
-              window.location.reload();
+              if (typeof window !== "undefined" && window.location.host === "localhost") {
+                 window.location.href = "/";
+              } else {
+                 window.location.reload();
+              }
             }}
           />
         )}

@@ -140,17 +140,9 @@ async def preview_order(
     
     # Platform Fee
     platform_fee = 0.0
-    if admin_pf and admin_pf.value is not None:
-        platform_fee = float(admin_pf.value)
-    elif rule and rule.platform_fee is not None:
-        platform_fee = float(rule.platform_fee)
 
     # Convenience Fee
     convenience_fee = 0.0
-    if admin_cf and admin_cf.value is not None:
-        convenience_fee = float(admin_cf.value)
-    elif rule and rule.convenience_fee is not None:
-        convenience_fee = float(rule.convenience_fee)
 
     # Free Delivery Above
     free_delivery_limit = 0.0

@@ -51,9 +51,9 @@ export default function LoginPage() {
       const role = getStoredUserType() || "delivery_boy";
       const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
       const isStandaloneCustomer = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "customer" || window.location.port === "3000");
-      const isStandaloneVendor = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "vendor" || window.location.port === "3001" || window.location.host.startsWith("vendor."));
-      const isStandaloneDelivery = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "delivery" || window.location.port === "3002" || window.location.host.startsWith("delivery."));
-      const isStandaloneAdmin = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "admin" || window.location.port === "3003" || window.location.host.startsWith("admin."));
+      const isStandaloneVendor = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "vendor" || window.location.port === "3001" || window.location.host.includes("vendor"));
+      const isStandaloneDelivery = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "delivery" || window.location.port === "3002" || window.location.host.includes("delivery") || window.location.host === "localhost");
+      const isStandaloneAdmin = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "admin" || window.location.port === "3003" || window.location.host.includes("admin"));
 
       if (isStandaloneCustomer || isStandaloneVendor || isStandaloneDelivery || isStandaloneAdmin) {
         router.replace("/");
@@ -205,9 +205,9 @@ export default function LoginPage() {
       if (typeof window !== "undefined") {
         const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
         const isStandaloneCustomer = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "customer" || window.location.port === "3000");
-        const isStandaloneVendor = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "vendor" || window.location.port === "3001" || window.location.host.startsWith("vendor."));
-        const isStandaloneDelivery = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "delivery" || window.location.port === "3002" || window.location.host.startsWith("delivery."));
-        const isStandaloneAdmin = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "admin" || window.location.port === "3003" || window.location.host.startsWith("admin."));
+        const isStandaloneVendor = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "vendor" || window.location.port === "3001" || window.location.host.includes("vendor"));
+        const isStandaloneDelivery = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "delivery" || window.location.port === "3002" || window.location.host.includes("delivery") || window.location.host === "localhost");
+        const isStandaloneAdmin = !isUnified && (process.env.NEXT_PUBLIC_APP_MODE === "admin" || window.location.port === "3003" || window.location.host.includes("admin"));
 
         if (isStandaloneCustomer || isStandaloneVendor || isStandaloneDelivery || isStandaloneAdmin) {
           router.replace("/");

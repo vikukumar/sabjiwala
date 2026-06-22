@@ -76,7 +76,7 @@ function OtpPromptModal({
         </div>
         <h3 className="text-base font-black uppercase tracking-wider">{title}</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">{message}</p>
-        
+
         <div className="space-y-1">
           <label className="block text-[10px] font-bold text-slate-400 uppercase text-left mb-1">Enter Customer OTP</label>
           <input
@@ -96,13 +96,13 @@ function OtpPromptModal({
               <span className="text-[9px] font-black text-rose-500 uppercase animate-pulse">Required</span>
             )}
           </div>
-          
+
           <input
             type="file" multiple accept="image/*"
             ref={fileInputRef} onChange={handleFileUpload}
             className="hidden" disabled={loading || uploading}
           />
-          
+
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -344,7 +344,7 @@ export default function VendorDashboard() {
         html: `
           <div style="filter: drop-shadow(0 4px 10px rgba(239, 68, 68, 0.4)); position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;">
             <span style="position: absolute; width: 42px; height: 42px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); animation: ping 1.8s infinite; display: block; box-sizing: border-box;"></span>
-            <div style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 2; box-sizing: border-box;">
+            <div style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 2; box-sizing: border-box;">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
                 <path d="m2 7 4.41-3.67A2 2 0 0 1 7.73 3h8.54a2 2 0 0 1 1.32.33L22 7"/>
                 <path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
@@ -355,7 +355,7 @@ export default function VendorDashboard() {
         `,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
-        className: "leaflet-custom-icon"
+        className: "bg-transparent border-none shadow-none"
       });
 
       const marker = L.marker([centerLat, centerLng], { icon: storeIcon, draggable: true }).addTo(map);
@@ -491,15 +491,29 @@ export default function VendorDashboard() {
   if (!isMounted) {
     return (
       <div className="fixed inset-0 z-[9999] bg-[#090d10] flex flex-col items-center justify-center space-y-6">
-        <div className="relative">
-          <div className="w-24 h-24 rounded-3xl bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center p-3 shadow-[0_0_50px_rgba(16,185,129,0.3)]">
-            <img src="/icon.png" alt="Vendor Portal" className="w-full h-full object-contain drop-shadow-xl" onError={(e) => { e.currentTarget.src = "/icon.png"; }} />
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 w-32 h-32 rounded-full border-[3px] border-slate-800 animate-ping opacity-20" style={{ animationDuration: '2s' }} />
+          <div className="w-28 h-28 rounded-[2rem] bg-gradient-to-tr from-emerald-600/20 to-teal-500/20 backdrop-blur-md border border-emerald-500/30 flex items-center justify-center p-4 shadow-[0_0_80px_rgba(16,185,129,0.25)] relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+            <img
+              src={"/icon.png"}
+              alt="Vendor Portal"
+              className="w-full h-full object-contain drop-shadow-2xl animate-pulse"
+              style={{ animationDuration: '2.5s' }}
+              onError={(e) => { e.currentTarget.src = "/icon.png"; }}
+            />
           </div>
-          <div className="absolute inset-0 w-24 h-24 rounded-3xl border-4 border-emerald-500 border-t-transparent animate-spin" style={{ animationDuration: '1.2s' }} />
         </div>
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-black tracking-wider text-white">Sbjiwala Vendor</h2>
-          <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest animate-pulse">Initializing Portal...</p>
+        <div className="text-center space-y-3 mt-8">
+          <h2 className="text-3xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white via-emerald-100 to-emerald-400">
+            SBJIWALA VENDOR
+          </h2>
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-xs font-bold text-emerald-400/80 uppercase tracking-[0.3em]">Preparing Dashboard</p>
+            <div className="w-48 h-1 bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full animate-[progress_1.5s_ease-in-out_infinite_alternate] w-1/2" />
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -588,7 +602,7 @@ export default function VendorDashboard() {
                   const y = 170 - ((d.revenue || 0) / maxRevenue) * (170 - 30);
                   return { x, y, val: d.revenue || 0, date: d.date };
                 });
-                
+
                 const linePath = revenuePoints.reduce((acc: string, p: any, i: number) => {
                   return acc + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`);
                 }, "");
@@ -617,7 +631,7 @@ export default function VendorDashboard() {
                       );
                     })}
                     <text x="35" y="35" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">₹{Math.round(maxRevenue)}</text>
-                    <text x="35" y="100" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">₹{Math.round(maxRevenue/2)}</text>
+                    <text x="35" y="100" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">₹{Math.round(maxRevenue / 2)}</text>
                     <text x="35" y="170" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">₹0</text>
 
                     {areaPath && <path d={areaPath} fill="url(#salesAreaGrad)" />}
@@ -698,7 +712,7 @@ export default function VendorDashboard() {
                       );
                     })}
                     <text x="35" y="35" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">{Math.round(maxOrders)}</text>
-                    <text x="35" y="100" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">{Math.round(maxOrders/2)}</text>
+                    <text x="35" y="100" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">{Math.round(maxOrders / 2)}</text>
                     <text x="35" y="170" textAnchor="end" className="fill-slate-400 text-[9px] font-mono">0</text>
 
                     {ordersData.map((d: any, i: number) => {
@@ -719,7 +733,7 @@ export default function VendorDashboard() {
                           />
                           <g className="opacity-0 group-hover/bar:opacity-100 transition-opacity duration-200 pointer-events-none">
                             <rect x={Math.max(10, x - 28)} y={y - 30} width="80" height="22" rx="6" fill="#1e293b" />
-                            <text x={x + barWidth/2} y={y - 16} textAnchor="middle" fill="#ffffff" className="text-[9px] font-bold">{d.orders} orders</text>
+                            <text x={x + barWidth / 2} y={y - 16} textAnchor="middle" fill="#ffffff" className="text-[9px] font-bold">{d.orders} orders</text>
                           </g>
                         </g>
                       );
@@ -738,6 +752,77 @@ export default function VendorDashboard() {
               })()
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Service Area & Map Configuration */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-sm font-black text-slate-800 dark:text-slate-105 flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Service Area Configuration
+            </h3>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Delivery Area Radius (km)</label>
+              <input
+                type="number"
+                step="0.5"
+                value={radius}
+                onChange={(e) => setRadius(parseFloat(e.target.value) || 0)}
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-emerald-500 transition-colors"
+              />
+            </div>
+            <div className="relative w-full h-[300px] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
+              <div ref={mapContainerRef} className="absolute inset-0 z-0"></div>
+              {/* Watermark */}
+              <div className="absolute bottom-4 left-4 z-[400] pointer-events-none opacity-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur px-3 py-1.5 rounded-full border border-slate-200/50 shadow-sm flex items-center gap-2">
+                <span className="text-xl">🥦</span>
+                <span className="text-xs font-black tracking-widest text-slate-800 dark:text-slate-200">SBJIWALA</span>
+              </div>
+            </div>
+            <Button onClick={() => saveServiceAreaMutation.mutate()} loading={saveServiceAreaMutation.isPending} className="w-full text-xs font-bold py-2.5">
+              Save Delivery Zone
+            </Button>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-sm font-black text-slate-800 dark:text-slate-105 flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Delivery Pricing Rules
+            </h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Base Delivery Charge (₹)</label>
+              <input type="number" step="1" value={baseCharge} onChange={(e) => setBaseCharge(e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Per KM Charge (₹)</label>
+              <input type="number" step="0.5" value={perKmCharge} onChange={(e) => setPerKmCharge(e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Min Order Amount (₹)</label>
+              <input type="number" step="1" value={minOrder} onChange={(e) => setMinOrder(e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Free Delivery Above (₹)</label>
+              <input type="number" step="1" value={freeAbove} onChange={(e) => setFreeAbove(e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-emerald-500" placeholder="Optional" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Packaging Fee (₹)</label>
+              <input type="number" step="1" value={packagingFee} onChange={(e) => setPackagingFee(e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Free Platform Fee Above (₹)</label>
+              <input type="number" step="1" value={freePlatformFeeAbove} onChange={(e) => setFreePlatformFeeAbove(e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-emerald-500" placeholder="Optional" />
+            </div>
+          </div>
+          <Button onClick={() => saveDeliveryRulesMutation.mutate()} loading={saveDeliveryRulesMutation.isPending} className="w-full text-xs font-bold py-2.5 mt-2">
+            Save Pricing Rules
+          </Button>
         </div>
       </div>
 
@@ -825,10 +910,9 @@ export default function VendorDashboard() {
                     <h5 className="font-extrabold text-slate-800 dark:text-slate-150">#Order {order.order_number}</h5>
                     <p className="text-[10px] text-slate-500 mt-0.5">₹{order.total_amount} • {order.payment_method.toUpperCase()}</p>
                   </div>
-                  
+
                   <div className="flex items-center gap-3">
-                    <span className={`inline-block text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                      order.status === "pending"
+                    <span className={`inline-block text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${order.status === "pending"
                         ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
                         : order.status === "confirmed"
                           ? "bg-purple-100 dark:bg-purple-955/40 text-purple-800 dark:text-purple-400"
@@ -839,7 +923,7 @@ export default function VendorDashboard() {
                               : order.status === "out_for_delivery"
                                 ? "bg-orange-100 dark:bg-orange-955/40 text-orange-850 dark:text-orange-400"
                                 : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
-                    }`}>
+                      }`}>
                       {order.status}
                     </span>
 

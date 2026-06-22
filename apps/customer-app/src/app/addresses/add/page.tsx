@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 import { useForm } from "react-hook-form";
 import { resolveLink } from "@/components/AppShell";
-import { createLocationPinIcon } from "@sbjiwala/shared";
+import { createLocationPinIcon, createGPSLocationIcon } from "@sbjiwala/shared";
 
 export default function AddAddressPage() {
   const router = useRouter();
@@ -135,8 +135,24 @@ export default function AddAddressPage() {
 
       const pinIcon = createLocationPinIcon(L);
 
-      const marker = L.marker([initLat, initLng], { draggable: true, icon: pinIcon }).addTo(map);
+      const marker = L.marker([initLat, initLng], { draggable: true, icon: pinIcon, zIndexOffset: 1000 }).addTo(map);
       markerRef.current = marker;
+
+      // GPS Live Location Marker
+      const gpsIcon = createGPSLocationIcon(L);
+      const gpsMarker = L.marker([initLat, initLng], { icon: gpsIcon, zIndexOffset: -100 }).addTo(map);
+      gpsMarker.setOpacity(0); // Hidden until locked
+      
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+          (pos) => {
+            gpsMarker.setLatLng([pos.coords.latitude, pos.coords.longitude]);
+            gpsMarker.setOpacity(1);
+          },
+          () => {},
+          { enableHighAccuracy: true }
+        );
+      }
 
       // Geocoding helper on coordinate updates
       const triggerReverseGeocode = (latitude: number, longitude: number) => {
@@ -296,6 +312,12 @@ export default function AddAddressPage() {
         <div className="space-y-4 animate-fade-in">
           <div className="relative border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
             <div ref={mapRef} className="h-96 w-full relative" style={{ zIndex: 1 }} />
+            
+            {/* Watermark */}
+            <div className="absolute bottom-4 left-4 z-[400] pointer-events-none opacity-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur px-3 py-1.5 rounded-full border border-slate-200/50 shadow-sm flex items-center gap-2">
+              <span className="text-xl">🥦</span>
+              <span className="text-xs font-black tracking-widest text-slate-800 dark:text-slate-200">SBJIWALA</span>
+            </div>
             
             {/* Locate Me overlay */}
             <button

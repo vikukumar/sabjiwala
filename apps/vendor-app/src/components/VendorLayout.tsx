@@ -83,11 +83,7 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
     const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
     if (!token) {
       const loginUrl = resolveVendorLink("/login");
-      if (typeof window !== "undefined" && (window as any).Capacitor) {
-        window.location.href = loginUrl;
-      } else {
-        router.replace(loginUrl);
-      }
+      router.replace(loginUrl);
       return;
     }
     setIsAuthed(true);
@@ -472,20 +468,29 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
   if (isAuthed === null) {
     return (
       <div className="fixed inset-0 z-[9999] bg-[#090d10] flex flex-col items-center justify-center space-y-6">
-        <div className="relative">
-          <div className="w-24 h-24 rounded-3xl bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center p-3 shadow-[0_0_50px_rgba(16,185,129,0.3)]">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 w-32 h-32 rounded-full border-[3px] border-slate-800 animate-ping opacity-20" style={{ animationDuration: '2s' }} />
+          <div className="w-28 h-28 rounded-[2rem] bg-gradient-to-tr from-emerald-600/20 to-teal-500/20 backdrop-blur-md border border-emerald-500/30 flex items-center justify-center p-4 shadow-[0_0_80px_rgba(16,185,129,0.25)] relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
             <img 
               src={publicSettings?.app_logo_url || "/icon.png"} 
               alt="Vendor Portal" 
-              className="w-full h-full object-contain drop-shadow-xl" 
+              className="w-full h-full object-contain drop-shadow-2xl animate-pulse" 
+              style={{ animationDuration: '2.5s' }}
               onError={(e) => { e.currentTarget.src = "/icon.png"; }} 
             />
           </div>
-          <div className="absolute inset-0 w-24 h-24 rounded-3xl border-4 border-emerald-500 border-t-transparent animate-spin" style={{ animationDuration: '1.2s' }} />
         </div>
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-black tracking-wider text-white">Sbjiwala Vendor</h2>
-          <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest animate-pulse">Initializing Portal...</p>
+        <div className="text-center space-y-3 mt-8">
+          <h2 className="text-3xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white via-emerald-100 to-emerald-400">
+            SBJIWALA VENDOR
+          </h2>
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-xs font-bold text-emerald-400/80 uppercase tracking-[0.3em]">Preparing Dashboard</p>
+            <div className="w-48 h-1 bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full animate-[progress_1.5s_ease-in-out_infinite_alternate] w-1/2" />
+            </div>
+          </div>
         </div>
       </div>
     );

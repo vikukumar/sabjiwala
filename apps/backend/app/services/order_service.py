@@ -59,9 +59,9 @@ class OrderService:
         if not rule:
             # Default fallback rule
             rule = VendorDeliveryRule(
-                base_delivery_charge=30.0,
-                per_km_charge=5.0,
-                max_delivery_distance_km=12.0
+                base_delivery_charge=0.0,
+                per_km_charge=2.0,
+                max_delivery_distance_km=25.0
             )
 
         if not address.latitude or not address.longitude or not vendor.store.latitude or not vendor.store.longitude:
@@ -76,7 +76,8 @@ class OrderService:
         if distance > rule.max_delivery_distance_km:
             raise ValueError(f"Delivery distance exceeds vendor's limit of {rule.max_delivery_distance_km} km")
 
-        delivery_charge = float(rule.base_delivery_charge) + float(rule.per_km_charge) * distance
+        # Hardcode as requested by user
+        delivery_charge = 0.0 + 2.0 * distance
         return delivery_charge, distance
 
     async def place_order(

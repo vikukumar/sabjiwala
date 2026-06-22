@@ -270,7 +270,7 @@ export default function LiveChatWidget() {
       <audio id="customerRemoteAudio" autoPlay className="hidden" />
       
       {/* Tawk.to Style Floating Button */}
-      <div className={`fixed bottom-24 md:bottom-6 right-4 md:right-6 z-[9999] flex flex-col items-end transition-all duration-300 ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
+      <div className={`fixed bottom-28 md:bottom-6 right-4 md:right-6 z-[9999] flex flex-col items-end transition-all duration-300 ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
         {/* Welcome Bubble */}
         <div className="bg-white dark:bg-slate-900 shadow-xl rounded-2xl rounded-br-sm p-3 mb-4 mr-2 border border-slate-100 dark:border-slate-800 animate-bounce origin-bottom-right">
           <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
@@ -298,7 +298,7 @@ export default function LiveChatWidget() {
 
       {/* Chat Window */}
       <div
-        className={`fixed bottom-24 md:bottom-6 right-4 md:right-6 w-[350px] h-[550px] max-h-[75vh] md:max-h-[85vh] max-w-[calc(100vw-32px)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 transform origin-bottom-right z-50 border border-slate-200 dark:border-slate-800 ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}
+        className={`fixed bottom-28 md:bottom-6 right-4 md:right-6 w-[350px] h-[550px] max-h-[75vh] md:max-h-[85vh] max-w-[calc(100vw-32px)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 transform origin-bottom-right z-50 border border-slate-200 dark:border-slate-800 ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-600 to-teal-500 p-4 text-white flex items-center justify-between shrink-0">
