@@ -802,20 +802,25 @@ async def reject_order_items(
         refund_message = f"COD amount reduced by ₹{total_refund_amount + tax_reduction:.2f}."
     else:
         # If paid online, initiate wallet refund
-        from app.services.wallet_service import WalletService
-        wallet_service = WalletService(db)
-        await wallet_service.add_funds(
+        from app.services.payment_service import PaymentService
+        from app.models.payment import WalletTransactionType
+        payment_service = PaymentService(db)
+        await payment_service.credit_wallet(
             user_id=order.user_id,
             amount=total_refund_amount + tax_reduction,
-            transaction_type="refund",
-            description=f"Refund for rejected items in order {order.order_number}",
-            reference_id=str(order.id)
+            txn_type=WalletTransactionType.REFUND,
+            reference_type="order",
+            reference_id=str(order.id),
+            description=f"Refund for rejected items in order {order.order_number}"
         )
         refund_message = f"₹{total_refund_amount + tax_reduction:.2f} refunded to customer's wallet."
 
+    from typing import Any
     # Update metadata
-    meta = dict(order.metadata_json) if order.metadata_json else {}
+    meta: dict[str, Any] = dict(order.metadata_json) if order.metadata_json else {}
     existing_rejections = meta.get("rejected_items", [])
+    if not isinstance(existing_rejections, list):
+        existing_rejections = []
     existing_rejections.extend(rejected_log)
     meta["rejected_items"] = existing_rejections
     meta["partial_rejection"] = True
