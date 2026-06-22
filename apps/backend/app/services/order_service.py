@@ -65,19 +65,50 @@ class OrderService:
             )
 
         if not address.latitude or not address.longitude or not vendor.store.latitude or not vendor.store.longitude:
-            # Return defaults if coords are missing
-            return float(rule.base_delivery_charge), 0.0
+            distance = 0.0
+        else:
+            distance = self.map_service.calculate_haversine_distance(
+                vendor.store.latitude, vendor.store.longitude,
+                address.latitude, address.longitude
+            )
 
-        distance = self.map_service.calculate_haversine_distance(
-            vendor.store.latitude, vendor.store.longitude,
-            address.latitude, address.longitude
-        )
-
-        if distance > rule.max_delivery_distance_km:
+        if rule and distance > rule.max_delivery_distance_km:
             raise ValueError(f"Delivery distance exceeds vendor's limit of {rule.max_delivery_distance_km} km")
 
-        # Hardcode as requested by user
-        delivery_charge = 0.0 + 2.0 * distance
+        from app.models.system import SystemSetting
+        settings_res = await self.db.execute(
+            select(SystemSetting).where(SystemSetting.key.in_([
+                "enable_delivery_fee", "delivery_fee_type", "default_base_delivery_charge", "default_per_km_charge"
+            ]))
+        )
+        settings_map = {s.key: s.value for s in settings_res.scalars().all()}
+        
+        # Determine if delivery fee is enabled
+        if rule:
+            is_enabled = rule.is_delivery_fee_enabled
+        else:
+            val = settings_map.get("enable_delivery_fee")
+            is_enabled = str(val).lower() == "true" if val is not None else True
+            
+        if not is_enabled:
+            return 0.0, distance
+            
+        # Calculate fee
+        if rule:
+            delivery_charge = float(rule.base_delivery_charge) + (float(rule.per_km_charge) * distance)
+        else:
+            fee_type = settings_map.get("delivery_fee_type", "per_km")
+            bc_val = settings_map.get("default_base_delivery_charge")
+            base_charge = float(bc_val) if bc_val is not None else 0.0
+            
+            pkm_val = settings_map.get("default_per_km_charge")
+            per_km = float(pkm_val) if pkm_val is not None else 2.0
+            
+            if fee_type == "static":
+                delivery_charge = base_charge
+            else:
+                delivery_charge = base_charge + (per_km * distance)
+
         return delivery_charge, distance
 
     async def place_order(
@@ -190,15 +221,26 @@ class OrderService:
 
         # Platform Fee
         platform_fee = 0.0
-        if rule and rule.platform_fee is not None:
-            platform_fee = float(rule.platform_fee)
+        if rule:
+            is_platform_enabled = rule.is_platform_fee_enabled
         else:
             from app.models.system import SystemSetting
             setting_res = await self.db.execute(
-                select(SystemSetting).where(SystemSetting.key == "default_platform_fee")
+                select(SystemSetting).where(SystemSetting.key == "enable_platform_fee")
             )
             setting = setting_res.scalars().first()
-            platform_fee = float(setting.value) if (setting and setting.value) else 0.0
+            is_platform_enabled = setting.value.lower() == "true" if (setting and setting.value) else True
+
+        if is_platform_enabled:
+            if rule and rule.platform_fee is not None:
+                platform_fee = float(rule.platform_fee)
+            else:
+                from app.models.system import SystemSetting
+                setting_res = await self.db.execute(
+                    select(SystemSetting).where(SystemSetting.key == "default_platform_fee")
+                )
+                setting = setting_res.scalars().first()
+                platform_fee = float(setting.value) if (setting and setting.value) else 0.0
 
         # Convenience Fee
         convenience_fee = 0.0

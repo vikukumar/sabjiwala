@@ -321,6 +321,8 @@ class ServiceAreaCreate(BaseModel):
     polygon_geojson: Optional[dict] = None
 
 class DeliveryRuleCreate(BaseModel):
+    is_delivery_fee_enabled: bool = True
+    is_platform_fee_enabled: bool = True
     min_order_amount: float = 0.0
     free_delivery_above: Optional[float] = None
     base_delivery_charge: float = 0.0

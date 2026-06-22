@@ -313,6 +313,183 @@ export default function VendorProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Delivery & Order Fees */}
+      <div className="mt-8">
+        <DeliveryRulesSection />
+      </div>
     </VendorLayout>
+  );
+}
+
+function DeliveryRulesSection() {
+  const { success, error: showError } = useToast();
+  const queryClient = useQueryClient();
+
+  const [isDeliveryFeeEnabled, setIsDeliveryFeeEnabled] = useState(true);
+  const [isPlatformFeeEnabled, setIsPlatformFeeEnabled] = useState(true);
+  const [baseDeliveryCharge, setBaseDeliveryCharge] = useState("0");
+  const [perKmCharge, setPerKmCharge] = useState("0");
+  const [freeDeliveryAbove, setFreeDeliveryAbove] = useState("");
+  const [platformFee, setPlatformFee] = useState("");
+
+  const { data: rulesData, isLoading } = useQuery<any>({
+    queryKey: ["vendorDeliveryRules"],
+    queryFn: async () => {
+      const res = await api.get("/vendors/me/delivery-rules");
+      return res.data?.data?.[0] || null;
+    }
+  });
+
+  useEffect(() => {
+    if (rulesData) {
+      setIsDeliveryFeeEnabled(rulesData.is_delivery_fee_enabled !== false);
+      setIsPlatformFeeEnabled(rulesData.is_platform_fee_enabled !== false);
+      setBaseDeliveryCharge(String(rulesData.base_delivery_charge || "0"));
+      setPerKmCharge(String(rulesData.per_km_charge || "0"));
+      setFreeDeliveryAbove(rulesData.free_delivery_above ? String(rulesData.free_delivery_above) : "");
+      setPlatformFee(rulesData.platform_fee !== null && rulesData.platform_fee !== undefined ? String(rulesData.platform_fee) : "");
+    }
+  }, [rulesData]);
+
+  const updateRulesMutation = useMutation({
+    mutationFn: async () => {
+      const payload: any = {
+        is_delivery_fee_enabled: isDeliveryFeeEnabled,
+        is_platform_fee_enabled: isPlatformFeeEnabled,
+        base_delivery_charge: parseFloat(baseDeliveryCharge) || 0,
+        per_km_charge: parseFloat(perKmCharge) || 0,
+        free_delivery_above: freeDeliveryAbove ? parseFloat(freeDeliveryAbove) : null,
+        platform_fee: platformFee ? parseFloat(platformFee) : null,
+      };
+      return api.post("/vendors/me/delivery-rules", payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendorDeliveryRules"] });
+      success("Delivery & Order Fees updated successfully!");
+    },
+    onError: (err: any) => {
+      showError("Update Failed", "Failed to update fees: " + (err.response?.data?.detail || err.message));
+    }
+  });
+
+  if (isLoading) return null;
+
+  return (
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-3xl p-6 shadow-sm space-y-6">
+      <div className="flex items-center gap-2.5">
+        <div className="p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl text-emerald-600 dark:text-emerald-400">
+          <Settings className="w-5 h-5" />
+        </div>
+        <div>
+          <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">Delivery & Order Fees</h3>
+          <p className="text-[10px] text-slate-500">Override platform defaults with your own fees. If disabled, platform fees will be used.</p>
+        </div>
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          updateRulesMutation.mutate();
+        }}
+        className="space-y-4 text-xs font-medium"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-300">Enable Custom Delivery Fee</label>
+                <p className="text-[10px] text-slate-500 font-normal">Use your own delivery charges instead of platform defaults.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDeliveryFeeEnabled(!isDeliveryFeeEnabled)}
+                className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors ${isDeliveryFeeEnabled ? "bg-emerald-500 justify-end" : "bg-slate-300 dark:bg-slate-600 justify-start"
+                  }`}
+              >
+                <span className="bg-white w-3 h-3 rounded-full shadow-sm block" />
+              </button>
+            </div>
+
+            {isDeliveryFeeEnabled && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="font-bold text-slate-500 uppercase">Base Delivery Charge</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={baseDeliveryCharge}
+                    onChange={e => setBaseDeliveryCharge(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-bold text-slate-500 uppercase">Per KM Charge</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={perKmCharge}
+                    onChange={e => setPerKmCharge(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-bold text-slate-500 uppercase">Free Delivery Above Subtotal</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Leave empty for no free delivery"
+                    value={freeDeliveryAbove}
+                    onChange={e => setFreeDeliveryAbove(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-900 dark:text-white"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-300">Enable Platform Fee</label>
+                <p className="text-[10px] text-slate-500 font-normal">Charge a platform fee for orders placed on your store.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPlatformFeeEnabled(!isPlatformFeeEnabled)}
+                className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors ${isPlatformFeeEnabled ? "bg-emerald-500 justify-end" : "bg-slate-300 dark:bg-slate-600 justify-start"
+                  }`}
+              >
+                <span className="bg-white w-3 h-3 rounded-full shadow-sm block" />
+              </button>
+            </div>
+
+            {isPlatformFeeEnabled && (
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-500 uppercase">Custom Platform Fee</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Leave empty to use platform default"
+                  value={platformFee}
+                  onChange={e => setPlatformFee(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-900 dark:text-white"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="pt-4">
+          <button
+            type="submit"
+            disabled={updateRulesMutation.isPending}
+            className="w-full md:w-auto px-8 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer text-xs"
+          >
+            {updateRulesMutation.isPending ? "Saving..." : "Save Delivery & Order Fees"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

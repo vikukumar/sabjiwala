@@ -20,26 +20,16 @@ engine = create_async_engine(DATABASE_URL)
 async def main():
     async with engine.begin() as conn:
         try:
-            print("Adding columns to vendor_delivery_rules...")
-            await conn.execute(text("ALTER TABLE vendor_delivery_rules ADD COLUMN platform_fee NUMERIC(10, 2)"))
-            await conn.execute(text("ALTER TABLE vendor_delivery_rules ADD COLUMN convenience_fee NUMERIC(10, 2)"))
-        except Exception as e:
-            print("vendor_delivery_rules error:", e)
-            
-        try:
             print("Adding boolean flags to vendor_delivery_rules...")
             await conn.execute(text("ALTER TABLE vendor_delivery_rules ADD COLUMN is_delivery_fee_enabled BOOLEAN NOT NULL DEFAULT TRUE"))
+        except Exception as e:
+            print("is_delivery_fee_enabled error:", e)
+    
+    async with engine.begin() as conn:
+        try:
             await conn.execute(text("ALTER TABLE vendor_delivery_rules ADD COLUMN is_platform_fee_enabled BOOLEAN NOT NULL DEFAULT TRUE"))
         except Exception as e:
-            print("vendor_delivery_rules flags error:", e)
-            
-        try:
-            print("Adding columns to orders...")
-            await conn.execute(text("ALTER TABLE orders ADD COLUMN original_delivery_charge NUMERIC(10, 2) NOT NULL DEFAULT 0.0"))
-            await conn.execute(text("ALTER TABLE orders ADD COLUMN platform_fee NUMERIC(10, 2) NOT NULL DEFAULT 0.0"))
-            await conn.execute(text("ALTER TABLE orders ADD COLUMN convenience_fee NUMERIC(10, 2) NOT NULL DEFAULT 0.0"))
-        except Exception as e:
-            print("orders error:", e)
+            print("is_platform_fee_enabled error:", e)
 
     print("Done")
 

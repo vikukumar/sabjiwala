@@ -151,7 +151,7 @@ class VendorStore(BaseEntity):
 
     # Prep time
     preparation_time_minutes: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
-    service_radius_km: ClassVar[Optional[float]] = None
+    service_radius_km: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     vendor: Mapped["Vendor"] = relationship(back_populates="store")
     holidays: Mapped[List["VendorHoliday"]] = relationship(back_populates="store", lazy="selectin")
@@ -229,6 +229,8 @@ class VendorDeliveryRule(BaseEntity):
         PGUUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
+    is_delivery_fee_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_platform_fee_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     min_order_amount: Mapped[float] = mapped_column(Numeric(10, 2), default=0.0, nullable=False)
     free_delivery_above: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
     base_delivery_charge: Mapped[float] = mapped_column(Numeric(10, 2), default=0.0, nullable=False)

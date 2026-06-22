@@ -76,9 +76,8 @@ export default function AdminSettingsPage() {
 
   const handleSave = (key: string) => {
     const orig = settings.find(s => s.key === key);
-    if (!orig) return;
     const value = editedSettings[key];
-    const isJson = orig.value_type === "json";
+    const isJson = orig ? orig.value_type === "json" : false;
     saveSettingMutation.mutate({ key, value, isJson });
   };
 
@@ -89,8 +88,7 @@ export default function AdminSettingsPage() {
   // Group settings for editing
   const getSettingControl = (key: string, label: string, desc: string, type: "text" | "password" | "boolean" | "select", options?: string[]) => {
     const orig = settings.find(s => s.key === key);
-    if (!orig) return null;
-    const currentVal = editedSettings[key] || "";
+    const currentVal = editedSettings[key] !== undefined ? editedSettings[key] : (orig?.value_json || orig?.value || "");
 
     return (
       <div key={key} className="p-4 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -426,10 +424,15 @@ export default function AdminSettingsPage() {
             <div className="space-y-4">
               <h3 className="text-sm font-black text-slate-800 dark:text-white">Default Order Fees & Conditions</h3>
               <p className="text-xs text-slate-500 mb-4">These default values are used globally unless a Vendor configures their own specific overrides.</p>
-              {getSettingControl("delivery_fee", "Default Delivery Fee", "Base delivery charge per order", "text")}
-              {getSettingControl("platform_fee", "Platform Fee", "Fixed fee charged per order", "text")}
-              {getSettingControl("convenience_fee", "Convenience Fee", "Fixed fee for online orders", "text")}
+              {getSettingControl("enable_delivery_fee", "Enable Delivery Fee", "Globally enable or disable delivery fees", "boolean")}
+              {getSettingControl("delivery_fee_type", "Delivery Fee Type", "Choose how delivery fee is calculated", "select", ["static", "per_km"])}
+              {getSettingControl("default_base_delivery_charge", "Default Base Delivery Charge", "Base fixed delivery charge or starting charge", "text")}
+              {getSettingControl("default_per_km_charge", "Default Per KM Charge", "Additional charge per kilometer if per_km is selected", "text")}
+              {getSettingControl("enable_platform_fee", "Enable Platform Fee", "Globally enable or disable platform fees", "boolean")}
+              {getSettingControl("default_platform_fee", "Default Platform Fee", "Fixed fee charged per order for platform usage", "text")}
+              {getSettingControl("default_convenience_fee", "Default Convenience Fee", "Fixed fee for online orders", "text")}
               {getSettingControl("free_delivery_above", "Free Delivery Threshold", "Waive delivery fee if subtotal exceeds this amount", "text")}
+              {getSettingControl("free_platform_fee_above", "Free Platform Fee Threshold", "Waive platform fee if subtotal exceeds this amount", "text")}
             </div>
           )}
         </div>

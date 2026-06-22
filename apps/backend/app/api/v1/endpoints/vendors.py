@@ -334,6 +334,8 @@ async def get_my_delivery_rules(
     return APIResponse(success=True, data=[
         {
             "id": str(rule.id),
+            "is_delivery_fee_enabled": rule.is_delivery_fee_enabled,
+            "is_platform_fee_enabled": rule.is_platform_fee_enabled,
             "min_order_amount": float(rule.min_order_amount),
             "free_delivery_above": float(rule.free_delivery_above) if rule.free_delivery_above is not None else None,
             "base_delivery_charge": float(rule.base_delivery_charge),

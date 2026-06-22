@@ -125,8 +125,12 @@ async def preview_order(
     packaging_charge = base_packaging
 
     # Fetch System Settings for Admin Overrides
+    # Fetch System Settings for Admin Overrides
     from app.models.system import SystemSetting
     
+    admin_pf_toggle_res = await db.execute(select(SystemSetting).where(SystemSetting.key == "enable_platform_fee"))
+    admin_pf_toggle = admin_pf_toggle_res.scalars().first()
+
     admin_pf_res = await db.execute(select(SystemSetting).where(SystemSetting.key == "default_platform_fee"))
     admin_pf = admin_pf_res.scalars().first()
     
@@ -140,9 +144,25 @@ async def preview_order(
     
     # Platform Fee
     platform_fee = 0.0
-
+    
+    # Safely check if platform fee is globally enabled
+    admin_pf_enabled = False
+    if admin_pf_toggle and admin_pf_toggle.value:
+        admin_pf_enabled = str(admin_pf_toggle.value).lower() == "true"
+        
+    is_platform_enabled = rule.is_platform_fee_enabled if rule else admin_pf_enabled
+    if is_platform_enabled:
+        if rule and rule.platform_fee is not None:
+            platform_fee = float(rule.platform_fee)
+        elif admin_pf and admin_pf.value:
+            platform_fee = float(admin_pf.value)
+            
     # Convenience Fee
     convenience_fee = 0.0
+    if rule and rule.convenience_fee is not None:
+        convenience_fee = float(rule.convenience_fee)
+    elif admin_cf and admin_cf.value:
+        convenience_fee = float(admin_cf.value)
 
     # Free Delivery Above
     free_delivery_limit = 0.0
