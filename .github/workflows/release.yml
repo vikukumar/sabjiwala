@@ -730,7 +730,8 @@ jobs:
       - name: Download Android Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: android-apks
+          pattern: android-apk-*
+          merge-multiple: true
           path: ./
 
       - name: Download iOS Builds
