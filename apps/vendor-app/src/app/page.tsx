@@ -490,8 +490,17 @@ export default function VendorDashboard() {
 
   if (!isMounted) {
     return (
-      <div className="min-h-screen bg-slate-100 dark:bg-[#090d10] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
+      <div className="fixed inset-0 z-[9999] bg-[#090d10] flex flex-col items-center justify-center space-y-6">
+        <div className="relative">
+          <div className="w-24 h-24 rounded-3xl bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center p-3 shadow-[0_0_50px_rgba(16,185,129,0.3)]">
+            <img src="/icon.png" alt="Vendor Portal" className="w-full h-full object-contain drop-shadow-xl" onError={(e) => { e.currentTarget.src = "/icon.png"; }} />
+          </div>
+          <div className="absolute inset-0 w-24 h-24 rounded-3xl border-4 border-emerald-500 border-t-transparent animate-spin" style={{ animationDuration: '1.2s' }} />
+        </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-black tracking-wider text-white">Sbjiwala Vendor</h2>
+          <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest animate-pulse">Initializing Portal...</p>
+        </div>
       </div>
     );
   }
