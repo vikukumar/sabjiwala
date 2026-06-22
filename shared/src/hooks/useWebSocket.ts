@@ -121,11 +121,18 @@ function initGlobalWS() {
   if ((window as any).Capacitor?.Plugins?.App) {
     try {
       const App = (window as any).Capacitor.Plugins.App;
-      App.addListener("appStateChange", (state: any) => {
+      const listenerOrPromise = App.addListener("appStateChange", (state: any) => {
         if (state.isActive) handleResumeGlobal();
-      }).then((listener: any) => {
-        capacitorListener = listener;
-      }).catch(() => {});
+      });
+      
+      // Handle both Promise (Capacitor v3+) and synchronous (Capacitor v2) returns
+      if (listenerOrPromise && typeof listenerOrPromise.then === "function") {
+        listenerOrPromise.then((listener: any) => {
+          capacitorListener = listener;
+        }).catch(() => {});
+      } else {
+        capacitorListener = listenerOrPromise;
+      }
     } catch (err) {
       console.warn("Failed to attach Capacitor app state listener", err);
     }

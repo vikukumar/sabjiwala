@@ -629,13 +629,19 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
     if (typeof window !== "undefined" && (window as any).Capacitor?.Plugins?.App) {
       try {
         const App = (window as any).Capacitor.Plugins.App;
-        App.addListener("appStateChange", (state: any) => {
+        const listenerOrPromise = App.addListener("appStateChange", (state: any) => {
           if (state.isActive) {
             handleResume();
           }
-        }).then((listener: any) => {
-          capacitorListener = listener;
-        }).catch(() => {});
+        });
+        
+        if (listenerOrPromise && typeof listenerOrPromise.then === "function") {
+          listenerOrPromise.then((listener: any) => {
+            capacitorListener = listener;
+          }).catch(() => {});
+        } else {
+          capacitorListener = listenerOrPromise;
+        }
       } catch (err) {
         console.warn("Failed to attach Capacitor app state listener", err);
       }
