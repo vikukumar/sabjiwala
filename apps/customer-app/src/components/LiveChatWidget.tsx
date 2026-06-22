@@ -37,6 +37,11 @@ export default function LiveChatWidget() {
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // New states for Calling and Ticket
   const [viewMode, setViewMode] = useState<"chat" | "call" | "ticket">("chat");
   const [callStatus, setCallStatus] = useState<"idle" | "dialing" | "connected">("idle");
@@ -257,6 +262,8 @@ export default function LiveChatWidget() {
       showError("Failed", err.response?.data?.detail || "Could not create ticket");
     }
   });
+
+  if (!mounted) return null;
 
   return (
     <>

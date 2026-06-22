@@ -246,11 +246,33 @@ jobs:
             sbjiwala-agent-v${{ needs.read-version.outputs.version }}-web.zip
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # 5. Android — customer, vendor, delivery, admin  (one runner, sequential)
+  # 5. Android — customer, vendor, delivery, admin, agent (matrix parallel)
   # ═══════════════════════════════════════════════════════════════════════════
   build-android:
     needs: read-version
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: customer-app
+            prefix: sbjiwala
+            package_name: in.sbjiwala.customer
+            upload_playstore: false
+          - app: vendor-app
+            prefix: sbjiwala-vendor
+            package_name: in.sbjiwala.vendor
+            upload_playstore: false
+          - app: delivery-app
+            prefix: sbjiwala-delivery
+            package_name: in.sbjiwala.delivery
+            upload_playstore: false
+          - app: admin-app
+            prefix: sbjiwala-admin
+            upload_playstore: false
+          - app: agent-app
+            prefix: sbjiwala-agent
+            upload_playstore: false
     env:
       VER: ${{ needs.read-version.outputs.version }}
     steps:
@@ -308,54 +330,46 @@ jobs:
       # ── Firebase google-services.json injection ───────────────────────────
       - name: Inject Firebase google-services.json Files
         run: |
-          # Customer App
-          if [ -n "${{ secrets.GOOGLE_SERVICES_CUSTOMER_BASE64 }}" ]; then
-            echo "${{ secrets.GOOGLE_SERVICES_CUSTOMER_BASE64 }}" | base64 --decode \
-              > apps/customer-app/android/app/google-services.json
-            echo "✅ customer google-services.json injected"
-          else
-            echo "⚠️  GOOGLE_SERVICES_CUSTOMER_BASE64 not set — FCM disabled for customer app"
-          fi
-
-          # Vendor App
-          if [ -n "${{ secrets.GOOGLE_SERVICES_VENDOR_BASE64 }}" ]; then
-            echo "${{ secrets.GOOGLE_SERVICES_VENDOR_BASE64 }}" | base64 --decode \
-              > apps/vendor-app/android/app/google-services.json
-            echo "✅ vendor google-services.json injected"
-          else
-            echo "⚠️  GOOGLE_SERVICES_VENDOR_BASE64 not set — FCM disabled for vendor app"
-          fi
-
-          # Delivery App
-          if [ -n "${{ secrets.GOOGLE_SERVICES_DELIVERY_BASE64 }}" ]; then
-            echo "${{ secrets.GOOGLE_SERVICES_DELIVERY_BASE64 }}" | base64 --decode \
-              > apps/delivery-app/android/app/google-services.json
-            echo "✅ delivery google-services.json injected"
-          else
-            echo "⚠️  GOOGLE_SERVICES_DELIVERY_BASE64 not set — FCM disabled for delivery app"
-          fi
-
-          # Admin App
-          if [ -n "${{ secrets.GOOGLE_SERVICES_ADMIN_BASE64 }}" ]; then
-            echo "${{ secrets.GOOGLE_SERVICES_ADMIN_BASE64 }}" | base64 --decode \
-              > apps/admin-app/android/app/google-services.json
-            echo "✅ admin google-services.json injected"
-          else
-            echo "⚠️  GOOGLE_SERVICES_ADMIN_BASE64 not set — FCM disabled for admin app"
-          fi
-
-          # Agent App
-          if [ -n "${{ secrets.GOOGLE_SERVICES_AGENT_BASE64 }}" ]; then
-            echo "${{ secrets.GOOGLE_SERVICES_AGENT_BASE64 }}" | base64 --decode \
-              > apps/agent-app/android/app/google-services.json
-            echo "✅ agent google-services.json injected"
-          else
-            echo "⚠️  GOOGLE_SERVICES_AGENT_BASE64 not set — FCM disabled for agent app"
+          APP="${{ matrix.app }}"
+          
+          if [ "$APP" = "customer-app" ]; then
+            if [ -n "${{ secrets.GOOGLE_SERVICES_CUSTOMER_BASE64 }}" ]; then
+              echo "${{ secrets.GOOGLE_SERVICES_CUSTOMER_BASE64 }}" | base64 --decode > apps/$APP/android/app/google-services.json
+              echo "✅ $APP google-services.json injected"
+            else
+              echo "⚠️  GOOGLE_SERVICES_CUSTOMER_BASE64 not set"
+            fi
+          elif [ "$APP" = "vendor-app" ]; then
+            if [ -n "${{ secrets.GOOGLE_SERVICES_VENDOR_BASE64 }}" ]; then
+              echo "${{ secrets.GOOGLE_SERVICES_VENDOR_BASE64 }}" | base64 --decode > apps/$APP/android/app/google-services.json
+              echo "✅ $APP google-services.json injected"
+            else
+              echo "⚠️  GOOGLE_SERVICES_VENDOR_BASE64 not set"
+            fi
+          elif [ "$APP" = "delivery-app" ]; then
+            if [ -n "${{ secrets.GOOGLE_SERVICES_DELIVERY_BASE64 }}" ]; then
+              echo "${{ secrets.GOOGLE_SERVICES_DELIVERY_BASE64 }}" | base64 --decode > apps/$APP/android/app/google-services.json
+              echo "✅ $APP google-services.json injected"
+            else
+              echo "⚠️  GOOGLE_SERVICES_DELIVERY_BASE64 not set"
+            fi
+          elif [ "$APP" = "admin-app" ]; then
+            if [ -n "${{ secrets.GOOGLE_SERVICES_ADMIN_BASE64 }}" ]; then
+              echo "${{ secrets.GOOGLE_SERVICES_ADMIN_BASE64 }}" | base64 --decode > apps/$APP/android/app/google-services.json
+              echo "✅ $APP google-services.json injected"
+            else
+              echo "⚠️  GOOGLE_SERVICES_ADMIN_BASE64 not set"
+            fi
+          elif [ "$APP" = "agent-app" ]; then
+            if [ -n "${{ secrets.GOOGLE_SERVICES_AGENT_BASE64 }}" ]; then
+              echo "${{ secrets.GOOGLE_SERVICES_AGENT_BASE64 }}" | base64 --decode > apps/$APP/android/app/google-services.json
+              echo "✅ $APP google-services.json injected"
+            else
+              echo "⚠️  GOOGLE_SERVICES_AGENT_BASE64 not set"
+            fi
           fi
 
       # ── Reusable helper ───────────────────────────────────────────────────
-      # Inline shell function used by every app build step below.
-      # Usage: build_next_app <app-dir>
       - name: Define shared build helper
         run: |
           cat << 'HELPER' > /tmp/build_next_app.sh
@@ -421,170 +435,61 @@ jobs:
           chmod +x /tmp/gradle_sign.sh
 
       # ── Compute Android version numbers from pipeline tag ─────────────────
-      # ANDROID_VERSION_NAME = full tag e.g. 0.1.0.23
-      # ANDROID_VERSION_CODE = numeric build number (must be monotonically increasing integer)
-      #   derived from the last numeric segment of the tag (the run_number)
       - name: Compute Android Version Numbers
         run: |
           VER="${{ env.VER }}"
-          # Last segment of the version (e.g. "23" from "0.1.0.23") becomes versionCode
           LAST_SEGMENT=$(echo "$VER" | awk -F. '{print $NF}')
-          # versionCode must be a plain integer — use last segment directly
           echo "ANDROID_VERSION_CODE=$LAST_SEGMENT" >> $GITHUB_ENV
           echo "ANDROID_VERSION_NAME=$VER"          >> $GITHUB_ENV
           echo "Android versionCode: $LAST_SEGMENT"
           echo "Android versionName: $VER"
 
-      # ── Customer App ──────────────────────────────────────────────────────
-      - name: Build & Sync Customer App (Android)
+      # ── App Build ─────────────────────────────────────────────────────────
+      - name: Build & Sync ${{ matrix.app }} (Android)
         env:
           API_URL: ${{ env.API_URL }}
-        run: /tmp/build_next_app.sh customer-app "${{ env.VER }}"
+        run: /tmp/build_next_app.sh ${{ matrix.app }} "${{ env.VER }}"
 
-      - name: Compile & Sign Customer Android App
+      - name: Compile & Sign ${{ matrix.app }} Android App
         run: |
           ANDROID_VERSION_CODE="${{ env.ANDROID_VERSION_CODE }}" \
           ANDROID_VERSION_NAME="${{ env.ANDROID_VERSION_NAME }}" \
-          /tmp/gradle_sign.sh apps/customer-app \
-            "sbjiwala-v${{ env.VER }}.apk" \
-            "sbjiwala-v${{ env.VER }}.aab"
+          /tmp/gradle_sign.sh apps/${{ matrix.app }} \
+            "${{ matrix.prefix }}-v${{ env.VER }}.apk" \
+            "${{ matrix.prefix }}-v${{ env.VER }}.aab"
 
-      - name: Upload Customer App to Play Store
-        if: env.HAS_PROD_KEYSTORE == 'true' && env.HAS_PLAY_STORE_CONFIG == 'true'
+      - name: Upload ${{ matrix.app }} to Play Store
+        if: matrix.upload_playstore == true && env.HAS_PROD_KEYSTORE == 'true' && env.HAS_PLAY_STORE_CONFIG == 'true'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
-          packageName: in.sbjiwala.customer
-          releaseFiles: sbjiwala-v${{ env.VER }}.aab
+          packageName: ${{ matrix.package_name }}
+          releaseFiles: ${{ matrix.prefix }}-v${{ env.VER }}.aab
           track: internal
           status: completed
 
-      # ── Vendor App ────────────────────────────────────────────────────────
-      - name: Build & Sync Vendor App (Android)
-        env:
-          API_URL: ${{ env.API_URL }}
-        run: /tmp/build_next_app.sh vendor-app "${{ env.VER }}"
-
-      - name: Compile & Sign Vendor Android App
-        run: |
-          ANDROID_VERSION_CODE="${{ env.ANDROID_VERSION_CODE }}" \
-          ANDROID_VERSION_NAME="${{ env.ANDROID_VERSION_NAME }}" \
-          /tmp/gradle_sign.sh apps/vendor-app \
-            "sbjiwala-vendor-v${{ env.VER }}.apk" \
-            "sbjiwala-vendor-v${{ env.VER }}.aab"
-
-      - name: Upload Vendor App to Play Store
-        if: env.HAS_PROD_KEYSTORE == 'true' && env.HAS_PLAY_STORE_CONFIG == 'true'
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
-          packageName: in.sbjiwala.vendor
-          releaseFiles: sbjiwala-vendor-v${{ env.VER }}.aab
-          track: internal
-          status: completed
-
-      # ── Delivery App ──────────────────────────────────────────────────────
-      - name: Build & Sync Delivery App (Android)
-        env:
-          API_URL: ${{ env.API_URL }}
-        run: /tmp/build_next_app.sh delivery-app "${{ env.VER }}"
-
-      - name: Compile & Sign Delivery Android App
-        run: |
-          ANDROID_VERSION_CODE="${{ env.ANDROID_VERSION_CODE }}" \
-          ANDROID_VERSION_NAME="${{ env.ANDROID_VERSION_NAME }}" \
-          /tmp/gradle_sign.sh apps/delivery-app \
-            "sbjiwala-delivery-v${{ env.VER }}.apk" \
-            "sbjiwala-delivery-v${{ env.VER }}.aab"
-
-      - name: Upload Delivery App to Play Store
-        if: env.HAS_PROD_KEYSTORE == 'true' && env.HAS_PLAY_STORE_CONFIG == 'true'
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
-          packageName: in.sbjiwala.delivery
-          releaseFiles: sbjiwala-delivery-v${{ env.VER }}.aab
-          track: internal
-          status: completed
-
-      # ── Admin App (NEW) ───────────────────────────────────────────────────
-      - name: Build & Sync Admin App (Android)
-        env:
-          API_URL: ${{ env.API_URL }}
-        run: /tmp/build_next_app.sh admin-app "${{ env.VER }}"
-
-      - name: Compile & Sign Admin Android App
-        run: |
-          ANDROID_VERSION_CODE="${{ env.ANDROID_VERSION_CODE }}" \
-          ANDROID_VERSION_NAME="${{ env.ANDROID_VERSION_NAME }}" \
-          /tmp/gradle_sign.sh apps/admin-app \
-            "sbjiwala-admin-v${{ env.VER }}.apk" \
-            "sbjiwala-admin-v${{ env.VER }}.aab"
-
-      # Admin APK is internal-only — no Play Store upload (internal tool)
-
-      # ── Agent App (NEW) ───────────────────────────────────────────────────
-      - name: Build & Sync Agent App (Android)
-        env:
-          API_URL: ${{ env.API_URL }}
-        run: /tmp/build_next_app.sh agent-app "${{ env.VER }}"
-
-      - name: Compile & Sign Agent Android App
-        run: |
-          ANDROID_VERSION_CODE="${{ env.ANDROID_VERSION_CODE }}" \
-          ANDROID_VERSION_NAME="${{ env.ANDROID_VERSION_NAME }}" \
-          /tmp/gradle_sign.sh apps/agent-app \
-            "sbjiwala-agent-v${{ env.VER }}.apk" \
-            "sbjiwala-agent-v${{ env.VER }}.aab"
-
-      # Agent APK is internal-only — no Play Store upload (internal tool)
-
-      # ── Package all APKs into per-app zip bundles ─────────────────────────
       - name: Create per-app zip bundles
         run: |
           VER="${{ env.VER }}"
           cd $GITHUB_WORKSPACE
 
-          zip sbjiwala-customer-v${VER}-android.zip \
-            sbjiwala-v${VER}.apk \
-            sbjiwala-v${VER}.aab
+          ZIP_NAME="${{ matrix.prefix }}-v${VER}-android.zip"
+          if [ "${{ matrix.app }}" = "customer-app" ]; then
+             ZIP_NAME="sbjiwala-customer-v${VER}-android.zip"
+          fi
 
-          zip sbjiwala-vendor-v${VER}-android.zip \
-            sbjiwala-vendor-v${VER}.apk \
-            sbjiwala-vendor-v${VER}.aab
-
-          zip sbjiwala-delivery-v${VER}-android.zip \
-            sbjiwala-delivery-v${VER}.apk \
-            sbjiwala-delivery-v${VER}.aab
-
-          zip sbjiwala-admin-v${VER}-android.zip \
-            sbjiwala-admin-v${VER}.apk \
-            sbjiwala-admin-v${VER}.aab
-
-          zip sbjiwala-agent-v${VER}-android.zip \
-            sbjiwala-agent-v${VER}.apk \
-            sbjiwala-agent-v${VER}.aab
+          zip $ZIP_NAME \
+            ${{ matrix.prefix }}-v${VER}.apk \
+            ${{ matrix.prefix }}-v${VER}.aab
 
       - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: android-apks
+          name: android-apk-${{ matrix.app }}
           path: |
-            sbjiwala-v${{ env.VER }}.apk
-            sbjiwala-vendor-v${{ env.VER }}.apk
-            sbjiwala-delivery-v${{ env.VER }}.apk
-            sbjiwala-admin-v${{ env.VER }}.apk
-            sbjiwala-agent-v${{ env.VER }}.apk
-            sbjiwala-v${{ env.VER }}.aab
-            sbjiwala-vendor-v${{ env.VER }}.aab
-            sbjiwala-delivery-v${{ env.VER }}.aab
-            sbjiwala-admin-v${{ env.VER }}.aab
-            sbjiwala-agent-v${{ env.VER }}.aab
-            sbjiwala-customer-v${{ env.VER }}-android.zip
-            sbjiwala-vendor-v${{ env.VER }}-android.zip
-            sbjiwala-delivery-v${{ env.VER }}-android.zip
-            sbjiwala-admin-v${{ env.VER }}-android.zip
-            sbjiwala-agent-v${{ env.VER }}-android.zip
+            ${{ matrix.prefix }}-v${{ env.VER }}.apk
+            ${{ matrix.prefix }}-v${{ env.VER }}.aab
+            *-android.zip
 
   # ═══════════════════════════════════════════════════════════════════════════
   # 6. iOS — customer, vendor, delivery (macOS runner)
