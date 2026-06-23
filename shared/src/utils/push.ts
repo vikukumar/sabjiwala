@@ -77,6 +77,19 @@ async function registerCapacitorPush(apiClient: typeof api) {
       console.log("Push received:", notification);
     });
 
+    try {
+      const { Device } = await import("@capacitor/device");
+      const info = await Device.getInfo();
+      if (info.manufacturer && info.manufacturer.toLowerCase() === "infinix") {
+        console.warn("Bypassing PushNotifications.checkPermissions() on Infinix device to avoid NPE crash.");
+        // Attempt to just register directly and skip check
+        await PushNotifications.register();
+        return;
+      }
+    } catch (err) {
+      console.warn("Could not check device manufacturer:", err);
+    }
+
     let permStatus = await PushNotifications.checkPermissions();
     if (permStatus.receive === "prompt") {
       permStatus = await PushNotifications.requestPermissions();
