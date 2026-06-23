@@ -271,28 +271,20 @@ export default function LiveChatWidget() {
       
       {/* Tawk.to Style Floating Button */}
       <div className={`fixed bottom-28 md:bottom-6 right-4 md:right-6 z-[9999] flex flex-col items-end transition-all duration-300 ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
-        {/* Welcome Bubble */}
-        <div className="bg-white dark:bg-slate-900 shadow-xl rounded-2xl rounded-br-sm p-3 mb-4 mr-2 border border-slate-100 dark:border-slate-800 animate-bounce origin-bottom-right">
-          <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-            👋 Hi there! <br/>
-            <span className="text-emerald-600 dark:text-emerald-400 font-black">We're online.</span> Need help?
-          </p>
-        </div>
-        
         {/* Main Floating Button */}
         <button
           onClick={() => setIsOpen(true)}
-          className="w-[60px] h-[60px] bg-gradient-to-tr from-emerald-600 to-teal-500 hover:scale-110 text-white rounded-[24px] rounded-br-[8px] shadow-[0_8px_30px_rgb(16,185,129,0.3)] flex items-center justify-center transition-all duration-300 group"
+          className="w-12 h-12 bg-gradient-to-tr from-emerald-600 to-teal-500 hover:scale-110 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 group"
         >
           {/* Custom Branding Icon replacing standard MessageSquare */}
-          <svg className="w-8 h-8 group-hover:animate-wiggle" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg className="w-6 h-6 group-hover:animate-wiggle" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M20.5 4.5H3.5C2.39543 4.5 1.5 5.39543 1.5 6.5V16.5C1.5 17.6046 2.39543 18.5 3.5 18.5H7.5L12 22.5L16.5 18.5H20.5C21.6046 18.5 22.5 17.6046 22.5 16.5V6.5C22.5 5.39543 21.6046 4.5 20.5 4.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             <circle cx="8" cy="11.5" r="1.5" fill="currentColor"/>
             <circle cx="12" cy="11.5" r="1.5" fill="currentColor"/>
             <circle cx="16" cy="11.5" r="1.5" fill="currentColor"/>
           </svg>
           {/* Notification Dot */}
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse"></span>
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse"></span>
         </button>
       </div>
 
