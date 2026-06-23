@@ -28,7 +28,7 @@
         "zod": "^4.4.3",
         "zustand": "^5.0.14",
         "@capacitor-firebase/crashlytics": "^8.3.0",
-        "@capacitor/device": "^6.0.0"
+        "@capacitor/device": "^8.0.2"
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4",
