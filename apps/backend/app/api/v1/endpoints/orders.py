@@ -750,6 +750,14 @@ async def reject_order_items(
     coupon_discount = round(coupon_discount, 2)
     new_subtotal = round(new_subtotal, 2)
 
+    # Check if fully rejected
+    is_fully_rejected = all(item.quantity <= 0 for item in order.items)
+    if is_fully_rejected:
+        order.delivery_charge = 0.0
+        order.packaging_charge = 0.0
+        order.platform_fee = 0.0
+        order.convenience_fee = 0.0
+
     # Calculate new total before wallet
     new_total_before_wallet = round(new_subtotal + float(order.delivery_charge) + new_tax_amount + float(order.packaging_charge) - coupon_discount, 2)
     new_total_before_wallet = max(0.0, new_total_before_wallet)
@@ -776,16 +784,21 @@ async def reject_order_items(
     order.discount_amount = coupon_discount
     order.wallet_amount = new_wallet_amount
     order.total_amount = new_total_amount
+    
+    old_status = order.status.value
+    if is_fully_rejected:
+        order.status = OrderStatus.CANCELLED
+        order.cancellation_reason = "Order completely rejected by customer at doorstep."
 
     # Write order status history
     from app.models.order import OrderStatusHistory
     history = OrderStatusHistory(
         order_id=order.id,
-        from_status=order.status.value,
+        from_status=old_status,
         to_status=order.status.value,
         changed_by=current_user["user_id"],
         changed_by_type=role,
-        notes=f"Adjusted items at doorstep. Subtotal modified."
+        notes=f"Adjusted items at doorstep. {'Order cancelled due to full rejection.' if is_fully_rejected else 'Subtotal modified.'}"
     )
     db.add(history)
 
@@ -818,24 +831,24 @@ async def reject_order_items(
     try:
         from app.services.notification_service import NotificationService
         notif = NotificationService(db)
-        if order.payment_method != "cod" and refund_due > 0:
+        if is_fully_rejected:
+            await notif.dispatch(
+                event_key="order_cancelled",
+                user_id=order.user_id,
+                variables={
+                    "order_number": order.order_number,
+                    "cancellation_reason": "Order completely rejected at doorstep"
+                },
+                reference_type="order",
+                reference_id=str(order.id)
+            )
+        elif refund_due > 0:
             await notif.dispatch(
                 event_key="order_refunded",
                 user_id=order.user_id,
                 variables={
                     "order_number": order.order_number,
                     "refund_amount": str(refund_due),
-                    "total_amount": str(order.total_amount)
-                },
-                reference_type="order",
-                reference_id=str(order.id)
-            )
-        else:
-            await notif.dispatch(
-                event_key="order_confirmed",
-                user_id=order.user_id,
-                variables={
-                    "order_number": order.order_number,
                     "total_amount": str(order.total_amount)
                 },
                 reference_type="order",
