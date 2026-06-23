@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@capacitor-firebase/analytics": "^8.3.0",
-    "@capacitor-firebase/crashlytics": "^8.3.0"
+    "@capacitor-firebase/crashlytics": "^8.3.0",
+    "@capacitor/geolocation": "^8.2.0"
   }
 }

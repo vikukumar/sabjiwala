@@ -455,7 +455,7 @@ async def enrich_order_response(order: Order, db: AsyncSession) -> OrderResponse
                 res_data.delivery_agent = {
                     "name": f"{store.store_name} (Self Delivered)".strip(),
                     "phone": phone_val,
-                    "vehicle_type": "delivery",
+                    "vehicle_type": None,
                     "vehicle_number": "Store Self Delivery",
                     "latitude": metadata.get("live_latitude") or store.latitude,
                     "longitude": metadata.get("live_longitude") or store.longitude,

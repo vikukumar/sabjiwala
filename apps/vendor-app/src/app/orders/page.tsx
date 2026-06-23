@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Clock, Loader2, Star, ShoppingBag, X, Package, CheckCircle2, AlertCircle, MapPin, Navigation } from "lucide-react";
+import { Clock, Loader2, Star, ShoppingBag, X, Package, CheckCircle2, AlertCircle, MapPin, Navigation, ExternalLink } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, useWebSocket, resolveImageUrl } from "@sbjiwala/shared";
+import { Geolocation } from "@capacitor/geolocation";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/index";
 import VendorLayout from "@/components/VendorLayout";
@@ -267,28 +268,46 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
   const routeLineRef = useRef<any>(null);
   const [gpsCoords, setGpsCoords] = useState<[number, number] | null>(null);
 
-  // Track browser geolocation representing delivery agent GPS
+  // Track browser geolocation representing delivery agent GPS using Capacitor
   useEffect(() => {
-    if (typeof window === "undefined" || !navigator.geolocation) return;
+    if (typeof window === "undefined") return;
     
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        setGpsCoords([pos.coords.latitude, pos.coords.longitude]);
-      },
-      (err) => {
-        console.warn("Geolocation watch failed, fetching single position", err);
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            setGpsCoords([pos.coords.latitude, pos.coords.longitude]);
-          },
-          () => {}
+    let watchId: string | null = null;
+
+    const setupGeolocation = async () => {
+      try {
+        const permissions = await Geolocation.checkPermissions();
+        if (permissions.location !== 'granted') {
+          const req = await Geolocation.requestPermissions();
+          if (req.location !== 'granted') {
+            console.warn("Location permission denied");
+            return;
+          }
+        }
+
+        watchId = await Geolocation.watchPosition(
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
+          (pos, err) => {
+            if (err) {
+              console.warn("Geolocation watch failed", err);
+              return;
+            }
+            if (pos) {
+              setGpsCoords([pos.coords.latitude, pos.coords.longitude]);
+            }
+          }
         );
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
-    );
+      } catch (e) {
+        console.warn("Geolocation initialization failed", e);
+      }
+    };
+
+    setupGeolocation();
 
     return () => {
-      navigator.geolocation.clearWatch(watchId);
+      if (watchId !== null) {
+        Geolocation.clearWatch({ id: watchId });
+      }
     };
   }, []);
 
@@ -431,10 +450,11 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
           Tracking Device GPS...
         </span>
       </div>
-      <div className="w-full h-64 rounded-2xl border border-slate-205 dark:border-slate-800 overflow-hidden shadow-inner relative z-10">
-        <div ref={mapRef} className="w-full h-full" />
-        
-        {/* Sabjiwala Watermark */}
+      <div className="w-full min-h-[50vh] rounded-2xl border border-slate-205 dark:border-slate-800 overflow-hidden shadow-inner relative z-10 flex flex-col">
+        <div className="flex-1 w-full relative">
+          <div ref={mapRef} className="w-full h-full absolute inset-0" />
+          
+          {/* Sabjiwala Watermark */}
         <div className="absolute bottom-2 left-2 pointer-events-none opacity-50 font-bold text-slate-800 tracking-widest text-[10px]" style={{ zIndex: 1000 }}>
           SABJIWALA
         </div>
@@ -452,6 +472,21 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
         >
           <Navigation className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
         </button>
+      </div>
+
+      {/* Navigation Action Bar */}
+      <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-3 z-[1001] relative shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${order.delivery_latitude || order.delivery_address?.latitude},${order.delivery_longitude || order.delivery_address?.longitude}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-extrabold py-3.5 rounded-xl shadow-md flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+          >
+            <Navigation className="w-5 h-5" />
+            Navigate to Customer
+            <ExternalLink className="w-3.5 h-3.5 opacity-75 ml-1" />
+          </a>
+        </div>
       </div>
     </div>
   );
