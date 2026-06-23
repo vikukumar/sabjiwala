@@ -579,12 +579,12 @@ export default function VendorOrdersPage() {
           </div>
 
           {/* Status Filter Tabs */}
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-full border border-slate-205 dark:border-slate-700 text-xs font-semibold self-stretch md:self-auto justify-between sm:justify-start">
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-full border border-slate-205 dark:border-slate-700 text-xs font-semibold self-stretch md:self-auto justify-between sm:justify-start overflow-x-auto no-scrollbar">
             {["all", "pending", "confirmed", "accepted", "packed", "out_for_delivery", "delivered", "cancelled"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-full capitalize text-[10px] sm:text-xs transition-all ${
+                className={`px-3 py-1.5 rounded-full capitalize text-[10px] sm:text-xs transition-all whitespace-nowrap ${
                   activeTab === tab
                     ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm font-bold"
                     : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-205"
