@@ -572,8 +572,13 @@ class OrderService:
             raise ValueError(f"Cannot change status of {old_status.value} order")
 
         if status == OrderStatus.CANCELLED:
-            if old_status in [OrderStatus.PICKED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED]:
-                raise ValueError("Order has already been shipped and cannot be cancelled.")
+            if user_type in ["vendor", "vendor_manager", "admin", "super_admin"]:
+                # Admin and vendor can cancel at any phase before delivery
+                pass
+            else:
+                # Customers cannot cancel once shipped
+                if old_status in [OrderStatus.PICKED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED]:
+                    raise ValueError("Order has already been shipped and cannot be cancelled.")
 
         if delivery_option:
             meta = dict(order.metadata_json) if order.metadata_json else {}

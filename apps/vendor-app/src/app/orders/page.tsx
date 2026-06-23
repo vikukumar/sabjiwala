@@ -864,6 +864,19 @@ export default function VendorOrdersPage() {
                     Mark as Delivered
                   </button>
                 )}
+                {!["delivered", "cancelled", "returned", "refunded", "failed"].includes(order.status) && (
+                  <button
+                    onClick={() => {
+                      if (confirm("Are you sure you want to cancel this order?")) {
+                        updateStatusMutation.mutate({ orderId: order.id, status: "cancelled", notes: "Order cancelled by vendor" });
+                      }
+                    }}
+                    disabled={updateStatusMutation.isPending}
+                    className="flex-1 bg-rose-600 hover:bg-rose-500 dark:bg-rose-500 dark:hover:bg-rose-400 text-white text-xs font-bold py-2.5 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  >
+                    Cancel Order
+                  </button>
+                )}
                 <button
                   onClick={() => setSelectedOrder(null)}
                   className="flex-1 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black uppercase text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850/50 cursor-pointer text-center"
