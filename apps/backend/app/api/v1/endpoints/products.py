@@ -118,8 +118,16 @@ async def create_product(
     )
     db.add(inventory)
     await db.flush()
+    
+    # Reload product with relationships to avoid MissingGreenlet error during Pydantic validation
+    result = await db.execute(
+        select(Product)
+        .options(selectinload(Product.variants), selectinload(Product.images), selectinload(Product.category))
+        .where(Product.id == product.id)
+    )
+    product_loaded = result.scalars().first()
 
-    return APIResponse(success=True, message="Product created", data=ProductResponse.model_validate(product))
+    return APIResponse(success=True, message="Product created", data=ProductResponse.model_validate(product_loaded))
 
 
 @router.get("/{product_id}", response_model=APIResponse[ProductResponse])
