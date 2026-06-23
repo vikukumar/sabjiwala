@@ -29,3 +29,10 @@
 -dontwarn org.webrtc.**
 -keep class org.webrtc.** { *; }
 -dontwarn org.jetbrains.kotlin.**
+
+# Capacitor Core & Plugins ProGuard Rules (Prevent NPE in getPermissionStates / Plugin Registration)
+-keep class com.getcapacitor.** { *; }
+-keep class com.capacitorjs.plugins.** { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keep @com.getcapacitor.annotation.Permission class * { *; }
+-keep class * extends com.getcapacitor.Plugin { *; }
