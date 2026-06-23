@@ -58,7 +58,7 @@ export default function TrackOrderClient() {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [driverLocation, setDriverLocation] = useState<any>(null);
-  const [mapObj, setMapObj] = useState<any>(null);
+  const mapObjRef = useRef<any>(null);
   const driverMarkerRef = useRef<any>(null);
   const agentToStoreLineRef = useRef<any>(null);
   const storeToCustomerLineRef = useRef<any>(null);
@@ -99,7 +99,7 @@ export default function TrackOrderClient() {
 
   // Initialize Leaflet map
   useEffect(() => {
-    if (typeof window === "undefined" || !mapRef.current || mapLoaded || !order) return;
+    if (typeof window === "undefined" || !mapRef.current || mapObjRef.current || !order) return;
 
     let map: any = null;
     let active = true;
@@ -206,7 +206,7 @@ export default function TrackOrderClient() {
         }
       }, 500);
 
-      setMapObj(map);
+      mapObjRef.current = map;
       setMapLoaded(true);
     });
 
@@ -214,11 +214,11 @@ export default function TrackOrderClient() {
       active = false;
       if (map) map.remove();
     };
-  }, [order, mapLoaded]);
+  }, [order]);
 
   // Handle live location updates reactively
   useEffect(() => {
-    if (mapObj && driverLocation && driverMarkerRef.current && order) {
+    if (mapObjRef.current && driverLocation && driverMarkerRef.current && order) {
       const newPos = [driverLocation.latitude, driverLocation.longitude] as [number, number];
       driverMarkerRef.current.setLatLng(newPos);
       
@@ -247,7 +247,7 @@ export default function TrackOrderClient() {
         });
       }
     }
-  }, [driverLocation, mapObj, order]);
+  }, [driverLocation, order]);
 
   let eta = order?.status === "out_for_delivery" ? "~5 min" : order?.status === "packed" ? "~15 min" : null;
   if (routeInfo && routeInfo.duration > 0) {
@@ -350,14 +350,14 @@ export default function TrackOrderClient() {
         {/* Locate Me FAB */}
         <button 
           onClick={() => {
-            if (mapObj) {
+            if (mapObjRef.current) {
               if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                  (pos) => mapObj.flyTo([pos.coords.latitude, pos.coords.longitude], 16, { animate: true, duration: 1.5 }),
-                  () => mapObj.flyTo([driverLat, driverLng], 15)
+                  (pos) => mapObjRef.current.flyTo([pos.coords.latitude, pos.coords.longitude], 16, { animate: true, duration: 1.5 }),
+                  () => mapObjRef.current.flyTo([driverLat, driverLng], 15)
                 );
               } else {
-                mapObj.flyTo([driverLat, driverLng], 15);
+                mapObjRef.current.flyTo([driverLat, driverLng], 15);
               }
             }
           }}
