@@ -288,3 +288,27 @@ async def complete_installation_step(
 
     await db.commit()
     return APIResponse(success=True, message=f"Step '{body.step}' completed successfully")
+
+@router.post("/reset-system", response_model=APIResponse)
+async def reset_system(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    WARNING: This will completely clear the database and reset the system.
+    Only to be used by super admin or during development.
+    """
+    import asyncio
+    from app.db.session import engine
+    from app.db.base import Base
+    import app.models
+    
+    # Drop all tables and recreate them
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+        
+    return APIResponse(
+        success=True,
+        message="System has been completely reset. The database is now empty. Please re-run the installation wizard."
+    )
+

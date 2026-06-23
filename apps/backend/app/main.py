@@ -99,8 +99,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Seed default RBAC roles and permissions
     async with async_session_factory() as session:
         await seed_default_roles_and_permissions(session)
-        from app.db.seed import seed_database
-        await seed_database(session)
         from app.services.notification_service import NotificationService
         ns = NotificationService(session)
         await ns.seed_default_templates()

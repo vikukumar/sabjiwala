@@ -62,7 +62,7 @@ async def send_otp(
         "attempts": "0",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    await redis.hset(otp_key, mapping=otp_data)
+    await redis.hset(otp_key, mapping=otp_data)  # type: ignore
     await redis.expire(otp_key, OTP_EXPIRY_SECONDS)
 
     # Set rate limit
@@ -80,9 +80,9 @@ async def send_otp(
         "expires_in": OTP_EXPIRY_SECONDS,
     }
 
-    # Include OTP in response only in debug mode (for testing)
-    if settings.APP_DEBUG:
-        result["otp"] = otp
+    # Ensure we never return the OTP to the client in production or dev to enforce actual SMS/Email verification
+    # if settings.APP_DEBUG:
+    #     result["otp"] = otp
 
     await logger.ainfo("OTP generated and sent", identifier=_mask_identifier(identifier), purpose=purpose)
 
@@ -242,7 +242,7 @@ async def verify_otp(
         dict with success, message
     """
     otp_key = f"{OTP_PREFIX}{purpose}:{identifier}"
-    otp_data = await redis.hgetall(otp_key)
+    otp_data = await redis.hgetall(otp_key)  # type: ignore
 
     if not otp_data:
         return {"success": False, "message": "OTP expired or not found"}
@@ -255,7 +255,7 @@ async def verify_otp(
     if isinstance(attempts, bytes):
         attempts = attempts.decode()
 
-    attempts = int(attempts)
+    attempts = int(attempts) if attempts is not None else 0
 
     # Check max attempts
     if attempts >= OTP_MAX_ATTEMPTS:
@@ -263,7 +263,7 @@ async def verify_otp(
         return {"success": False, "message": "Maximum verification attempts exceeded"}
 
     # Increment attempts
-    await redis.hset(otp_key, "attempts", str(attempts + 1))
+    await redis.hset(otp_key, "attempts", str(attempts + 1))  # type: ignore
 
     # Verify
     if otp.strip() == stored_otp:
