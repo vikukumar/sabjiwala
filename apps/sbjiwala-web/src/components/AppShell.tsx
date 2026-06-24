@@ -330,6 +330,9 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
             <X className="w-5 h-5" />
           </button>
         )}
+        <div className="mt-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
+          Version {process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}
+        </div>
       </div>
 
       {/* Location Bar */}
@@ -407,6 +410,9 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
             <span>Sign In / Login</span>
           </Link>
         )}
+        <div className="mt-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
+          Version {process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}
+        </div>
       </div>
     </div>
   );
@@ -714,6 +720,9 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
             )}
           </div>
         )}
+        <div className="mt-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
+          Version {process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}
+        </div>
       </div>
 
       {/* Onboarding Bottom Controls */}
@@ -763,6 +772,9 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
             </button>
           </div>
         )}
+        <div className="mt-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
+          Version {process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}
+        </div>
       </div>
     </div>
   );
@@ -1856,16 +1868,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("click", handleGlobalClick, { capture: true });
   }, [pathname, router]);
 
-  // Public routes or sub-portals that don't need customer app shell (full screen / own layout)
-  const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
-  const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
-  
-  const isBypassRoute = isNative
-    ? (pathname === "/login" || pathname === "/register" || pathname?.startsWith("/login/") || pathname?.startsWith("/register/"))
-    : (isUnified
-      ? (!isCustomerAppPath || pathname === "/app/login" || pathname === "/app/register")
-      : ["/login", "/register", "/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r)));
-  if (isBypassRoute) return <>{children}</>;
+    // Public routes or sub-portals that don't need customer app shell (full screen / own layout)
+    const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+    const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
+    
+    const isBypassRoute = isNative
+      ? (pathname === "/login" || pathname === "/register" || pathname?.startsWith("/login/") || pathname?.startsWith("/register/"))
+      : (isUnified
+        ? (!isCustomerAppPath || pathname === "/app/login" || pathname === "/app/register")
+        : ["/login", "/register", "/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r)));
+    if (isBypassRoute) return <>{children}</>;
 
   if (showSplash) {
     return <SplashPermissionsScreen onComplete={() => setShowSplash(false)} />;
@@ -1993,6 +2005,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {inlineSearchOpen && (
           <InlineSearchModal onClose={() => setInlineSearchOpen(false)} />
         )}
+        <div className="mt-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
+          Version {process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}
+        </div>
       </div>
     </AppShellContext.Provider>
 
