@@ -178,6 +178,11 @@ async def preview_order(
         if subtotal < float(rule.min_order_amount):
             raise HTTPException(status_code=400, detail=f"Minimum order amount for this vendor is ₹{rule.min_order_amount}")
     
+    is_delivery_enabled = rule.is_delivery_fee_enabled if rule else True
+    if not is_delivery_enabled:
+        delivery_charge = 0.0
+        original_delivery_charge = 0.0
+        
     if free_delivery_limit > 0 and subtotal >= free_delivery_limit:
         delivery_charge = 0.0
             
