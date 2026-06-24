@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
+import { AppUpdater } from "@sbjiwala/shared";
 import Providers from "./providers";
 
 export const metadata: Metadata = {

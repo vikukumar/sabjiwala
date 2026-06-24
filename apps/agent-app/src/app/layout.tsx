@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+import { AppUpdater } from "@sbjiwala/shared";
 import Providers from "./providers";
 
 export const metadata: Metadata = {

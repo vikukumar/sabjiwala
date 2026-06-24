@@ -15,6 +15,7 @@
         "predev": "node ../../tmp/fix_node_modules.js && node -e \"const fs=require('fs'),path=require('path'); const vj=path.resolve('src/app/version.json'); if(!process.env.NEXT_PUBLIC_APP_VERSION){const rv=fs.readFileSync('../../version.json','utf8'); fs.mkdirSync(path.dirname(vj),{recursive:true}); fs.writeFileSync(vj,rv);}\""
     },
     "dependencies": {
+        "@capacitor-firebase/analytics": "^8.3.0",
         "@capacitor-firebase/crashlytics": "^8.3.0",
         "@capacitor/android": "^8.4.0",
         "@capacitor/background-runner": "^3.0.0",
@@ -29,12 +30,14 @@
         "@capacitor/network": "^8.0.1",
         "@capacitor/push-notifications": "^8.1.1",
         "@capacitor/toast": "^8.0.1",
+        "@capawesome-team/capacitor-file-opener": "^8.0.1",
         "@capgo/capacitor-android-sms-retriever": "^8.0.4",
         "@capgo/capacitor-stream-call": "^8.0.41",
         "@capgo/capacitor-updater": "^8.49.1",
         "@sbjiwala/shared": "file:../../shared",
         "@tanstack/react-query": "^5.100.14",
         "axios": "^1.16.1",
+        "firebase": "^12.15.0",
         "leaflet": "^1.9.4",
         "lucide-react": "^1.17.0",
         "next": "16.2.6",
@@ -42,9 +45,7 @@
         "react-dom": "19.2.6",
         "react-hook-form": "^7.76.1",
         "zod": "^4.4.3",
-        "zustand": "^5.0.14",
-        "firebase": "^12.15.0",
-        "@capacitor-firebase/analytics": "^8.3.0"
+        "zustand": "^5.0.14"
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4",

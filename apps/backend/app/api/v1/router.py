@@ -27,10 +27,12 @@ from app.api.v1.endpoints.wallets import router as wallets_router
 from app.api.v1.endpoints.reviews import router as reviews_router
 from app.api.v1.endpoints.pages import router as pages_router
 from app.api.v1.endpoints.chat import router as chat_router
+from app.api.v1.endpoints.system import router as system_router
 
 api_router = APIRouter()
 
 api_router.include_router(health_router, prefix="/health", tags=["Health"])
+api_router.include_router(system_router, prefix="/system", tags=["System"])
 api_router.include_router(installation_router, prefix="/installation", tags=["Installation"])
 api_router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 api_router.include_router(users_router, prefix="/users", tags=["Users"])

@@ -5,4 +5,4 @@ export * from './utils/push';
 export * from './utils/streamCall';
 export * from './utils/mapIcons';
 export * from './components/FloatingChatWidget';
-export * from './utils/firebase';
+export * from './utils/firebase';export * from ./components/AppUpdater;
