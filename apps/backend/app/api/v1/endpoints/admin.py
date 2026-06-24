@@ -681,12 +681,16 @@ async def update_vendor_settings(
     # Check if we need to update any delivery rule fields
     has_rule_updates = any(
         v is not None for v in [
+            body.is_delivery_fee_enabled,
+            body.is_platform_fee_enabled,
             body.min_order_amount,
             body.free_delivery_above,
             body.base_delivery_charge,
             body.per_km_charge,
             body.max_delivery_distance_km,
             body.packaging_fee,
+            body.platform_fee,
+            body.convenience_fee,
             body.free_platform_fee_above
         ]
     )
@@ -696,6 +700,10 @@ async def update_vendor_settings(
             rule = VendorDeliveryRule(vendor_id=vendor_id)
             db.add(rule)
             
+        if body.is_delivery_fee_enabled is not None:
+            rule.is_delivery_fee_enabled = body.is_delivery_fee_enabled
+        if body.is_platform_fee_enabled is not None:
+            rule.is_platform_fee_enabled = body.is_platform_fee_enabled
         if body.min_order_amount is not None:
             rule.min_order_amount = body.min_order_amount
         if body.free_delivery_above is not None:
@@ -708,6 +716,10 @@ async def update_vendor_settings(
             rule.max_delivery_distance_km = body.max_delivery_distance_km
         if body.packaging_fee is not None:
             rule.packaging_fee = body.packaging_fee
+        if body.platform_fee is not None:
+            rule.platform_fee = body.platform_fee
+        if body.convenience_fee is not None:
+            rule.convenience_fee = body.convenience_fee
         if body.free_platform_fee_above is not None:
             rule.free_platform_fee_above = body.free_platform_fee_above
             

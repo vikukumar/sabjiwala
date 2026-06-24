@@ -666,6 +666,8 @@ class UpdateVendorCommissionRequest(BaseModel):
     pan_number: Optional[str] = None
     fssai_number: Optional[str] = None
     # Delivery rule fields
+    is_delivery_fee_enabled: Optional[bool] = None
+    is_platform_fee_enabled: Optional[bool] = None
     min_order_amount: Optional[float] = None
     free_delivery_above: Optional[float] = None
     base_delivery_charge: Optional[float] = None

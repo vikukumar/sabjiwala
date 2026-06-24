@@ -283,10 +283,22 @@ async def create_delivery_rule(
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
-    rule = VendorDeliveryRule(vendor_id=vendor.id, **body.model_dump())
-    db.add(rule)
-    await db.flush()
-    return APIResponse(success=True, message="Delivery rule created")
+    rule_res = await db.execute(select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == vendor.id, VendorDeliveryRule.is_deleted == False))
+    rule = rule_res.scalars().first()
+    
+    if rule:
+        # Update existing
+        for key, value in body.model_dump(exclude_unset=True).items():
+            setattr(rule, key, value)
+        message = "Delivery rule updated"
+    else:
+        # Create new
+        rule = VendorDeliveryRule(vendor_id=vendor.id, **body.model_dump())
+        db.add(rule)
+        message = "Delivery rule created"
+        
+    await db.commit()
+    return APIResponse(success=True, message=message)
 
 
 @router.get("/me/service-areas", response_model=APIResponse)
