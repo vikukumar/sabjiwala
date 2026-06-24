@@ -182,6 +182,11 @@ async def get_vendor_details(
     doc_res = await db.execute(select(VendorDocument).where(VendorDocument.vendor_id == vendor.id))
     documents = doc_res.scalars().all()
     
+    # Fetch delivery rules
+    from app.models.vendor import VendorDeliveryRule
+    rule_res = await db.execute(select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == vendor.id))
+    rule = rule_res.scalars().first()
+    
     data = {
         "id": str(vendor.id),
         "business_name": vendor.business_name,
@@ -192,14 +197,33 @@ async def get_vendor_details(
         "gst_number": vendor.gst_number,
         "pan_number": vendor.pan_number,
         "fssai_number": vendor.fssai_number,
+        "commission_rate": float(vendor.commission_rate),
         "contact_email": user.email if user else vendor.contact_email,
         "contact_phone": user.phone if user else vendor.contact_phone,
         "created_at": vendor.created_at.isoformat(),
         "store": {
             "store_name": vendor.store.store_name if vendor.store else "",
+            "address_line_1": vendor.store.address_line_1 if vendor.store else "",
             "city": vendor.store.city if vendor.store else "",
             "state": vendor.store.state if vendor.store else "",
+            "pincode": vendor.store.postal_code if vendor.store else "",
+            "latitude": float(vendor.store.latitude) if vendor.store and vendor.store.latitude else None,
+            "longitude": float(vendor.store.longitude) if vendor.store and vendor.store.longitude else None,
+            "service_radius_km": float(vendor.store.service_radius_km) if vendor.store and vendor.store.service_radius_km else 5.0,
         } if vendor.store else None,
+        "delivery_rules": {
+            "is_delivery_fee_enabled": rule.is_delivery_fee_enabled if rule else True,
+            "is_platform_fee_enabled": rule.is_platform_fee_enabled if rule else True,
+            "min_order_amount": float(rule.min_order_amount) if rule and rule.min_order_amount is not None else 0.0,
+            "free_delivery_above": float(rule.free_delivery_above) if rule and rule.free_delivery_above is not None else None,
+            "base_delivery_charge": float(rule.base_delivery_charge) if rule and rule.base_delivery_charge is not None else 0.0,
+            "per_km_charge": float(rule.per_km_charge) if rule and rule.per_km_charge is not None else 0.0,
+            "max_delivery_distance_km": float(rule.max_delivery_distance_km) if rule and rule.max_delivery_distance_km is not None else 10.0,
+            "packaging_fee": float(rule.packaging_fee) if rule and rule.packaging_fee is not None else 0.0,
+            "platform_fee": float(rule.platform_fee) if rule and rule.platform_fee is not None else None,
+            "convenience_fee": float(rule.convenience_fee) if rule and rule.convenience_fee is not None else None,
+            "free_platform_fee_above": float(rule.free_platform_fee_above) if rule and rule.free_platform_fee_above is not None else None,
+        } if rule else None,
         "documents": [
             {
                 "id": str(d.id),

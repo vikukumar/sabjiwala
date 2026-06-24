@@ -293,6 +293,7 @@ class VendorResponse(BaseModel):
     business_name: str
     slug: str
     status: str
+    rejection_reason: Optional[str] = None
     description: Optional[str] = None
     logo_url: Optional[str] = None
     average_rating: float

@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Building2, MapPin, Phone, Mail, CheckCircle2, XCircle, Eye, Search, Loader2, Filter, ExternalLink, Clock, Star, Package } from "lucide-react";
+import { Building2, MapPin, Phone, Mail, CheckCircle2, XCircle, Eye, Search, Loader2, Filter, ExternalLink, Clock, Star, Package, Edit, Save } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import AdminLayout from "@/components/AdminLayout";
 import dynamic from "next/dynamic";
@@ -19,17 +19,32 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   suspended: { label: "Suspended", color: "text-slate-600 dark:text-slate-400", bg: "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700" },
 };
 
-function VendorDetailModal({ vendor, onClose }: { vendor: any; onClose: () => void }) {
+
+function VendorDetailModal({ vendor: initialVendor, onClose }: { vendor: any; onClose: () => void }) {
   const { success, error: showError } = useToast();
   const queryClient = useQueryClient();
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
+  const [isEditingFees, setIsEditingFees] = useState(false);
+  const [feeForm, setFeeForm] = useState<any>({});
+
+  // Fetch full details including documents and delivery rules
+  const { data: vendorData, isLoading: isLoadingFull } = useQuery<any>({
+    queryKey: ["adminVendorDetail", initialVendor.id],
+    queryFn: async () => {
+      const res = await api.get(`/admin/vendors/${initialVendor.id}`);
+      return res.data?.data || res.data;
+    },
+  });
+
+  const vendor = vendorData || initialVendor;
 
   const approveMutation = useMutation({
-    mutationFn: async () => api.post(`/admin/vendors/${vendor.id}/approve`),
+    mutationFn: async () => api.post(`/admin/vendors/${vendor.id}/verify?status=approved`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminVendors"] });
       queryClient.invalidateQueries({ queryKey: ["adminMetrics"] });
+      queryClient.invalidateQueries({ queryKey: ["adminVendorDetail", vendor.id] });
       success("Vendor approved successfully!");
       onClose();
     },
@@ -37,9 +52,10 @@ function VendorDetailModal({ vendor, onClose }: { vendor: any; onClose: () => vo
   });
 
   const rejectMutation = useMutation({
-    mutationFn: async () => api.post(`/admin/vendors/${vendor.id}/reject`, { reason: rejectionReason }),
+    mutationFn: async () => api.post(`/admin/vendors/${vendor.id}/verify?status=rejected&reason=${encodeURIComponent(rejectionReason)}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminVendors"] });
+      queryClient.invalidateQueries({ queryKey: ["adminVendorDetail", vendor.id] });
       success("Vendor rejected.");
       onClose();
     },
@@ -56,19 +72,41 @@ function VendorDetailModal({ vendor, onClose }: { vendor: any; onClose: () => vo
     onError: (err: any) => showError("Failed", err.response?.data?.detail || err.message),
   });
 
+  const feesMutation = useMutation({
+    mutationFn: async () => api.patch(`/admin/vendors/${vendor.id}/commission`, feeForm),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminVendorDetail", vendor.id] });
+      success("Fees updated successfully.");
+      setIsEditingFees(false);
+    },
+    onError: (err: any) => showError("Failed", err.response?.data?.detail || err.message),
+  });
+
   const store = vendor.store || vendor.vendor_store || {};
   const statusCfg = STATUS_CONFIG[vendor.status] || STATUS_CONFIG.pending;
+  const rules = vendor.delivery_rules || {};
+
+  const handleEditFeesClick = () => {
+    setFeeForm({
+      base_delivery_charge: rules.base_delivery_charge || 0,
+      per_km_charge: rules.per_km_charge || 0,
+      min_order_amount: rules.min_order_amount || 0,
+      platform_fee: rules.platform_fee || 0,
+    });
+    setIsEditingFees(true);
+  };
 
   return (
-    <div className="fixed inset-0 md:left-64 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 md:left-64 z-[999] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-4xl w-full max-h-[95vh] overflow-y-auto shadow-2xl">
+        {isLoadingFull && <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 flex items-center justify-center z-10"><Loader2 className="w-8 h-8 animate-spin text-emerald-500" /></div>}
         <div className="p-6 space-y-5">
           {/* Header */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
-                🏪
+                ðŸ ª
               </div>
               <div>
                 <h2 className="text-lg font-black text-slate-900 dark:text-white">{vendor.business_name}</h2>
@@ -81,16 +119,16 @@ function VendorDetailModal({ vendor, onClose }: { vendor: any; onClose: () => vo
           </div>
 
           {/* Info Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
             {[
               { icon: Mail, label: "Email", value: vendor.email || vendor.user?.email || "N/A" },
-              { icon: Phone, label: "Phone", value: vendor.phone || vendor.user?.phone || "N/A" },
+              { icon: Phone, label: "Phone", value: vendor.phone || vendor.contact_phone || vendor.user?.phone || "N/A" },
               { icon: MapPin, label: "City", value: store.city || store.address_line_2 || "N/A" },
-              { icon: Building2, label: "Business Type", value: vendor.business_type || "Retail" },
-              { icon: Star, label: "Rating", value: `${vendor.average_rating || "N/A"} / 5` },
-              { icon: Package, label: "Total Orders", value: vendor.total_orders || 0 },
-            ].map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex items-center gap-2.5 bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+              { icon: Building2, label: "GST Number", value: vendor.gst_number || "N/A" },
+              { icon: Building2, label: "PAN Number", value: vendor.pan_number || "N/A" },
+              { icon: Building2, label: "FSSAI", value: vendor.fssai_number || "N/A" },
+            ].map(({ icon: Icon, label, value }, idx) => (
+              <div key={idx} className="flex items-center gap-2.5 bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                 <Icon className="w-4 h-4 text-slate-400 flex-shrink-0" />
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase">{label}</p>
@@ -100,42 +138,116 @@ function VendorDetailModal({ vendor, onClose }: { vendor: any; onClose: () => vo
             ))}
           </div>
 
-          {/* Store Address */}
-          {store.address_line_1 && (
-            <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-xs">
-              <p className="font-bold text-slate-400 uppercase mb-1">Store Address</p>
-              <p className="text-slate-700 dark:text-slate-200">{store.address_line_1}, {store.city} {store.pincode}</p>
-            </div>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Store Address & Map */}
+            <div className="space-y-4">
+              {store.address_line_1 && (
+                <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-xs">
+                  <p className="font-bold text-slate-400 uppercase mb-1">Store Address</p>
+                  <p className="text-slate-700 dark:text-slate-200">{store.address_line_1}, {store.city} {store.pincode}</p>
+                </div>
+              )}
 
-          {/* Map if location available */}
-          {store.latitude && store.longitude && (
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-500 uppercase">Store Location</p>
-              <VendorLocationMap lat={parseFloat(store.latitude)} lng={parseFloat(store.longitude)} storeName={store.store_name || vendor.business_name} />
-            </div>
-          )}
-
-          {/* KYC Documents */}
-          {vendor.kyc_documents?.length > 0 && (
-            <div>
-              <p className="text-xs font-bold text-slate-500 uppercase mb-2">KYC Documents</p>
-              <div className="grid grid-cols-2 gap-2">
-                {vendor.kyc_documents.map((doc: any, i: number) => (
-                  <a
-                    key={i}
-                    href={doc.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 text-blue-700 dark:text-blue-400 p-2.5 rounded-xl text-xs font-bold hover:bg-blue-100 transition-all"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    {doc.document_type || `Document ${i + 1}`}
-                  </a>
-                ))}
+              {store.latitude && store.longitude && (
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-slate-500 uppercase flex justify-between">
+                    <span>Store Location</span>
+                    <span>Radius: {store.service_radius_km || 5} km</span>
+                  </p>
+                  <div className="h-40 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                    <VendorLocationMap lat={parseFloat(store.latitude)} lng={parseFloat(store.longitude)} storeName={store.store_name || vendor.business_name} />
+                  </div>
+                </div>
+              )}
+              
+              {/* Delivery & Platform Fees section */}
+              <div className="bg-indigo-50 dark:bg-indigo-950/20 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/30">
+                <div className="flex justify-between items-center mb-3">
+                  <p className="text-xs font-bold text-indigo-800 dark:text-indigo-400 uppercase">Delivery & Platform Fees</p>
+                  {!isEditingFees && (
+                    <button onClick={handleEditFeesClick} className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-white dark:bg-slate-900 px-2 py-1 rounded shadow-sm border border-indigo-200 dark:border-indigo-800">
+                      <Edit className="w-3 h-3" /> Edit
+                    </button>
+                  )}
+                </div>
+                
+                {isEditingFees ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <label className="block text-slate-500 mb-1 font-bold">Base Charge (â‚¹)</label>
+                        <input type="number" value={feeForm.base_delivery_charge} onChange={e => setFeeForm({...feeForm, base_delivery_charge: parseFloat(e.target.value)})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5" />
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 mb-1 font-bold">Per KM Charge (â‚¹)</label>
+                        <input type="number" value={feeForm.per_km_charge} onChange={e => setFeeForm({...feeForm, per_km_charge: parseFloat(e.target.value)})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5" />
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 mb-1 font-bold">Min Order (â‚¹)</label>
+                        <input type="number" value={feeForm.min_order_amount} onChange={e => setFeeForm({...feeForm, min_order_amount: parseFloat(e.target.value)})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5" />
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 mb-1 font-bold">Platform Fee (â‚¹)</label>
+                        <input type="number" value={feeForm.platform_fee} onChange={e => setFeeForm({...feeForm, platform_fee: parseFloat(e.target.value)})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5" />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => setIsEditingFees(false)} className="text-xs text-slate-500 font-bold px-2">Cancel</button>
+                      <button onClick={() => feesMutation.mutate()} disabled={feesMutation.isPending} className="text-xs bg-indigo-600 text-white font-bold px-3 py-1.5 rounded flex items-center gap-1 shadow-sm disabled:opacity-50">
+                        <Save className="w-3 h-3" /> Save
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <p className="text-slate-500">Base Delivery Charge</p>
+                      <p className="font-bold text-slate-900 dark:text-white">â‚¹{rules.base_delivery_charge || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Per KM Charge</p>
+                      <p className="font-bold text-slate-900 dark:text-white">â‚¹{rules.per_km_charge || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Min Order Amount</p>
+                      <p className="font-bold text-slate-900 dark:text-white">â‚¹{rules.min_order_amount || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Platform Fee</p>
+                      <p className="font-bold text-slate-900 dark:text-white">â‚¹{rules.platform_fee || 0}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+
+            {/* KYC Documents Section */}
+            <div className="space-y-3">
+              <p className="text-xs font-bold text-slate-500 uppercase">KYC Documents</p>
+              {vendor.documents?.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3">
+                  {vendor.documents.map((doc: any, i: number) => (
+                    <div key={i} className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-950">
+                      <div className="p-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-between items-center">
+                         <span className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300">{doc.document_type.replace(/_/g, " ")}</span>
+                         <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{doc.verification_status}</span>
+                      </div>
+                      <a href={resolveImageUrl(doc.file_url)} target="_blank" rel="noopener noreferrer" className="block w-full h-32 relative bg-slate-100 dark:bg-slate-900 group">
+                        <img src={resolveImageUrl(doc.file_url)} className="w-full h-full object-cover transition-opacity group-hover:opacity-70" alt="Document" />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                           <span className="bg-slate-900/80 text-white text-[10px] font-bold px-2 py-1 rounded">Click to Expand</span>
+                        </div>
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                  <p className="text-xs text-slate-500">No documents uploaded</p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Rejection Reason Input */}
           {showRejectForm && (
