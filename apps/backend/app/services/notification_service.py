@@ -433,7 +433,7 @@ class NotificationService:
                 # let's trigger it directly asynchronously in a try-block
                 try:
                     if sub.endpoint == "fcm":
-                        await send_fcm_legacy_push(
+                        await send_fcm_push(
                             token=sub.auth_key,
                             title=push_title,
                             body=push_body,
@@ -595,39 +595,67 @@ async def send_queued_sms(sms_q: SmsQueue) -> bool:
         return False
 
 
-async def send_fcm_legacy_push(token: str, title: str, body: str, data: Optional[Dict[str, Any]] = None) -> bool:
-    """Send a legacy FCM notification via HTTP POST to Google's legacy endpoint."""
-    import httpx
-    if not settings.FCM_SERVER_KEY:
-        logger.warning("FCM server key not configured, push notification logged but not sent", token=token)
+_firebase_app_initialized = False
+
+async def send_fcm_push(token: str, title: str, body: str, data: Optional[Dict[str, Any]] = None) -> bool:
+    """Send FCM notification via Firebase Admin SDK (HTTP v1)."""
+    global _firebase_app_initialized
+    import anyio
+    
+    if not settings.FIREBASE_SERVICE_ACCOUNT_JSON:
+        logger.warning("FIREBASE_SERVICE_ACCOUNT_JSON not configured, push notification logged but not sent", token=token)
         return False
-
-    url = "https://fcm.googleapis.com/fcm/send"
-    headers = {
-        "Authorization": f"key={settings.FCM_SERVER_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "to": token,
-        "notification": {
-            "title": title,
-            "body": body,
-            "sound": "default",
-            "badge": "1",
-            "click_action": "FLUTTER_NOTIFICATION_CLICK"
-        },
-        "data": data or {}
-    }
-
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=payload, headers=headers, timeout=10)
-        if response.status_code == 200:
-            logger.info("FCM push notification sent successfully", token=token)
+        
+    def sync_send():
+        global _firebase_app_initialized
+        import firebase_admin
+        from firebase_admin import credentials, messaging
+        
+        if not _firebase_app_initialized:
+            try:
+                import json
+                import os
+                # check if it's a file path or raw JSON string
+                sa_val = settings.FIREBASE_SERVICE_ACCOUNT_JSON
+                if sa_val.strip().startswith("{"):
+                    cred_dict = json.loads(sa_val)
+                    cred = credentials.Certificate(cred_dict)
+                else:
+                    if not os.path.exists(sa_val):
+                        logger.error(f"Firebase Service Account file not found: {sa_val}")
+                        return False
+                    cred = credentials.Certificate(sa_val)
+                firebase_admin.initialize_app(cred)
+                _firebase_app_initialized = True
+            except Exception as e:
+                logger.error("Failed to initialize Firebase Admin SDK", error=str(e))
+                return False
+                
+        # Send message
+        try:
+            # FCM HTTP v1 requires all data values to be strings
+            str_data = {str(k): str(v) for k, v in (data or {}).items() if v is not None}
+            
+            message = messaging.Message(
+                notification=messaging.Notification(
+                    title=title,
+                    body=body
+                ),
+                data=str_data,
+                token=token,
+                android=messaging.AndroidConfig(
+                    priority='high',
+                    notification=messaging.AndroidNotification(
+                        sound='default',
+                        click_action='FLUTTER_NOTIFICATION_CLICK'
+                    )
+                )
+            )
+            response = messaging.send(message)
+            logger.info("FCM push notification sent successfully", token=token, message_id=response)
             return True
-        else:
-            logger.error("FCM service returned non-200 status", status=response.status_code, response=response.text)
+        except Exception as e:
+            logger.error("Failed to send FCM push notification", error=str(e), token=token)
             return False
-    except Exception as e:
-        logger.error("Failed to send FCM push notification", error=str(e), token=token)
-        return False
+
+    return await anyio.to_thread.run_sync(sync_send)

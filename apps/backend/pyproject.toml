@@ -34,6 +34,7 @@ dependencies = [
     # Notifications
     "aiosmtplib>=3.0.0",
     "pywebpush>=2.0.0",
+    "firebase-admin>=6.5.0",
     "jinja2>=3.1.4",
     # Maps
     "geopy>=2.4.1",

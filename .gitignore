@@ -160,3 +160,6 @@ sbjiwala-release.keystore
 github_secrets_values.txt
 apps/backend/test_returns2.py
 patch_deps.py
+.env.production
+.env
+.env.*

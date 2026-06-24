@@ -29,8 +29,15 @@ function notifyConnectionSubscribers(connected: boolean) {
 
 function connectGlobalWS() {
   if (typeof window === "undefined") return;
-  if (globalWs?.readyState === WebSocket.OPEN || globalWs?.readyState === WebSocket.CONNECTING) {
+  if (globalWs?.readyState === WebSocket.OPEN) {
     return;
+  }
+  // If socket is stuck connecting, forcefully close it to attempt a fresh connection
+  if (globalWs?.readyState === WebSocket.CONNECTING) {
+    globalWs.onclose = null;
+    globalWs.onerror = null;
+    globalWs.close();
+    globalWs = null;
   }
 
   const token = localStorage.getItem("sw_access_token");
@@ -48,6 +55,10 @@ function connectGlobalWS() {
     } catch (e) {
       console.error("Invalid API URL", e);
     }
+  } else if ((window as any).Capacitor || window.location.hostname === 'localhost' && window.location.protocol.startsWith('capacitor')) {
+    // Mobile app fallback if API base is relative
+    baseHost = "sbjiwala.qzz.io";
+    protocol = "wss:";
   }
 
   const ws = new WebSocket(`${protocol}//${baseHost}/api/v1/ws?token=${token}`);
@@ -93,7 +104,15 @@ function connectGlobalWS() {
 
 function handleResumeGlobal() {
   if (!globalWs || globalWs.readyState !== WebSocket.OPEN) {
+    // If it was stuck connecting, it will be forcefully closed by connectGlobalWS
     connectGlobalWS();
+  } else {
+    // It's open, send a ping immediately to verify it's not a ghost connection
+    try {
+      globalWs.send(JSON.stringify({ type: "ping" }));
+    } catch (err) {
+      connectGlobalWS();
+    }
   }
 }
 

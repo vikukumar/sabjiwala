@@ -110,6 +110,7 @@ class Settings(BaseSettings):
     VAPID_PRIVATE_KEY: str = ""
     VAPID_SUBJECT: str = "mailto:admin@sbjiwala.qzz.io"
     FCM_SERVER_KEY: Optional[str] = None
+    FIREBASE_SERVICE_ACCOUNT_JSON: Optional[str] = None
 
     # ---- Google OAuth2 ----
     GOOGLE_CLIENT_ID: str = ""
