@@ -642,6 +642,15 @@ class SystemSettingUpdate(BaseModel):
     value: Optional[str] = None
     value_json: Optional[dict] = None
 
+class AdminUpdateUserRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    is_verified: Optional[bool] = None
+    is_active: Optional[bool] = None
+    gender: Optional[str] = None
+
 class UpdateUserStatusRequest(BaseModel):
     is_active: bool
 

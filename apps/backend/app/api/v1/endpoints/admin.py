@@ -1,7 +1,7 @@
 """
 Super Admin dashboard and oversight endpoints.
 """
-from typing import List, Optional
+from typing import List, Optional, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import (
     APIResponse, PaginatedResponse, PaginationMeta, SystemSettingUpdate,
-    UpdateUserStatusRequest, UpdateUserRoleRequest, UpdateVendorCommissionRequest,
+    AdminUpdateUserRequest, UpdateUserStatusRequest, UpdateUserRoleRequest, UpdateVendorCommissionRequest,
     UpdateDeliveryBoyStatusRequest, AdvertisementCreate,
     CmsPageCreateUpdate, EmailTemplateCreateUpdate, EmailTemplateTestRequest
 )
@@ -286,6 +286,152 @@ async def list_users(
     }
     
     return APIResponse(success=True, data=user_list, meta={"pagination": pagination})
+
+
+@router.get("/users/{user_id}", response_model=APIResponse)
+async def get_user_profile_admin(
+    user_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get full profile details of a user for admin."""
+    await _verify_admin(current_user)
+    
+    result = await db.execute(select(User).where(User.id == user_id, User.is_deleted == False))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    data: dict[str, Any] = {
+        "id": str(user.id),
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "phone": user.phone,
+        "username": user.username,
+        "user_type": user.user_type.value if hasattr(user.user_type, "value") else str(user.user_type),
+        "is_active": user.is_active,
+        "is_verified": user.is_verified,
+        "gender": user.gender,
+        "created_at": user.created_at.isoformat() if user.created_at else "",
+    }
+    
+    # Fetch roles
+    from app.models.user import Role, UserRole
+    role_res = await db.execute(
+        select(Role.name).join(UserRole).where(UserRole.user_id == user.id, UserRole.is_deleted == False)
+    )
+    data["roles"] = role_res.scalars().all()
+    
+    # Fetch wallets
+    from app.models.payment import Wallet
+    wallet_res = await db.execute(select(Wallet).where(Wallet.user_id == user.id))
+    wallets = wallet_res.scalars().all()
+    data["wallets"] = [
+        {"id": str(w.id), "type": w.wallet_type.value if hasattr(w.wallet_type, "value") else str(w.wallet_type), "balance": float(w.balance)}
+        for w in wallets
+    ]
+    
+    # Fetch addresses
+    from app.models.user import UserAddress
+    address_res = await db.execute(select(UserAddress).where(UserAddress.user_id == user.id, UserAddress.is_deleted == False))
+    addresses = address_res.scalars().all()
+    data["addresses"] = [
+        {
+            "id": str(a.id),
+            "label": a.label,
+            "address_line_1": a.address_line_1,
+            "city": a.city,
+            "postal_code": a.postal_code,
+            "is_default": a.is_default
+        } for a in addresses
+    ]
+    
+    # Fetch specific profiles based on user type
+    if user.user_type == UserType.VENDOR:
+        from app.models.vendor import Vendor
+        v_res = await db.execute(select(Vendor).where(Vendor.user_id == user.id))
+        vendor = v_res.scalars().first()
+        if vendor:
+            data["vendor_profile"] = {
+                "id": str(vendor.id),
+                "business_name": vendor.business_name,
+                "status": vendor.status.value if hasattr(vendor.status, "value") else str(vendor.status)
+            }
+    elif user.user_type == UserType.DELIVERY_BOY:
+        from app.models.delivery import DeliveryBoy
+        db_res = await db.execute(select(DeliveryBoy).where(DeliveryBoy.user_id == user.id))
+        dboy = db_res.scalars().first()
+        if dboy:
+            data["delivery_profile"] = {
+                "id": str(dboy.id),
+                "status": dboy.status.value if hasattr(dboy.status, "value") else str(dboy.status),
+                "vehicle_type": dboy.vehicle_type
+            }
+
+    return APIResponse(success=True, data=data)
+
+
+@router.put("/users/{user_id}", response_model=APIResponse)
+async def update_user_profile_admin(
+    user_id: UUID,
+    body: AdminUpdateUserRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update user core profile details."""
+    await _verify_admin(current_user)
+    
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(select(User).options(selectinload(User.profile)).where(User.id == user_id, User.is_deleted == False))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if body.first_name is not None: user.first_name = body.first_name
+    if body.last_name is not None: user.last_name = body.last_name
+    if body.email is not None: user.email = body.email
+    if body.phone is not None: user.phone = body.phone
+    if body.is_verified is not None: user.is_verified = body.is_verified
+    if body.is_active is not None: user.is_active = body.is_active
+    
+    if body.gender is not None:
+        if user.profile:
+            user.profile.gender = body.gender
+        else:
+            from app.models.user import UserProfile
+            db.add(UserProfile(user_id=user.id, gender=body.gender))
+    
+    await db.commit()
+    return APIResponse(success=True, message="User profile updated successfully")
+
+
+@router.delete("/users/{user_id}", response_model=APIResponse)
+async def delete_user_admin(
+    user_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft delete a user account."""
+    await _verify_admin(current_user)
+    
+    # Prevent self-deletion
+    if str(user_id) == current_user.get("user_id"):
+        raise HTTPException(status_code=400, detail="Cannot delete your own admin account")
+        
+    result = await db.execute(select(User).where(User.id == user_id, User.is_deleted == False))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    from datetime import datetime, timezone
+    user.is_deleted = True
+    user.deleted_at = datetime.now(timezone.utc)
+    user.deleted_by = UUID(str(current_user.get("user_id"))) if current_user.get("user_id") else None
+    user.is_active = False
+    
+    await db.commit()
+    return APIResponse(success=True, message="User deleted successfully")
 
 
 @router.patch("/users/{user_id}/status", response_model=APIResponse)
