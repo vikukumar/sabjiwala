@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Invoice {{ order.id }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin: 2cm;
+            @frame header {
+                -pdf-frame-content: header_content;
+                top: 1cm; margin-left: 2cm; margin-right: 2cm; height: 3cm;
+            }
+            @frame footer {
+                -pdf-frame-content: footer_content;
+                bottom: 1cm; margin-left: 2cm; margin-right: 2cm; height: 1cm;
+            }
+        }
+        body {
+            font-family: Helvetica, sans-serif;
+            color: #333333;
+            font-size: 10pt;
+        }
+        .header-table {
+            width: 100%;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #059669;
+        }
+        .header-logo {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #059669;
+        }
+        .header-company {
+            text-align: right;
+            color: #666;
+            font-size: 9pt;
+        }
+        .invoice-title {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #059669;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .info-table {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            padding-bottom: 5px;
+        }
+        .info-value {
+            color: #222;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .items-table th {
+            background-color: #059669;
+            color: white;
+            padding: 8px;
+            text-align: left;
+            font-weight: bold;
+        }
+        .items-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .items-table th.right, .items-table td.right {
+            text-align: right;
+        }
+        .summary-table {
+            width: 50%;
+            margin-left: 50%;
+            border-collapse: collapse;
+        }
+        .summary-table td {
+            padding: 6px 8px;
+        }
+        .summary-label {
+            text-align: left;
+            font-weight: bold;
+            color: #555;
+        }
+        .summary-value {
+            text-align: right;
+        }
+        .total-row {
+            background-color: #f0fdf4;
+            border-top: 2px solid #059669;
+        }
+        .total-row td {
+            font-weight: bold;
+            font-size: 12pt;
+            color: #059669;
+        }
+        .notes {
+            margin-top: 40px;
+            font-size: 9pt;
+            color: #666;
+            padding: 10px;
+            background-color: #f9fafb;
+            border-left: 3px solid #059669;
+        }
+        .footer-text {
+            text-align: center;
+            font-size: 8pt;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="header_content">
+        <table class="header-table">
+            <tr>
+                <td class="header-logo">
+                    Sbjiwala
+                </td>
+                <td class="header-company">
+                    <strong>Sbjiwala Pvt Ltd</strong><br>
+                    Agriculture Hub, Phase 1<br>
+                    New Delhi, India 110001<br>
+                    support@sbjiwala.qzz.io
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div id="footer_content">
+        <div class="footer-text">
+            Thank you for shopping with Sbjiwala! Freshness delivered.
+        </div>
+    </div>
+
+    <div class="invoice-title">INVOICE</div>
+
+    <table class="info-table">
+        <tr>
+            <td width="50%" valign="top">
+                <div class="info-label">Billed To:</div>
+                <div class="info-value">
+                    <strong>{{ order.delivery_address.get('name', 'Customer') }}</strong><br>
+                    {{ order.delivery_address.get('flat_number', '') }} {{ order.delivery_address.get('building_name', '') }}<br>
+                    {{ order.delivery_address.get('street', '') }}<br>
+                    {{ order.delivery_address.get('landmark', '') }}<br>
+                    {{ order.delivery_address.get('city', '') }}, {{ order.delivery_address.get('state', '') }} - {{ order.delivery_address.get('pincode', '') }}<br>
+                    Ph: {{ order.delivery_address.get('phone_number', '') }}
+                </div>
+            </td>
+            <td width="50%" valign="top" align="right">
+                <table width="100%">
+                    <tr>
+                        <td align="right" class="info-label">Invoice No:</td>
+                        <td align="right" class="info-value">ORD-{{ order.id | string | upper | truncate(8, True, '') }}</td>
+                    </tr>
+                    <tr>
+                        <td align="right" class="info-label">Order Date:</td>
+                        <td align="right" class="info-value">{{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}</td>
+                    </tr>
+                    <tr>
+                        <td align="right" class="info-label">Payment Method:</td>
+                        <td align="right" class="info-value">{{ order.payment_method | upper }}</td>
+                    </tr>
+                    <tr>
+                        <td align="right" class="info-label">Payment Status:</td>
+                        <td align="right" class="info-value">{{ order.payment_status | title }}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>Item Description</th>
+                <th class="right">Qty</th>
+                <th class="right">Unit Price</th>
+                <th class="right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>
+                    <strong>{{ item.product_name }}</strong><br>
+                    <span style="font-size: 8pt; color: #666;">Sold by: {{ item.vendor.name if item.vendor else 'Sbjiwala' }}</span>
+                </td>
+                <td class="right">{{ item.quantity }} {{ item.unit }}</td>
+                <td class="right">₹{{ "%.2f"|format(item.price_at_order) }}</td>
+                <td class="right">₹{{ "%.2f"|format(item.total_price) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="summary-table">
+        <tr>
+            <td class="summary-label">Subtotal:</td>
+            <td class="summary-value">₹{{ "%.2f"|format(order.subtotal) }}</td>
+        </tr>
+        {% if order.delivery_charge > 0 %}
+        <tr>
+            <td class="summary-label">Delivery Charge:</td>
+            <td class="summary-value">₹{{ "%.2f"|format(order.delivery_charge) }}</td>
+        </tr>
+        {% endif %}
+        {% if order.platform_fee > 0 %}
+        <tr>
+            <td class="summary-label">Platform Fee:</td>
+            <td class="summary-value">₹{{ "%.2f"|format(order.platform_fee) }}</td>
+        </tr>
+        {% endif %}
+        {% if order.packaging_charge > 0 %}
+        <tr>
+            <td class="summary-label">Packaging Charge:</td>
+            <td class="summary-value">₹{{ "%.2f"|format(order.packaging_charge) }}</td>
+        </tr>
+        {% endif %}
+        {% if order.tax_amount > 0 %}
+        <tr>
+            <td class="summary-label">Tax:</td>
+            <td class="summary-value">₹{{ "%.2f"|format(order.tax_amount) }}</td>
+        </tr>
+        {% endif %}
+        {% if order.discount_amount > 0 %}
+        <tr>
+            <td class="summary-label">Discount:</td>
+            <td class="summary-value" style="color: #059669;">-₹{{ "%.2f"|format(order.discount_amount) }}</td>
+        </tr>
+        {% endif %}
+        {% if order.coupon_discount > 0 %}
+        <tr>
+            <td class="summary-label">Coupon ({{ order.coupon_code }}):</td>
+            <td class="summary-value" style="color: #059669;">-₹{{ "%.2f"|format(order.coupon_discount) }}</td>
+        </tr>
+        {% endif %}
+        {% if order.wallet_amount > 0 %}
+        <tr>
+            <td class="summary-label">Paid via Wallet:</td>
+            <td class="summary-value" style="color: #059669;">-₹{{ "%.2f"|format(order.wallet_amount) }}</td>
+        </tr>
+        {% endif %}
+        <tr class="total-row">
+            <td class="summary-label">Grand Total:</td>
+            <td class="summary-value">₹{{ "%.2f"|format(order.total_amount) }}</td>
+        </tr>
+    </table>
+
+    <div class="notes">
+        <strong>Notes:</strong><br>
+        This is a computer generated invoice and does not require a physical signature. For returns and exchanges, please reach out to us within 24 hours of delivery. 
+    </div>
+
+</body>
+</html>

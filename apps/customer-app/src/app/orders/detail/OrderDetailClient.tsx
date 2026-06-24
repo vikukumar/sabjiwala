@@ -7,7 +7,7 @@ import { api, resolveImageUrl } from "@sbjiwala/shared";
 import Link from "next/link";
 import {
   Package, MapPin, Clock, CheckCircle2, Truck, XCircle,
-  CreditCard, Star, ChevronLeft, Phone, Copy, MessageSquare, ArrowRight, RotateCcw
+  CreditCard, Star, ChevronLeft, Phone, Copy, MessageSquare, ArrowRight, RotateCcw, Download
 } from "lucide-react";
 import { Button, Badge, Skeleton } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
@@ -391,6 +391,23 @@ export default function OrderDetailClient() {
           </div>
         </div>
       </div>
+
+      {/* Invoice */}
+      {isDelivered && (
+        <div 
+          onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders/${id}/invoice`, '_blank')}
+          className="card p-4 flex items-center gap-3 border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20 hover:border-emerald-500 transition-colors cursor-pointer mb-4"
+        >
+          <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+            <Download className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">Download Invoice</p>
+            <p className="text-xs text-emerald-700/70 dark:text-emerald-400/70">Original PDF Receipt</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-emerald-500" />
+        </div>
+      )}
 
       {/* Support */}
       <Link href={resolveLink(`/support?order=${id}`)}>

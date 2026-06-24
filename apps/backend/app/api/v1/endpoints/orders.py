@@ -872,111 +872,29 @@ async def get_order_invoice(
     order_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    """Compile and render a print-friendly invoice HTML for an order."""
-    from fastapi.responses import HTMLResponse
-    from app.models.system import SystemSetting
+    """Generate and return a beautifully styled PDF invoice for an order."""
+    from fastapi.responses import Response
     from app.models.order import Order
-    from app.models.user import User
-    from app.models.vendor import Vendor
-    from jinja2 import Template
+    from app.services.invoice_service import InvoiceService
     
     # Fetch order
     res = await db.execute(
         select(Order)
         .where(Order.id == order_id)
-        .options(selectinload(Order.items))
+        .options(selectinload(Order.items).selectinload(Order.items.property.mapper.class_.vendor))
     )
     order = res.scalars().first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
         
-    # Fetch system invoice settings — template is stored as plain text (s.value),
-    # branding is stored as JSON object (s.value_json).
-    setting_res = await db.execute(
-        select(SystemSetting).where(SystemSetting.key.in_(["invoice_template_html", "invoice_branding_json"]))
-    )
-    settings_db = setting_res.scalars().all()
-    settings_by_key = {s.key: s for s in settings_db}
-
-    template_setting = settings_by_key.get("invoice_template_html")
-    branding_setting = settings_by_key.get("invoice_branding_json")
-
-    # invoice_template must be a plain str for Jinja2
-    invoice_template: str = (template_setting.value or "") if template_setting else ""
-    # branding is a JSON dict
-    branding: dict = (branding_setting.value_json or {}) if branding_setting else {}
-
-    if not invoice_template:
-        raise HTTPException(status_code=500, detail="Invoice template not configured")
-        
-    # Fetch customer
-    customer_res = await db.execute(select(User).where(User.id == order.user_id))
-    customer = customer_res.scalars().first()
-    customer_name = f"{customer.first_name} {customer.last_name}" if customer else "Customer"
-    customer_phone = customer.phone if customer else ""
-    
-    # Fetch vendor
-    vendor_res = await db.execute(select(Vendor).where(Vendor.id == order.vendor_id))
-    vendor = vendor_res.scalars().first()
-    vendor_name = vendor.business_name if vendor else "Vendor"
-    vendor_address = "Local Mandi"
-    vendor_gst = "N/A"
-    
-    # Construct template variables
-    items_list = []
-    for item in order.items:
-        items_list.append({
-            "name": item.product_name,
-            "quantity": item.quantity,
-            "unit": item.unit if isinstance(item.unit, str) else str(item.unit),
-            "unit_price": float(item.unit_price),
-            "total_price": float(item.unit_price) * float(item.quantity)
-        })
-
-    # delivery_address is stored as a JSONB dict — flatten it to a readable string
-    delivery_addr = order.delivery_address
-    if isinstance(delivery_addr, dict):
-        parts = [
-            delivery_addr.get("address_line_1", ""),
-            delivery_addr.get("address_line_2", ""),
-            delivery_addr.get("city", ""),
-            delivery_addr.get("state", ""),
-            delivery_addr.get("postal_code", ""),
-        ]
-        delivery_address_str = ", ".join(p for p in parts if p)
-    else:
-        delivery_address_str = str(delivery_addr or "")
-
-    # branding may be stored as a plain string (old format) — fall back safely
-    if not isinstance(branding, dict):
-        branding = {}
-
-    variables = {
-        "company_name": branding.get("company_name", "Sbjiwala"),
-        "company_address": branding.get("company_address", ""),
-        "company_phone": branding.get("company_phone", ""),
-        "company_gstin": branding.get("gstin", ""),
-        "order_number": order.order_number,
-        "created_at": order.created_at.strftime("%Y-%m-%d %H:%M") if order.created_at else "",
-        "status": order.status.value if hasattr(order.status, "value") else str(order.status),
-        "vendor_name": vendor_name,
-        "vendor_address": vendor_address,
-        "vendor_gst": vendor_gst,
-        "customer_name": customer_name,
-        "customer_phone": customer_phone,
-        "delivery_address": delivery_address_str,
-        "items": items_list,
-        "subtotal": float(order.subtotal),
-        "delivery_charge": float(order.delivery_charge),
-        "tax_amount": float(order.tax_amount),
-        "packaging_charge": float(order.packaging_charge),
-        "discount_amount": float(order.discount_amount),
-        "total_amount": float(order.total_amount)
-    }
-
     try:
-        html_content = Template(str(invoice_template)).render(**variables)
-        return HTMLResponse(content=html_content)
+        # Check if URL exists and we want to redirect (optional)
+        # But for dynamic API, we can just stream the PDF directly.
+        pdf_bytes = await InvoiceService(db).generate_invoice_pdf(order, list(order.items))
+        
+        headers = {
+            'Content-Disposition': f'attachment; filename="Invoice_{order.id}.pdf"'
+        }
+        return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to render invoice template: {str(e)}")
-
+        raise HTTPException(status_code=500, detail=f"Failed to generate PDF invoice: {str(e)}")

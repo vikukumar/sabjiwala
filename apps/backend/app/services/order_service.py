@@ -796,4 +796,12 @@ class OrderService:
             reference_id=str(order.id)
         )
 
+        # Generate Invoice if Delivered
+        if status == OrderStatus.DELIVERED:
+            from app.services.invoice_service import InvoiceService
+            try:
+                await InvoiceService(self.db).generate_and_upload_invoice(str(order.id))
+            except Exception as e:
+                logger.error(f"Failed to trigger invoice generation: {e}")
+
         return order
