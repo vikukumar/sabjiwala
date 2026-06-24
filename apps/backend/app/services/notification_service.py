@@ -177,37 +177,43 @@ class NotificationService:
         """Seed beautiful default email templates if they don't exist."""
         from app.models.cms import EmailTemplate
         
+        base_html = (
+            "<!DOCTYPE html>"
+            "<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'></head>"
+            "<body style=\"font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 40px 20px; color: #1e293b;\">"
+            "<table width='100%' cellpadding='0' cellspacing='0' role='presentation' style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); overflow: hidden;'>"
+            "<tr><td style='padding: 30px 30px; text-align: center; background: linear-gradient(135deg, #059669 0%, #10b981 100%);'>"
+            "<h1 style='color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -1px;'>Sbjiwala</h1>"
+            "<p style='color: rgba(255,255,255,0.9); margin: 6px 0 0 0; font-size: 14px; font-weight: 500;'>Farm Fresh &bull; 10 Min Delivery</p>"
+            "</td></tr>"
+            "<tr><td style='padding: 40px 30px;'>"
+            "{content}"
+            "</td></tr>"
+            "<tr><td style='background-color: #f8fafc; padding: 24px 30px; text-align: center;'>"
+            "<p style='margin: 0; color: #94a3b8; font-size: 13px; font-weight: 500;'>&copy; 2026 Sbjiwala Technologies. All rights reserved.</p>"
+            "</td></tr>"
+            "</table></body></html>"
+        )
+        
         default_templates = [
             {
                 "slug": "order_placed",
                 "name": "Order Placed Notification",
                 "subject": "Order Placed Successfully - Sabjiwala",
-                "body_html": (
-                    "<div style='font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>"
-                    "<div style='text-align: center; border-bottom: 2px solid #059669; padding-bottom: 10px;'>"
-                    "<h2 style='color: #059669; margin: 0;'>Sabjiwala</h2>"
-                    "<p style='color: #64748b; margin: 5px 0 0 0;'>Kisan ke Ghar Se Apke Ghar Tak</p>"
+                "body_html": base_html.replace("{content}", 
+                    "<div style='text-align: center; margin-bottom: 24px;'>"
+                    "<div style='background-color: #ecfdf5; width: 64px; height: 64px; border-radius: 32px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;'><span style='font-size: 32px;'>🎉</span></div>"
+                    "<h2 style='font-size: 22px; font-weight: 700; margin: 0 0 8px 0; color: #0f172a;'>Order Placed Successfully!</h2>"
+                    "<p style='color: #475569; font-size: 15px; margin: 0;'>Your fresh veggies are being packed.</p>"
                     "</div>"
-                    "<h3 style='color: #0f172a; margin-top: 20px;'>Aapka Order Place Ho Gaya Hai! 🎉</h3>"
-                    "<p>Hello,</p>"
-                    "<p>Thank you for shopping with us! Your order <strong>#{{ order_number }}</strong> has been successfully received.</p>"
-                    "<div style='background-color: #f8fafc; border-radius: 6px; padding: 15px; margin: 20px 0;'>"
-                    "<p style='margin: 0 0 10px 0;'><strong>Order Details:</strong></p>"
+                    "<div style='background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; margin-bottom: 24px;'>"
+                    "<p style='margin: 0 0 12px 0; font-size: 14px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;'>Order Details</p>"
                     "<table style='width: 100%; border-collapse: collapse;'>"
-                    "<tr>"
-                    "<td style='padding: 5px 0; color: #64748b;'>Order Amount:</td>"
-                    "<td style='padding: 5px 0; text-align: right; font-weight: bold;'>₹{{ total_amount }}</td>"
-                    "</tr>"
-                    "<tr>"
-                    "<td style='padding: 5px 0; color: #64748b;'>Delivery Address:</td>"
-                    "<td style='padding: 5px 0; text-align: right;'>{{ delivery_address }}</td>"
-                    "</tr>"
-                    "</table>"
-                    "</div>"
-                    "<p>Our delivery boy will arrive at your doorstep in 10 minutes!</p>"
-                    "<hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>"
-                    "<p style='font-size: 12px; color: #94a3b8; text-align: center;'>Sabjiwala © 2026. All rights reserved.</p>"
-                    "</div>"
+                    "<tr><td style='padding: 8px 0; color: #475569; border-bottom: 1px solid #e2e8f0;'>Order Number:</td><td style='padding: 8px 0; text-align: right; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0;'>#{{ order_number }}</td></tr>"
+                    "<tr><td style='padding: 8px 0; color: #475569; border-bottom: 1px solid #e2e8f0;'>Total Amount:</td><td style='padding: 8px 0; text-align: right; font-weight: 700; color: #059669; border-bottom: 1px solid #e2e8f0;'>₹{{ total_amount }}</td></tr>"
+                    "<tr><td style='padding: 8px 0; color: #475569;'>Delivery Address:</td><td style='padding: 8px 0; text-align: right; color: #0f172a;'>{{ delivery_address }}</td></tr>"
+                    "</table></div>"
+                    "<p style='color: #64748b; font-size: 15px; text-align: center; margin: 0;'>Our delivery partner will arrive at your doorstep shortly.</p>"
                 ),
                 "body_text": "Hello, thank you for shopping with us! Your order #{{ order_number }} has been placed. Amount: ₹{{ total_amount }}.",
                 "variables": ["order_number", "total_amount", "delivery_address"]
@@ -216,16 +222,11 @@ class NotificationService:
                 "slug": "order_confirmed",
                 "name": "Order Confirmed Notification",
                 "subject": "Your Order is Confirmed - Sabjiwala",
-                "body_html": (
-                    "<div style='font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>"
-                    "<div style='text-align: center; border-bottom: 2px solid #059669; padding-bottom: 10px;'>"
-                    "<h2 style='color: #059669; margin: 0;'>Sabjiwala</h2>"
-                    "</div>"
-                    "<h3 style='color: #0f172a; margin-top: 20px;'>Order Confirmed! 👍</h3>"
-                    "<p>Hello,</p>"
-                    "<p>We have confirmed your order <strong>#{{ order_number }}</strong>. The vendor is now preparing and packing your fresh greens.</p>"
-                    "<hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>"
-                    "<p style='font-size: 12px; color: #94a3b8; text-align: center;'>Sabjiwala © 2026. All rights reserved.</p>"
+                "body_html": base_html.replace("{content}", 
+                    "<div style='text-align: center; margin-bottom: 24px;'>"
+                    "<div style='background-color: #ecfdf5; width: 64px; height: 64px; border-radius: 32px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;'><span style='font-size: 32px;'>👍</span></div>"
+                    "<h2 style='font-size: 22px; font-weight: 700; margin: 0 0 8px 0; color: #0f172a;'>Order Confirmed!</h2>"
+                    "<p style='color: #475569; font-size: 15px; margin: 0; line-height: 1.5;'>We have confirmed your order <strong>#{{ order_number }}</strong>. The vendor is now handpicking and packing your farm fresh greens.</p>"
                     "</div>"
                 ),
                 "body_text": "Hello, your order #{{ order_number }} has been confirmed and is being packed.",
@@ -235,17 +236,12 @@ class NotificationService:
                 "slug": "order_delivered",
                 "name": "Order Delivered Notification",
                 "subject": "Order Delivered! 🏁 - Sabjiwala",
-                "body_html": (
-                    "<div style='font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>"
-                    "<div style='text-align: center; border-bottom: 2px solid #059669; padding-bottom: 10px;'>"
-                    "<h2 style='color: #059669; margin: 0;'>Sabjiwala</h2>"
-                    "</div>"
-                    "<h3 style='color: #0f172a; margin-top: 20px;'>Order Delivered Successfully! 🏁</h3>"
-                    "<p>Hello,</p>"
-                    "<p>Your order <strong>#{{ order_number }}</strong> has been delivered. Thank you for choosing Sabjiwala for your daily fresh veggies!</p>"
-                    "<p>Please let us know how your delivery agent did.</p>"
-                    "<hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>"
-                    "<p style='font-size: 12px; color: #94a3b8; text-align: center;'>Sabjiwala © 2026. All rights reserved.</p>"
+                "body_html": base_html.replace("{content}", 
+                    "<div style='text-align: center; margin-bottom: 24px;'>"
+                    "<div style='background-color: #ecfdf5; width: 64px; height: 64px; border-radius: 32px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;'><span style='font-size: 32px;'>🏠</span></div>"
+                    "<h2 style='font-size: 22px; font-weight: 700; margin: 0 0 8px 0; color: #0f172a;'>Order Delivered Successfully!</h2>"
+                    "<p style='color: #475569; font-size: 15px; margin: 0 0 16px 0; line-height: 1.5;'>Your order <strong>#{{ order_number }}</strong> has arrived safely.</p>"
+                    "<p style='color: #64748b; font-size: 14px; margin: 0;'>Thank you for choosing Sbjiwala for your daily fresh veggies! Please rate your delivery experience in the app.</p>"
                     "</div>"
                 ),
                 "body_text": "Hello, your order #{{ order_number }} has been delivered successfully. Thank you!",
@@ -255,17 +251,14 @@ class NotificationService:
                 "slug": "order_refunded",
                 "name": "Order Refunded Notification",
                 "subject": "Refund Credited to Wallet - Sabjiwala",
-                "body_html": (
-                    "<div style='font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>"
-                    "<div style='text-align: center; border-bottom: 2px solid #059669; padding-bottom: 10px;'>"
-                    "<h2 style='color: #059669; margin: 0;'>Sabjiwala</h2>"
+                "body_html": base_html.replace("{content}", 
+                    "<div style='text-align: center; margin-bottom: 24px;'>"
+                    "<div style='background-color: #f0fdf4; border: 2px solid #bbf7d0; width: 64px; height: 64px; border-radius: 32px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;'><span style='font-size: 32px; color: #16a34a;'>₹</span></div>"
+                    "<h2 style='font-size: 22px; font-weight: 700; margin: 0 0 8px 0; color: #0f172a;'>Refund Processed</h2>"
+                    "<p style='color: #475569; font-size: 15px; margin: 0 0 24px 0; line-height: 1.5;'>A refund of <strong>₹{{ refund_amount }}</strong> for order <strong>#{{ order_number }}</strong> has been successfully credited back to your Sabjiwala Wallet.</p>"
+                    "<div style='background-color: #f8fafc; border-radius: 12px; padding: 16px; display: inline-block;'>"
+                    "<span style='color: #64748b; font-size: 14px;'>You can use this wallet balance seamlessly on your next fresh grocery order!</span>"
                     "</div>"
-                    "<h3 style='color: #0f172a; margin-top: 20px;'>Refund Processed 💰</h3>"
-                    "<p>Hello,</p>"
-                    "<p>A refund of <strong>₹{{ refund_amount }}</strong> for order <strong>#{{ order_number }}</strong> has been successfully credited back to your Sabjiwala Wallet.</p>"
-                    "<p>You can use this wallet balance for your next grocery order.</p>"
-                    "<hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>"
-                    "<p style='font-size: 12px; color: #94a3b8; text-align: center;'>Sabjiwala © 2026. All rights reserved.</p>"
                     "</div>"
                 ),
                 "body_text": "Hello, a refund of ₹{{ refund_amount }} for order #{{ order_number }} has been credited to your wallet.",

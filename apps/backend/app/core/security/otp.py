@@ -184,26 +184,47 @@ async def send_otp_via_email(email: str, otp: str) -> None:
 
     # HTML body
     html_body = f"""
+    <!DOCTYPE html>
     <html>
-      <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px; color: #0f172a;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-          <div style="background-color: #10b981; padding: 24px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800;">Sbjiwala</h1>
-            <p style="color: #d1fae5; margin: 4px 0 0 0; font-size: 14px;">Farm Fresh Vegetables in 10 Minutes</p>
-          </div>
-          <div style="padding: 32px; text-align: center;">
-            <h2 style="font-size: 20px; font-weight: 700; margin-top: 0; color: #1e293b;">Your One-Time Password (OTP)</h2>
-            <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin-bottom: 24px;">Use the following OTP to log in to your Sbjiwala account. This OTP is valid for 5 minutes.</p>
-            <div style="background-color: #f1f5f9; padding: 16px 24px; border-radius: 12px; font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #059669; display: inline-block; margin-bottom: 24px;">
-              {otp}
-            </div>
-            <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">If you did not request this OTP, please ignore this email or contact support.</p>
-          </div>
-          <div style="background-color: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
-            &copy; 2026 Sbjiwala. All rights reserved.
-          </div>
-        </div>
-      </body>
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 40px 20px; color: #1e293b;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); overflow: hidden;">
+            <tr>
+                <td style="padding: 40px 30px; text-align: center; background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -1px;">Sbjiwala</h1>
+                    <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">Farm Fresh &bull; 10 Min Delivery</p>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 40px 30px;">
+                    <h2 style="font-size: 22px; font-weight: 700; margin: 0 0 16px 0; color: #0f172a; text-align: center;">Secure Login OTP</h2>
+                    <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0; text-align: center;">You have requested to log in. Please use the verification code below to securely access your account.</p>
+                    
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 32px;">
+                        <span style="font-family: monospace; font-size: 42px; font-weight: 800; letter-spacing: 12px; color: #059669; display: inline-block; margin-left: 12px;">{otp}</span>
+                    </div>
+                    
+                    <p style="color: #64748b; font-size: 14px; text-align: center; margin: 0 0 24px 0;">This code is valid for <strong>5 minutes</strong>. Please do not share it with anyone.</p>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                        <tr>
+                            <td style="border-top: 1px solid #e2e8f0; padding-top: 24px; text-align: center;">
+                                <p style="color: #94a3b8; font-size: 13px; line-height: 1.5; margin: 0;">If you didn't request this code, you can safely ignore this email. Your account remains secure.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td style="background-color: #f8fafc; padding: 24px 30px; text-align: center;">
+                    <p style="margin: 0; color: #94a3b8; font-size: 13px; font-weight: 500;">&copy; 2026 Sbjiwala Technologies. All rights reserved.</p>
+                </td>
+            </tr>
+        </table>
+    </body>
     </html>
     """
     

@@ -162,24 +162,6 @@ async def register(
             if not verification_identifier:
                 raise HTTPException(status_code=400, detail="User email or phone is required")
 
-            if "@" not in verification_identifier:
-                # Add role without OTP verification
-                existing_user.is_active = True
-                existing_user.is_verified = True
-                existing_user.is_phone_verified = True
-                await db.flush()
-                await db.commit()
-                await logger.ainfo("Role added to existing user (no OTP required)", user_id=str(existing_user.id), role=role_name)
-                return APIResponse(
-                    success=True,
-                    message=f"Added {role_name} role. Please use your password to log in with your mobile number.",
-                    data=UserResponse.model_validate(existing_user),
-                    meta={
-                        "requires_otp_verification": False,
-                        "verification_identifier": verification_identifier,
-                    }
-                )
-
             redis = await _get_redis(request)
             otp_res = await send_otp(redis, verification_identifier, purpose="register")
             if not otp_res["success"]:
@@ -197,7 +179,7 @@ async def register(
 
             return APIResponse(
                 success=True,
-                message=f"Added {role_name} role. Please verify using the OTP sent to your email.",
+                message=f"Added {role_name} role. Please verify using the OTP sent to your {'email' if '@' in verification_identifier else 'mobile number'}.",
                 data=UserResponse.model_validate(existing_user),
                 meta=meta_data
             )
@@ -322,25 +304,6 @@ async def register(
     if not verification_identifier:
         raise HTTPException(status_code=400, detail="Email or phone number is required")
 
-    if "@" not in verification_identifier:
-        # Sign up with mobile number: do not send OTP, set active/verified immediately
-        user.is_active = True
-        user.is_verified = True
-        user.is_phone_verified = True
-        await db.flush()
-        await db.commit()
-        await logger.ainfo("User registered with phone (no OTP required)", user_id=str(user.id), phone=user.phone, role=body.role)
-        
-        return APIResponse(
-            success=True,
-            message="Registration successful. Please use your password to log in with your mobile number.",
-            data=UserResponse.model_validate(user),
-            meta={
-                "requires_otp_verification": False,
-                "verification_identifier": verification_identifier,
-            }
-        )
-
     redis = await _get_redis(request)
     otp_res = await send_otp(redis, verification_identifier, purpose="register")
     if not otp_res["success"]:
@@ -359,7 +322,7 @@ async def register(
 
     return APIResponse(
         success=True,
-        message=f"Registration successful. Please verify the OTP sent to your email.",
+        message=f"Registration successful. Please verify the OTP sent to your {'email' if '@' in verification_identifier else 'mobile number'}.",
         data=UserResponse.model_validate(user),
         meta=meta_data
     )
@@ -486,8 +449,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 @router.post("/token", include_in_schema=True)
 async def login_for_access_token(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
-    request: Request = None,
     db: AsyncSession = Depends(get_db)
 ):
     """OAuth2 compatible token login, required for Swagger UI."""
