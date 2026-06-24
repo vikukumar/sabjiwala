@@ -22,7 +22,7 @@ import LiveChatWidget from "./LiveChatWidget";
 
 
 // Default is false, meaning no AppShell is currently active
-const AppShellContext = createContext(false);
+export const AppShellContext = createContext(false);
 // ==================== ROUTE PROTECTION helper ====================
 export const resolveLink = (href: string) => {
   const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
@@ -1856,15 +1856,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("click", handleGlobalClick, { capture: true });
   }, [pathname, router]);
 
-  // Public routes or sub-portals that don't need customer app shell (full screen / own layout)
-  const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
-  const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
-  const isBypassRoute = isNative
-    ? (pathname === "/login" || pathname === "/register" || pathname?.startsWith("/login/") || pathname?.startsWith("/register/"))
-    : (isUnified
-      ? (!isCustomerAppPath || pathname === "/app/login" || pathname === "/app/register")
-      : ["/login", "/register", "/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r)));
-  if (isBypassRoute) return <>{children}</>;
+    // Public routes or sub-portals that don't need customer app shell (full screen / own layout)
+    const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+    const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
+    
+    const isBypassRoute = isNative
+      ? (pathname === "/login" || pathname === "/register" || pathname?.startsWith("/login/") || pathname?.startsWith("/register/"))
+      : (isUnified
+        ? (!isCustomerAppPath || pathname === "/app/login" || pathname === "/app/register")
+        : ["/login", "/register", "/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r)));
+    if (isBypassRoute) return <>{children}</>;
 
   if (showSplash) {
     return <SplashPermissionsScreen onComplete={() => setShowSplash(false)} />;

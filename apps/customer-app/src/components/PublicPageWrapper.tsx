@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -13,6 +13,7 @@ import {
   MapPin
 } from "lucide-react";
 import { api } from "@sbjiwala/shared";
+import { AppShellContext } from "./AppShell";
 
 interface UserPayload {
   sub: string;
@@ -27,6 +28,7 @@ export default function PublicPageWrapper({ children }: { children: React.ReactN
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserPayload | null>(null);
   const [theme, setTheme] = useState<"light" | "dark" | "amoled">("light");
+  const isInsideAppShell = useContext(AppShellContext);
 
   useEffect(() => {
     // Check theme
@@ -96,15 +98,18 @@ export default function PublicPageWrapper({ children }: { children: React.ReactN
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] amoled:bg-black text-slate-800 dark:text-slate-100 flex flex-col justify-between transition-colors duration-300 antialiased font-sans relative overflow-hidden">
+    <div className={`transition-colors duration-300 antialiased font-sans relative overflow-hidden ${isInsideAppShell ? '' : 'min-h-screen bg-slate-50 dark:bg-[#090d10] amoled:bg-black text-slate-800 dark:text-slate-100 flex flex-col justify-between'}`}>
       
       {/* Background blobs to match landing page design */}
-      <div className="blob-container opacity-40">
-        <div className="blob bg-emerald-500/10 w-[300px] h-[300px] top-[-50px] left-[-50px] absolute rounded-full blur-3xl" />
-        <div className="blob bg-teal-500/15 w-[350px] h-[350px] top-[30%] right-[-100px] absolute rounded-full blur-3xl" />
-      </div>
+      {!isInsideAppShell && (
+        <div className="blob-container opacity-40">
+          <div className="blob bg-emerald-500/10 w-[300px] h-[300px] top-[-50px] left-[-50px] absolute rounded-full blur-3xl" />
+          <div className="blob bg-teal-500/15 w-[350px] h-[350px] top-[30%] right-[-100px] absolute rounded-full blur-3xl" />
+        </div>
+      )}
 
       {/* Header */}
+      {!isInsideAppShell && (
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 amoled:bg-black/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 shadow-sm transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 hover:opacity-90 active:scale-95 transition-all">
@@ -181,13 +186,15 @@ export default function PublicPageWrapper({ children }: { children: React.ReactN
           </div>
         </div>
       </header>
+      )}
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto py-12 px-4 sm:px-6 lg:px-8 relative z-10">
+      <main className={`${isInsideAppShell ? '' : 'flex-1 max-w-7xl w-full mx-auto py-12 px-4 sm:px-6 lg:px-8 relative z-10'}`}>
         {children}
       </main>
 
       {/* Footer */}
+      {!isInsideAppShell && (
       <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-950 amoled:bg-black py-12 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-12 gap-8 mb-8">
           <div className="md:col-span-5 space-y-4 text-center md:text-left">
@@ -236,6 +243,7 @@ export default function PublicPageWrapper({ children }: { children: React.ReactN
           </div>
         </div>
       </footer>
+      )}
     </div>
   );
 }
