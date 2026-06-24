@@ -15,7 +15,12 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
+    "@capacitor/core": "^8.4.1",
     "@capacitor/device": "^8.0.2",
+    "@capacitor/dialog": "^8.0.1",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/toast": "^8.0.1",
+    "@capawesome-team/capacitor-file-opener": "^8.0.1",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^26.0.0",
     "axios": "^1.16.1",
