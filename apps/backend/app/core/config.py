@@ -93,8 +93,8 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM_NAME: str = "Sbjiwala"
     SMTP_FROM_EMAIL: str = "noreply@sbjiwala.qzz.io"
-    SMTP_USE_TLS: bool = True
-    SMTP_START_TLS: bool = True
+    SMTP_USE_TLS: bool = False
+    SMTP_START_TLS: bool = False
 
     # ---- SMS (MSG91) ----
     SMS_PROVIDER: str = "msg91"
@@ -247,6 +247,13 @@ async def apply_system_settings_overrides(db) -> None:
         if hasattr(settings, "APP_URL"):
             settings.GOOGLE_REDIRECT_URI = f"{settings.APP_URL}/api/v1/auth/google/callback"
             settings.FACEBOOK_REDIRECT_URI = f"{settings.APP_URL}/api/v1/auth/facebook/callback"
+            
+        # Safeguard SMTP TLS settings to prevent incompatible combination (use_tls and start_tls both True)
+        if getattr(settings, "SMTP_USE_TLS", False) and getattr(settings, "SMTP_START_TLS", False):
+            if getattr(settings, "SMTP_PORT", 587) == 587:
+                settings.SMTP_USE_TLS = False
+            else:
+                settings.SMTP_START_TLS = False
             
     except Exception:
         pass

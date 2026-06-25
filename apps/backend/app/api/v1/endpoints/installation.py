@@ -48,7 +48,7 @@ async def seed_system_settings(db: AsyncSession):
         {"key": "smtp_password", "value": "", "value_type": "string", "group": "notification", "description": "SMTP Password", "is_public": False},
         {"key": "smtp_from_name", "value": "Sabjiwala", "value_type": "string", "group": "notification", "description": "SMTP From Name", "is_public": True},
         {"key": "smtp_from_email", "value": "noreply@sbjiwala.qzz.io", "value_type": "string", "group": "notification", "description": "SMTP From Email Address", "is_public": True},
-        {"key": "smtp_use_tls", "value": "true", "value_type": "boolean", "group": "notification", "description": "Enable TLS for SMTP", "is_public": False},
+        {"key": "smtp_use_tls", "value": "false", "value_type": "boolean", "group": "notification", "description": "Enable TLS for SMTP", "is_public": False},
         {"key": "smtp_start_tls", "value": "true", "value_type": "boolean", "group": "notification", "description": "Enable StartTLS for SMTP", "is_public": False},
         # SMS Gateways
         {"key": "sms_provider", "value": "android_gateway", "value_type": "string", "group": "notification", "description": "SMS provider mode: android_gateway, sms_server, or msg91", "is_public": False},

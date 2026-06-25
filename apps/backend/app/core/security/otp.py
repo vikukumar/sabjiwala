@@ -233,6 +233,15 @@ async def send_otp_via_email(email: str, otp: str) -> None:
     msg.attach(MIMEText(plain_text, "plain"))
     msg.attach(MIMEText(html_body, "html"))
 
+    # Ensure use_tls and start_tls are not both True (incompatible in aiosmtplib)
+    use_tls = settings.SMTP_USE_TLS
+    start_tls = settings.SMTP_START_TLS
+    if use_tls and start_tls:
+        if settings.SMTP_PORT == 587:
+            use_tls = False
+        else:
+            start_tls = False
+
     try:
         await aiosmtplib.send(
             msg,
@@ -240,8 +249,8 @@ async def send_otp_via_email(email: str, otp: str) -> None:
             port=settings.SMTP_PORT,
             username=settings.SMTP_USER or None,
             password=settings.SMTP_PASSWORD or None,
-            use_tls=settings.SMTP_USE_TLS,
-            start_tls=settings.SMTP_START_TLS,
+            use_tls=use_tls,
+            start_tls=start_tls,
             timeout=10,
         )
         await logger.ainfo("SMTP OTP email sent successfully", to=email)
