@@ -3,7 +3,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { ToastProvider } from "@/components/ui/Toast";
-import AppShell from "@/components/AppShell";
 import { initFirebaseAnalyticsAndCrashlytics } from "@sbjiwala/shared";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -31,7 +30,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <AppShell>{children}</AppShell>
+        {children}
       </ToastProvider>
     </QueryClientProvider>
   );
