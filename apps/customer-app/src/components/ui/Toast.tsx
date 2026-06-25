@@ -105,7 +105,11 @@ const ensureString = (val: any): string => {
     if (Array.isArray(val)) {
       return val.map(v => ensureString(v)).join(", ");
     }
-    if (val.message) return ensureString(val.message);
+    if (val.message) {
+      const msg = ensureString(val.message);
+      const issues = val.issues && Array.isArray(val.issues) ? val.issues.join(", ") : "";
+      return issues ? `${msg}: ${issues}` : msg;
+    }
     if (val.msg) return ensureString(val.msg);
     if (val.detail) return ensureString(val.detail);
     try {

@@ -6,6 +6,29 @@ import { useRouter } from "next/navigation";
 import { Mail, Phone, ArrowRight, ShieldCheck, Loader2, User, Lock, Gift, Truck } from "lucide-react";
 import { api } from "@sbjiwala/shared";
 
+const formatError = (err: any): string => {
+  if (!err) return "";
+  if (typeof err === "string") return err;
+  const detail = err.response?.data?.detail ?? err.detail ?? err;
+  if (detail && typeof detail === "object") {
+    const msg = detail.message || detail.msg || "";
+    const issues = Array.isArray(detail.issues)
+      ? detail.issues.join(", ")
+      : detail.issues
+      ? String(detail.issues)
+      : "";
+    if (msg && issues) return `${msg}: ${issues}`;
+    if (msg) return String(msg);
+    if (issues) return String(issues);
+    try {
+      return JSON.stringify(detail);
+    } catch {
+      return String(detail);
+    }
+  }
+  return err.message || String(err);
+};
+
 export default function DeliveryRegisterPage() {
   const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -137,7 +160,7 @@ export default function DeliveryRegisterPage() {
         setErrorMsg(res.message || "Registration failed.");
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || err.message || "Registration failed.");
+      setErrorMsg(formatError(err) || "Registration failed.");
     } finally {
       setSubmitLoading(false);
     }
@@ -173,7 +196,7 @@ export default function DeliveryRegisterPage() {
         setErrorMsg(res.message || "Invalid OTP code.");
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || err.message || "Verification failed.");
+      setErrorMsg(formatError(err) || "Verification failed.");
     } finally {
       setSubmitLoading(false);
     }
@@ -198,7 +221,7 @@ export default function DeliveryRegisterPage() {
         setErrorMsg(res.message || "Failed to send OTP.");
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || err.message);
+      setErrorMsg(formatError(err) || "Failed to send OTP.");
     } finally {
       setOtpLoading(false);
     }

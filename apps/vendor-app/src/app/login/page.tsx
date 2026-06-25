@@ -8,6 +8,29 @@ import { encryptPayload } from "@/components/ui/crypto";
 
 import { useRouter } from "next/navigation";
 
+const formatError = (err: any): string => {
+  if (!err) return "";
+  if (typeof err === "string") return err;
+  const detail = err.response?.data?.detail ?? err.detail ?? err;
+  if (detail && typeof detail === "object") {
+    const msg = detail.message || detail.msg || "";
+    const issues = Array.isArray(detail.issues)
+      ? detail.issues.join(", ")
+      : detail.issues
+      ? String(detail.issues)
+      : "";
+    if (msg && issues) return `${msg}: ${issues}`;
+    if (msg) return String(msg);
+    if (issues) return String(issues);
+    try {
+      return JSON.stringify(detail);
+    } catch {
+      return String(detail);
+    }
+  }
+  return err.message || String(err);
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -128,7 +151,7 @@ export default function LoginPage() {
         setErrorMsg(res.message || "Failed to send OTP.");
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || err.message || "Something went wrong.");
+      setErrorMsg(formatError(err) || "Something went wrong.");
     } finally {
       setOtpLoading(false);
     }
@@ -162,7 +185,7 @@ export default function LoginPage() {
         setErrorMsg(res.message || "Invalid OTP code.");
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || err.message || "Verification failed.");
+      setErrorMsg(formatError(err) || "Verification failed.");
     } finally {
       setSubmitLoading(false);
     }
@@ -190,7 +213,7 @@ export default function LoginPage() {
         setErrorMsg(res.message || "Invalid login credentials.");
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || err.message || "Login failed.");
+      setErrorMsg(formatError(err) || "Login failed.");
     } finally {
       setSubmitLoading(false);
     }
