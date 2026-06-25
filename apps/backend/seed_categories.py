@@ -132,7 +132,7 @@ CATEGORY_TREE = [
 ]
 
 
-async def seed_via_api(api_url: str, token: str):
+async def seed_via_api(api_url: str, token: str) -> None:
     """Seed categories via the REST API."""
     import httpx
 
@@ -201,11 +201,15 @@ async def seed_via_api(api_url: str, token: str):
         print(f"\n🎉 Done! Created {total_created} categories/subcategories.")
 
 
-async def seed_direct_db():
+async def seed_direct_db() -> None:
     """Seed categories directly into the database (for server-side use)."""
     import re
     import secrets
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "app"))
+    
+    # Force process directory to script parent dir to guarantee correct .env lookup
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(backend_dir)
+    sys.path.insert(0, os.path.join(backend_dir, "app"))
 
     from app.db.session import async_session_factory
     from app.models.product import Category
@@ -220,10 +224,12 @@ async def seed_direct_db():
         from sqlalchemy import select
         existing_result = await db.execute(select(Category).where(Category.is_deleted == False))
         existing_names = {c.name.lower() for c in existing_result.scalars().all()}
-        print(f"Found {len(existing_names)} existing categories.")
+        print(f"Found {len(existing_names)} existing active categories.")
 
         total_created = 0
-        parent_ids: dict[str, object] = {}
+        total_updated = 0
+        from uuid import UUID
+        parent_ids: dict[str, UUID] = {}
 
         for parent_name, icon, desc, sort, subcats in CATEGORY_TREE:
             if parent_name.lower() not in existing_names:
@@ -251,14 +257,31 @@ async def seed_direct_db():
                 existing_cat = result.scalars().first()
                 if existing_cat:
                     parent_ids[parent_name] = existing_cat.id
-                print(f"  ⏭️  Exists: {parent_name}")
+                    # Self-heal parent attributes if needed
+                    if existing_cat.level != 0 or existing_cat.parent_id is not None:
+                        existing_cat.level = 0
+                        existing_cat.parent_id = None
+                        total_updated += 1
+                        print(f"  ⚙️  Updated parent structure: {parent_name}")
+                    else:
+                        print(f"  ⏭️  Exists: {parent_name}")
+                else:
+                    print(f"  ⏭️  Exists: {parent_name} (Record missing, skipping)")
 
             pid = parent_ids.get(parent_name)
             if not pid:
                 continue
 
             for sub_name, sub_icon, sub_desc, sub_sort in subcats:
-                if sub_name.lower() not in existing_names:
+                result = await db.execute(
+                    select(Category).where(
+                        Category.name == sub_name,
+                        Category.is_deleted == False,
+                    )
+                )
+                existing_sub = result.scalars().first()
+
+                if not existing_sub:
                     sub = Category(
                         name=sub_name,
                         slug=slugify(sub_name),
@@ -273,10 +296,17 @@ async def seed_direct_db():
                     total_created += 1
                     print(f"    ✅ Created sub: {sub_name}")
                 else:
-                    print(f"    ⏭️  Exists: {sub_name}")
+                    # Self-heal subcategory if parent_id or level is incorrect
+                    if existing_sub.parent_id != pid or existing_sub.level != 1:
+                        existing_sub.parent_id = pid
+                        existing_sub.level = 1
+                        total_updated += 1
+                        print(f"    ⚙️  Updated sub parent/level: {sub_name}")
+                    else:
+                        print(f"    ⏭️  Exists: {sub_name}")
 
         await db.commit()
-        print(f"\n🎉 Done! Created {total_created} categories.")
+        print(f"\n🎉 Done! Created {total_created} and self-healed {total_updated} categories.")
 
 
 if __name__ == "__main__":
