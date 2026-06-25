@@ -110,6 +110,14 @@ export const isProtectedRoute = (path: string) => {
   return protectedPrefixes.some(prefix => path === prefix || path.startsWith(prefix + "/"));
 };
 
+export const isAuthRoute = (path: string) => {
+  if (!path) return false;
+  const cleanPath = path.toLowerCase();
+  const authPaths = ["/login", "/register", "/signup", "/singup", "/forgot-password"];
+  return authPaths.some(p => cleanPath === p || cleanPath === `/app${p}` || cleanPath.startsWith(`${p}/`) || cleanPath.startsWith(`/app${p}/`));
+};
+
+
 // ==================== NAV ITEMS ====================
 const mainNavItems = [
   { href: "/", icon: Home, label: "Home", exact: true },
@@ -414,7 +422,7 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 flex-shrink-0 bg-slate-50/75 dark:bg-slate-950/75 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/80 fixed left-0 top-0 h-full z-30 shadow-sm">
+      <aside className={`hidden md:flex flex-col w-64 flex-shrink-0 bg-slate-50/75 dark:bg-slate-950/75 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/80 fixed left-0 top-0 h-full z-30 shadow-sm ${isAuthRoute(pathname) ? "md:!hidden" : ""}`}>
         {content}
       </aside>
 
@@ -1860,11 +1868,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
     const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
     
+    const isCurrentAuth = isAuthRoute(pathname);
+    
     const isBypassRoute = isNative
-      ? (pathname === "/login" || pathname === "/register" || pathname?.startsWith("/login/") || pathname?.startsWith("/register/"))
+      ? false
       : (isUnified
-        ? (!isCustomerAppPath || pathname === "/app/login" || pathname === "/app/register")
-        : ["/login", "/register", "/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r)));
+        ? (!isCustomerAppPath)
+        : ["/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r)));
     if (isBypassRoute) return <>{children}</>;
 
   if (showSplash) {
@@ -1925,22 +1935,26 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenLocation={() => setShowLocationModal(true)} locationName={locationName} />
 
         {/* Right Column Structure */}
-        <div className="flex-1 flex flex-col h-full md:ml-64 min-w-0 max-w-full pt-[env(safe-area-inset-top)]">
+        <div className={`flex-1 flex flex-col h-full ${isCurrentAuth ? "md:ml-0" : "md:ml-64"} min-w-0 max-w-full pt-[env(safe-area-inset-top)]`}>
 
           {/* Header sits naturally at the top, no absolute/fixed/sticky needed */}
-          <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} onOpenSearch={() => router.push('/search')} />
+          <div className={isCurrentAuth ? "md:hidden" : ""}>
+            <Header onMenuOpen={() => setSidebarOpen(true)} onOpenLocation={() => setShowLocationModal(true)} onOpenSearch={() => router.push('/search')} />
+          </div>
 
           {/* Flipkart-Style Sub-Header Location Bar */}
-          <div
-            onClick={() => setShowLocationModal(true)}
-            className="w-full bg-emerald-50/50 dark:bg-slate-900/60 backdrop-blur-md border-b border-slate-205 dark:border-slate-800/80 px-4 py-2 flex items-center gap-2 cursor-pointer hover:bg-emerald-55/60 dark:hover:bg-slate-800/80 transition-all flex-shrink-0"
-          >
-            <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0 animate-bounce" />
-            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-350 truncate">
-              Deliver to: <span className="text-slate-900 dark:text-white font-extrabold">{locationName}</span>
-            </span>
-            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold ml-auto flex-shrink-0">Change ▼</span>
-          </div>
+          {!isCurrentAuth && (
+            <div
+              onClick={() => setShowLocationModal(true)}
+              className="w-full bg-emerald-50/50 dark:bg-slate-900/60 backdrop-blur-md border-b border-slate-205 dark:border-slate-800/80 px-4 py-2 flex items-center gap-2 cursor-pointer hover:bg-emerald-55/60 dark:hover:bg-slate-800/80 transition-all flex-shrink-0"
+            >
+              <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0 animate-bounce" />
+              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-350 truncate">
+                Deliver to: <span className="text-slate-900 dark:text-white font-extrabold">{locationName}</span>
+              </span>
+              <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold ml-auto flex-shrink-0">Change ▼</span>
+            </div>
+          )}
 
           {/* 2. THE MAGIC IS HERE: Only this container is allowed to scroll */}
           <main className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0 page-enter max-w-full">
