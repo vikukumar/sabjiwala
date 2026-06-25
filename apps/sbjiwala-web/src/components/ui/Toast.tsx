@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback, useRef } from "react";
+import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from "react";
 import { CheckCircle2, XCircle, AlertCircle, Info, X } from "lucide-react";
 
 // ==================== TYPES ====================
@@ -56,6 +56,21 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const warning = useCallback((title: string, message?: string) => addToast({ type: "warning", title, message }), [addToast]);
   const info = useCallback((title: string, message?: string) => addToast({ type: "info", title, message }), [addToast]);
 
+  // Global event listener for triggering toasts from non-React / out-of-context spaces
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleGlobalToast = (e: Event) => {
+      const customEvent = e as CustomEvent<{ type: ToastType; title: string; message?: string; duration?: number }>;
+      if (customEvent.detail) {
+        addToast(customEvent.detail);
+      }
+    };
+    window.addEventListener("sw_show_toast", handleGlobalToast);
+    return () => {
+      window.removeEventListener("sw_show_toast", handleGlobalToast);
+    };
+  }, [addToast]);
+
   return (
     <ToastContext.Provider value={{ toast: addToast, success, error, warning, info }}>
       {children}
@@ -98,9 +113,34 @@ const toastConfig = {
   },
 };
 
+const ensureString = (val: any): string => {
+  if (val === null || val === undefined) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object") {
+    if (Array.isArray(val)) {
+      return val.map(v => ensureString(v)).join(", ");
+    }
+    if (val.message) {
+      const msg = ensureString(val.message);
+      const issues = val.issues && Array.isArray(val.issues) ? val.issues.join(", ") : "";
+      return issues ? `${msg}: ${issues}` : msg;
+    }
+    if (val.msg) return ensureString(val.msg);
+    if (val.detail) return ensureString(val.detail);
+    try {
+      return JSON.stringify(val);
+    } catch (e) {
+      return String(val);
+    }
+  }
+  return String(val);
+};
+
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) => void }) {
-  const cfg = toastConfig[toast.type];
+  const cfg = toastConfig[toast.type] || toastConfig.info;
   const Icon = cfg.icon;
+  const titleStr = ensureString(toast.title);
+  const messageStr = toast.message ? ensureString(toast.message) : undefined;
   return (
     <div
       className={`flex items-start gap-3 p-4 rounded-2xl border shadow-lg backdrop-blur-sm max-w-sm w-full toast-enter ${cfg.bg}`}
@@ -108,9 +148,9 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
     >
       <Icon className={`w-5 h-5 mt-0.5 flex-shrink-0 ${cfg.icon_cls}`} />
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-bold ${cfg.title_cls}`}>{toast.title}</p>
-        {toast.message && (
-          <p className="text-xs text-slate-550 dark:text-slate-400 mt-0.5">{toast.message}</p>
+        <p className={`text-sm font-bold ${cfg.title_cls}`}>{titleStr}</p>
+        {messageStr && (
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{messageStr}</p>
         )}
       </div>
       <button
