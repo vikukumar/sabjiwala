@@ -1590,7 +1590,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return;
 
     const isProtected = isProtectedRoute(pathname);
-    const hasToken = !!localStorage.getItem("sw_access_token");
+    const role = getStoredUserType();
+    const hasToken = !!localStorage.getItem("sw_access_token") && !!role;
     const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
 
     // Auto-prepend /app for customer routes in unified mode
@@ -1640,7 +1641,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }
     } else {
       // 2. Authenticated Route Guards
-      const role = getStoredUserType();
 
       // If already logged in, redirect away from auth routes
       if (isVendorAuthPath && (role === "vendor" || role === "vendor_manager")) {
@@ -1930,7 +1930,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AppShellContext.Provider value={true}>
       {/* 1. Force the app to match exact screen height and stop body scrolling */}
-      <div className="h-screen md:h-[100dvh] w-full flex overflow-hidden">
+      <div className="h-[100dvh] w-full flex overflow-hidden">
 
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenLocation={() => setShowLocationModal(true)} locationName={locationName} />
 

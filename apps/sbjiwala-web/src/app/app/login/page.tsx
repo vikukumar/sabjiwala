@@ -157,7 +157,12 @@ function LoginPageContent() {
 
     if (typeof window !== "undefined" && localStorage.getItem("sw_access_token")) {
       const userType = getStoredUserType();
-      redirectBasedOnRole(userType || "customer");
+      if (userType) {
+        redirectBasedOnRole(userType);
+      } else {
+        localStorage.removeItem("sw_access_token");
+        localStorage.removeItem("sw_refresh_token");
+      }
     }
   }, [searchParams]);
 
