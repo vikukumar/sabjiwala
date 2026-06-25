@@ -161,53 +161,57 @@ export default function ProfilePage() {
           </div>
           <span className="text-4xl opacity-80 relative z-10 drop-shadow-md">🥬🥕🍅</span>
         </div>
-
         <div className="px-6 pb-6 pt-4">
-          <div className="flex items-end gap-4 mb-4 relative z-10">
-            <div className="relative flex-shrink-0 -mt-12">
-              {/* Custom Farm Avatar */}
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white border-4 border-white dark:border-slate-900 shadow-xl relative overflow-hidden">
-                {uploadingAvatar ? <Spinner size="sm" className="text-white" /> : getAvatarContent()}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4 relative z-10">
+            <div className="flex items-end gap-4 min-w-0">
+              <div className="relative flex-shrink-0 -mt-12">
+                {/* Custom Farm Avatar */}
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white border-4 border-white dark:border-slate-900 shadow-xl relative overflow-hidden">
+                  {uploadingAvatar ? <Spinner size="sm" className="text-white" /> : getAvatarContent()}
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                  disabled={uploadingAvatar}
+                />
+                <button 
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 hover:bg-emerald-700 transition-all shadow-md cursor-pointer hover:scale-105 active:scale-95"
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
               </div>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarChange}
-                disabled={uploadingAvatar}
-              />
-              <button 
-                type="button"
-                onClick={() => avatarInputRef.current?.click()}
-                disabled={uploadingAvatar}
-                className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 hover:bg-emerald-700 transition-all shadow-md cursor-pointer hover:scale-105 active:scale-95"
+              <div className="pb-1 flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white break-words leading-tight">{fullName}</h2>
+                  {isNameMissing && (
+                    <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/50 animate-pulse whitespace-nowrap">
+                      ✏️ Set Name
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{profile?.email || profile?.phone}</p>
+                <Badge variant={profile?.is_verified ? "success" : "warning"} size="sm" className="mt-1.5">
+                  {profile?.is_verified ? "Verified Profile" : "Unverified Profile"}
+                </Badge>
+              </div>
+            </div>
+            <div className="flex-shrink-0 w-full sm:w-auto">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full sm:w-auto"
+                leftIcon={<Edit2 className="w-3.5 h-3.5" />}
+                onClick={() => setEditing(!editing)}
               >
-                <Camera className="w-4 h-4" />
-              </button>
+                {editing ? "Cancel" : "Edit Profile"}
+              </Button>
             </div>
-            <div className="pb-1 flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black text-slate-900 dark:text-white break-words">{fullName}</h2>
-                {isNameMissing && (
-                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/50 animate-pulse whitespace-nowrap">
-                    ✏️ Set Name
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{profile?.email || profile?.phone}</p>
-              <Badge variant={profile?.is_verified ? "success" : "warning"} size="sm" className="mt-1.5">
-                {profile?.is_verified ? "Verified Profile" : "Unverified Profile"}
-              </Badge>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              leftIcon={<Edit2 className="w-3.5 h-3.5" />}
-              onClick={() => setEditing(!editing)}
-            >
-              {editing ? "Cancel" : "Edit Profile"}
-            </Button>
           </div>
 
           {/* Edit Form */}
