@@ -165,8 +165,10 @@ class SchemaEvolutionEngine:
         enums: Dict[str, List[str]] = {}
 
         try:
-            for enum_info in inspector.get_enums():
-                enums[enum_info["name"]] = enum_info.get("labels", [])
+            get_enums_func = getattr(inspector, "get_enums", None)
+            if get_enums_func:
+                for enum_info in get_enums_func():
+                    enums[enum_info["name"]] = enum_info.get("labels", [])
         except Exception:
             pass  # get_enums may not be available in all versions
 
@@ -181,7 +183,8 @@ class SchemaEvolutionEngine:
         """Create any tables that exist in models but not in the database."""
         changes: List[Dict[str, Any]] = []
 
-        for table_name, table in metadata.tables.items():
+        for table in metadata.sorted_tables:
+            table_name = table.name
             if table_name.startswith("_"):
                 continue  # Skip internal tables
 
@@ -220,7 +223,7 @@ class SchemaEvolutionEngine:
                     # Determine safe default for NOT NULL columns
                     default_clause = ""
                     if not column.nullable:
-                        if column.server_default is not None:
+                        if column.server_default is not None and hasattr(column.server_default, "arg"):
                             default_val = column.server_default.arg
                             if callable(default_val):
                                 default_clause = f" DEFAULT ''"
@@ -231,7 +234,7 @@ class SchemaEvolutionEngine:
                             nullable = "NULL"
                         else:
                             # Must provide a default for NOT NULL on existing rows
-                            default_clause = self._get_type_default(str(col_type))
+                            default_clause = self._get_type_default(col_type)
 
                     ddl = (
                         f'ALTER TABLE "{table_name}" '
@@ -323,7 +326,7 @@ class SchemaEvolutionEngine:
                     enum_name = getattr(enum_type, "name", None)
                     if enum_name and enum_name in live_enums:
                         live_values = set(live_enums[enum_name])
-                        model_values = set(enum_type.enums)
+                        model_values = set(getattr(enum_type, "enums"))
                         missing_values = model_values - live_values
 
                         for value in missing_values:
