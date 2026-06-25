@@ -18,8 +18,16 @@
       "androidSplashResourceName": "splash",
       "showSpinner": false
     },
+    "StatusBar": {
+      "style": "Dark",
+      "backgroundColor": "#059669"
+    },
     "PushNotifications": {
-      "presentationOptions": ["badge", "sound", "alert"]
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
     },
     "LocalNotifications": {
       "smallIcon": "ic_stat_icon_config_sample",

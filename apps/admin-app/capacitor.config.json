@@ -18,6 +18,10 @@
       "androidSplashResourceName": "splash",
       "showSpinner": false
     },
+    "StatusBar": {
+      "style": "Dark",
+      "backgroundColor": "#059669"
+    },
     "Geolocation": {
       "permissions": {
         "location": [
