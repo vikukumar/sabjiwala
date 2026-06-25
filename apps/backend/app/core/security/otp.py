@@ -236,22 +236,24 @@ async def send_otp_via_email(email: str, otp: str) -> None:
     # Determine correct TLS mode from port to avoid aiosmtplib incompatibility.
     # Port 465 → implicit TLS (use_tls=True, start_tls=False)
     # Port 587 → STARTTLS (use_tls=False, start_tls=True)
-    # Port 25  → no TLS
+    # Port 25  → no TLS (both False)
     use_tls = settings.SMTP_USE_TLS
     start_tls = settings.SMTP_START_TLS
     port = settings.SMTP_PORT
-    if use_tls and start_tls:
-        # Both cannot be True — resolve by port
-        if port == 465:
-            start_tls = False   # implicit SSL on 465
-        else:
-            use_tls = False     # STARTTLS on 587 or others
-    elif not use_tls and not start_tls:
-        # Auto-detect sensible defaults from port
-        if port == 465:
-            use_tls = True
-        elif port == 587:
-            start_tls = True
+    # Always enforce port-based protocol correctness — overrides any misconfigured settings
+    if port == 465:
+        use_tls = True
+        start_tls = False
+    elif port == 587:
+        use_tls = False
+        start_tls = True
+    elif port == 25:
+        use_tls = False
+        start_tls = False
+    elif use_tls and start_tls:
+        # Unknown port but both True — pick one
+        use_tls = True
+        start_tls = False
 
     try:
         await aiosmtplib.send(

@@ -1492,14 +1492,19 @@ async def magic_link_request(
             msg.attach(MIMEText(f"Click here to login: {magic_url}", "plain"))
             msg.attach(MIMEText(html_body, "html"))
             
-            # Ensure use_tls and start_tls are not both True (incompatible in aiosmtplib)
-            use_tls = settings.SMTP_USE_TLS
-            start_tls = settings.SMTP_START_TLS
-            if use_tls and start_tls:
-                if settings.SMTP_PORT == 587:
-                    use_tls = False
-                else:
-                    start_tls = False
+            # Enforce port-based TLS protocol (port 465→SSL, 587→STARTTLS, 25→no TLS)
+            _smtp_port = settings.SMTP_PORT
+            if _smtp_port == 465:
+                use_tls, start_tls = True, False
+            elif _smtp_port == 587:
+                use_tls, start_tls = False, True
+            elif _smtp_port == 25:
+                use_tls, start_tls = False, False
+            else:
+                use_tls = settings.SMTP_USE_TLS
+                start_tls = settings.SMTP_START_TLS
+                if use_tls and start_tls:
+                    use_tls, start_tls = True, False
 
             try:
                 await aiosmtplib.send(

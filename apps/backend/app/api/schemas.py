@@ -199,6 +199,42 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+    @classmethod
+    def model_validate(cls, obj, *args, **kwargs):  # type: ignore[override]
+        """Override to safely extract gender from the profile relationship without lazy-loading."""
+        from pydantic import model_validator as _mv  # noqa: F401
+        if hasattr(obj, "__dict__") and not isinstance(obj, dict):
+            # Safely try to read gender from the already-loaded profile relationship
+            gender_val = None
+            try:
+                # Only access if the profile is already in the instance's __dict__ (already loaded)
+                profile = obj.__dict__.get("profile")
+                if profile is not None:
+                    gender_val = getattr(profile, "gender", None)
+            except Exception:
+                pass
+            # Build a plain dict to avoid any lazy-load issues
+            data = {
+                "id": getattr(obj, "id", None),
+                "email": getattr(obj, "email", None),
+                "phone": getattr(obj, "phone", None),
+                "first_name": getattr(obj, "first_name", ""),
+                "last_name": getattr(obj, "last_name", ""),
+                "user_type": (lambda ut: ut.value if ut is not None and hasattr(ut, "value") else str(ut) if ut is not None else None)(getattr(obj, "user_type", None)),
+                "is_active": getattr(obj, "is_active", True),
+                "is_verified": getattr(obj, "is_verified", False),
+                "avatar_url": getattr(obj, "avatar_url", None),
+                "referral_code": getattr(obj, "referral_code", None),
+                "mfa_enabled": getattr(obj, "mfa_enabled", False),
+                "created_at": getattr(obj, "created_at", None),
+                "active_role": None,
+                "gender": gender_val,
+            }
+            return super().model_validate(data, *args, **kwargs)
+        return super().model_validate(obj, *args, **kwargs)
+
+
+
 class UserProfileUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -207,6 +243,7 @@ class UserProfileUpdate(BaseModel):
     gender: Optional[str] = None
     language: Optional[str] = None
     bio: Optional[str] = None
+
 
 class AddressCreate(BaseModel):
     label: str = "Home"

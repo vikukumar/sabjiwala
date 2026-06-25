@@ -506,14 +506,19 @@ async def send_queued_email(email_q: EmailQueue) -> bool:
         email_q.attempts += 1
         email_q.last_attempt_at = datetime.now(timezone.utc)
 
-        # Ensure use_tls and start_tls are not both True (incompatible in aiosmtplib)
-        use_tls = settings.SMTP_USE_TLS
-        start_tls = settings.SMTP_START_TLS
-        if use_tls and start_tls:
-            if settings.SMTP_PORT == 587:
-                use_tls = False
-            else:
-                start_tls = False
+        # Enforce port-based TLS protocol (port 465→SSL, 587→STARTTLS, 25→no TLS)
+        _port = settings.SMTP_PORT
+        if _port == 465:
+            use_tls, start_tls = True, False
+        elif _port == 587:
+            use_tls, start_tls = False, True
+        elif _port == 25:
+            use_tls, start_tls = False, False
+        else:
+            use_tls = settings.SMTP_USE_TLS
+            start_tls = settings.SMTP_START_TLS
+            if use_tls and start_tls:
+                use_tls, start_tls = True, False
 
         await aiosmtplib.send(
             msg,
