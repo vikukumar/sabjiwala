@@ -207,7 +207,7 @@ async def seed_direct_db():
     import secrets
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "app"))
 
-    from app.db.session import AsyncSessionLocal
+    from app.db.session import async_session_factory
     from app.models.product import Category
 
     def slugify(text: str) -> str:
@@ -216,7 +216,7 @@ async def seed_direct_db():
         text = re.sub(r"[-\s]+", "-", text)
         return text[:100] + "-" + secrets.token_hex(3)
 
-    async with AsyncSessionLocal() as db:
+    async with async_session_factory() as db:
         from sqlalchemy import select
         existing_result = await db.execute(select(Category).where(Category.is_deleted == False))
         existing_names = {c.name.lower() for c in existing_result.scalars().all()}
