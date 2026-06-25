@@ -3,7 +3,7 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   output: process.env.NODE_ENV === "development" ? undefined : "export",
-  skipTrailingSlashRedirect: true,
+  //skipTrailingSlashRedirect: true,
   experimental: {
     externalDir: true,
   },
