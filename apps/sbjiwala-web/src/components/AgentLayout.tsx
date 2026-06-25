@@ -214,12 +214,7 @@ export default function AgentLayout({ children, title = "Agent Portal", isAvaila
           <LogOut className="w-4 h-4" />
           <span>Sign Out</span>
         </button>
-        <p className="text-[10px] text-center text-slate-500 font-mono mt-2">
-          Sbjiwala Agent v{versionInfo.version}
-        </p>
-        <div className="mt-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
-          Version {process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}
-        </div>
+
       </div>
     </div>
   );

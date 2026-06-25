@@ -62,6 +62,28 @@ try {
   fs.mkdirSync(webAppDir, { recursive: true });
   fs.mkdirSync(webCustomerNestedDir, { recursive: true });
 
+  // Write nested customer app layout
+  const nestedLayoutContent = `"use client";
+
+import React from "react";
+import AppShell from "@/components/AppShell";
+import { AppUpdater } from "@sbjiwala/shared";
+
+export default function CustomerAppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <AppShell>{children}</AppShell>
+      <AppUpdater appName="customer" />
+    </>
+  );
+}
+`;
+  fs.writeFileSync(path.join(webCustomerNestedDir, 'layout.tsx'), nestedLayoutContent, 'utf8');
+
   // Copy customer-app/src/app files
   fs.readdirSync(customerAppDir).forEach((child) => {
     const srcChildPath = path.join(customerAppDir, child);
@@ -83,6 +105,15 @@ try {
       if (child === 'page.tsx') {
         // page.tsx (customer dashboard) goes to /app/page.tsx
         copyRecursiveSync(srcChildPath, path.join(webCustomerNestedDir, 'page.tsx'));
+      } else if (child === 'layout.tsx') {
+        // Root layout.tsx — remove AppShell and AppUpdater
+        let content = fs.readFileSync(srcChildPath, 'utf8');
+        content = content
+          .replace(/import\s+AppShell\s+from\s+['"]@\/components\/AppShell['"];?\r?\n?/, '')
+          .replace(/import\s+\{\s*AppUpdater\s*\}\s+from\s+['"]@sbjiwala\/shared['"];?\r?\n?/, '')
+          .replace(/<AppShell>([\s\S]*?)<\/AppShell>/, '$1')
+          .replace(/<AppUpdater\s+appName="customer"\s*\/>\r?\n?/, '');
+        fs.writeFileSync(path.join(webAppDir, child), content, 'utf8');
       } else {
         // Root files (layout, providers, etc.) go to root /
         copyRecursiveSync(srcChildPath, path.join(webAppDir, child));

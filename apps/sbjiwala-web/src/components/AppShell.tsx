@@ -330,9 +330,6 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
             <X className="w-5 h-5" />
           </button>
         )}
-        <div className="mt-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
-          Version {process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}
-        </div>
       </div>
 
       {/* Location Bar */}
@@ -410,9 +407,6 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
             <span>Sign In / Login</span>
           </Link>
         )}
-        <div className="mt-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
-          Version {process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}
-        </div>
       </div>
     </div>
   );
@@ -720,9 +714,6 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
             )}
           </div>
         )}
-        <div className="mt-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
-          Version {process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}
-        </div>
       </div>
 
       {/* Onboarding Bottom Controls */}
@@ -772,9 +763,6 @@ function SplashPermissionsScreen({ onComplete }: { onComplete: () => void }) {
             </button>
           </div>
         )}
-        <div className="mt-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
-          Version {process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}
-        </div>
       </div>
     </div>
   );
@@ -2005,9 +1993,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {inlineSearchOpen && (
           <InlineSearchModal onClose={() => setInlineSearchOpen(false)} />
         )}
-        <div className="mt-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
-          Version {process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}
-        </div>
       </div>
     </AppShellContext.Provider>
 

@@ -595,14 +595,6 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
           <LogOut className="w-4 h-4" />
           <span>Sign Out</span>
         </button>
-        <div className="text-center">
-          <span className="text-[9px] text-slate-600 font-mono tracking-wider">
-            Sbjiwala v{versionInfo.version}
-          </span>
-        </div>
-        <div className="mt-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
-          Version {process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}
-        </div>
       </div>
     </div>
   );
