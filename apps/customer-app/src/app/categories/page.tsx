@@ -74,7 +74,7 @@ export default function CategoriesPage() {
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<any[]>({
     queryKey: ["categories"],
     queryFn: async () => {
-      const r = await api.get("/catalog/categories");
+      const r = await api.get("/catalog/categories", { params: { all_levels: true } });
       return r.data || [];
     },
     staleTime: 5 * 60_000,

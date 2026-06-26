@@ -332,18 +332,18 @@ export default function ProductCard({ product }: { product: any }) {
             </div>
 
             {cartItem ? (
-              <div className="flex items-center gap-1 bg-emerald-600 dark:bg-emerald-500 text-white rounded-xl p-1 shadow-lg animate-scale-in card-3d-button">
+              <div className="flex items-center gap-0.5 sm:gap-1 bg-emerald-600 dark:bg-emerald-500 text-white rounded-xl p-0.5 sm:p-1 shadow-lg animate-scale-in card-3d-button flex-shrink-0">
                 <button
                   onClick={() =>
                     isGuest
                       ? handleGuestUpdateQty(cartItem.quantity - 1)
                       : updateQty.mutate({ itemId: cartItem.id, qty: cartItem.quantity - 1 })
                   }
-                  className="w-5.5 h-5.5 flex items-center justify-center rounded-lg hover:bg-emerald-700 dark:hover:bg-emerald-650 active:scale-90 transition-transform cursor-pointer"
+                  className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-lg hover:bg-emerald-700 dark:hover:bg-emerald-650 active:scale-90 transition-transform cursor-pointer"
                 >
-                  <Minus className="w-3 h-3" />
+                  <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 </button>
-                <span className="px-1 text-xs font-black min-w-[16px] text-center select-none">{cartItem.quantity}</span>
+                <span className="px-0.5 sm:px-1 text-[10px] sm:text-xs font-black min-w-[12px] sm:min-w-[16px] text-center select-none">{cartItem.quantity}</span>
                 <button
                   onClick={() => {
                     const targetQty = cartItem.quantity + 1;
@@ -359,9 +359,9 @@ export default function ProductCard({ product }: { product: any }) {
                       updateQty.mutate({ itemId: cartItem.id, qty: targetQty });
                     }
                   }}
-                  className="w-5.5 h-5.5 flex items-center justify-center rounded-lg hover:bg-emerald-700 dark:hover:bg-emerald-650 active:scale-90 transition-transform cursor-pointer"
+                  className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-lg hover:bg-emerald-700 dark:hover:bg-emerald-650 active:scale-90 transition-transform cursor-pointer"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 </button>
               </div>
             ) : isOutOfStock ? (
