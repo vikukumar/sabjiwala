@@ -202,31 +202,49 @@ export default function AdminLayout({ children, title = "Admin Panel" }: AdminLa
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto space-y-0.5 pr-1 custom-scrollbar">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const resolvedHref = resolveAdminLink(item.href);
-            const isActive = pathname === resolvedHref || (item.href !== "/" && pathname?.startsWith(resolvedHref));
-            return (
-              <Link
-                key={item.id}
-                href={resolvedHref}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer ${
-                  isActive
-                    ? "bg-emerald-600 text-white shadow-md"
-                    : "hover:bg-slate-800 text-slate-400 hover:text-white"
-                }`}
-              >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1">{item.label}</span>
-                {item.badge && (
-                  <span className="text-[8px] font-black bg-emerald-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+          {(() => {
+            const flatItems = navItems.map(item => ({
+              ...item,
+              resolved: resolveAdminLink(item.href)
+            }));
+            const matchingItems = flatItems.filter(item => {
+              const exact = item.href === "/";
+              return exact
+                ? pathname === item.resolved
+                : pathname === item.resolved || pathname.startsWith(item.resolved + "/");
+            });
+            let activeResolved = "";
+            if (matchingItems.length > 0) {
+              matchingItems.sort((a, b) => b.resolved.length - a.resolved.length);
+              activeResolved = matchingItems[0].resolved;
+            }
+
+            return navItems.map((item) => {
+              const Icon = item.icon;
+              const resolvedHref = resolveAdminLink(item.href);
+              const isActive = resolvedHref === activeResolved;
+              return (
+                <Link
+                  key={item.id}
+                  href={resolvedHref}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-emerald-600 text-white shadow-md"
+                      : "hover:bg-slate-800 text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge && (
+                    <span className="text-[8px] font-black bg-emerald-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            });
+          })()}
         </nav>
       </div>
 

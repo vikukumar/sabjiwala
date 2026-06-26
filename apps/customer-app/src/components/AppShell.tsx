@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef, createContext, useContext, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -309,10 +309,21 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
     setIsLoggedIn(!!localStorage.getItem("sw_access_token"));
   }, []);
 
-  const isActive = (href: string, exact = false) => {
-    const resolved = resolveLink(href);
-    return exact ? pathname === resolved : pathname === resolved || pathname.startsWith(resolved + "/");
-  };
+  const activeResolved = (() => {
+    const flatItems = sidebarSections.flatMap(s => s.items.map(item => ({
+      ...item,
+      resolved: resolveLink(item.href)
+    })));
+    const matchingItems = flatItems.filter(item => {
+      const exact = item.href === "/";
+      return exact 
+        ? pathname === item.resolved 
+        : pathname === item.resolved || pathname.startsWith(item.resolved + "/");
+    });
+    if (matchingItems.length === 0) return "";
+    matchingItems.sort((a, b) => b.resolved.length - a.resolved.length);
+    return matchingItems[0].resolved;
+  })();
 
   const handleLogout = () => {
     localStorage.removeItem("sw_access_token");
@@ -333,7 +344,7 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
         {onClose && (
           <button
             onClick={onClose}
-            className="md:hidden p-1.5 rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            className="md:hidden p-1.5 rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/10 text-slate-550 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -353,7 +364,7 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
           <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-none">Delivering to</p>
           <p className="text-xs font-black text-slate-805 dark:text-white truncate mt-1">{locationName.split(",")[0] || locationName}</p>
         </div>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-505 ml-auto flex-shrink-0" />
+        <ChevronRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-550 ml-auto flex-shrink-0" />
       </div>
 
       {/* Nav Sections */}
@@ -365,9 +376,9 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
             </p>
             <ul className="space-y-0.5">
               {section.items.map((item) => {
-                const active = isActive(item.href, item.href === "/");
-                const Icon = item.icon;
                 const resolvedHref = resolveLink(item.href);
+                const active = resolvedHref === activeResolved;
+                const Icon = item.icon;
                 return (
                   <li key={item.href}>
                     <Link
