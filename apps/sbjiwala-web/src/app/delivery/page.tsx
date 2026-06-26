@@ -687,6 +687,7 @@ function ActiveOrdersDashboard() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
+                      {/* Navigate button */}
                       {["assigned", "accepted", "packed", "confirmed", "picked", "out_for_delivery"].includes(task.status) && (
                         <button
                           onClick={() => setNavTarget({ order: task })}
@@ -846,6 +847,7 @@ function ActiveOrdersDashboard() {
         onCancel={() => setRejectionConfig(null)}
       />
 
+      {/* Navigation Chooser */}
       {navTarget && (() => {
         const order = navTarget.order;
         const isPicked = ["picked", "out_for_delivery"].includes(order.status);
@@ -861,8 +863,16 @@ function ActiveOrdersDashboard() {
             heading={0}
             isPicked={isPicked}
             orderNumber={order.order_number}
-            storePoint={{ lat: storeLat, lng: storeLng, label: order.vendor_store?.store_name || "Store", type: "store" }}
-            customerPoint={{ lat: custLat, lng: custLng, label: order.delivery_address?.full_name || "Customer", type: "customer" }}
+            storePoint={{
+              lat: storeLat, lng: storeLng,
+              label: order.vendor_store?.store_name || "Store",
+              type: "store"
+            }}
+            customerPoint={{
+              lat: custLat, lng: custLng,
+              label: order.delivery_address?.full_name || "Customer",
+              type: "customer"
+            }}
           />
         );
       })()}

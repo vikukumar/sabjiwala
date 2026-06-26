@@ -525,11 +525,14 @@ export default function VendorOrdersPage() {
           watchId = await Geolocation.watchPosition(
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
             (pos, err) => {
-              if (!err && pos) setVendorGpsPos([pos.coords.latitude, pos.coords.longitude]);
+              if (!err && pos) {
+                setVendorGpsPos([pos.coords.latitude, pos.coords.longitude]);
+              }
             }
           );
         }
       } catch (e) {
+        // Permission not available — fallback to browser geolocation
         if (navigator.geolocation) {
           navigator.geolocation.watchPosition(
             (pos) => setVendorGpsPos([pos.coords.latitude, pos.coords.longitude]),
@@ -540,7 +543,9 @@ export default function VendorOrdersPage() {
       }
     };
     setup();
-    return () => { if (watchId) Geolocation.clearWatch({ id: watchId }).catch(() => { }); };
+    return () => {
+      if (watchId) Geolocation.clearWatch({ id: watchId }).catch(() => { });
+    };
   }, []);
 
   const rejectItemsMutation = useMutation({
@@ -842,6 +847,7 @@ export default function VendorOrdersPage() {
                 <SelfDeliveryMap order={order} store={store} />
               )}
 
+              {/* Navigate button for self-delivery out_for_delivery orders */}
               {isSelfDelivery && order.status === "out_for_delivery" && (
                 <button
                   onClick={() => setNavTarget({ order })}
@@ -1029,6 +1035,7 @@ export default function VendorOrdersPage() {
         onCancel={() => setRejectionConfig(null)}
       />
 
+      {/* Navigation Chooser for self-delivery orders */}
       {navTarget && (() => {
         const order = navTarget.order;
         const custLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
@@ -1042,8 +1049,16 @@ export default function VendorOrdersPage() {
             currentPos={vendorGpsPos}
             isPicked={true}
             orderNumber={order.order_number}
-            storePoint={{ lat: storeLat, lng: storeLng, label: store.store_name || "My Store", type: "store" }}
-            customerPoint={{ lat: custLat, lng: custLng, label: order.delivery_address?.full_name || "Customer", type: "customer" }}
+            storePoint={{
+              lat: storeLat, lng: storeLng,
+              label: store.store_name || "My Store",
+              type: "store"
+            }}
+            customerPoint={{
+              lat: custLat, lng: custLng,
+              label: order.delivery_address?.full_name || "Customer",
+              type: "customer"
+            }}
           />
         );
       })()}

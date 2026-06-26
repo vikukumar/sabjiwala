@@ -19,6 +19,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, resolveAppOrigin } from "@sbjiwala/shared";
 import LiveChatWidget from "./LiveChatWidget";
+import Image from "next/image";
 
 
 // Default is false, meaning no AppShell is currently active
@@ -258,7 +259,7 @@ function Header({ onMenuOpen, onOpenLocation, onOpenSearch }: { onMenuOpen: () =
             <Menu className="w-5 h-5" />
           </button>
           <Link href={resolveLink("/")} className="flex items-center gap-2 flex-shrink-0">
-            <img src={publicSettings?.app_logo_url || "/logo_horizontal.png"} alt={publicSettings?.app_name || "Sbjiwala"} className="h-8 w-auto object-contain" />
+            <Image src={publicSettings?.app_logo_url || "/logo_horizontal.png"} alt={publicSettings?.app_name || "Sbjiwala"} className="h-8 w-auto object-contain" />
             <span className="hidden sm:inline-flex bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
               {publicSettings?.app_name || "Sbjiwala"} Express
             </span>
@@ -316,8 +317,8 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
     })));
     const matchingItems = flatItems.filter(item => {
       const exact = item.href === "/";
-      return exact 
-        ? pathname === item.resolved 
+      return exact
+        ? pathname === item.resolved
         : pathname === item.resolved || pathname.startsWith(item.resolved + "/");
     });
     if (matchingItems.length === 0) return "";
@@ -338,7 +339,7 @@ function Sidebar({ onClose, isOpen, onOpenLocation, locationName }: { onClose: (
       {/* Logo */}
       <div className="flex items-center justify-between p-6 border-b border-slate-200/40 dark:border-slate-800/80">
         <div className="flex items-center gap-2">
-          <img src={publicSettings?.app_logo_url || "/logo_horizontal.png"} alt={publicSettings?.app_name || "Sbjiwala"} className="h-7 w-auto object-contain dark:brightness-0 dark:invert" />
+          <Image src={publicSettings?.app_logo_url || "/logo_horizontal.png"} alt={publicSettings?.app_name || "Sbjiwala"} className="h-auto w-[50px] object-cover dark:brightness-0 dark:invert" />
           {/* <span className="text-slate-900 dark:text-white font-black text-sm">{publicSettings?.app_name || "Sbjiwala"}</span> */}
         </div>
         {onClose && (
@@ -494,11 +495,10 @@ function BottomNav({ onOpenSearch }: { onOpenSearch: () => void }) {
               aria-label={item.label}
             >
               <div className="relative">
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  isActive
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 ${isActive
                     ? "bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)] relative overflow-hidden active-nav-shine"
                     : "text-slate-400 dark:text-slate-500 hover:text-slate-650 dark:hover:text-slate-350"
-                }`}>
+                  }`}>
                   <Icon className="w-5 h-5" />
                 </div>
                 {item.cartBadge && cartCount > 0 && (
@@ -507,11 +507,10 @@ function BottomNav({ onOpenSearch }: { onOpenSearch: () => void }) {
                   </span>
                 )}
               </div>
-              <span className={`text-[10px] font-bold transition-all duration-300 ${
-                isActive
+              <span className={`text-[10px] font-bold transition-all duration-300 ${isActive
                   ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
                   : "text-slate-400 dark:text-slate-500 opacity-70"
-              }`}>
+                }`}>
                 {item.label}
               </span>
             </Link>
@@ -1877,18 +1876,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("click", handleGlobalClick, { capture: true });
   }, [pathname, router]);
 
-    // Public routes or sub-portals that don't need customer app shell (full screen / own layout)
-    const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
-    const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
-    
-    const isCurrentAuth = isAuthRoute(pathname);
-    
-    const isBypassRoute = isNative
-      ? false
-      : (isUnified
-        ? (!isCustomerAppPath)
-        : ["/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r)));
-    if (isBypassRoute) return <>{children}</>;
+  // Public routes or sub-portals that don't need customer app shell (full screen / own layout)
+  const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+  const isCustomerAppPath = pathname === "/app" || pathname.startsWith("/app/");
+
+  const isCurrentAuth = isAuthRoute(pathname);
+
+  const isBypassRoute = isNative
+    ? false
+    : (isUnified
+      ? (!isCustomerAppPath)
+      : ["/vendor", "/delivery", "/admin", "/kyc", "/users"].some(r => pathname?.startsWith(r)));
+  if (isBypassRoute) return <>{children}</>;
 
   if (showSplash) {
     return <SplashPermissionsScreen onComplete={() => setShowSplash(false)} />;
@@ -2001,9 +2000,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             onPermissionGranted={() => {
               // refresh page state/items
               if (typeof window !== "undefined" && window.location.host === "localhost") {
-                 window.location.href = "/";
+                window.location.href = "/";
               } else {
-                 window.location.reload();
+                window.location.reload();
               }
             }}
           />

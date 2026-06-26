@@ -219,6 +219,12 @@ export default function CustomerAppLayout({
     copyRecursiveSync(deliveryLayoutSrc, deliveryLayoutDest);
   }
 
+  const navigationMapSrc = path.join(deliverySrc, 'components/NavigationMap.tsx');
+  const navigationMapDest = path.join(webSrc, 'components/NavigationMap.tsx');
+  if (fs.existsSync(navigationMapSrc)) {
+    copyRecursiveSync(navigationMapSrc, navigationMapDest);
+  }
+
   const deliveryPageDest = path.join(webAppDir, 'delivery/page.tsx');
   copyRecursiveSync(path.join(deliverySrc, 'app/page.tsx'), deliveryPageDest);
 
