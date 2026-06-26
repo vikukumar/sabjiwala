@@ -17,6 +17,9 @@ from app.db.base import BaseEntity
 
 from app.models.product import Product
 
+if TYPE_CHECKING:
+    from app.models.vendor import Vendor
+
 
 class OrderStatus(str, enum.Enum):
     PENDING = "pending"
@@ -226,6 +229,7 @@ class OrderItem(BaseEntity):
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     order: Mapped["Order"] = relationship(back_populates="items")
+    vendor: Mapped["Vendor"] = relationship()
 
 
 class OrderStatusHistory(BaseEntity):

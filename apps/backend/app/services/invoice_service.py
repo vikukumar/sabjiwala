@@ -33,7 +33,32 @@ class InvoiceService:
         Generates a PDF invoice for the given order using the HTML template.
         """
         template = env.get_template("invoice.html")
-        html_out = template.render(order=order, items=items)
+        from app.services.notification_service import get_frontend_url
+        frontend_url = get_frontend_url()
+        
+        # Fetch social settings
+        from app.models.system import SystemSetting
+        social_vars = {}
+        try:
+            settings_result = await self.db.execute(
+                select(SystemSetting).where(SystemSetting.key.in_([
+                    "social_facebook", "social_instagram", "social_twitter", "social_linkedin", "social_youtube"
+                ]))
+            )
+            for s in settings_result.scalars().all():
+                if s.value:
+                    social_vars[s.key] = s.value
+        except Exception as e:
+            logger.error("Failed to load social settings for invoice PDF", error=str(e))
+
+        html_out = template.render(
+            order=order,
+            items=items,
+            frontend_url=frontend_url,
+            logo_horizontal=f"{frontend_url}/logo_horizontal.png",
+            logo_vertical=f"{frontend_url}/logo_vertical.png",
+            **social_vars
+        )
 
         # Generate PDF
         result_file = io.BytesIO()
@@ -73,7 +98,7 @@ class InvoiceService:
             file_meta = await storage_service.save_file(
                 file_bytes=pdf_bytes,
                 original_filename=filename,
-                owner_id=order.customer_id,
+                owner_id=order.user_id,
                 bucket="invoices",
                 is_public=True,
                 entity_type="order",

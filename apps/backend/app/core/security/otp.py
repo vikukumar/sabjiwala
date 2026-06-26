@@ -27,6 +27,8 @@ async def send_otp(
     redis: Redis,
     identifier: str,
     purpose: str = "login",
+    request = None,
+    db = None,
 ) -> dict:
     """
     Generate and store an OTP for a given identifier (phone/email).
@@ -35,6 +37,8 @@ async def send_otp(
         redis: Redis connection
         identifier: Phone number or email
         purpose: OTP purpose (login, register, reset_password, verify_email, verify_phone)
+        request: FastAPI Request (optional)
+        db: AsyncSession database connection (optional)
 
     Returns:
         dict with otp (only in debug mode), expires_at, message
@@ -70,7 +74,7 @@ async def send_otp(
 
     # Send OTP via SMS or Email based on identifier
     if "@" in identifier:
-        await send_otp_via_email(identifier, otp)
+        await send_otp_via_email(identifier, otp, request=request, db=db)
     else:
         await send_otp_via_sms(identifier, otp)
 
@@ -81,8 +85,8 @@ async def send_otp(
     }
 
     # Ensure we never return the OTP to the client in production or dev to enforce actual SMS/Email verification
-    # if settings.APP_DEBUG:
-    #     result["otp"] = otp
+    if settings.APP_DEBUG:
+        result["otp"] = otp
 
     await logger.ainfo("OTP generated and sent", identifier=_mask_identifier(identifier), purpose=purpose)
 
@@ -165,7 +169,12 @@ async def send_otp_via_sms(phone: str, otp: str) -> None:
         await logger.aerror("Exception occurred while sending MSG91 OTP SMS", error=str(e), to=phone)
 
 
-async def send_otp_via_email(email: str, otp: str) -> None:
+async def send_otp_via_email(
+    email: str,
+    otp: str,
+    request = None,
+    db = None,
+) -> None:
     """Send OTP to the user's email using configurable SMTP settings."""
     import aiosmtplib
     from email.mime.multipart import MIMEMultipart
@@ -183,6 +192,78 @@ async def send_otp_via_email(email: str, otp: str) -> None:
     msg["To"] = email
 
     # HTML body
+    from app.services.notification_service import get_frontend_url
+    origin = request.headers.get("origin") if request else None
+    host = request.headers.get("host") if request else None
+    user_agent = request.headers.get("user-agent") if request else None
+    frontend_url = get_frontend_url(host=host, origin=origin, user_agent=user_agent)
+    logo_horizontal_url = f"{frontend_url}/logo_horizontal.png"
+    logo_vertical_url = f"{frontend_url}/logo_vertical.png"
+
+    # Fetch social settings
+    social_facebook = ""
+    social_instagram = ""
+    social_twitter = ""
+    social_linkedin = ""
+    social_youtube = ""
+    
+    if db:
+        try:
+            from app.models.system import SystemSetting
+            from sqlalchemy import select
+            settings_result = await db.execute(
+                select(SystemSetting).where(SystemSetting.key.in_([
+                    "social_facebook", "social_instagram", "social_twitter", "social_linkedin", "social_youtube"
+                ]))
+            )
+            social_map = {s.key: s.value for s in settings_result.scalars().all() if s.value}
+            social_facebook = social_map.get("social_facebook", "")
+            social_instagram = social_map.get("social_instagram", "")
+            social_twitter = social_map.get("social_twitter", "")
+            social_linkedin = social_map.get("social_linkedin", "")
+            social_youtube = social_map.get("social_youtube", "")
+        except Exception as e:
+            logger.error("Failed to load social settings for OTP email", error=str(e))
+
+    social_links_html = ""
+    has_social = any([social_facebook, social_instagram, social_twitter, social_linkedin, social_youtube])
+    if has_social:
+        social_links_html = """
+        <div style="margin-bottom: 16px; text-align: center;">
+            <p style="margin: 0 0 12px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Follow us</p>
+        """
+        if social_facebook:
+            social_links_html += f"""
+            <a href="{social_facebook}" style="margin: 0 8px; text-decoration: none; display: inline-block;">
+                <img src="https://img.icons8.com/material-outlined/24/059669/facebook-new.png" width="20" height="20" alt="Facebook" style="display: block; border: 0;" />
+            </a>
+            """
+        if social_instagram:
+            social_links_html += f"""
+            <a href="{social_instagram}" style="margin: 0 8px; text-decoration: none; display: inline-block;">
+                <img src="https://img.icons8.com/material-outlined/24/059669/instagram-new.png" width="20" height="20" alt="Instagram" style="display: block; border: 0;" />
+            </a>
+            """
+        if social_twitter:
+            social_links_html += f"""
+            <a href="{social_twitter}" style="margin: 0 8px; text-decoration: none; display: inline-block;">
+                <img src="https://img.icons8.com/material-outlined/24/059669/twitter.png" width="20" height="20" alt="Twitter" style="display: block; border: 0;" />
+            </a>
+            """
+        if social_linkedin:
+            social_links_html += f"""
+            <a href="{social_linkedin}" style="margin: 0 8px; text-decoration: none; display: inline-block;">
+                <img src="https://img.icons8.com/material-outlined/24/059669/linkedin.png" width="20" height="20" alt="LinkedIn" style="display: block; border: 0;" />
+            </a>
+            """
+        if social_youtube:
+            social_links_html += f"""
+            <a href="{social_youtube}" style="margin: 0 8px; text-decoration: none; display: inline-block;">
+                <img src="https://img.icons8.com/material-outlined/24/059669/youtube-play.png" width="20" height="20" alt="YouTube" style="display: block; border: 0;" />
+            </a>
+            """
+        social_links_html += "</div>"
+
     html_body = f"""
     <!DOCTYPE html>
     <html>
@@ -191,17 +272,19 @@ async def send_otp_via_email(email: str, otp: str) -> None:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <body style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 40px 20px; color: #1e293b;">
-        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); overflow: hidden;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0;">
             <tr>
-                <td style="padding: 40px 30px; text-align: center; background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -1px;">Sbjiwala</h1>
-                    <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">Farm Fresh &bull; 10 Min Delivery</p>
+                <td style="padding: 30px; text-align: center; background: #ffffff; border-bottom: 1px solid #f1f5f9;">
+                    <img src="{logo_horizontal_url}" style="width: 95px; height: auto; display: block; margin: 0 auto;" alt="Sbjiwala" />
                 </td>
             </tr>
             <tr>
                 <td style="padding: 40px 30px;">
-                    <h2 style="font-size: 22px; font-weight: 700; margin: 0 0 16px 0; color: #0f172a; text-align: center;">Secure Login OTP</h2>
-                    <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0; text-align: center;">You have requested to log in. Please use the verification code below to securely access your account.</p>
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <img src="{logo_vertical_url}" style="width: 80px; height: auto; display: block; margin: 0 auto 16px auto;" alt="Sbjiwala" />
+                        <h2 style="font-size: 22px; font-weight: 700; margin: 0 0 16px 0; color: #0f172a; text-align: center;">Secure Login OTP</h2>
+                        <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0; text-align: center;">You have requested to log in. Please use the verification code below to securely access your account.</p>
+                    </div>
                     
                     <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 32px;">
                         <span style="font-family: monospace; font-size: 42px; font-weight: 800; letter-spacing: 12px; color: #059669; display: inline-block; margin-left: 12px;">{otp}</span>
@@ -219,7 +302,8 @@ async def send_otp_via_email(email: str, otp: str) -> None:
                 </td>
             </tr>
             <tr>
-                <td style="background-color: #f8fafc; padding: 24px 30px; text-align: center;">
+                <td style="background-color: #f8fafc; padding: 24px 30px; text-align: center; border-top: 1px solid #f1f5f9;">
+                    {social_links_html}
                     <p style="margin: 0; color: #94a3b8; font-size: 13px; font-weight: 500;">&copy; 2026 Sbjiwala Technologies. All rights reserved.</p>
                 </td>
             </tr>

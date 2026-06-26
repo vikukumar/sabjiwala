@@ -163,7 +163,7 @@ async def register(
                 raise HTTPException(status_code=400, detail="User email or phone is required")
 
             redis = await _get_redis(request)
-            otp_res = await send_otp(redis, verification_identifier, purpose="register")
+            otp_res = await send_otp(redis, verification_identifier, purpose="register", request=request, db=db)
             if not otp_res["success"]:
                 raise HTTPException(status_code=400, detail=otp_res["message"])
 
@@ -305,7 +305,7 @@ async def register(
         raise HTTPException(status_code=400, detail="Email or phone number is required")
 
     redis = await _get_redis(request)
-    otp_res = await send_otp(redis, verification_identifier, purpose="register")
+    otp_res = await send_otp(redis, verification_identifier, purpose="register", request=request, db=db)
     if not otp_res["success"]:
         raise HTTPException(status_code=400, detail=otp_res["message"])
 
@@ -622,7 +622,7 @@ async def send_login_otp(
             detail="Please use your password with your mobile number to log in."
         )
 
-    result = await send_otp(redis, target_identifier, body.purpose)
+    result = await send_otp(redis, target_identifier, body.purpose, request=request, db=db)
 
     if not result["success"]:
         raise HTTPException(status_code=429, detail=result["message"])
@@ -1499,8 +1499,76 @@ async def magic_link_request(
     await redis.setex(f"magic_link:{token}", 600, redis_data)
 
     # Formulate login URL
-    origin = request.headers.get("origin") or "http://localhost:3000"
-    magic_url = f"{origin}/login?magic_token={token}"
+    from app.services.notification_service import get_frontend_url
+    origin = request.headers.get("origin")
+    host = request.headers.get("host")
+    user_agent = request.headers.get("user-agent")
+    frontend_url = get_frontend_url(host=host, origin=origin, user_agent=user_agent)
+    magic_url = f"{frontend_url}/login?magic_token={token}"
+    logo_horizontal_url = f"{frontend_url}/logo_horizontal.png"
+    logo_vertical_url = f"{frontend_url}/logo_vertical.png"
+
+    # Fetch social settings
+    social_facebook = ""
+    social_instagram = ""
+    social_twitter = ""
+    social_linkedin = ""
+    social_youtube = ""
+    
+    try:
+        from app.models.system import SystemSetting
+        settings_result = await db.execute(
+            select(SystemSetting).where(SystemSetting.key.in_([
+                "social_facebook", "social_instagram", "social_twitter", "social_linkedin", "social_youtube"
+            ]))
+        )
+        social_map = {s.key: s.value for s in settings_result.scalars().all() if s.value}
+        social_facebook = social_map.get("social_facebook", "")
+        social_instagram = social_map.get("social_instagram", "")
+        social_twitter = social_map.get("social_twitter", "")
+        social_linkedin = social_map.get("social_linkedin", "")
+        social_youtube = social_map.get("social_youtube", "")
+    except Exception as e:
+        logger.error("Failed to load social settings for magic link email", error=str(e))
+
+    social_links_html = ""
+    has_social = any([social_facebook, social_instagram, social_twitter, social_linkedin, social_youtube])
+    if has_social:
+        social_links_html = """
+        <div style="margin-bottom: 16px; text-align: center;">
+            <p style="margin: 0 0 12px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Follow us</p>
+        """
+        if social_facebook:
+            social_links_html += f"""
+            <a href="{social_facebook}" style="margin: 0 8px; text-decoration: none; display: inline-block;">
+                <img src="https://img.icons8.com/material-outlined/24/059669/facebook-new.png" width="20" height="20" alt="Facebook" style="display: block; border: 0;" />
+            </a>
+            """
+        if social_instagram:
+            social_links_html += f"""
+            <a href="{social_instagram}" style="margin: 0 8px; text-decoration: none; display: inline-block;">
+                <img src="https://img.icons8.com/material-outlined/24/059669/instagram-new.png" width="20" height="20" alt="Instagram" style="display: block; border: 0;" />
+            </a>
+            """
+        if social_twitter:
+            social_links_html += f"""
+            <a href="{social_twitter}" style="margin: 0 8px; text-decoration: none; display: inline-block;">
+                <img src="https://img.icons8.com/material-outlined/24/059669/twitter.png" width="20" height="20" alt="Twitter" style="display: block; border: 0;" />
+            </a>
+            """
+        if social_linkedin:
+            social_links_html += f"""
+            <a href="{social_linkedin}" style="margin: 0 8px; text-decoration: none; display: inline-block;">
+                <img src="https://img.icons8.com/material-outlined/24/059669/linkedin.png" width="20" height="20" alt="LinkedIn" style="display: block; border: 0;" />
+            </a>
+            """
+        if social_youtube:
+            social_links_html += f"""
+            <a href="{social_youtube}" style="margin: 0 8px; text-decoration: none; display: inline-block;">
+                <img src="https://img.icons8.com/material-outlined/24/059669/youtube-play.png" width="20" height="20" alt="YouTube" style="display: block; border: 0;" />
+            </a>
+            """
+        social_links_html += "</div>"
 
     sent_via = ""
     if user.email:
@@ -1517,20 +1585,33 @@ async def magic_link_request(
             
             html_body = f"""
             <html>
-              <body style="font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px; color: #0f172a;">
-                <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-                  <div style="background-color: #10b981; padding: 24px; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800;">Sbjiwala</h1>
-                  </div>
-                  <div style="padding: 32px; text-align: center;">
-                    <h2 style="font-size: 20px; font-weight: 700; margin-top: 0; color: #1e293b;">Magic Login Link</h2>
-                    <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin-bottom: 24px;">Click the button below to instantly log in to your Sbjiwala account. This link is valid for 10 minutes.</p>
-                    <a href="{magic_url}" style="background-color: #059669; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 12px; font-weight: 700; display: inline-block;">
-                      Log In Instantly
-                    </a>
-                    <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">If the button doesn't work, copy and paste this URL into your browser:<br/><a href="{magic_url}" style="color: #10b981;">{magic_url}</a></p>
-                  </div>
-                </div>
+              <body style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 40px 20px; color: #1e293b;">
+                <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0;">
+                  <tr>
+                    <td style="padding: 30px; text-align: center; background: #ffffff; border-bottom: 1px solid #f1f5f9;">
+                      <img src="{logo_horizontal_url}" style="width: 95px; height: auto; display: block; margin: 0 auto;" alt="Sbjiwala" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 40px 30px; text-align: center;">
+                      <div style="text-align: center; margin-bottom: 24px;">
+                        <img src="{logo_vertical_url}" style="width: 80px; height: auto; display: block; margin: 0 auto 16px auto;" alt="Sbjiwala" />
+                        <h2 style="font-size: 22px; font-weight: 700; margin: 0 0 8px 0; color: #0f172a;">Magic Login Link</h2>
+                        <p style="color: #475569; font-size: 15px; margin: 0; line-height: 1.5;">Click the button below to instantly log in to your Sbjiwala account. This link is valid for 10 minutes.</p>
+                      </div>
+                      <a href="{magic_url}" style="background-color: #059669; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 12px; font-weight: 700; display: inline-block; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);">
+                        Log In Instantly
+                      </a>
+                      <p style="color: #94a3b8; font-size: 12px; margin-top: 24px; line-height: 1.5;">If the button doesn't work, copy and paste this URL into your browser:<br/><a href="{magic_url}" style="color: #10b981; text-decoration: none; word-break: break-all;">{magic_url}</a></p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="background-color: #f8fafc; padding: 24px 30px; text-align: center; border-top: 1px solid #f1f5f9;">
+                      {social_links_html}
+                      <p style="margin: 0; color: #94a3b8; font-size: 12px; font-weight: 500;">&copy; 2026 Sbjiwala Technologies. All rights reserved.</p>
+                    </td>
+                  </tr>
+                </table>
               </body>
             </html>
             """
@@ -1679,7 +1760,7 @@ async def password_reset_request(
         target_identifier = user.email or user.phone
 
     redis = await _get_redis(request)
-    result = await send_otp(redis, target_identifier, purpose="reset_password")
+    result = await send_otp(redis, target_identifier, purpose="reset_password", request=request, db=db)
     if not result["success"]:
         raise HTTPException(status_code=429, detail=result["message"])
 

@@ -72,6 +72,10 @@ class FileMetadata(BaseEntity):
     # entity_type: product_image, vendor_logo, kyc_doc, invoice, avatar, review_image
     entity_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
+    @property
+    def public_url(self) -> str:
+        return f"/api/v1/storage/{self.id}"
+
     __table_args__ = (
         Index("ix_file_metadata_owner", "owner_id", "storage_bucket"),
         Index("ix_file_metadata_vendor", "vendor_id", "storage_bucket"),

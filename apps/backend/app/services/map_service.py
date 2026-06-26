@@ -25,7 +25,7 @@ class MapService:
         try:
             # Nominatim is blocking, so run it in a thread-safe wrapper or directly
             # For FastAPI async simplicity, we can do it directly. In production, wrap in run_in_executor
-            import anyio
+            import anyio.to_thread
             from functools import partial
             location = await anyio.to_thread.run_sync(
                 partial(self.geocoder.geocode, address, timeout=5)
@@ -45,7 +45,7 @@ class MapService:
         Reverse geocode coordinates to a formatted address.
         """
         try:
-            import anyio
+            import anyio.to_thread
             from functools import partial
             location = await anyio.to_thread.run_sync(
                 partial(self.geocoder.reverse, (latitude, longitude), timeout=5)

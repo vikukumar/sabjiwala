@@ -22,6 +22,74 @@ from app.models.user import User
 logger = structlog.get_logger()
 
 
+def get_frontend_url(
+    host: Optional[str] = None,
+    origin: Optional[str] = None,
+    user_agent: Optional[str] = None
+) -> str:
+    """Derive the frontend URL based on the API settings or the host header/origin."""
+    from app.core.config import settings
+    # Fallback to configured settings
+    url = settings.APP_URL or "http://localhost:8000"
+    
+    # Check if this is a mobile request
+    is_mobile = False
+    
+    # Check for mobile protocol/schemes in either host or origin
+    for val in [origin, host]:
+        if val:
+            val_lower = val.lower()
+            if val_lower.startswith(("capacitor://", "ionic://", "file://")):
+                is_mobile = True
+                break
+            if val_lower == "http://localhost" or val_lower.startswith("http://localhost:"):
+                # Port 3000 is the Next.js local web app. If it is NOT 3000, treat as mobile (Capacitor)
+                if "localhost:3000" not in val_lower:
+                    is_mobile = True
+                    break
+                    
+    # Check User-Agent for mobile indicators
+    if not is_mobile and user_agent:
+        ua_lower = user_agent.lower()
+        if any(keyword in ua_lower for keyword in ["capacitor", "cordova", "sabjiwalamobile", "dart"]):
+            is_mobile = True
+            
+    # Check if we are running in an API request where host matches the backend API url domain
+    # and no browser origin is present (indicating native mobile app or direct API call)
+    if not is_mobile and host and url:
+        from urllib.parse import urlparse
+        try:
+            api_domain = urlparse(url).netloc
+            # If the host string doesn't have a protocol, prepend http:// to parse netloc
+            parsed_host = urlparse(host if "://" in host else f"http://{host}").netloc
+            if parsed_host == api_domain:
+                # If origin is also missing or matches API, treat as mobile/direct API client
+                if not origin or urlparse(origin if "://" in origin else f"http://{origin}").netloc == api_domain:
+                    is_mobile = True
+        except Exception:
+            pass
+
+    # If it is NOT a mobile request, we can use the web client's host/origin header
+    if not is_mobile:
+        target_web = origin or host
+        if target_web:
+            target_web = target_web.rstrip("/")
+            if "://" not in target_web:
+                proto = "https" if "localhost" not in target_web and "127.0.0.1" not in target_web else "http"
+                return f"{proto}://{target_web}"
+            return target_web
+            
+    # Fallback/derivation from API APP_URL (for mobile or background tasks/workers)
+    if "api." in url:
+        return url.replace("api.", "")
+    if "localhost:8000" in url:
+        return url.replace("localhost:8000", "localhost:3000")
+    if "127.0.0.1:8000" in url:
+        return url.replace("127.0.0.1:8000", "127.0.0.1:3000")
+    return url
+
+
+
 class NotificationService:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -181,27 +249,57 @@ class NotificationService:
             "<!DOCTYPE html>"
             "<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'></head>"
             "<body style=\"font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 40px 20px; color: #1e293b;\">"
-            "<table width='100%' cellpadding='0' cellspacing='0' role='presentation' style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); overflow: hidden;'>"
-            "<tr><td style='padding: 30px 30px; text-align: center; background: linear-gradient(135deg, #059669 0%, #10b981 100%);'>"
-            "<h1 style='color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -1px;'>Sbjiwala</h1>"
-            "<p style='color: rgba(255,255,255,0.9); margin: 6px 0 0 0; font-size: 14px; font-weight: 500;'>Farm Fresh &bull; 10 Min Delivery</p>"
+            "<table width='100%' cellpadding='0' cellspacing='0' role='presentation' style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0;'>"
+            "<tr><td style='padding: 30px 30px; text-align: center; background: #ffffff; border-bottom: 1px solid #f1f5f9;'>"
+            "<img src=\"{{ logo_horizontal }}\" style=\"width: 95px; height: auto; display: block; margin: 0 auto;\" alt=\"Sbjiwala\" />"
             "</td></tr>"
             "<tr><td style='padding: 40px 30px;'>"
             "{content}"
             "</td></tr>"
-            "<tr><td style='background-color: #f8fafc; padding: 24px 30px; text-align: center;'>"
-            "<p style='margin: 0; color: #94a3b8; font-size: 13px; font-weight: 500;'>&copy; 2026 Sbjiwala Technologies. All rights reserved.</p>"
+            "<tr><td style='background-color: #f8fafc; padding: 24px 30px; text-align: center; border-top: 1px solid #f1f5f9;'>"
+            "{% if social_facebook or social_instagram or social_twitter or social_linkedin or social_youtube %}"
+            "<div style=\"margin-bottom: 16px; text-align: center;\">"
+            "<p style=\"margin: 0 0 12px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;\">Follow us</p>"
+            "{% if social_facebook %}"
+            "<a href=\"{{ social_facebook }}\" style=\"margin: 0 8px; text-decoration: none; display: inline-block;\">"
+            "<img src=\"https://img.icons8.com/material-outlined/24/059669/facebook-new.png\" width=\"20\" height=\"20\" alt=\"Facebook\" style=\"display: block; border: 0;\" />"
+            "</a>"
+            "{% endif %}"
+            "{% if social_instagram %}"
+            "<a href=\"{{ social_instagram }}\" style=\"margin: 0 8px; text-decoration: none; display: inline-block;\">"
+            "<img src=\"https://img.icons8.com/material-outlined/24/059669/instagram-new.png\" width=\"20\" height=\"20\" alt=\"Instagram\" style=\"display: block; border: 0;\" />"
+            "</a>"
+            "{% endif %}"
+            "{% if social_twitter %}"
+            "<a href=\"{{ social_twitter }}\" style=\"margin: 0 8px; text-decoration: none; display: inline-block;\">"
+            "<img src=\"https://img.icons8.com/material-outlined/24/059669/twitter.png\" width=\"20\" height=\"20\" alt=\"Twitter\" style=\"display: block; border: 0;\" />"
+            "</a>"
+            "{% endif %}"
+            "{% if social_linkedin %}"
+            "<a href=\"{{ social_linkedin }}\" style=\"margin: 0 8px; text-decoration: none; display: inline-block;\">"
+            "<img src=\"https://img.icons8.com/material-outlined/24/059669/linkedin.png\" width=\"20\" height=\"20\" alt=\"LinkedIn\" style=\"display: block; border: 0;\" />"
+            "</a>"
+            "{% endif %}"
+            "{% if social_youtube %}"
+            "<a href=\"{{ social_youtube }}\" style=\"margin: 0 8px; text-decoration: none; display: inline-block;\">"
+            "<img src=\"https://img.icons8.com/material-outlined/24/059669/youtube-play.png\" width=\"20\" height=\"20\" alt=\"YouTube\" style=\"display: block; border: 0;\" />"
+            "</a>"
+            "{% endif %}"
+            "</div>"
+            "{% endif %}"
+            "<p style='margin: 0; color: #94a3b8; font-size: 12px; font-weight: 500;'>&copy; 2026 Sbjiwala Technologies. All rights reserved.</p>"
             "</td></tr>"
             "</table></body></html>"
         )
         
-        default_templates = [
+        default_templates: List[Dict[str, Any]] = [
             {
                 "slug": "order_placed",
                 "name": "Order Placed Notification",
                 "subject": "Order Placed Successfully - Sabjiwala",
                 "body_html": base_html.replace("{content}", 
                     "<div style='text-align: center; margin-bottom: 24px;'>"
+                    "<img src=\"{{ logo_vertical }}\" style=\"width: 80px; height: auto; display: block; margin: 0 auto 16px auto;\" alt=\"Sbjiwala\" />"
                     "<div style='background-color: #ecfdf5; width: 64px; height: 64px; border-radius: 32px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;'><span style='font-size: 32px;'>🎉</span></div>"
                     "<h2 style='font-size: 22px; font-weight: 700; margin: 0 0 8px 0; color: #0f172a;'>Order Placed Successfully!</h2>"
                     "<p style='color: #475569; font-size: 15px; margin: 0;'>Your fresh veggies are being packed.</p>"
@@ -224,6 +322,7 @@ class NotificationService:
                 "subject": "Your Order is Confirmed - Sabjiwala",
                 "body_html": base_html.replace("{content}", 
                     "<div style='text-align: center; margin-bottom: 24px;'>"
+                    "<img src=\"{{ logo_vertical }}\" style=\"width: 80px; height: auto; display: block; margin: 0 auto 16px auto;\" alt=\"Sbjiwala\" />"
                     "<div style='background-color: #ecfdf5; width: 64px; height: 64px; border-radius: 32px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;'><span style='font-size: 32px;'>👍</span></div>"
                     "<h2 style='font-size: 22px; font-weight: 700; margin: 0 0 8px 0; color: #0f172a;'>Order Confirmed!</h2>"
                     "<p style='color: #475569; font-size: 15px; margin: 0; line-height: 1.5;'>We have confirmed your order <strong>#{{ order_number }}</strong>. The vendor is now handpicking and packing your farm fresh greens.</p>"
@@ -238,6 +337,7 @@ class NotificationService:
                 "subject": "Order Delivered! 🏁 - Sabjiwala",
                 "body_html": base_html.replace("{content}", 
                     "<div style='text-align: center; margin-bottom: 24px;'>"
+                    "<img src=\"{{ logo_vertical }}\" style=\"width: 80px; height: auto; display: block; margin: 0 auto 16px auto;\" alt=\"Sbjiwala\" />"
                     "<div style='background-color: #ecfdf5; width: 64px; height: 64px; border-radius: 32px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;'><span style='font-size: 32px;'>🏠</span></div>"
                     "<h2 style='font-size: 22px; font-weight: 700; margin: 0 0 8px 0; color: #0f172a;'>Order Delivered Successfully!</h2>"
                     "<p style='color: #475569; font-size: 15px; margin: 0 0 16px 0; line-height: 1.5;'>Your order <strong>#{{ order_number }}</strong> has arrived safely.</p>"
@@ -253,6 +353,7 @@ class NotificationService:
                 "subject": "Refund Credited to Wallet - Sabjiwala",
                 "body_html": base_html.replace("{content}", 
                     "<div style='text-align: center; margin-bottom: 24px;'>"
+                    "<img src=\"{{ logo_vertical }}\" style=\"width: 80px; height: auto; display: block; margin: 0 auto 16px auto;\" alt=\"Sbjiwala\" />"
                     "<div style='background-color: #f0fdf4; border: 2px solid #bbf7d0; width: 64px; height: 64px; border-radius: 32px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;'><span style='font-size: 32px; color: #16a34a;'>₹</span></div>"
                     "<h2 style='font-size: 22px; font-weight: 700; margin: 0 0 8px 0; color: #0f172a;'>Refund Processed</h2>"
                     "<p style='color: #475569; font-size: 15px; margin: 0 0 24px 0; line-height: 1.5;'>A refund of <strong>₹{{ refund_amount }}</strong> for order <strong>#{{ order_number }}</strong> has been successfully credited back to your Sabjiwala Wallet.</p>"
@@ -269,7 +370,13 @@ class NotificationService:
         for t in default_templates:
             res = await self.db.execute(select(EmailTemplate).where(EmailTemplate.slug == t["slug"]))
             existing = res.scalars().first()
-            if not existing:
+            if existing:
+                existing.name = t["name"]
+                existing.subject = t["subject"]
+                existing.body_html = t["body_html"]
+                existing.body_text = t["body_text"]
+                existing.variables = t["variables"]
+            else:
                 self.db.add(EmailTemplate(**t))
         await self.db.flush()
 
@@ -302,12 +409,38 @@ class NotificationService:
 
         channels = template.channels or []
 
+        # Fetch social media settings
+        from app.models.system import SystemSetting
+        social_vars = {}
+        try:
+            settings_result = await self.db.execute(
+                select(SystemSetting).where(SystemSetting.key.in_([
+                    "social_facebook", "social_instagram", "social_twitter", "social_linkedin", "social_youtube"
+                ]))
+            )
+            for s in settings_result.scalars().all():
+                if s.value:
+                    social_vars[s.key] = s.value
+        except Exception as e:
+            logger.error("Failed to load social settings for dispatch", error=str(e))
+
+        req_host = variables.get("request_host")
+        req_orig = variables.get("request_origin")
+        req_ua = variables.get("request_user_agent")
+
         # Render helper
         def render(tpl_str: Optional[str]) -> str:
             if not tpl_str:
                 return ""
             try:
-                return Template(tpl_str).render(**variables)
+                render_vars = {
+                    "frontend_url": get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua),
+                    "logo_horizontal": f"{get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua)}/logo_horizontal.png",
+                    "logo_vertical": f"{get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua)}/logo_vertical.png",
+                    **social_vars,
+                    **variables
+                }
+                return Template(tpl_str).render(**render_vars)
             except Exception as e:
                 logger.error("Template rendering failed", error=str(e), template=tpl_str, vars=variables)
                 return tpl_str
@@ -359,9 +492,16 @@ class NotificationService:
                 
                 if email_template:
                     try:
-                        subject = Template(email_template.subject).render(**variables)
-                        body_html = Template(email_template.body_html).render(**variables)
-                        body_text = Template(email_template.body_text or email_template.subject).render(**variables)
+                        render_vars = {
+                            "frontend_url": get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua),
+                            "logo_horizontal": f"{get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua)}/logo_horizontal.png",
+                            "logo_vertical": f"{get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua)}/logo_vertical.png",
+                            **social_vars,
+                            **variables
+                        }
+                        subject = Template(email_template.subject).render(**render_vars)
+                        body_html = Template(email_template.body_html).render(**render_vars)
+                        body_text = Template(email_template.body_text or email_template.subject).render(**render_vars)
                     except Exception as e:
                         logger.error("Failed to render custom email template", error=str(e))
                 
@@ -451,7 +591,7 @@ class NotificationService:
 
 async def any_webpush_send(sub_info: Dict[str, Any], title: str, body: str, data: Dict[str, Any]) -> None:
     """Send web push payload using VAPID private key."""
-    import anyio
+    import anyio.to_thread
     if not settings.VAPID_PRIVATE_KEY or not settings.VAPID_SUBJECT:
         logger.warning("VAPID credentials not set, skipping webpush dispatch")
         return
@@ -607,7 +747,7 @@ _firebase_app_initialized = False
 async def send_fcm_push(token: str, title: str, body: str, data: Optional[Dict[str, Any]] = None) -> bool:
     """Send FCM notification via Firebase Admin SDK (HTTP v1)."""
     global _firebase_app_initialized
-    import anyio
+    import anyio.to_thread
     
     if not settings.FIREBASE_SERVICE_ACCOUNT_JSON:
         logger.warning("FIREBASE_SERVICE_ACCOUNT_JSON not configured, push notification logged but not sent", token=token)
