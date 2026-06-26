@@ -16,6 +16,9 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   Onion: "🧅", Garlic: "🧄", Tomato: "🍅", Potato: "🥔", Mushroom: "🍄",
   Corn: "🌽", Pepper: "🫑", Brinjal: "🍆", Lemon: "🍋", Mango: "🥭",
   Banana: "🍌", Apple: "🍎", Grapes: "🍇", Watermelon: "🍉", Coconut: "🥥",
+  "Dairy & Eggs": "🥛", "Herbs & Spices": "🌿", "Grains & Cereals": "🌾",
+  "Organic & Natural": "🌱", "Flowers & Plants": "🌸", "Bakery & Snacks": "🍞",
+  Beverages: "🧃",
 };
 
 function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {

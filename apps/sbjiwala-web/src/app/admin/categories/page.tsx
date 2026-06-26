@@ -193,29 +193,22 @@ export default function AdminCategoriesPage() {
   const handleSeedDefaults = async () => {
     setSeeding(true);
     let created = 0;
-    let updated = 0;
     const parentIdMap: Record<string, string> = {};
 
     try {
-      // Map existing parents
-      for (const cat of categories) {
-        if (!cat.parent_id) parentIdMap[cat.name] = cat.id;
-      }
-
       for (let i = 0; i < DEFAULT_CATEGORIES.length; i++) {
         const { name, icon, desc, subs } = DEFAULT_CATEGORIES[i];
-        let parentId = parentIdMap[name];
-
-        const existingParent = categories.find((c: any) => c.name.toLowerCase() === name.toLowerCase() && !c.parent_id);
+        let parentId = "";
+        const existingParent = categories.find((c: any) => c.name.toLowerCase() === name.toLowerCase());
 
         if (existingParent) {
           try {
             const res = await api.patch(`/products/categories/${existingParent.id}`, {
               name, icon, description: desc, is_active: true, sort_order: i + 1, parent_id: null
             });
-            parentId = res.data?.id || existingParent.id;
+            parentId = existingParent.id;
             parentIdMap[name] = parentId;
-            updated++;
+            created++;
           } catch {}
         } else {
           try {
@@ -238,7 +231,7 @@ export default function AdminCategoriesPage() {
                   name: sub.name, icon: sub.icon, description: sub.desc,
                   is_active: true, sort_order: j + 1, parent_id: parentId
                 });
-                updated++;
+                created++;
               } catch {}
             } else {
               try {
@@ -254,7 +247,7 @@ export default function AdminCategoriesPage() {
       }
 
       queryClient.invalidateQueries({ queryKey: ["adminCategories"] });
-      success(`🎉 Seeding complete! Created ${created} and replaced/updated ${updated} categories.`);
+      success(`🎉 Processed ${created} categories successfully!`);
     } catch (err: any) {
       showError("Seeding Failed", err.message);
     } finally {

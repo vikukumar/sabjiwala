@@ -343,7 +343,7 @@ const categoryDetails: Record<string, { title: string; subtitle: string; emoji: 
     title: "Grains & Cereals",
     subtitle: "Daily essentials",
     emoji: "🌾",
-    gradient: "from-yellow-50 to-amber-100 dark:from-yellow-950/20 dark:to-yellow-950/20",
+    gradient: "from-yellow-50 to-amber-100 dark:from-yellow-950/20 dark:to-amber-950/20",
     textDark: "text-yellow-800 dark:text-yellow-300",
     textLight: "text-yellow-600 dark:text-yellow-400"
   },
@@ -351,7 +351,7 @@ const categoryDetails: Record<string, { title: string; subtitle: string; emoji: 
     title: "Organic & Natural",
     subtitle: "100% pesticide-free",
     emoji: "🌱",
-    gradient: "from-emerald-50 to-green-100 dark:from-emerald-950/20 dark:to-emerald-950/20",
+    gradient: "from-emerald-50 to-green-100 dark:from-emerald-950/20 dark:to-green-950/20",
     textDark: "text-emerald-800 dark:text-emerald-300",
     textLight: "text-emerald-600 dark:text-emerald-400"
   },
@@ -368,7 +368,7 @@ const categoryDetails: Record<string, { title: string; subtitle: string; emoji: 
     subtitle: "Breads & munchies",
     emoji: "🍞",
     gradient: "from-orange-50 to-amber-100 dark:from-orange-950/20 dark:to-amber-950/20",
-    textDark: "text-orange-805 dark:text-orange-300",
+    textDark: "text-orange-800 dark:text-orange-300",
     textLight: "text-orange-600 dark:text-orange-400"
   }
 };

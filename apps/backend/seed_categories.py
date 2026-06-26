@@ -257,14 +257,15 @@ async def seed_direct_db() -> None:
                 existing_cat = result.scalars().first()
                 if existing_cat:
                     parent_ids[parent_name] = existing_cat.id
+                    existing_cat.icon = icon
+                    existing_cat.description = desc
+                    existing_cat.sort_order = sort
                     # Self-heal parent attributes if needed
                     if existing_cat.level != 0 or existing_cat.parent_id is not None:
                         existing_cat.level = 0
                         existing_cat.parent_id = None
-                        total_updated += 1
-                        print(f"  ⚙️  Updated parent structure: {parent_name}")
-                    else:
-                        print(f"  ⏭️  Exists: {parent_name}")
+                    total_updated += 1
+                    print(f"  ⚙️  Updated parent structure & details: {parent_name}")
                 else:
                     print(f"  ⏭️  Exists: {parent_name} (Record missing, skipping)")
 
@@ -296,14 +297,15 @@ async def seed_direct_db() -> None:
                     total_created += 1
                     print(f"    ✅ Created sub: {sub_name}")
                 else:
+                    existing_sub.icon = sub_icon
+                    existing_sub.description = sub_desc
+                    existing_sub.sort_order = sub_sort
                     # Self-heal subcategory if parent_id or level is incorrect
                     if existing_sub.parent_id != pid or existing_sub.level != 1:
                         existing_sub.parent_id = pid
                         existing_sub.level = 1
-                        total_updated += 1
-                        print(f"    ⚙️  Updated sub parent/level: {sub_name}")
-                    else:
-                        print(f"    ⏭️  Exists: {sub_name}")
+                    total_updated += 1
+                    print(f"    ⚙️  Updated sub parent/level & details: {sub_name}")
 
         await db.commit()
         print(f"\n🎉 Done! Created {total_created} and self-healed {total_updated} categories.")

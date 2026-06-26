@@ -3,6 +3,7 @@ import Script from "next/script";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import Providers from "./providers";
+import { AppUpdater, StatusBarInit } from "@sbjiwala/shared";
 
 export const metadata: Metadata = {
   title: {
@@ -94,6 +95,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col antialiased" style={{ fontFamily: "var(--font-inter, Inter, system-ui, sans-serif)" }}>
         <Providers>
+          <StatusBarInit />
           {children}
                   </Providers>
         <Script

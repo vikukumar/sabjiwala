@@ -417,6 +417,7 @@ class CategoryResponse(BaseModel):
     name: str
     slug: str
     description: Optional[str] = None
+    icon: Optional[str] = None
     image_url: Optional[str] = None
     parent_id: Optional[UUID] = None
     level: int

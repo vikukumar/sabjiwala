@@ -12,6 +12,12 @@ import { useToast } from "@/components/ui/Toast";
 const CATEGORY_EMOJIS: Record<string, string> = {
   Vegetables: "🥦", Fruits: "🍎", "Leafy Greens": "🥬", "Root Vegetables": "🥕",
   Herbs: "🌿", Dairy: "🥛", Grains: "🌾", Spices: "🌶️", Exotics: "🥑",
+  Onion: "🧅", Garlic: "🧄", Tomato: "🍅", Potato: "🥔", Mushroom: "🍄",
+  Corn: "🌽", Pepper: "🫑", Brinjal: "🍆", Lemon: "🍋", Mango: "🥭",
+  Banana: "🍌", Apple: "🍎", Grapes: "🍇", Watermelon: "🍉", Coconut: "🥥",
+  "Dairy & Eggs": "🥛", "Herbs & Spices": "🌿", "Grains & Cereals": "🌾",
+  "Organic & Natural": "🌱", "Flowers & Plants": "🌸", "Bakery & Snacks": "🍞",
+  Beverages: "🧃",
 };
 
 // Guest Cart Local Helpers

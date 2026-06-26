@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import versionInfo from "@/app/version.json";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -336,7 +337,7 @@ export default function ProfilePage() {
         </span>
       </div>
 
-      <p className="text-center text-xs text-slate-400 dark:text-slate-500">Sbjiwala v1.0 · Member since {new Date(profile?.created_at || Date.now()).getFullYear()}</p>
+      <p className="text-center text-xs text-slate-400 dark:text-slate-500">Sbjiwala v{process.env.NEXT_PUBLIC_APP_VERSION || versionInfo.version || "1.0.0"} · Member since {new Date(profile?.created_at || Date.now()).getFullYear()}</p>
     </div>
   );
 }
