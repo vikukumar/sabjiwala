@@ -163,16 +163,24 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* ===== SCROLLBAR ===== */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 999px;
+/* ===== SCROLLBAR — hidden globally, scroll still works ===== */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE / Edge legacy */
 }
-::-webkit-scrollbar-thumb:hover { background: var(--foreground-muted); }
-.scrollbar-hide { scrollbar-width: none; }
-.scrollbar-hide::-webkit-scrollbar { display: none; }
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+/* Utility aliases (kept for explicit usage) */
+.scrollbar-none,
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
 
 /* ===== SELECTION ===== */
 ::selection {

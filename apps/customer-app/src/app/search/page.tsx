@@ -10,6 +10,14 @@ import { Button, Badge, EmptyState, Spinner, Skeleton } from "@/components/ui/in
 import ProductCard from "@/components/ProductCard";
 import { useToast } from "@/components/ui/Toast";
 
+const CATEGORY_EMOJIS: Record<string, string> = {
+  Vegetables: "🥦", Fruits: "🍎", "Leafy Greens": "🥬", "Root Vegetables": "🥕",
+  Herbs: "🌿", Dairy: "🥛", Grains: "🌾", Spices: "🌶️", Exotics: "🥑",
+  Onion: "🧅", Garlic: "🧄", Tomato: "🍅", Potato: "🥔", Mushroom: "🍄",
+  Corn: "🌽", Pepper: "🫑", Brinjal: "🍆", Lemon: "🍋", Mango: "🥭",
+  Banana: "🍌", Apple: "🍎", Grapes: "🍇", Watermelon: "🍉", Coconut: "🥥",
+};
+
 function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371; // km
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -175,13 +183,16 @@ function SearchContent() {
           <div>
             <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-3">Browse Categories</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {categories.slice(0, 6).map((cat: any) => (
-                <Link key={cat.id} href={`/search?category=${cat.id}`}
-                  className="card p-4 flex items-center gap-3 hover:border-emerald-400 transition-colors">
-                  <span className="text-2xl">{["🥦", "🍎", "🥬", "🥕", "🌿", "🧅"][categories.indexOf(cat) % 6]}</span>
-                  <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{cat.name}</span>
-                </Link>
-              ))}
+              {categories.slice(0, 6).map((cat: any) => {
+                const emoji = cat.icon || CATEGORY_EMOJIS[cat.name] || "🥗";
+                return (
+                  <Link key={cat.id} href={`/search?category=${cat.id}`}
+                    className="card p-4 flex items-center gap-3 hover:border-emerald-400 transition-colors">
+                    <span className="text-2xl">{emoji}</span>
+                    <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{cat.name}</span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </div>
