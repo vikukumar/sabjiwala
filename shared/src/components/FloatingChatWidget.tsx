@@ -83,7 +83,7 @@ export function FloatingChatWidget({ appMode = "customer" }: FloatingChatWidgetP
           {/* Header */}
           <div className="bg-emerald-600 text-white p-4 flex justify-between items-center shadow-md">
             <div>
-              <h3 className="font-black text-lg">Sabjiwala Support</h3>
+              <h3 className="font-black text-lg">Sbjiwala Support</h3>
               <p className="text-xs text-emerald-100 font-semibold flex items-center gap-1.5">
                 <span className={`w-2 h-2 rounded-full ${isConnected ? "bg-emerald-300 animate-pulse" : "bg-rose-400"}`}></span>
                 {chatStatus === "bot" ? "Chatting with Bot" : chatStatus === "active" ? "Chatting with Agent" : "Connecting..."}
@@ -106,13 +106,12 @@ export function FloatingChatWidget({ appMode = "customer" }: FloatingChatWidgetP
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex flex-col ${msg.sender_type === "customer" ? "items-end" : "items-start"}`}>
-                <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${
-                  msg.sender_type === "customer" 
-                    ? "bg-emerald-600 text-white rounded-br-none" 
-                    : msg.sender_type === "system" 
+                <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${msg.sender_type === "customer"
+                    ? "bg-emerald-600 text-white rounded-br-none"
+                    : msg.sender_type === "system"
                       ? "bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 self-center text-xs px-3 py-1 font-semibold rounded-full"
                       : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-none shadow-sm border border-slate-100 dark:border-slate-700"
-                }`}>
+                  }`}>
                   {msg.message}
                 </div>
               </div>
@@ -125,8 +124,8 @@ export function FloatingChatWidget({ appMode = "customer" }: FloatingChatWidgetP
                 {botFaqs.map((cat: any) => (
                   <div key={cat.category_id} className="space-y-1.5">
                     {cat.faqs.map((faq: any) => (
-                      <button 
-                        key={faq.id} 
+                      <button
+                        key={faq.id}
                         onClick={() => handleFaqClick(faq)}
                         className="block w-full text-left bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 text-xs font-semibold p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-colors shadow-sm"
                       >
@@ -137,15 +136,15 @@ export function FloatingChatWidget({ appMode = "customer" }: FloatingChatWidgetP
                 ))}
               </div>
             )}
-            
+
             <div ref={messagesEndRef} />
           </div>
 
           {/* Input Area */}
           <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
             <div className="flex gap-2 relative">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleFaqClick}
@@ -154,7 +153,7 @@ export function FloatingChatWidget({ appMode = "customer" }: FloatingChatWidgetP
                 className="w-full bg-slate-100 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white transition-all outline-none"
                 disabled={chatStatus === "connecting"}
               />
-              <button 
+              <button
                 onClick={handleSend}
                 disabled={!inputText.trim() || chatStatus === "connecting"}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white p-3 rounded-xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[48px]"
@@ -168,7 +167,7 @@ export function FloatingChatWidget({ appMode = "customer" }: FloatingChatWidgetP
 
       {/* Floating Button */}
       {!isOpen && (
-        <button 
+        <button
           onClick={() => setIsOpen(true)}
           className="bg-emerald-600 hover:bg-emerald-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgb(16,185,129,0.3)] transition-all transform hover:-translate-y-1 hover:scale-105 z-[100] group"
         >

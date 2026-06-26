@@ -129,7 +129,7 @@ function AddressForm({ onSave, onCancel, existing }: {
       const watermarkControl = (L.control as any)({ position: 'bottomright' });
       watermarkControl.onAdd = function () {
         const div = L.DomUtil.create('div', 'watermark-overlay');
-        div.innerHTML = '<span style="font-weight: 900; font-size: 2.5rem; opacity: 0.15; user-select: none; pointer-events: none; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">SBJIWALA</span>';
+        div.innerHTML = '<span style="font-weight: 900; font-size: 2.5rem; opacity: 0.15; user-select: none; pointer-events: none; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">Sbjiwala</span>';
         div.style.padding = '10px';
         return div;
       };
@@ -147,12 +147,12 @@ function AddressForm({ onSave, onCancel, existing }: {
             setCoords({ lat: latitude, lng: longitude });
             map.setView([latitude, longitude], 16);
             marker.setLatLng([latitude, longitude]);
-            
+
             const gpsIcon = createGPSLocationIcon(L);
             if (!gpsMarkerRef.current) {
-               gpsMarkerRef.current = L.marker([latitude, longitude], { icon: gpsIcon }).addTo(map);
+              gpsMarkerRef.current = L.marker([latitude, longitude], { icon: gpsIcon }).addTo(map);
             } else {
-               gpsMarkerRef.current.setLatLng([latitude, longitude]);
+              gpsMarkerRef.current.setLatLng([latitude, longitude]);
             }
 
             reverseGeocode(latitude, longitude);
@@ -191,13 +191,13 @@ function AddressForm({ onSave, onCancel, existing }: {
         if (markerRef.current) {
           markerRef.current.setLatLng([latitude, longitude]);
         }
-        
+
         import("leaflet").then((L) => {
           const gpsIcon = createGPSLocationIcon(L);
           if (!gpsMarkerRef.current && mapObj.current) {
-             gpsMarkerRef.current = L.marker([latitude, longitude], { icon: gpsIcon }).addTo(mapObj.current);
+            gpsMarkerRef.current = L.marker([latitude, longitude], { icon: gpsIcon }).addTo(mapObj.current);
           } else if (gpsMarkerRef.current) {
-             gpsMarkerRef.current.setLatLng([latitude, longitude]);
+            gpsMarkerRef.current.setLatLng([latitude, longitude]);
           }
         });
 
@@ -236,7 +236,7 @@ function AddressForm({ onSave, onCancel, existing }: {
   return (
     <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center px-4 pb-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onCancel} />
-      
+
       {/* Leaflet CSS */}
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 
@@ -263,7 +263,7 @@ function AddressForm({ onSave, onCancel, existing }: {
                   <Navigation className="w-3.5 h-3.5" /> Locate Me
                 </button>
               </div>
-              
+
               <div className="relative h-60 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800" style={{ zIndex: 1 }}>
                 <div ref={mapRef} className="w-full h-full" />
                 {isLocating && (
@@ -374,9 +374,8 @@ function PaymentMethodCard({ selected, id, icon: Icon, label, desc, badge, onCli
   selected: boolean; id: string; icon: any; label: string; desc: string; badge?: string; onClick: () => void;
 }) {
   return (
-    <button onClick={onClick} className={`w-full flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left cursor-pointer ${
-      selected ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20" : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
-    }`}>
+    <button onClick={onClick} className={`w-full flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left cursor-pointer ${selected ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20" : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+      }`}>
       <div className={`p-2.5 rounded-xl ${selected ? "bg-emerald-100 dark:bg-emerald-950/40" : "bg-slate-100 dark:bg-slate-800"}`}>
         <Icon className={`w-5 h-5 ${selected ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500 dark:text-slate-400"}`} />
       </div>
@@ -487,11 +486,11 @@ export default function CheckoutPage() {
   const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
   const platformFee = previewData ? previewData.platform_fee || 0 : 0.0;
   const convenienceFee = previewData ? previewData.convenience_fee || 0 : 0.0;
-  
+
   const couponDiscount = previewData ? previewData.coupon_discount : 0.0;
   const taxableAmount = Math.max(0, subtotal + deliveryFee + packagingCharge + platformFee + convenienceFee - couponDiscount);
   const taxAmount = previewData ? previewData.tax_amount : Math.round(taxableAmount * 0.05 * 100) / 100;
-  
+
   const walletBalance = walletData?.balance || 0;
   const walletDeduction = previewData ? previewData.wallet_deduction : (useWallet ? Math.round(Math.min(walletBalance, subtotal + deliveryFee + taxAmount + packagingCharge + platformFee + convenienceFee - couponDiscount) * 100) / 100 : 0);
   const finalTotal = previewData ? previewData.total_amount : Math.round(Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge + platformFee + convenienceFee - couponDiscount - walletDeduction) * 100) / 100;
@@ -519,7 +518,7 @@ export default function CheckoutPage() {
     }
     // Also consider if platform fee is exempted
     if (platformFee === 0 && previewData?.original_platform_fee) {
-       // Wait, we didn't add original_platform_fee to backend, so we skip it.
+      // Wait, we didn't add original_platform_fee to backend, so we skip it.
     }
     return Math.max(0, itemSavings);
   }, [cartData?.items, couponDiscount, deliveryFee, packagingCharge, previewData, subtotal, platformFee]);
@@ -645,9 +644,8 @@ export default function CheckoutPage() {
                   <div
                     key={addr.id}
                     onClick={() => setSelectedAddress(addr.id)}
-                    className={`w-full flex items-start gap-3 p-3 rounded-xl border-2 transition-all text-left cursor-pointer ${
-                      selectedAddress === addr.id ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20" : "border-slate-200 dark:border-slate-700 hover:border-slate-300"
-                    }`}
+                    className={`w-full flex items-start gap-3 p-3 rounded-xl border-2 transition-all text-left cursor-pointer ${selectedAddress === addr.id ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20" : "border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                      }`}
                   >
                     <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 ${selectedAddress === addr.id ? "border-emerald-500 bg-emerald-500" : "border-slate-300"}`}>
                       {selectedAddress === addr.id && <div className="w-full h-full flex items-center justify-center"><div className="w-2.5 h-2.5 bg-white rounded-full" /></div>}

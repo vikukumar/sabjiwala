@@ -4,7 +4,7 @@ set -e
 
 BACKUP_DIR="/app/storage/backups"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-FILENAME="sabjiwala_backup_${TIMESTAMP}.sql"
+FILENAME="sbjiwala_backup_${TIMESTAMP}.sql"
 
 echo "Creating database backup..."
 mkdir -p "${BACKUP_DIR}"

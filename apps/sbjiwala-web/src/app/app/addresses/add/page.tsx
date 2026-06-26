@@ -16,17 +16,17 @@ export default function AddAddressPage() {
   const addressId = searchParams.get("id");
 
   const { success, error: showError } = useToast();
-  
+
   // State for step: 1 (Map Picker), 2 (Form Details)
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [loadingGeocode, setLoadingGeocode] = useState(false);
-  
+
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({
     lat: 19.076,
     lng: 72.877
   });
-  
+
   const [reverseAddress, setReverseAddress] = useState("");
 
   const mapRef = useRef<HTMLDivElement>(null);
@@ -142,14 +142,14 @@ export default function AddAddressPage() {
       const gpsIcon = createGPSLocationIcon(L);
       const gpsMarker = L.marker([initLat, initLng], { icon: gpsIcon, zIndexOffset: -100 }).addTo(map);
       gpsMarker.setOpacity(0); // Hidden until locked
-      
+
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
           (pos) => {
             gpsMarker.setLatLng([pos.coords.latitude, pos.coords.longitude]);
             gpsMarker.setOpacity(1);
           },
-          () => {},
+          () => { },
           { enableHighAccuracy: true }
         );
       }
@@ -162,7 +162,7 @@ export default function AddAddressPage() {
           .then(data => {
             if (data && data.display_name) {
               setReverseAddress(data.display_name);
-              
+
               // Automatically extract address fields for step 2
               if (data.address) {
                 const city = data.address.city || data.address.town || data.address.suburb || "";
@@ -174,7 +174,7 @@ export default function AddAddressPage() {
               }
             }
           })
-          .catch(() => {})
+          .catch(() => { })
           .finally(() => setLoadingGeocode(false));
       };
 
@@ -227,7 +227,7 @@ export default function AddAddressPage() {
       if (markerRef.current) {
         markerRef.current.setLatLng([latitude, longitude]);
       }
-      
+
       setLoadingGeocode(true);
       fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
         .then(res => res.json())
@@ -244,7 +244,7 @@ export default function AddAddressPage() {
             }
           }
         })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setLoadingGeocode(false));
     });
   };
@@ -257,7 +257,7 @@ export default function AddAddressPage() {
         latitude: coords.lat,
         longitude: coords.lng
       };
-      
+
       if (addressId) {
         await api.put(`/users/me/addresses/${addressId}`, payload);
         success("Success", "Address updated successfully!");
@@ -265,7 +265,7 @@ export default function AddAddressPage() {
         await api.post("/users/me/addresses", payload);
         success("Success", "Address saved successfully!");
       }
-      
+
       router.push(resolveLink("/addresses"));
     } catch (err: any) {
       showError("Failed to save address", err.response?.data?.detail || err.message);
@@ -312,13 +312,13 @@ export default function AddAddressPage() {
         <div className="space-y-4 animate-fade-in">
           <div className="relative border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
             <div ref={mapRef} className="h-96 w-full relative" style={{ zIndex: 1 }} />
-            
+
             {/* Watermark */}
             <div className="absolute bottom-4 left-4 z-[400] pointer-events-none opacity-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur px-3 py-1.5 rounded-full border border-slate-200/50 shadow-sm flex items-center gap-2">
               <span className="text-xl">🥦</span>
-              <span className="text-xs font-black tracking-widest text-slate-800 dark:text-slate-200">SBJIWALA</span>
+              <span className="text-xs font-black tracking-widest text-slate-800 dark:text-slate-200">Sbjiwala</span>
             </div>
-            
+
             {/* Locate Me overlay */}
             <button
               onClick={handleLocateMe}
@@ -392,7 +392,7 @@ export default function AddAddressPage() {
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Recipient Full Name *</label>
               <input {...register("full_name", { required: true })} className="input-base px-4 py-3 text-sm rounded-2xl" placeholder="Full name of receiver" required />
             </div>
-            
+
             <div className="col-span-2">
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Mobile Number *</label>
               <input {...register("phone", { required: true })} className="input-base px-4 py-3 text-sm rounded-2xl" type="tel" placeholder="10-digit mobile number" required />

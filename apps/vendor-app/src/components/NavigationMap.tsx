@@ -514,7 +514,7 @@ function SbjiwalaNavMap({
 
       {/* Sbjiwala watermark */}
       <div className="absolute bottom-20 left-3 pointer-events-none text-[9px] font-black text-white/30 tracking-[0.2em] z-[1001]">
-        SABJIWALA NAV
+        Sbjiwala NAV
       </div>
 
       {/* Speed badge */}
@@ -551,11 +551,10 @@ function SbjiwalaNavMap({
           {/* Follow me button */}
           <button
             onClick={handleLocateMe}
-            className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-              isFollowing
-                ? "bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/25"
-                : "bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-700"
-            }`}
+            className={`p-3 rounded-2xl border transition-all cursor-pointer ${isFollowing
+              ? "bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/25"
+              : "bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-700"
+              }`}
           >
             <LocateFixed className="w-5 h-5" />
           </button>
@@ -638,9 +637,9 @@ export function NavigationChooser({
               <div className="w-11 h-11 bg-white dark:bg-slate-700 rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0">
                 {/* Google Maps "G" icon */}
                 <svg viewBox="0 0 24 24" width="26" height="26">
-                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#EA4335"/>
-                  <path d="M12 5c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z" fill="white"/>
-                  <path d="M12 7.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z" fill="#EA4335"/>
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#EA4335" />
+                  <path d="M12 5c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z" fill="white" />
+                  <path d="M12 7.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z" fill="#EA4335" />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">

@@ -272,6 +272,6 @@ async def mark_all_vendor_notifications_read(
     return APIResponse(success=True, message="All notifications marked as read")
 '''
 
-with open(r'd:/Projects/sabjiwala/apps/backend/app/api/v1/endpoints/vendors_append.py', 'w', encoding='utf-8') as f:
+with open(r'd:/Projects/sbjiwala/apps/backend/app/api/v1/endpoints/vendors_append.py', 'w', encoding='utf-8') as f:
     f.write(new_code)
 print('Written to append helper')

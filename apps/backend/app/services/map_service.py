@@ -16,7 +16,7 @@ logger = structlog.get_logger()
 class MapService:
     def __init__(self):
         # Initialize Nominatim geocoder with a unique user agent
-        self.geocoder = Nominatim(user_agent="sabjiwala_backend_app")
+        self.geocoder = Nominatim(user_agent="sbjiwala_backend_app")
 
     async def geocode(self, address: str) -> Optional[Dict[str, Any]]:
         """

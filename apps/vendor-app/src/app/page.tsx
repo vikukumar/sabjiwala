@@ -506,7 +506,7 @@ export default function VendorDashboard() {
         </div>
         <div className="text-center space-y-3 mt-8">
           <h2 className="text-3xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white via-emerald-100 to-emerald-400">
-            SBJIWALA VENDOR
+            Sbjiwala VENDOR
           </h2>
           <div className="flex flex-col items-center gap-3">
             <p className="text-xs font-bold text-emerald-400/80 uppercase tracking-[0.3em]">Preparing Dashboard</p>
@@ -779,7 +779,7 @@ export default function VendorDashboard() {
               {/* Watermark */}
               <div className="absolute bottom-4 left-4 z-[400] pointer-events-none opacity-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur px-3 py-1.5 rounded-full border border-slate-200/50 shadow-sm flex items-center gap-2">
                 <span className="text-xl">🥦</span>
-                <span className="text-xs font-black tracking-widest text-slate-800 dark:text-slate-200">SBJIWALA</span>
+                <span className="text-xs font-black tracking-widest text-slate-800 dark:text-slate-200">Sbjiwala</span>
               </div>
             </div>
             <Button onClick={() => saveServiceAreaMutation.mutate()} loading={saveServiceAreaMutation.isPending} className="w-full text-xs font-bold py-2.5">
@@ -913,16 +913,16 @@ export default function VendorDashboard() {
 
                   <div className="flex items-center gap-3">
                     <span className={`inline-block text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${order.status === "pending"
-                        ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
-                        : order.status === "confirmed"
-                          ? "bg-purple-100 dark:bg-purple-955/40 text-purple-800 dark:text-purple-400"
-                          : order.status === "accepted"
-                            ? "bg-teal-100 dark:bg-teal-955/40 text-teal-800 dark:text-teal-400"
-                            : order.status === "packed"
-                              ? "bg-blue-100 dark:bg-blue-955/40 text-blue-800 dark:text-blue-400"
-                              : order.status === "out_for_delivery"
-                                ? "bg-orange-100 dark:bg-orange-955/40 text-orange-850 dark:text-orange-400"
-                                : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
+                      ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
+                      : order.status === "confirmed"
+                        ? "bg-purple-100 dark:bg-purple-955/40 text-purple-800 dark:text-purple-400"
+                        : order.status === "accepted"
+                          ? "bg-teal-100 dark:bg-teal-955/40 text-teal-800 dark:text-teal-400"
+                          : order.status === "packed"
+                            ? "bg-blue-100 dark:bg-blue-955/40 text-blue-800 dark:text-blue-400"
+                            : order.status === "out_for_delivery"
+                              ? "bg-orange-100 dark:bg-orange-955/40 text-orange-850 dark:text-orange-400"
+                              : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
                       }`}>
                       {order.status}
                     </span>

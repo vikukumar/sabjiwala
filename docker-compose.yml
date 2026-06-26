@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: sabjiwala_postgres
+    container_name: sbjiwala_postgres
     restart: always
     environment:
       POSTGRES_DB: sbjiwala
@@ -19,7 +19,7 @@ services:
 
   redis:
     image: redis:7.4-alpine
-    container_name: sabjiwala_redis
+    container_name: sbjiwala_redis
     restart: always
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
@@ -36,7 +36,7 @@ services:
     build:
       context: .
       dockerfile: ./infrastructure/docker/Dockerfile.complete
-    container_name: sabjiwala_complete_app
+    container_name: sbjiwala_complete_app
     restart: always
     environment:
       - APP_NAME=Sbjiwala

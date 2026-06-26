@@ -8,11 +8,11 @@ import AdminLayout from "@/components/AdminLayout";
 
 // Predefined blocks that can be added visually
 const VISUAL_BLOCKS = [
-  { id: "header", label: "Logo & Header", defaultHtml: "<div style='text-align: center; border-bottom: 2px solid #059669; padding-bottom: 10px;'>\n  <h2 style='color: #059669; margin: 0;'>Sabjiwala</h2>\n  <p style='color: #64748b; margin: 5px 0 0 0;'>Kisan ke Ghar Se Apke Ghar Tak</p>\n</div>" },
+  { id: "header", label: "Logo & Header", defaultHtml: "<div style='text-align: center; border-bottom: 2px solid #059669; padding-bottom: 10px;'>\n  <h2 style='color: #059669; margin: 0;'>Sbjiwala</h2>\n  <p style='color: #64748b; margin: 5px 0 0 0;'>Kisan ke Ghar Se Apke Ghar Tak</p>\n</div>" },
   { id: "heading", label: "Accent Title", defaultHtml: "<h3 style='color: #0f172a; margin-top: 20px; font-size: 18px;'>Order Placed Successfully! 🎉</h3>" },
   { id: "text", label: "Body Paragraph", defaultHtml: "<p>Hello,</p>\n<p>Thank you for shopping with us! Your order #{{ order_number }} has been received and will be delivered shortly.</p>" },
   { id: "items_table", label: "Order Items Table", defaultHtml: "<div style='background-color: #f8fafc; border-radius: 6px; padding: 15px; margin: 20px 0;'>\n  <p style='margin: 0 0 10px 0;'><strong>Order Details:</strong></p>\n  <table style='width: 100%; border-collapse: collapse;'>\n    <tr>\n      <td style='padding: 5px 0; color: #64748b;'>Order Amount:</td>\n      <td style='padding: 5px 0; text-align: right; font-weight: bold;'>₹{{ total_amount }}</td>\n    </tr>\n    <tr>\n      <td style='padding: 5px 0; color: #64748b;'>Delivery Address:</td>\n      <td style='padding: 5px 0; text-align: right;'>{{ delivery_address }}</td>\n    </tr>\n  </table>\n</div>" },
-  { id: "footer", label: "Footer Disclaimer", defaultHtml: "<hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>\n<p style='font-size: 12px; color: #94a3b8; text-align: center;'>Sabjiwala © 2026. All rights reserved.</p>" },
+  { id: "footer", label: "Footer Disclaimer", defaultHtml: "<hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;'/>\n<p style='font-size: 12px; color: #94a3b8; text-align: center;'>Sbjiwala © 2026. All rights reserved.</p>" },
 ];
 
 export default function AdminEmailDesigner() {
@@ -24,7 +24,7 @@ export default function AdminEmailDesigner() {
   const [bodyText, setBodyText] = useState("");
   const [variables, setVariables] = useState<string[]>([]);
   const [designerMode, setDesignerMode] = useState<"visual" | "html" | "preview">("visual");
-  
+
   // Test email state
   const [testEmail, setTestEmail] = useState("");
   const [testVars, setTestVars] = useState<Record<string, string>>({
@@ -57,9 +57,9 @@ export default function AdminEmailDesigner() {
     } else {
       // Default seed fallbacks
       setName(selectedSlug.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") + " Email");
-      setSubject("Sabjiwala Notification");
+      setSubject("Sbjiwala Notification");
       setBodyHtml("<div style='font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>\n  <h3>Notification</h3>\n  <p>Default details here...</p>\n</div>");
-      setBodyText("Sabjiwala Notification");
+      setBodyText("Sbjiwala Notification");
       setVariables([]);
     }
   }, [selectedSlug, templates]);
@@ -171,11 +171,10 @@ export default function AdminEmailDesigner() {
                       setSelectedSlug(tpl.slug);
                       setDesignerMode("visual");
                     }}
-                    className={`w-full flex flex-col p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-900 text-emerald-800 dark:text-emerald-450"
-                        : "bg-transparent border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
-                    }`}
+                    className={`w-full flex flex-col p-3 rounded-xl border text-left transition-all cursor-pointer ${isSelected
+                      ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-900 text-emerald-800 dark:text-emerald-450"
+                      : "bg-transparent border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
+                      }`}
                   >
                     <div className="text-xs font-extrabold flex items-center gap-1.5">
                       {tpl.label}
@@ -220,33 +219,30 @@ export default function AdminEmailDesigner() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setDesignerMode("visual")}
-                  className={`flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all cursor-pointer ${
-                    designerMode === "visual"
-                      ? "bg-white dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800 text-slate-850 dark:text-white shadow-sm"
-                      : "text-slate-400 hover:text-slate-655"
-                  }`}
+                  className={`flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all cursor-pointer ${designerMode === "visual"
+                    ? "bg-white dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800 text-slate-850 dark:text-white shadow-sm"
+                    : "text-slate-400 hover:text-slate-655"
+                    }`}
                 >
                   <Grid className="w-4 h-4" />
                   Visual Blocks
                 </button>
                 <button
                   onClick={() => setDesignerMode("html")}
-                  className={`flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all cursor-pointer ${
-                    designerMode === "html"
-                      ? "bg-white dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800 text-slate-850 dark:text-white shadow-sm"
-                      : "text-slate-400 hover:text-slate-655"
-                  }`}
+                  className={`flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all cursor-pointer ${designerMode === "html"
+                    ? "bg-white dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800 text-slate-850 dark:text-white shadow-sm"
+                    : "text-slate-400 hover:text-slate-655"
+                    }`}
                 >
                   <Code className="w-4 h-4" />
                   HTML Code Code
                 </button>
                 <button
                   onClick={() => setDesignerMode("preview")}
-                  className={`flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all cursor-pointer ${
-                    designerMode === "preview"
-                      ? "bg-white dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800 text-slate-850 dark:text-white shadow-sm"
-                      : "text-slate-400 hover:text-slate-655"
-                  }`}
+                  className={`flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all cursor-pointer ${designerMode === "preview"
+                    ? "bg-white dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800 text-slate-850 dark:text-white shadow-sm"
+                    : "text-slate-400 hover:text-slate-655"
+                    }`}
                 >
                   <Eye className="w-4 h-4" />
                   Email Preview
@@ -356,7 +352,7 @@ export default function AdminEmailDesigner() {
               SMTP Email Delivery Test Engine
             </h3>
             <p className="text-[10px] text-slate-400">Validate server connections and layout formatting immediately by pushing a real test email.</p>
-            
+
             <div className="flex flex-col md:flex-row gap-4 items-end">
               <div className="flex-1 space-y-1">
                 <label className="text-[10px] uppercase font-extrabold text-slate-400">Target Email Address</label>
@@ -364,7 +360,7 @@ export default function AdminEmailDesigner() {
                   type="email"
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
-                  placeholder="e.g. developer@sabjiwala.qzz.io"
+                  placeholder="e.g. developer@sbjiwala.qzz.io"
                   className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-850 bg-transparent focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
                 />
               </div>

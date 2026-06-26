@@ -50,7 +50,7 @@ export default function RefundPolicyPage() {
             </h1>
           </div>
           <Card className="p-6">
-            <div 
+            <div
               className="prose dark:prose-invert max-w-none text-xs text-slate-700 dark:text-slate-350 font-medium"
               dangerouslySetInnerHTML={{ __html: cmsPage.content_html || cmsPage.content }}
             />
@@ -136,7 +136,7 @@ export default function RefundPolicyPage() {
               <strong>Vegetable & Fruit Shipments:</strong> Since fresh produce is short-lived, you must check everything at delivery time. No returns will be allowed once the agent departs.
             </li>
             <li>
-              <strong>Wallet Refund Timing:</strong> Doorstep rejection differences for prepaid digital payments reflect in your Sabjiwala Wallet balance instantly.
+              <strong>Wallet Refund Timing:</strong> Doorstep rejection differences for prepaid digital payments reflect in your Sbjiwala Wallet balance instantly.
             </li>
             <li>
               <strong>Cash on Delivery:</strong> For COD orders, the rider adjusts the total bill directly on their delivery boy app. You pay only for the accepted items.

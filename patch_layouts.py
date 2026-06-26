@@ -1,7 +1,7 @@
 import os
 
 apps = ['vendor-app', 'delivery-app', 'admin-app', 'agent-app']
-base_dir = r"d:\Projects\sabjiwala\apps"
+base_dir = r"d:\Projects\sbjiwala\apps"
 
 for app in apps:
     layout_path = os.path.join(base_dir, app, "src", "app", "layout.tsx")

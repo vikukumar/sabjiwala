@@ -46,7 +46,7 @@ async def seed_system_settings(db: AsyncSession):
         {"key": "smtp_port", "value": "587", "value_type": "integer", "group": "notification", "description": "SMTP Port", "is_public": False},
         {"key": "smtp_user", "value": "", "value_type": "string", "group": "notification", "description": "SMTP Username", "is_public": False},
         {"key": "smtp_password", "value": "", "value_type": "string", "group": "notification", "description": "SMTP Password", "is_public": False},
-        {"key": "smtp_from_name", "value": "Sabjiwala", "value_type": "string", "group": "notification", "description": "SMTP From Name", "is_public": True},
+        {"key": "smtp_from_name", "value": "Sbjiwala", "value_type": "string", "group": "notification", "description": "SMTP From Name", "is_public": True},
         {"key": "smtp_from_email", "value": "noreply@sbjiwala.qzz.io", "value_type": "string", "group": "notification", "description": "SMTP From Email Address", "is_public": True},
         {"key": "smtp_use_tls", "value": "false", "value_type": "boolean", "group": "notification", "description": "Enable TLS for SMTP", "is_public": False},
         {"key": "smtp_start_tls", "value": "true", "value_type": "boolean", "group": "notification", "description": "Enable StartTLS for SMTP", "is_public": False},
@@ -142,13 +142,13 @@ async def seed_system_settings(db: AsyncSession):
             "            </tr>\n"
             "        </table>\n"
             "        <div class=\"footer\">\n"
-            "            Thank you for buying fresh from Sabjiwala! Keep supporting your local farmers.\n"
+            "            Thank you for buying fresh from Sbjiwala! Keep supporting your local farmers.\n"
             "        </div>\n"
             "    </div>\n"
             "</body>\n"
             "</html>\n"
         ), "value_type": "string", "group": "appearance", "description": "HTML Jinja2 template layout of invoices", "is_public": True},
-        {"key": "invoice_branding_json", "value": "", "value_json": {"company_name": "Sabjiwala", "company_address": "Main Wholesale Mandi, Jaipur, Rajasthan", "company_phone": "+91 99999 88888", "gstin": "08ABCDE1234F1Z1"}, "value_type": "json", "group": "appearance", "description": "Global business metadata attributes for invoices", "is_public": True},
+        {"key": "invoice_branding_json", "value": "", "value_json": {"company_name": "Sbjiwala", "company_address": "Main Wholesale Mandi, Jaipur, Rajasthan", "company_phone": "+91 99999 88888", "gstin": "08ABCDE1234F1Z1"}, "value_type": "json", "group": "appearance", "description": "Global business metadata attributes for invoices", "is_public": True},
 
     ]
     for d in defaults:

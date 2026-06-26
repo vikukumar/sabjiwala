@@ -168,7 +168,7 @@ function OtpPromptModal({
         </div>
         <h3 className="text-base font-black uppercase tracking-wider">{title}</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">{message}</p>
-        
+
         <div className="space-y-1">
           <label className="block text-[10px] font-bold text-slate-400 uppercase text-left mb-1">Enter Customer OTP</label>
           <input
@@ -188,13 +188,13 @@ function OtpPromptModal({
               <span className="text-[9px] font-black text-rose-500 uppercase animate-pulse">Required</span>
             )}
           </div>
-          
+
           <input
             type="file" multiple accept="image/*"
             ref={fileInputRef} onChange={handleFileUpload}
             className="hidden" disabled={loading || uploading}
           />
-          
+
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -272,7 +272,7 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
   // Track browser geolocation representing delivery agent GPS using Capacitor
   useEffect(() => {
     if (typeof window === "undefined") return;
-    
+
     let watchId: string | null = null;
 
     const setupGeolocation = async () => {
@@ -402,7 +402,7 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
         iconSize: [38, 38],
         iconAnchor: [19, 19],
       });
-      
+
       const gpsMarker = L.marker([storeLat, storeLng], { icon: gpsIcon }).addTo(map).bindPopup("Live GPS Device Position");
       gpsMarkerRef.current = gpsMarker;
 
@@ -420,10 +420,10 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
   useEffect(() => {
     if (mapObjRef.current && gpsCoords && gpsMarkerRef.current && order && store) {
       gpsMarkerRef.current.setLatLng(gpsCoords);
-      
+
       const customerLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
       const customerLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
-      
+
       // Update the route line from the current GPS position to the customer
       fetchRoute(gpsCoords, [customerLat, customerLng]).then((coords) => {
         if (routeLineRef.current) {
@@ -454,29 +454,29 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
       <div className="w-full min-h-[50vh] rounded-2xl border border-slate-205 dark:border-slate-800 overflow-hidden shadow-inner relative z-10 flex flex-col">
         <div className="flex-1 w-full relative">
           <div ref={mapRef} className="w-full h-full absolute inset-0" />
-          
-          {/* Sabjiwala Watermark */}
-        <div className="absolute bottom-2 left-2 pointer-events-none opacity-50 font-bold text-slate-800 tracking-widest text-[10px]" style={{ zIndex: 1000 }}>
-          SABJIWALA
+
+          {/* Sbjiwala Watermark */}
+          <div className="absolute bottom-2 left-2 pointer-events-none opacity-50 font-bold text-slate-800 tracking-widest text-[10px]" style={{ zIndex: 1000 }}>
+            Sbjiwala
+          </div>
+
+          {/* Locate Me FAB */}
+          <button
+            onClick={() => {
+              if (mapObjRef.current && gpsCoords) {
+                mapObjRef.current.flyTo(gpsCoords, 16, { animate: true, duration: 1.5 });
+              }
+            }}
+            className="absolute bottom-4 right-4 bg-white dark:bg-slate-800 p-3 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            style={{ zIndex: 1000 }}
+            title="Locate Me"
+          >
+            <Navigation className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          </button>
         </div>
 
-        {/* Locate Me FAB */}
-        <button 
-          onClick={() => {
-            if (mapObjRef.current && gpsCoords) {
-              mapObjRef.current.flyTo(gpsCoords, 16, { animate: true, duration: 1.5 });
-            }
-          }}
-          className="absolute bottom-4 right-4 bg-white dark:bg-slate-800 p-3 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-          style={{ zIndex: 1000 }}
-          title="Locate Me"
-        >
-          <Navigation className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-        </button>
-      </div>
-
-      {/* Navigation Action Bar */}
-      <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-3 z-[1001] relative shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        {/* Navigation Action Bar */}
+        <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-3 z-[1001] relative shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <a
             href={`https://www.google.com/maps/dir/?api=1&destination=${order.delivery_latitude || order.delivery_address?.latitude},${order.delivery_longitude || order.delivery_address?.longitude}`}
             target="_blank"
@@ -536,7 +536,7 @@ export default function VendorOrdersPage() {
         if (navigator.geolocation) {
           navigator.geolocation.watchPosition(
             (pos) => setVendorGpsPos([pos.coords.latitude, pos.coords.longitude]),
-            () => {},
+            () => { },
             { enableHighAccuracy: true, maximumAge: 5000 }
           );
         }
@@ -544,7 +544,7 @@ export default function VendorOrdersPage() {
     };
     setup();
     return () => {
-      if (watchId) Geolocation.clearWatch({ id: watchId }).catch(() => {});
+      if (watchId) Geolocation.clearWatch({ id: watchId }).catch(() => { });
     };
   }, []);
 
@@ -621,11 +621,10 @@ export default function VendorOrdersPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-full capitalize text-[10px] sm:text-xs transition-all whitespace-nowrap ${
-                  activeTab === tab
-                    ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm font-bold"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-205"
-                }`}
+                className={`px-3 py-1.5 rounded-full capitalize text-[10px] sm:text-xs transition-all whitespace-nowrap ${activeTab === tab
+                  ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm font-bold"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-205"
+                  }`}
               >
                 {tab}
               </button>
@@ -664,7 +663,7 @@ export default function VendorOrdersPage() {
                       <span>•</span>
                       <span className="capitalize">{order.payment_method} ({order.payment_status})</span>
                     </div>
-                    
+
                     {/* Visual Item Images Row */}
                     <div className="flex gap-2 pt-1.5 overflow-x-auto scrollbar-hide">
                       {order.items?.slice(0, 5).map((item: any, idx: number) => {
@@ -689,29 +688,27 @@ export default function VendorOrdersPage() {
                   </div>
 
                   <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-end flex-shrink-0">
-                    <span className={`inline-block text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${
-                      order.status === "pending"
-                        ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
-                        : order.status === "confirmed"
-                          ? "bg-purple-100 dark:bg-purple-955/40 text-purple-800 dark:text-purple-400"
-                          : order.status === "accepted"
-                            ? "bg-teal-100 dark:bg-teal-955/40 text-teal-800 dark:text-teal-400"
-                            : order.status === "packed"
-                              ? "bg-blue-100 dark:bg-blue-955/40 text-blue-800 dark:text-blue-400"
-                              : order.status === "assigned"
-                                ? "bg-indigo-105 dark:bg-indigo-955/40 text-indigo-800 dark:text-indigo-400"
-                                : order.status === "out_for_delivery"
-                                  ? "bg-cyan-105 dark:bg-cyan-955/40 text-cyan-800 dark:text-cyan-400"
-                                  : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
-                    }`}>
+                    <span className={`inline-block text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${order.status === "pending"
+                      ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
+                      : order.status === "confirmed"
+                        ? "bg-purple-100 dark:bg-purple-955/40 text-purple-800 dark:text-purple-400"
+                        : order.status === "accepted"
+                          ? "bg-teal-100 dark:bg-teal-955/40 text-teal-800 dark:text-teal-400"
+                          : order.status === "packed"
+                            ? "bg-blue-100 dark:bg-blue-955/40 text-blue-800 dark:text-blue-400"
+                            : order.status === "assigned"
+                              ? "bg-indigo-105 dark:bg-indigo-955/40 text-indigo-800 dark:text-indigo-400"
+                              : order.status === "out_for_delivery"
+                                ? "bg-cyan-105 dark:bg-cyan-955/40 text-cyan-800 dark:text-cyan-400"
+                                : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
+                      }`}>
                       {order.status}
                     </span>
                     {order.metadata_json?.delivery_option && (
-                      <span className={`inline-block text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${
-                        order.metadata_json.delivery_option === "self"
-                          ? "bg-orange-100 dark:bg-orange-955/40 text-orange-800 dark:text-orange-400"
-                          : "bg-indigo-100 dark:bg-indigo-955/40 text-indigo-800 dark:text-indigo-400"
-                      }`}>
+                      <span className={`inline-block text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${order.metadata_json.delivery_option === "self"
+                        ? "bg-orange-100 dark:bg-orange-955/40 text-orange-800 dark:text-orange-400"
+                        : "bg-indigo-100 dark:bg-indigo-955/40 text-indigo-800 dark:text-indigo-400"
+                        }`}>
                         {order.metadata_json.delivery_option === "self" ? "Self Delivery" : "Platform Rider"}
                       </span>
                     )}
@@ -767,32 +764,30 @@ export default function VendorOrdersPage() {
               <div className="flex justify-between items-center text-xs flex-wrap gap-2">
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-slate-400 uppercase">Status</p>
-                  <span className={`inline-block text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${
-                    order.status === "pending"
-                      ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
-                      : order.status === "confirmed"
-                        ? "bg-purple-100 dark:bg-purple-955/40 text-purple-800 dark:text-purple-400"
-                        : order.status === "accepted"
-                          ? "bg-teal-100 dark:bg-teal-955/40 text-teal-800 dark:text-teal-400"
-                          : order.status === "packed"
-                            ? "bg-blue-100 dark:bg-blue-955/40 text-blue-800 dark:text-blue-400"
-                            : order.status === "assigned"
-                              ? "bg-indigo-105 dark:bg-indigo-955/40 text-indigo-800 dark:text-indigo-400"
-                              : order.status === "out_for_delivery"
-                                ? "bg-cyan-105 dark:bg-cyan-955/40 text-cyan-800 dark:text-cyan-400"
-                                : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
-                  }`}>
+                  <span className={`inline-block text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${order.status === "pending"
+                    ? "bg-amber-100 dark:bg-amber-955/40 text-amber-800 dark:text-amber-400"
+                    : order.status === "confirmed"
+                      ? "bg-purple-100 dark:bg-purple-955/40 text-purple-800 dark:text-purple-400"
+                      : order.status === "accepted"
+                        ? "bg-teal-100 dark:bg-teal-955/40 text-teal-800 dark:text-teal-400"
+                        : order.status === "packed"
+                          ? "bg-blue-100 dark:bg-blue-955/40 text-blue-800 dark:text-blue-400"
+                          : order.status === "assigned"
+                            ? "bg-indigo-105 dark:bg-indigo-955/40 text-indigo-800 dark:text-indigo-400"
+                            : order.status === "out_for_delivery"
+                              ? "bg-cyan-105 dark:bg-cyan-955/40 text-cyan-800 dark:text-cyan-400"
+                              : "bg-emerald-100 dark:bg-emerald-955/40 text-emerald-800 dark:text-emerald-400"
+                    }`}>
                     {order.status}
                   </span>
                 </div>
 
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-slate-400 uppercase">Delivery Option</p>
-                  <span className={`inline-block text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${
-                    isSelfDelivery
-                      ? "bg-orange-100 dark:bg-orange-955/40 text-orange-800 dark:text-orange-400"
-                      : "bg-indigo-100 dark:bg-indigo-955/40 text-indigo-800 dark:text-indigo-400"
-                  }`}>
+                  <span className={`inline-block text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${isSelfDelivery
+                    ? "bg-orange-100 dark:bg-orange-955/40 text-orange-800 dark:text-orange-400"
+                    : "bg-indigo-100 dark:bg-indigo-955/40 text-indigo-800 dark:text-indigo-400"
+                    }`}>
                     {isSelfDelivery ? "Self Delivery" : "Platform Rider"}
                   </span>
                 </div>

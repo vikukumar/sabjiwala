@@ -9,7 +9,7 @@ logger = structlog.get_logger()
 
 # Configure Celery to use Redis broker and backend
 celery_app = Celery(
-    "sabjiwala_tasks",
+    "sbjiwala_tasks",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
 )

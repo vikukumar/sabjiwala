@@ -63,6 +63,6 @@ async def submit_kyc(
     return APIResponse(success=True, message="KYC documents submitted for review. Approval takes 24-48 hours.")
 '''
 
-with open(r'd:/Projects/sabjiwala/apps/backend/app/api/v1/endpoints/delivery.py', 'a', encoding='utf-8') as f:
+with open(r'd:/Projects/sbjiwala/apps/backend/app/api/v1/endpoints/delivery.py', 'a', encoding='utf-8') as f:
     f.write(new_code)
 print('Done!')

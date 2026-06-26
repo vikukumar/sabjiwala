@@ -22,10 +22,10 @@ class LatestReleaseResponse(BaseModel):
 @router.get("/latest-release", response_model=LatestReleaseResponse)
 async def get_latest_release():
     """
-    Fetch the latest release information from the Sabjiwala GitHub repository.
+    Fetch the latest release information from the Sbjiwala GitHub repository.
     This is used by the auto-updater in the mobile apps and the web download page.
     """
-    url = "https://api.github.com/repos/vikukumar/sabjiwala/releases/latest"
+    url = "https://api.github.com/repos/vikukumar/sbjiwala/releases/latest"
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(

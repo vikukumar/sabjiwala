@@ -51,7 +51,7 @@ def get_frontend_url(
     # Check User-Agent for mobile indicators
     if not is_mobile and user_agent:
         ua_lower = user_agent.lower()
-        if any(keyword in ua_lower for keyword in ["capacitor", "cordova", "sabjiwalamobile", "dart"]):
+        if any(keyword in ua_lower for keyword in ["capacitor", "cordova", "sbjiwalamobile", "dart"]):
             is_mobile = True
             
     # Check if we are running in an API request where host matches the backend API url domain
@@ -192,7 +192,7 @@ class NotificationService:
                 "name": "Order Delivered",
                 "event_key": "order_delivered",
                 "in_app_title": "Order Deliver Ho Gaya! 🏁",
-                "in_app_body": "Aapka order {{ order_number }} safaltapurvak deliver ho gaya hai. Sabjiwala se kharidari ke liye dhanyawad!",
+                "in_app_body": "Aapka order {{ order_number }} safaltapurvak deliver ho gaya hai. Sbjiwala se kharidari ke liye dhanyawad!",
                 "push_title": "Order Deliver Ho Gaya! 🏁",
                 "push_body": "Aapka order {{ order_number }} safaltapurvak deliver ho gaya hai.",
             },
@@ -296,7 +296,7 @@ class NotificationService:
             {
                 "slug": "order_placed",
                 "name": "Order Placed Notification",
-                "subject": "Order Placed Successfully - Sabjiwala",
+                "subject": "Order Placed Successfully - Sbjiwala",
                 "body_html": base_html.replace("{content}", 
                     "<div style='text-align: center; margin-bottom: 24px;'>"
                     "<img src=\"{{ logo_vertical }}\" style=\"width: 80px; height: auto; display: block; margin: 0 auto 16px auto;\" alt=\"Sbjiwala\" />"
@@ -319,7 +319,7 @@ class NotificationService:
             {
                 "slug": "order_confirmed",
                 "name": "Order Confirmed Notification",
-                "subject": "Your Order is Confirmed - Sabjiwala",
+                "subject": "Your Order is Confirmed - Sbjiwala",
                 "body_html": base_html.replace("{content}", 
                     "<div style='text-align: center; margin-bottom: 24px;'>"
                     "<img src=\"{{ logo_vertical }}\" style=\"width: 80px; height: auto; display: block; margin: 0 auto 16px auto;\" alt=\"Sbjiwala\" />"
@@ -334,7 +334,7 @@ class NotificationService:
             {
                 "slug": "order_delivered",
                 "name": "Order Delivered Notification",
-                "subject": "Order Delivered! 🏁 - Sabjiwala",
+                "subject": "Order Delivered! 🏁 - Sbjiwala",
                 "body_html": base_html.replace("{content}", 
                     "<div style='text-align: center; margin-bottom: 24px;'>"
                     "<img src=\"{{ logo_vertical }}\" style=\"width: 80px; height: auto; display: block; margin: 0 auto 16px auto;\" alt=\"Sbjiwala\" />"
@@ -350,13 +350,13 @@ class NotificationService:
             {
                 "slug": "order_refunded",
                 "name": "Order Refunded Notification",
-                "subject": "Refund Credited to Wallet - Sabjiwala",
+                "subject": "Refund Credited to Wallet - Sbjiwala",
                 "body_html": base_html.replace("{content}", 
                     "<div style='text-align: center; margin-bottom: 24px;'>"
                     "<img src=\"{{ logo_vertical }}\" style=\"width: 80px; height: auto; display: block; margin: 0 auto 16px auto;\" alt=\"Sbjiwala\" />"
                     "<div style='background-color: #f0fdf4; border: 2px solid #bbf7d0; width: 64px; height: 64px; border-radius: 32px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;'><span style='font-size: 32px; color: #16a34a;'>₹</span></div>"
                     "<h2 style='font-size: 22px; font-weight: 700; margin: 0 0 8px 0; color: #0f172a;'>Refund Processed</h2>"
-                    "<p style='color: #475569; font-size: 15px; margin: 0 0 24px 0; line-height: 1.5;'>A refund of <strong>₹{{ refund_amount }}</strong> for order <strong>#{{ order_number }}</strong> has been successfully credited back to your Sabjiwala Wallet.</p>"
+                    "<p style='color: #475569; font-size: 15px; margin: 0 0 24px 0; line-height: 1.5;'>A refund of <strong>₹{{ refund_amount }}</strong> for order <strong>#{{ order_number }}</strong> has been successfully credited back to your Sbjiwala Wallet.</p>"
                     "<div style='background-color: #f8fafc; border-radius: 12px; padding: 16px; display: inline-block;'>"
                     "<span style='color: #64748b; font-size: 14px;'>You can use this wallet balance seamlessly on your next fresh grocery order!</span>"
                     "</div>"

@@ -188,7 +188,7 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
 
   const initiateCall = async () => {
     const callId = "support_vendor_" + (vendorProfile?.id || "vendor") + "_" + Date.now();
-    
+
     let nativeSuccess = false;
     if (isStreamCallAvailable()) {
       nativeSuccess = await startStreamCall(callId, "audio");
@@ -227,7 +227,7 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
       const audio = document.getElementById("vendorRemoteAudio") as HTMLAudioElement;
       if (audio) {
         audio.srcObject = event.streams[0];
-        audio.play().catch(() => {});
+        audio.play().catch(() => { });
       }
     };
     try {
@@ -324,7 +324,7 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
   // Geolocation tracking for active self-delivery orders
   useEffect(() => {
     if (!isAuthed) return;
-    
+
     // Check if there are active self-delivery orders that are out_for_delivery
     const activeSelfDeliveries = (vendorOrders || []).filter(
       (order: any) =>
@@ -335,7 +335,7 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
     if (activeSelfDeliveries.length === 0) return;
 
     let watchId: number | null = null;
-    
+
     if (typeof window !== "undefined" && navigator.geolocation) {
       const handleLocationUpdate = (position: GeolocationPosition) => {
         activeSelfDeliveries.forEach((order: any) => {
@@ -472,18 +472,18 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
           <div className="absolute inset-0 w-32 h-32 rounded-full border-[3px] border-slate-800 animate-ping opacity-20" style={{ animationDuration: '2s' }} />
           <div className="w-28 h-28 rounded-[2rem] bg-gradient-to-tr from-emerald-600/20 to-teal-500/20 backdrop-blur-md border border-emerald-500/30 flex items-center justify-center p-4 shadow-[0_0_80px_rgba(16,185,129,0.25)] relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
-            <img 
-              src={publicSettings?.app_logo_url || "/icon.png"} 
-              alt="Vendor Portal" 
-              className="w-full h-full object-contain drop-shadow-2xl animate-pulse" 
+            <img
+              src={publicSettings?.app_logo_url || "/icon.png"}
+              alt="Vendor Portal"
+              className="w-full h-full object-contain drop-shadow-2xl animate-pulse"
               style={{ animationDuration: '2.5s' }}
-              onError={(e) => { e.currentTarget.src = "/icon.png"; }} 
+              onError={(e) => { e.currentTarget.src = "/icon.png"; }}
             />
           </div>
         </div>
         <div className="text-center space-y-3 mt-8">
           <h2 className="text-3xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white via-emerald-100 to-emerald-400">
-            SBJIWALA VENDOR
+            Sbjiwala VENDOR
           </h2>
           <div className="flex flex-col items-center gap-3">
             <p className="text-xs font-bold text-emerald-400/80 uppercase tracking-[0.3em]">Preparing Dashboard</p>
@@ -550,9 +550,8 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
               <Link
                 key={item.id}
                 href={item.href}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer ${
-                  isActive ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/10" : "hover:bg-slate-850 hover:text-white text-slate-400"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left font-medium text-sm transition-all cursor-pointer ${isActive ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/10" : "hover:bg-slate-850 hover:text-white text-slate-400"
+                  }`}
               >
                 <Icon className="w-5 h-5" />
                 <span>{item.label}</span>
@@ -567,13 +566,12 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
           <p className="text-[10px] text-slate-500 uppercase font-black">Logged in as</p>
           <h4 className="text-xs font-bold text-white truncate">{businessName}</h4>
           <span
-            className={`inline-block text-[9px] font-extrabold px-2 py-0.5 rounded cursor-pointer ${
-              vendorStatus === "approved"
+            className={`inline-block text-[9px] font-extrabold px-2 py-0.5 rounded cursor-pointer ${vendorStatus === "approved"
                 ? "bg-emerald-500/10 text-emerald-400"
                 : vendorStatus === "documents_submitted" || vendorStatus === "under_review"
-                ? "bg-blue-500/10 text-blue-400"
-                : "bg-rose-500/10 text-rose-400 hover:underline"
-            }`}
+                  ? "bg-blue-500/10 text-blue-400"
+                  : "bg-rose-500/10 text-rose-400 hover:underline"
+              }`}
             onClick={() => {
               if (vendorStatus !== "approved") router.push(resolveVendorLink("/kyc"));
             }}
@@ -691,8 +689,8 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
                   {vendorStatus === "rejected"
                     ? `Verification rejected: "${vendorProfile?.rejection_reason || 'Please upload valid documents'}"`
                     : vendorStatus === "documents_submitted" || vendorStatus === "under_review"
-                    ? "Your verification documents are currently being reviewed by admin officers."
-                    : "Your store profile is pending document verification. Please complete KYC."}
+                      ? "Your verification documents are currently being reviewed by admin officers."
+                      : "Your store profile is pending document verification. Please complete KYC."}
                 </p>
               </div>
               {vendorStatus !== "documents_submitted" && vendorStatus !== "under_review" && (
@@ -731,7 +729,7 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
           })()}
         </main>
       </div>
-      
+
       {callStatus !== "idle" && (
         <div className="fixed bottom-6 right-6 z-50 w-80 bg-slate-900 border border-slate-800 text-white rounded-3xl p-5 shadow-2xl space-y-4 font-sans">
           <audio id="vendorRemoteAudio" autoPlay className="hidden" />
@@ -775,7 +773,7 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
           {callStatus === "ivr" && (
             <div className="space-y-3">
               <p className="text-[11px] text-slate-350 leading-relaxed font-medium">{ivrMessage}</p>
-              
+
               <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => handleIvrOption(1)}

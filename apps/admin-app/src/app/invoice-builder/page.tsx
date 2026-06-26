@@ -249,13 +249,13 @@ export default function AdminInvoiceBuilder() {
     if (settings.length > 0) {
       const tmplSetting = settings.find(s => s.key === "invoice_template_html");
       const brandingSetting = settings.find(s => s.key === "invoice_branding_json");
-      
+
       if (tmplSetting) {
         setHtmlTemplate(tmplSetting.value || "");
       }
       if (brandingSetting) {
         const brand = brandingSetting.value_json || {};
-        setCompanyName(brand.company_name || "Sabjiwala");
+        setCompanyName(brand.company_name || "Sbjiwala");
         setCompanyAddress(brand.company_address || "");
         setCompanyPhone(brand.company_phone || "");
         setCompanyGstin(brand.gstin || "");
@@ -301,13 +301,13 @@ export default function AdminInvoiceBuilder() {
   // Mock template rendering for preview
   const getRenderedPreview = () => {
     let rendered = htmlTemplate;
-    
+
     // Replace branding values
-    rendered = rendered.replace(new RegExp("{{\\s*company_name\\s*}}", "g"), companyName || "Sabjiwala");
+    rendered = rendered.replace(new RegExp("{{\\s*company_name\\s*}}", "g"), companyName || "Sbjiwala");
     rendered = rendered.replace(new RegExp("{{\\s*company_address\\s*}}", "g"), companyAddress || "123 Mandi Market, Jaipur");
     rendered = rendered.replace(new RegExp("{{\\s*company_phone\\s*}}", "g"), companyPhone || "+91 99999 88888");
     rendered = rendered.replace(new RegExp("{{\\s*company_gstin\\s*}}", "g"), companyGstin || "08ABCDE1234F1Z1");
-    
+
     // Replace order specifics
     rendered = rendered.replace(new RegExp("{{\\s*order_number\\s*}}", "g"), "SBJ-98273");
     rendered = rendered.replace(new RegExp("{{\\s*created_at\\s*}}", "g"), "2026-06-20 22:45");
@@ -316,7 +316,7 @@ export default function AdminInvoiceBuilder() {
     rendered = rendered.replace(new RegExp("{{\\s*customer_phone\\s*}}", "g"), "+91 98765 43210");
     rendered = rendered.replace(new RegExp("{{\\s*delivery_address\\s*}}", "g"), "Flat 302, Block B, Royal Palms, Jaipur");
     rendered = rendered.replace(new RegExp("{{\\s*total_amount\\s*}}", "g"), "135.00");
-    
+
     // Replace items loop
     const loopRegex = /{%\\s*for\\s+item\\s+in\\s+items\\s*%}([\s\S]*?){%\\s*endfor\\s*%}/g;
     rendered = rendered.replace(loopRegex, () => {
@@ -335,7 +335,7 @@ export default function AdminInvoiceBuilder() {
         </tr>
       `;
     });
-    
+
     return rendered;
   };
 
@@ -407,22 +407,20 @@ export default function AdminInvoiceBuilder() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setActiveTab("edit")}
-                  className={`flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all cursor-pointer ${
-                    activeTab === "edit"
+                  className={`flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all cursor-pointer ${activeTab === "edit"
                       ? "bg-white dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800 text-slate-850 dark:text-white shadow-sm"
                       : "text-slate-400 hover:text-slate-655"
-                  }`}
+                    }`}
                 >
                   <Edit3 className="w-4 h-4" />
                   HTML Designer
                 </button>
                 <button
                   onClick={() => setActiveTab("preview")}
-                  className={`flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all cursor-pointer ${
-                    activeTab === "preview"
+                  className={`flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all cursor-pointer ${activeTab === "preview"
                       ? "bg-white dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800 text-slate-850 dark:text-white shadow-sm"
                       : "text-slate-400 hover:text-slate-655"
-                  }`}
+                    }`}
                 >
                   <Eye className="w-4 h-4" />
                   Live Preview
@@ -446,7 +444,7 @@ export default function AdminInvoiceBuilder() {
                   type="text"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="e.g. Sabjiwala Sourcing Private Limited"
+                  placeholder="e.g. Sbjiwala Sourcing Private Limited"
                   className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-white"
                 />
               </div>

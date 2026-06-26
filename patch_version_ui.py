@@ -6,7 +6,7 @@ apps = [
     ('admin-app', 'AdminLayout.tsx'),
     ('agent-app', 'AgentLayout.tsx')
 ]
-base_dir = r"d:\Projects\sabjiwala\apps"
+base_dir = r"d:\Projects\sbjiwala\apps"
 
 for app, layout_file in apps:
     app_shell_path = os.path.join(base_dir, app, "src", "components", layout_file)

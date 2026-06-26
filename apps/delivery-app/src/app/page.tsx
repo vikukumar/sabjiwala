@@ -77,7 +77,7 @@ function OtpPromptModal({
         </div>
         <h3 className="text-base font-black uppercase tracking-wider">{title}</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">{message}</p>
-        
+
         <div className="space-y-1">
           <label className="block text-[10px] font-bold text-slate-400 uppercase text-left mb-1">Enter Customer OTP</label>
           <input
@@ -97,13 +97,13 @@ function OtpPromptModal({
               <span className="text-[9px] font-black text-rose-500 uppercase animate-pulse">Required</span>
             )}
           </div>
-          
+
           <input
             type="file" multiple accept="image/*"
             ref={fileInputRef} onChange={handleFileUpload}
             className="hidden" disabled={loading || uploading}
           />
-          
+
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -255,17 +255,17 @@ function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: nu
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a =
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
 // =========== DELIVERY TRACKING MAP helpers ===========
 
 
-const fetchRoute = async (start: [number, number], end: [number, number]): Promise<{coords: [number, number][], distance: number, duration: number}> => {
+const fetchRoute = async (start: [number, number], end: [number, number]): Promise<{ coords: [number, number][], distance: number, duration: number }> => {
   try {
     const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`);
     const data = await res.json();
@@ -291,7 +291,7 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
   const driverMarkerRef = useRef<any>(null);
   const agentToStoreLineRef = useRef<any>(null);
   const storeToCustomerLineRef = useRef<any>(null);
-  const [routeInfo, setRouteInfo] = useState<{distance: number, duration: number} | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ distance: number, duration: number } | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined" || !mapContainerRef.current || !order) return;
@@ -398,14 +398,14 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
   useEffect(() => {
     if (mapObj && driverMarkerRef.current && order) {
       driverMarkerRef.current.setLatLng(currentPos);
-      
+
       const customerLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
       const customerLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
       const storeLat = order.vendor_store?.latitude || 19.0760;
       const storeLng = order.vendor_store?.longitude || 72.9977;
 
       const isPicked = ["picked", "out_for_delivery"].includes(order.status);
-      
+
       if (isPicked) {
         fetchRoute(currentPos, [customerLat, customerLng]).then((data) => {
           if (agentToStoreLineRef.current) {
@@ -447,20 +447,20 @@ function DeliveryTrackingMap({ order, currentPos, simulationMode, setSimulationM
           className={`px-3 py-1 rounded-xl font-bold transition-all border cursor-pointer ${simulationMode
             ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
             : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-          }`}>
+            }`}>
           {simulationMode ? "Simulated GPS 🛰️" : "Device GPS 📍"}
         </button>
       </div>
       <div className="map-3d-wrapper overflow-hidden border border-slate-200 dark:border-slate-800 relative shadow-inner rounded-2xl" style={{ zIndex: 1 }}>
         <div ref={mapContainerRef} className="h-48 md:h-80 w-full relative" />
-        
-        {/* Sabjiwala Watermark */}
+
+        {/* Sbjiwala Watermark */}
         <div className="absolute bottom-2 left-2 pointer-events-none opacity-50 font-bold text-slate-800 tracking-widest text-[10px]" style={{ zIndex: 1000 }}>
-          SABJIWALA
+          Sbjiwala
         </div>
 
         {/* Locate Me FAB */}
-        <button 
+        <button
           onClick={handleLocateMe}
           className="absolute bottom-4 right-4 bg-white dark:bg-slate-800 p-3 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
           style={{ zIndex: 1000 }}
@@ -586,11 +586,10 @@ function ActiveOrdersDashboard() {
                       <h4 className="font-extrabold text-slate-900 dark:text-slate-50">{destAddr.full_name || "Customer"}</h4>
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
-                      <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
-                        task.status === "assigned" || task.status === "packed"
-                          ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400"
-                          : "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-400"
-                      }`}>{task.status}</span>
+                      <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${task.status === "assigned" || task.status === "packed"
+                        ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400"
+                        : "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-400"
+                        }`}>{task.status}</span>
                       {isCOD && (
                         <span className="text-[10px] font-bold bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded-full">
                           💵 COD ₹{task.total_amount}

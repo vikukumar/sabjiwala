@@ -21,7 +21,7 @@ const VEHICLES = [
 const COLORS = ["#ea580c"];
 
 
-const fetchRoute = async (start: [number, number], end: [number, number]): Promise<{coords: [number, number][], distance: number, duration: number}> => {
+const fetchRoute = async (start: [number, number], end: [number, number]): Promise<{ coords: [number, number][], distance: number, duration: number }> => {
   try {
     const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`);
     const data = await res.json();
@@ -62,7 +62,7 @@ export default function TrackOrderClient() {
   const driverMarkerRef = useRef<any>(null);
   const agentToStoreLineRef = useRef<any>(null);
   const storeToCustomerLineRef = useRef<any>(null);
-  const [routeInfo, setRouteInfo] = useState<{distance: number, duration: number} | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ distance: number, duration: number } | null>(null);
 
   const { data: order } = useQuery<any>({
     queryKey: ["order", id],
@@ -221,14 +221,14 @@ export default function TrackOrderClient() {
     if (mapObjRef.current && driverLocation && driverMarkerRef.current && order) {
       const newPos = [driverLocation.latitude, driverLocation.longitude] as [number, number];
       driverMarkerRef.current.setLatLng(newPos);
-      
+
       const customerLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
       const customerLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
       const storeLat = order.vendor_store?.latitude || 19.0760;
       const storeLng = order.vendor_store?.longitude || 72.9977;
-      
+
       const isPicked = ["picked", "out_for_delivery"].includes(order.status);
-      
+
       if (isPicked) {
         fetchRoute(newPos, [customerLat, customerLng]).then((data) => {
           if (agentToStoreLineRef.current) {
@@ -341,14 +341,14 @@ export default function TrackOrderClient() {
             </div>
           </div>
         )}
-        
-        {/* Sabjiwala Watermark */}
+
+        {/* Sbjiwala Watermark */}
         <div className="absolute bottom-2 left-2 pointer-events-none opacity-50 font-bold text-slate-800 tracking-widest text-[10px]" style={{ zIndex: 1000 }}>
-          SABJIWALA
+          Sbjiwala
         </div>
 
         {/* Locate Me FAB */}
-        <button 
+        <button
           onClick={() => {
             if (mapObjRef.current) {
               if (navigator.geolocation) {

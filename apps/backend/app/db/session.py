@@ -26,7 +26,7 @@ engine = create_async_engine(
     poolclass=AsyncAdaptedQueuePool,
     connect_args={
         "server_settings": {
-            "application_name": "sabjiwala_backend",
+            "application_name": "sbjiwala_backend",
             "jit": "off",  # Disable JIT for connection pooling stability
         }
     },
