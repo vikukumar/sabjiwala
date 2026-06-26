@@ -49,6 +49,7 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [countdown, setCountdown] = useState(0);
+  const [isNativeApp, setIsNativeApp] = useState(false);
 
   const getStoredUserType = () => {
     if (typeof window === "undefined") return null;
@@ -69,6 +70,10 @@ export default function LoginPage() {
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
     setTheme(isDark ? "dark" : "light");
+    if (typeof window !== "undefined") {
+      const cap = (window as any).Capacitor;
+      setIsNativeApp(cap?.isNativePlatform?.() === true);
+    }
 
     if (typeof window !== "undefined" && localStorage.getItem("sw_access_token")) {
       const role = getStoredUserType() || "delivery_boy";
@@ -455,14 +460,16 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <div className="flex justify-between items-center text-[10px] font-semibold text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-slate-800 mt-2">
-              <a href={process.env.NEXT_PUBLIC_APP_MODE === "unified" ? "/login" : "http://localhost:3000/login"} className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1">
-                ← Customer Portal
-              </a>
-              <a href={process.env.NEXT_PUBLIC_APP_MODE === "unified" ? "/vendor/login" : "http://localhost:3001/login"} className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1">
-                Partner with Us →
-              </a>
-            </div>
+            {!isNativeApp && (
+              <div className="flex justify-between items-center text-[10px] font-semibold text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-slate-800 mt-2">
+                <a href={process.env.NEXT_PUBLIC_APP_MODE === "unified" ? "/login" : "http://localhost:3000/login"} className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1">
+                  ← Customer Portal
+                </a>
+                <a href={process.env.NEXT_PUBLIC_APP_MODE === "unified" ? "/vendor/login" : "http://localhost:3001/login"} className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1">
+                  Partner with Us →
+                </a>
+              </div>
+            )}
           </div>
 
           <div className="relative flex py-1 items-center">

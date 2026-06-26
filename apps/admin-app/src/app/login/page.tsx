@@ -56,6 +56,7 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [countdown, setCountdown] = useState(0);
+  const [isNativeApp, setIsNativeApp] = useState(false);
 
   const [checkingSetup, setCheckingSetup] = useState(true);
 
@@ -78,6 +79,10 @@ export default function LoginPage() {
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
     setTheme(isDark ? "dark" : "light");
+    if (typeof window !== "undefined") {
+      const cap = (window as any).Capacitor;
+      setIsNativeApp(cap?.isNativePlatform?.() === true);
+    }
 
     const checkInstallation = async () => {
       try {
@@ -558,11 +563,13 @@ export default function LoginPage() {
           )}
 
           {/* Return to Customer Portal link */}
-          <div className="border-t border-slate-200 dark:border-slate-800/80 pt-4 text-center text-xs font-semibold text-slate-550 dark:text-slate-400">
-            <Link href="/login" className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1 justify-center">
-              ← Return to Customer Portal
-            </Link>
-          </div>
+          {!isNativeApp && (
+            <div className="border-t border-slate-200 dark:border-slate-800/80 pt-4 text-center text-xs font-semibold text-slate-550 dark:text-slate-400">
+              <Link href="/login" className="hover:text-emerald-655 dark:hover:text-emerald-400 flex items-center gap-1 justify-center">
+                ← Return to Customer Portal
+              </Link>
+            </div>
+          )}
         </div>
       </main>
 
