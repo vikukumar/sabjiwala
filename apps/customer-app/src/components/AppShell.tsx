@@ -1724,9 +1724,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     // Poll server health status every 30 seconds
     const checkServerHealth = async () => {
       try {
-        const res = await api.get("/health");
-        if (res.success || res.data) {
+        const res = (await api.get("/health")) as any;
+        if (res && (res.status === "healthy" || res.status === "alive" || res.success || res.data)) {
           setServerAvailable(true);
+        } else {
+          throw new Error("Invalid health check response");
         }
       } catch (err) {
         // Fallback check catalog
