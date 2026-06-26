@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { ShoppingBag, Search, Loader2, ChevronDown, RefreshCw, Filter, CheckCircle2 } from "lucide-react";

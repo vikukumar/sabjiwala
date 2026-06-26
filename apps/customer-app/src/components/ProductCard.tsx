@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { Heart, Star, Plus, Minus, Loader2 } from "lucide-react";

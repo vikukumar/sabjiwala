@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { Truck, Phone, Star, CheckCircle2, XCircle, Search, Loader2, MapPin, IndianRupee, Activity, BadgeCheck } from "lucide-react";

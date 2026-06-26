@@ -175,19 +175,19 @@ function VendorDetailModal({ vendor: initialVendor, onClose }: { vendor: any; on
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <label className="block text-slate-500 mb-1 font-bold">Base Charge (â‚¹)</label>
+                        <label className="block text-slate-500 mb-1 font-bold">Base Charge (₹)</label>
                         <input type="number" value={feeForm.base_delivery_charge} onChange={e => setFeeForm({...feeForm, base_delivery_charge: parseFloat(e.target.value)})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5" />
                       </div>
                       <div>
-                        <label className="block text-slate-500 mb-1 font-bold">Per KM Charge (â‚¹)</label>
+                        <label className="block text-slate-500 mb-1 font-bold">Per KM Charge (₹)</label>
                         <input type="number" value={feeForm.per_km_charge} onChange={e => setFeeForm({...feeForm, per_km_charge: parseFloat(e.target.value)})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5" />
                       </div>
                       <div>
-                        <label className="block text-slate-500 mb-1 font-bold">Min Order (â‚¹)</label>
+                        <label className="block text-slate-500 mb-1 font-bold">Min Order (₹)</label>
                         <input type="number" value={feeForm.min_order_amount} onChange={e => setFeeForm({...feeForm, min_order_amount: parseFloat(e.target.value)})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5" />
                       </div>
                       <div>
-                        <label className="block text-slate-500 mb-1 font-bold">Platform Fee (â‚¹)</label>
+                        <label className="block text-slate-500 mb-1 font-bold">Platform Fee (₹)</label>
                         <input type="number" value={feeForm.platform_fee} onChange={e => setFeeForm({...feeForm, platform_fee: parseFloat(e.target.value)})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5" />
                       </div>
                     </div>
@@ -202,19 +202,19 @@ function VendorDetailModal({ vendor: initialVendor, onClose }: { vendor: any; on
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <p className="text-slate-500">Base Delivery Charge</p>
-                      <p className="font-bold text-slate-900 dark:text-white">â‚¹{rules.base_delivery_charge || 0}</p>
+                      <p className="font-bold text-slate-900 dark:text-white">₹{rules.base_delivery_charge || 0}</p>
                     </div>
                     <div>
                       <p className="text-slate-500">Per KM Charge</p>
-                      <p className="font-bold text-slate-900 dark:text-white">â‚¹{rules.per_km_charge || 0}</p>
+                      <p className="font-bold text-slate-900 dark:text-white">₹{rules.per_km_charge || 0}</p>
                     </div>
                     <div>
                       <p className="text-slate-500">Min Order Amount</p>
-                      <p className="font-bold text-slate-900 dark:text-white">â‚¹{rules.min_order_amount || 0}</p>
+                      <p className="font-bold text-slate-900 dark:text-white">₹{rules.min_order_amount || 0}</p>
                     </div>
                     <div>
                       <p className="text-slate-500">Platform Fee</p>
-                      <p className="font-bold text-slate-900 dark:text-white">â‚¹{rules.platform_fee || 0}</p>
+                      <p className="font-bold text-slate-900 dark:text-white">₹{rules.platform_fee || 0}</p>
                     </div>
                   </div>
                 )}

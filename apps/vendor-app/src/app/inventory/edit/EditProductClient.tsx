@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Loader2, Save, Trash2, ImagePlus, Star, Package, ChevronUp } from "lucide-react";

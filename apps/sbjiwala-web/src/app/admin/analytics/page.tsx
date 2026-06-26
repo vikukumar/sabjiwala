@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { BarChart3, TrendingUp, DollarSign, ShoppingBag, Users, Calendar, RefreshCw, Loader2, ArrowUpRight } from "lucide-react";

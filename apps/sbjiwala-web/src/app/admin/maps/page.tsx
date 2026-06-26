@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { RefreshCw, Building2, Truck, ShoppingBag, Loader2, Activity, Radio } from "lucide-react";
