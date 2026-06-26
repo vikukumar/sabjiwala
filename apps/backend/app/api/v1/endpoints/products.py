@@ -423,3 +423,29 @@ async def create_category(
     db.add(category)
     await db.flush()
     return APIResponse(success=True, message="Category created successfully", data=CategoryResponse.model_validate(category))
+
+
+@router.patch("/categories/{category_id}", response_model=APIResponse[CategoryResponse])
+async def update_category(
+    category_id: UUID,
+    body: CategoryCreate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update an existing category."""
+    result = await db.execute(select(Category).where(Category.id == category_id, Category.is_deleted == False))
+    category = result.scalars().first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    category.name = body.name
+    category.description = body.description
+    category.icon = body.icon
+    category.image_url = body.image_url
+    category.parent_id = body.parent_id
+    category.is_active = body.is_active
+    category.sort_order = body.sort_order
+    category.updated_by = current_user["user_id"]
+    
+    await db.flush()
+    return APIResponse(success=True, message="Category updated successfully", data=CategoryResponse.model_validate(category))

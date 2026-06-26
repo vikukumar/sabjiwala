@@ -314,6 +314,62 @@ const categoryDetails: Record<string, { title: string; subtitle: string; emoji: 
     gradient: "from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20",
     textDark: "text-teal-800 dark:text-teal-300",
     textLight: "text-teal-600 dark:text-teal-400"
+  },
+  Fruits: {
+    title: "Fresh Fruits",
+    subtitle: "Sweet & seasonal",
+    emoji: "🍎",
+    gradient: "from-rose-50 to-red-100 dark:from-rose-950/20 dark:to-red-950/20",
+    textDark: "text-rose-800 dark:text-rose-300",
+    textLight: "text-rose-600 dark:text-rose-400"
+  },
+  "Dairy & Eggs": {
+    title: "Dairy & Eggs",
+    subtitle: "Farm fresh dairy",
+    emoji: "🥛",
+    gradient: "from-sky-50 to-blue-100 dark:from-sky-950/20 dark:to-blue-950/20",
+    textDark: "text-sky-800 dark:text-sky-300",
+    textLight: "text-sky-600 dark:text-sky-400"
+  },
+  "Herbs & Spices": {
+    title: "Herbs & Spices",
+    subtitle: "Flavor enhancers",
+    emoji: "🌶️",
+    gradient: "from-amber-50 to-orange-100 dark:from-amber-950/20 dark:to-orange-950/20",
+    textDark: "text-amber-800 dark:text-amber-300",
+    textLight: "text-amber-600 dark:text-amber-400"
+  },
+  "Grains & Cereals": {
+    title: "Grains & Cereals",
+    subtitle: "Daily essentials",
+    emoji: "🌾",
+    gradient: "from-yellow-50 to-amber-100 dark:from-yellow-950/20 dark:to-yellow-950/20",
+    textDark: "text-yellow-800 dark:text-yellow-300",
+    textLight: "text-yellow-600 dark:text-yellow-400"
+  },
+  "Organic & Natural": {
+    title: "Organic & Natural",
+    subtitle: "100% pesticide-free",
+    emoji: "🌱",
+    gradient: "from-emerald-50 to-green-100 dark:from-emerald-950/20 dark:to-emerald-950/20",
+    textDark: "text-emerald-800 dark:text-emerald-300",
+    textLight: "text-emerald-600 dark:text-emerald-400"
+  },
+  Beverages: {
+    title: "Beverages",
+    subtitle: "Juices & refreshments",
+    emoji: "🧃",
+    gradient: "from-cyan-50 to-teal-100 dark:from-cyan-950/20 dark:to-teal-950/20",
+    textDark: "text-cyan-800 dark:text-cyan-300",
+    textLight: "text-cyan-600 dark:text-cyan-400"
+  },
+  "Bakery & Snacks": {
+    title: "Bakery & Snacks",
+    subtitle: "Breads & munchies",
+    emoji: "🍞",
+    gradient: "from-orange-50 to-amber-100 dark:from-orange-950/20 dark:to-amber-950/20",
+    textDark: "text-orange-805 dark:text-orange-300",
+    textLight: "text-orange-600 dark:text-orange-400"
   }
 };
 

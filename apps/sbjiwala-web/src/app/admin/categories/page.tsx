@@ -193,7 +193,7 @@ export default function AdminCategoriesPage() {
   const handleSeedDefaults = async () => {
     setSeeding(true);
     let created = 0;
-    const existingNames = new Set(categories.map((c: any) => c.name.toLowerCase()));
+    let updated = 0;
     const parentIdMap: Record<string, string> = {};
 
     try {
@@ -206,7 +206,18 @@ export default function AdminCategoriesPage() {
         const { name, icon, desc, subs } = DEFAULT_CATEGORIES[i];
         let parentId = parentIdMap[name];
 
-        if (!existingNames.has(name.toLowerCase())) {
+        const existingParent = categories.find((c: any) => c.name.toLowerCase() === name.toLowerCase() && !c.parent_id);
+
+        if (existingParent) {
+          try {
+            const res = await api.patch(`/products/categories/${existingParent.id}`, {
+              name, icon, description: desc, is_active: true, sort_order: i + 1, parent_id: null
+            });
+            parentId = res.data?.id || existingParent.id;
+            parentIdMap[name] = parentId;
+            updated++;
+          } catch {}
+        } else {
           try {
             const res = await api.post("/products/categories", {
               name, icon, description: desc, is_active: true, sort_order: i + 1, parent_id: null
@@ -220,7 +231,16 @@ export default function AdminCategoriesPage() {
         if (parentId) {
           for (let j = 0; j < subs.length; j++) {
             const sub = subs[j];
-            if (!existingNames.has(sub.name.toLowerCase())) {
+            const existingSub = categories.find((c: any) => c.name.toLowerCase() === sub.name.toLowerCase() && c.parent_id === parentId);
+            if (existingSub) {
+              try {
+                await api.patch(`/products/categories/${existingSub.id}`, {
+                  name: sub.name, icon: sub.icon, description: sub.desc,
+                  is_active: true, sort_order: j + 1, parent_id: parentId
+                });
+                updated++;
+              } catch {}
+            } else {
               try {
                 await api.post("/products/categories", {
                   name: sub.name, icon: sub.icon, description: sub.desc,
@@ -234,7 +254,7 @@ export default function AdminCategoriesPage() {
       }
 
       queryClient.invalidateQueries({ queryKey: ["adminCategories"] });
-      success(`🎉 Seeded ${created} categories successfully!`);
+      success(`🎉 Seeding complete! Created ${created} and replaced/updated ${updated} categories.`);
     } catch (err: any) {
       showError("Seeding Failed", err.message);
     } finally {
