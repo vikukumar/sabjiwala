@@ -1,5 +1,5 @@
 """
-Service to generate PDF invoices using Jinja2 and xhtml2pdf.
+Service to generate PDF invoices using Jinja2 and WeasyPrint.
 """
 import io
 import os
@@ -11,8 +11,6 @@ from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select
-
-from xhtml2pdf import pisa
 
 from app.models.order import Order, OrderItem
 from app.services.storage_service import StorageService
@@ -32,6 +30,8 @@ class InvoiceService:
         """
         Generates a PDF invoice for the given order using the HTML template.
         """
+        from weasyprint import HTML, CSS
+
         template = env.get_template("invoice.html")
         from app.services.notification_service import get_frontend_url
         frontend_url = get_frontend_url()
@@ -60,18 +60,9 @@ class InvoiceService:
             **social_vars
         )
 
-        # Generate PDF
-        result_file = io.BytesIO()
-        pisa_status = pisa.CreatePDF(
-            io.StringIO(html_out),
-            dest=result_file
-        )
-
-        if pisa_status.err:
-            logger.error(f"Error generating PDF invoice for order {order.id}")
-            raise RuntimeError(f"PDF generation failed for order {order.id}")
-
-        return result_file.getvalue()
+        # Generate PDF using WeasyPrint
+        pdf_bytes = HTML(string=html_out, base_url=frontend_url).write_pdf()
+        return pdf_bytes
 
     async def generate_and_upload_invoice(self, order_id: str) -> Optional[str]:
         """
