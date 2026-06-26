@@ -98,7 +98,7 @@ export default function PublicPageWrapper({ children }: { children: React.ReactN
   };
 
   return (
-    <div className={`transition-colors duration-300 antialiased font-sans relative overflow-hidden ${isInsideAppShell ? '' : 'min-h-screen bg-slate-50 dark:bg-[#090d10] amoled:bg-black text-slate-800 dark:text-slate-100 flex flex-col justify-between'}`}>
+    <div className={`transition-colors duration-300 antialiased font-sans relative ${isInsideAppShell ? '' : 'min-h-screen bg-slate-50 dark:bg-[#090d10] amoled:bg-black text-slate-800 dark:text-slate-100 flex flex-col'}`}>
       
       {/* Background blobs to match landing page design */}
       {!isInsideAppShell && (
