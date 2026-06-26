@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { Heart, Star, Plus, Minus, Loader2 } from "lucide-react";
@@ -75,17 +75,24 @@ export default function ProductCard({ product }: { product: any }) {
 
   // Dynamic 4.5% product price customer markup
   const price = Math.round((product.attributes?.price ?? product.price ?? 30) * 1.045 * 100) / 100;
-  const rawMrp = product.attributes?.mrp ?? product.mrp;
-  const mrp = rawMrp ? Math.round(rawMrp * 1.045 * 100) / 100 : undefined;
+  // Compare price: check both compare_at_price and mrp fields
+  const rawCompare = product.attributes?.compare_at_price ?? product.attributes?.mrp ?? product.compare_at_price ?? product.mrp;
+  const comparePrice = rawCompare ? Math.round(rawCompare * 1.045 * 100) / 100 : undefined;
   const emoji = product.attributes?.image_emoji || "🥬";
-  const hasDiscount = mrp && mrp > price;
-  const discountPct = hasDiscount ? Math.round(((mrp - price) / mrp) * 100) : 0;
+  const hasDiscount = comparePrice && comparePrice > price;
+  const discountPct = hasDiscount ? Math.round(((comparePrice - price) / comparePrice) * 100) : 0;
   const ratingVal = product.attributes?.rating;
   const rating = ratingVal && ratingVal > 0 ? Number(ratingVal).toFixed(1) : "New";
+  // Build unit label: "1 kg", "500 g", etc.
+  const unitDisplay = (() => {
+    const uv = product.unit_value ?? product.attributes?.unit_value;
+    const ut = product.unit ?? product.attributes?.unit ?? "kg";
+    return uv ? `${uv} ${ut}` : ut;
+  })();
   
-  const stock = product.stock ?? product.attributes?.quantity ?? 0;
+  const stock = product.stock ?? product.attributes?.quantity ?? null; // null = unknown
   const isUnlimited = product.attributes?.is_unlimited ?? false;
-  const isOutOfStock = !isUnlimited && stock <= 0;
+  const isOutOfStock = !isUnlimited && stock !== null && stock <= 0;
 
   const targetVendorId = product.attributes?.vendor_id || product.vendor_id || product.vendor?.id;
 
@@ -212,11 +219,11 @@ export default function ProductCard({ product }: { product: any }) {
     if (differentVendor) {
       setShowClearCartModal(true);
     } else {
-      const stock = product.stock ?? product.attributes?.quantity ?? 0;
+      const stock = product.stock ?? product.attributes?.quantity ?? null;
       const isUnlimited = product.attributes?.is_unlimited ?? false;
       const existingItem = currentItems?.find((i: any) => i.product_id === product.id);
       const existingQty = existingItem ? existingItem.quantity : 0;
-      if (!isUnlimited && existingQty + 1 > stock) {
+      if (!isUnlimited && stock !== null && existingQty + 1 > stock) {
         showError("Insufficient stock", `Only ${stock} items available in stock.`);
         return;
       }
@@ -308,7 +315,7 @@ export default function ProductCard({ product }: { product: any }) {
             </Link>
             
             {/* Unit / Weight */}
-            <p className="text-[10px] text-slate-400 dark:text-slate-450 font-bold mt-0.5">{product.unit || "1 kg"}</p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-450 font-bold mt-0.5">{unitDisplay}</p>
           </div>
 
           {/* Pricing & Cart controls */}
@@ -319,7 +326,7 @@ export default function ProductCard({ product }: { product: any }) {
               </span>
               {hasDiscount && (
                 <span className="text-[10px] text-slate-450 line-through">
-                  ₹{mrp?.toFixed(2)}
+                  ₹{comparePrice?.toFixed(2)}
                 </span>
               )}
             </div>
@@ -340,10 +347,10 @@ export default function ProductCard({ product }: { product: any }) {
                 <button
                   onClick={() => {
                     const targetQty = cartItem.quantity + 1;
-                    const stock = product.stock ?? product.attributes?.quantity ?? 0;
+                    const itemStock = product.stock ?? product.attributes?.quantity ?? null;
                     const isUnlimited = product.attributes?.is_unlimited ?? false;
-                    if (!isUnlimited && targetQty > stock) {
-                      showError("Insufficient stock", `Only ${stock} items available in stock.`);
+                    if (!isUnlimited && itemStock !== null && targetQty > itemStock) {
+                      showError("Insufficient stock", `Only ${itemStock} items available in stock.`);
                       return;
                     }
                     if (isGuest) {

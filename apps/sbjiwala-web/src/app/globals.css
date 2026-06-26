@@ -326,6 +326,66 @@ body {
   box-shadow: 0 0 0 3px rgb(5 150 105 / 0.1);
 }
 
+/* ===== GLOBAL SELECT DROPDOWN — iOS-like glassy, dark/light aware ===== */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: var(--surface);
+  color: var(--foreground);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 2.5rem 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 0.875rem;
+}
+select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgb(5 150 105 / 0.1);
+  outline: none;
+}
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Dark mode — themed background so dropdown doesn't flash white */
+.dark select {
+  background-color: #1e293b;
+  color: #f1f5f9;
+  border-color: #334155;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+.dark select:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgb(5 150 105 / 0.15);
+}
+/* Select option theming (best-effort — browser support varies) */
+select option {
+  background-color: var(--surface);
+  color: var(--foreground);
+  padding: 0.5rem;
+}
+.dark select option {
+  background-color: #1e293b;
+  color: #f1f5f9;
+}
+/* Native select inside Tailwind inline bg-transparent forms */
+select.bg-transparent {
+  background-color: transparent;
+}
+.dark select.bg-transparent {
+  background-color: transparent;
+}
+
 /* ===== STATUS BADGES ===== */
 .badge-pending { background: #fef3c7; color: #92400e; }
 .dark .badge-pending { background: rgb(245 158 11 / 0.15); color: #fbbf24; }

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -46,14 +46,26 @@ function CartItemRow({ item, isGuest, onUpdateGuestQty }: CartItemRowProps) {
   });
 
   const emoji = item.attributes?.image_emoji || item.product?.attributes?.image_emoji || "🥬";
+  const imageUrl = item.product?.primary_image_url || item.product?.attributes?.image_url || item.attributes?.image_url;
   // Apply the dynamic 4.5% product price customer markup on item prices if they aren't pre-marked
   const rawPrice = item.price || item.product?.attributes?.price || 30;
   const price = isGuest ? rawPrice : Math.round(rawPrice * 1.045 * 100) / 100;
+  const unitDisplay = (() => {
+    const unitVal = item.product?.unit_value || item.unit_value;
+    const unitType = item.product?.unit || item.unit || "kg";
+    return unitVal ? `${unitVal} ${unitType}` : unitType;
+  })();
 
   const handleQtyChange = (newQty: number) => {
-    const stock = item.stock ?? item.attributes?.stock ?? 0;
-    const isUnlimited = item.is_unlimited ?? item.attributes?.is_unlimited ?? false;
-    if (newQty > item.quantity && !isUnlimited && newQty > stock) {
+    // Stock can live in multiple places depending on API version
+    const stock =
+      item.product?.attributes?.quantity ??
+      item.product?.stock ??
+      item.attributes?.quantity ??
+      item.stock ??
+      null; // null = unknown, allow update
+    const isUnlimited = item.is_unlimited ?? item.product?.attributes?.is_unlimited ?? item.attributes?.is_unlimited ?? false;
+    if (newQty > item.quantity && !isUnlimited && stock !== null && newQty > stock) {
       showError("Insufficient stock", `Only ${stock} items available in stock.`);
       return;
     }
@@ -67,12 +79,16 @@ function CartItemRow({ item, isGuest, onUpdateGuestQty }: CartItemRowProps) {
 
   return (
     <div className="flex items-center gap-4 py-4 border-b border-slate-100 dark:border-slate-800 last:border-none">
-      <div className="w-16 h-16 bg-gradient-to-br from-slate-50 to-emerald-50/20 dark:from-slate-800/50 dark:to-slate-900 rounded-xl flex items-center justify-center text-3xl flex-shrink-0">
-        {emoji}
+      <div className="w-16 h-16 bg-gradient-to-br from-slate-50 to-emerald-50/20 dark:from-slate-800/50 dark:to-slate-900 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden">
+        {imageUrl ? (
+          <img src={imageUrl} alt={item.product_name || item.name} className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-3xl">{emoji}</span>
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <h3 className="font-black text-sm text-slate-900 dark:text-white truncate">{item.product_name || item.name}</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{item.unit || "1 kg"}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{unitDisplay}</p>
         <p className="text-sm font-black text-emerald-700 dark:text-emerald-400 mt-1">₹{(price * item.quantity).toFixed(2)}</p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
@@ -323,7 +339,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
+    <div className="max-w-4xl mx-auto px-4 py-6">
       <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-6">My Cart</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

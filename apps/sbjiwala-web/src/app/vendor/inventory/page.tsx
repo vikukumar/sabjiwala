@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useRef } from "react";
 import {
@@ -433,13 +433,15 @@ export default function VendorInventoryPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {products.map((p: any) => {
                   const attrs = p.attributes || {};
-                  const qty = parseFloat(attrs.quantity || 0);
+                  const qty = parseFloat(attrs.quantity ?? p.stock ?? 0);
                   const isOutOfStock = qty <= 0;
                   const isLowStock = qty > 0 && qty < 10;
                   const imageUrl = p.primary_image_url || p.images?.[0]?.image_url || attrs.image_url;
                   const emoji = attrs.image_emoji || "🥬";
-                  const price = attrs.price;
-                  const comparePrice = attrs.compare_at_price;
+                  // Read price and comparePrice from both top-level and attributes
+                  const price = p.price ?? attrs.price;
+                  const comparePrice = p.compare_at_price ?? attrs.compare_at_price;
+                  const unitDisplay = p.unit_value ? `${p.unit_value} ${p.unit || "kg"}` : (p.unit || "kg");
 
                   return (
                     <div key={p.id} className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col">
@@ -494,7 +496,7 @@ export default function VendorInventoryPage() {
                         <h4 className="font-extrabold text-sm text-slate-900 dark:text-white leading-tight line-clamp-2">{p.name}</h4>
 
                         {/* Unit */}
-                        <p className="text-[10px] text-slate-400 font-semibold">{p.unit_value} {p.unit}</p>
+                        <p className="text-[10px] text-slate-400 font-semibold">{unitDisplay}</p>
 
                         {/* Price Row */}
                         <div className="flex items-center gap-2 mt-auto">
