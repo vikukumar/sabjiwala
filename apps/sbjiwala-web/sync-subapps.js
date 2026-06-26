@@ -114,6 +114,9 @@ export default function CustomerAppLayout({
           .replace(/<AppShell>([\s\S]*?)<\/AppShell>/, '$1')
           .replace(/<AppUpdater\s+appName="customer"\s*\/>\r?\n?/, '');
         fs.writeFileSync(path.join(webAppDir, child), content, 'utf8');
+      } else if (child === 'not-found.tsx' || child === 'error.tsx') {
+        // Copy customer-specific error pages to /app/app/not-found.tsx and /app/app/error.tsx
+        copyRecursiveSync(srcChildPath, path.join(webCustomerNestedDir, child));
       } else {
         // Root files (layout, providers, etc.) go to root /
         copyRecursiveSync(srcChildPath, path.join(webAppDir, child));
@@ -121,13 +124,27 @@ export default function CustomerAppLayout({
     }
   });
 
-  // 4. Inject unified landing page at webSrc/app/page.tsx
-  console.log(`Copying unified marketplace home page...`);
+  // 4. Inject unified landing page, not-found and error boundaries
+  console.log(`Copying unified marketplace pages and error handlers...`);
   const unifiedPageSource = path.join(webSrc, '../app_page_unified.tsx');
   if (fs.existsSync(unifiedPageSource)) {
     fs.copyFileSync(unifiedPageSource, path.join(webAppDir, 'page.tsx'));
   } else {
     console.warn(`[WARNING] Unified page source template not found at ${unifiedPageSource}`);
+  }
+
+  const unifiedNotFoundSource = path.join(webSrc, '../app_not_found_unified.tsx');
+  if (fs.existsSync(unifiedNotFoundSource)) {
+    fs.copyFileSync(unifiedNotFoundSource, path.join(webAppDir, 'not-found.tsx'));
+  } else {
+    console.warn(`[WARNING] Unified not found template not found at ${unifiedNotFoundSource}`);
+  }
+
+  const unifiedErrorSource = path.join(webSrc, '../app_error_unified.tsx');
+  if (fs.existsSync(unifiedErrorSource)) {
+    fs.copyFileSync(unifiedErrorSource, path.join(webAppDir, 'error.tsx'));
+  } else {
+    console.warn(`[WARNING] Unified error template not found at ${unifiedErrorSource}`);
   }
 
   // 5. Clean and Copy Vendor app specific pages under /vendor/
@@ -184,6 +201,16 @@ export default function CustomerAppLayout({
     }
   });
 
+  // Sync vendor-specific error and 404 pages
+  const vendorNotFoundSrc = path.join(vendorSrc, 'app/not-found.tsx');
+  if (fs.existsSync(vendorNotFoundSrc)) {
+    fs.copyFileSync(vendorNotFoundSrc, path.join(webAppDir, 'vendor/not-found.tsx'));
+  }
+  const vendorErrorSrc = path.join(vendorSrc, 'app/error.tsx');
+  if (fs.existsSync(vendorErrorSrc)) {
+    fs.copyFileSync(vendorErrorSrc, path.join(webAppDir, 'vendor/error.tsx'));
+  }
+
   // 6. Clean and Copy Delivery app specific pages under /delivery/
   console.log(`Syncing delivery-app pages...`);
   const deliveryLayoutSrc = path.join(deliverySrc, 'components/DeliveryLayout.tsx');
@@ -212,6 +239,16 @@ export default function CustomerAppLayout({
       copyRecursiveSync(srcPath, dest);
     }
   });
+
+  // Sync delivery-specific error and 404 pages
+  const deliveryNotFoundSrc = path.join(deliverySrc, 'app/not-found.tsx');
+  if (fs.existsSync(deliveryNotFoundSrc)) {
+    fs.copyFileSync(deliveryNotFoundSrc, path.join(webAppDir, 'delivery/not-found.tsx'));
+  }
+  const deliveryErrorSrc = path.join(deliverySrc, 'app/error.tsx');
+  if (fs.existsSync(deliveryErrorSrc)) {
+    fs.copyFileSync(deliveryErrorSrc, path.join(webAppDir, 'delivery/error.tsx'));
+  }
 
   // 7. Clean and Copy Admin app specific pages under /admin/
   console.log(`Syncing admin-app pages...`);
@@ -249,6 +286,16 @@ export default function CustomerAppLayout({
     }
   });
 
+  // Sync admin-specific error and 404 pages
+  const adminNotFoundSrc = path.join(adminSrc, 'app/not-found.tsx');
+  if (fs.existsSync(adminNotFoundSrc)) {
+    fs.copyFileSync(adminNotFoundSrc, path.join(webAppDir, 'admin/not-found.tsx'));
+  }
+  const adminErrorSrc = path.join(adminSrc, 'app/error.tsx');
+  if (fs.existsSync(adminErrorSrc)) {
+    fs.copyFileSync(adminErrorSrc, path.join(webAppDir, 'admin/error.tsx'));
+  }
+
   // Copy admin-app custom components
   console.log(`Syncing admin-app custom components...`);
   if (fs.existsSync(path.join(adminSrc, 'components'))) {
@@ -281,6 +328,16 @@ export default function CustomerAppLayout({
       copyRecursiveSync(srcPath, dest);
     }
   });
+
+  // Sync agent-specific error and 404 pages
+  const agentNotFoundSrc = path.join(agentSrc, 'app/not-found.tsx');
+  if (fs.existsSync(agentNotFoundSrc)) {
+    fs.copyFileSync(agentNotFoundSrc, path.join(webAppDir, 'agent/not-found.tsx'));
+  }
+  const agentErrorSrc = path.join(agentSrc, 'app/error.tsx');
+  if (fs.existsSync(agentErrorSrc)) {
+    fs.copyFileSync(agentErrorSrc, path.join(webAppDir, 'agent/error.tsx'));
+  }
 
   // 8. Sync public assets from customer-app to sbjiwala-web
   console.log(`Syncing public assets...`);
