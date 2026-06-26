@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import Providers from "./providers";
 import AppShell from "@/components/AppShell";
-import { AppUpdater } from "@sbjiwala/shared";
+import { AppUpdater, StatusBarInit } from "@sbjiwala/shared";
 
 export const metadata: Metadata = {
   title: {
@@ -96,6 +96,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col antialiased" style={{ fontFamily: "var(--font-inter, Inter, system-ui, sans-serif)" }}>
         <Providers>
+          <StatusBarInit />
           <AppShell>{children}</AppShell>
           <AppUpdater appName="customer" />
         </Providers>
