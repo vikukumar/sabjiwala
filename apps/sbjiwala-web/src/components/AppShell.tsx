@@ -17,7 +17,7 @@ import {
   Truck
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveAppOrigin } from "@sbjiwala/shared";
 import LiveChatWidget from "./LiveChatWidget";
 
 
@@ -80,7 +80,7 @@ export const resolveLink = (href: string) => {
       formattedHref.startsWith("/admin") ||
       formattedHref.startsWith("/kyc")
     ) {
-      return `https://sbjiwala.qzz.io${formattedHref}`;
+      return `${resolveAppOrigin()}${formattedHref}`;
     }
     return formattedHref;
   }
@@ -1861,7 +1861,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           e.preventDefault();
           let targetUrl = href;
           if (isCrossPortal) {
-            targetUrl = `https://sbjiwala.qzz.io${href}`;
+            targetUrl = `${resolveAppOrigin()}${href}`;
           }
           const isNative = !!(window as any).Capacitor;
           if (isNative) {

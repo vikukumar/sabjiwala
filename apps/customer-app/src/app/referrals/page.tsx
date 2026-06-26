@@ -1,12 +1,13 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveAppOrigin } from "@sbjiwala/shared";
 import Link from "next/link";
 import { Gift, Copy, Share2, CheckCircle2, Users, TrendingUp, Wallet } from "lucide-react";
 import { Button, Card, Badge, Skeleton, StatCard } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
+import { resolveLink } from "@/components/AppShell";
 
 export default function ReferralsPage() {
   const { success } = useToast();
@@ -23,7 +24,7 @@ export default function ReferralsPage() {
   });
 
   const referralCode = profile?.referral_code || "SABJI" + (profile?.id || "").slice(-6).toUpperCase();
-  const referralLink = `https://sbjiwala.qzz.ioz.io/register?ref=${referralCode}`;
+  const referralLink = `${resolveAppOrigin()}${resolveLink("/register")}?ref=${referralCode}`;
 
   const copyCode = () => {
     navigator.clipboard.writeText(referralCode);

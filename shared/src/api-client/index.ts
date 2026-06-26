@@ -271,3 +271,38 @@ export function resolveImageUrl(url: string | null | undefined): string {
   }
   return url;
 }
+
+export function resolveAppOrigin(hostHeader?: string | null): string {
+  if (hostHeader) {
+    const protocol = (hostHeader.includes('localhost') || hostHeader.includes('127.0.0.1')) ? 'http' : 'https';
+    return `${protocol}://${hostHeader}`;
+  }
+
+  if (typeof window !== 'undefined') {
+    const isCapacitor = (window as any).Capacitor?.isNativePlatform?.() === true || 
+      (window.location.hostname === 'localhost' && (window.location.port === '' || window.location.protocol.startsWith('capacitor')));
+
+    if (isCapacitor) {
+      const storedBaseUrl = localStorage.getItem('sw_api_base_url');
+      const apiUrl = storedBaseUrl || process.env.NEXT_PUBLIC_API_URL || '';
+      if (apiUrl && apiUrl.startsWith('http')) {
+        const match = apiUrl.match(/^(https?:\/\/[^\/]+)/);
+        if (match) {
+          let apiOrigin = match[1];
+          return apiOrigin.replace(/:\/\/api\./, '://');
+        }
+      }
+      return 'https://sbjiwala.qzz.io';
+    }
+
+    if (window.location.origin && !window.location.origin.includes('localhost:')) {
+      return window.location.origin;
+    }
+  }
+
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+
+  return 'https://sbjiwala.qzz.io';
+}
