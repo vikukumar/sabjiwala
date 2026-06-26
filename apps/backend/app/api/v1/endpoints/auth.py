@@ -930,7 +930,7 @@ async def disable_mfa(
 
 
 @router.get("/google")
-async def google_login_redirect(state: str = None):
+async def google_login_redirect(state: Optional[str] = None):
     """Redirect to Google OAuth2 login."""
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
@@ -952,7 +952,7 @@ async def google_login_redirect(state: str = None):
 async def google_callback(
     code: str,
     request: Request,
-    state: str = None,
+    state: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Google OAuth2 callback."""
@@ -1070,7 +1070,7 @@ async def google_callback(
 
 
 @router.get("/facebook")
-async def facebook_login_redirect(state: str = None):
+async def facebook_login_redirect(state: Optional[str] = None):
     """Redirect to Facebook OAuth2 login."""
     params = {
         "client_id": settings.FACEBOOK_CLIENT_ID,
@@ -1090,7 +1090,7 @@ async def facebook_login_redirect(state: str = None):
 async def facebook_callback(
     code: str,
     request: Request,
-    state: str = None,
+    state: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Facebook OAuth2 callback."""
