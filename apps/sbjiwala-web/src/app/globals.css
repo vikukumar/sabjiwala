@@ -120,7 +120,7 @@
   --color-accent: var(--sw-accent);
   --color-muted: var(--foreground-muted);
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-
+  
   --color-slate-350: #b0c2d4;
   --color-slate-450: #7c8e9f;
   --color-slate-550: #52627a;
@@ -128,27 +128,21 @@
 }
 
 /* ===== BASE STYLES ===== */
-*,
-*::before,
-*::after {
+*, *::before, *::after {
   box-sizing: border-box;
   max-width: 100%;
 }
 
-html,
-body {
+html, body {
   margin: 0;
   padding: 0;
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   max-width: 100vw;
 }
 
-html,
-body,
-#__next,
-.min-h-screen,
-main {
+html, body, #__next, .min-h-screen, main {
   max-width: 100vw;
   overflow-x: hidden;
 }
@@ -171,24 +165,18 @@ body {
 
 /* ===== SCROLLBAR — hidden globally, scroll still works ===== */
 * {
-  scrollbar-width: none;
-  /* Firefox */
-  -ms-overflow-style: none;
-  /* IE / Edge legacy */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE / Edge legacy */
 }
-
 *::-webkit-scrollbar {
-  display: none;
-  /* Chrome, Safari, Opera */
+  display: none; /* Chrome, Safari, Opera */
 }
-
 /* Utility aliases (kept for explicit usage) */
 .scrollbar-none,
 .scrollbar-hide {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-
 .scrollbar-none::-webkit-scrollbar,
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
@@ -202,174 +190,61 @@ body {
 
 /* ===== ANIMATIONS ===== */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-16px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes slideLeft {
-  from {
-    opacity: 0;
-    transform: translateX(24px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
 }
-
 @keyframes slideRight {
-  from {
-    opacity: 0;
-    transform: translateX(-24px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
 }
-
 @keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
-
 @keyframes pulse-glow {
-
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgb(5 150 105 / 0.4);
-  }
-
-  50% {
-    box-shadow: 0 0 0 8px rgb(5 150 105 / 0);
-  }
+  0%, 100% { box-shadow: 0 0 0 0 rgb(5 150 105 / 0.4); }
+  50% { box-shadow: 0 0 0 8px rgb(5 150 105 / 0); }
 }
-
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
-
 @keyframes bounceIn {
-  0% {
-    transform: scale(0.3);
-    opacity: 0;
-  }
-
-  50% {
-    transform: scale(1.05);
-  }
-
-  70% {
-    transform: scale(0.9);
-  }
-
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
 }
-
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
-
 @keyframes floatUp {
-  0% {
-    opacity: 0;
-    transform: translateY(0);
-  }
-
-  50% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
+  0% { opacity: 0; transform: translateY(0); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-20px); }
 }
 
-.animate-fade-in {
-  animation: fadeIn var(--duration) var(--ease) both;
-}
-
-.animate-slide-up {
-  animation: slideUp var(--duration-slow) var(--ease) both;
-}
-
-.animate-slide-down {
-  animation: slideDown var(--duration) var(--ease) both;
-}
-
-.animate-slide-left {
-  animation: slideLeft var(--duration) var(--ease) both;
-}
-
-.animate-slide-right {
-  animation: slideRight var(--duration) var(--ease) both;
-}
-
-.animate-scale-in {
-  animation: scaleIn var(--duration) var(--ease-spring) both;
-}
-
-.animate-bounce-in {
-  animation: bounceIn 0.5s var(--ease-spring) both;
-}
-
-.animate-spin-custom {
-  animation: spin 1s linear infinite;
-}
+.animate-fade-in { animation: fadeIn var(--duration) var(--ease) both; }
+.animate-slide-up { animation: slideUp var(--duration-slow) var(--ease) both; }
+.animate-slide-down { animation: slideDown var(--duration) var(--ease) both; }
+.animate-slide-left { animation: slideLeft var(--duration) var(--ease) both; }
+.animate-slide-right { animation: slideRight var(--duration) var(--ease) both; }
+.animate-scale-in { animation: scaleIn var(--duration) var(--ease-spring) both; }
+.animate-bounce-in { animation: bounceIn 0.5s var(--ease-spring) both; }
+.animate-spin-custom { animation: spin 1s linear infinite; }
 
 /* Skeleton shimmer */
 .skeleton {
@@ -386,7 +261,6 @@ body {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgb(255 255 255 / 0.12);
 }
-
 .dark .glass {
   background: rgb(0 0 0 / 0.3);
   border-color: rgb(255 255 255 / 0.06);
@@ -402,7 +276,6 @@ body {
 .card-hover {
   transition: all var(--duration) var(--ease);
 }
-
 .card-hover:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--sw-primary);
@@ -418,16 +291,12 @@ body {
   border: none;
   cursor: pointer;
 }
-
 .btn-primary:hover {
   background: var(--sw-primary-dark);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgb(5 150 105 / 0.4);
 }
-
-.btn-primary:active {
-  transform: translateY(0);
-}
+.btn-primary:active { transform: translateY(0); }
 
 .btn-secondary {
   background: transparent;
@@ -438,7 +307,6 @@ body {
   transition: all var(--duration) var(--ease);
   cursor: pointer;
 }
-
 .btn-secondary:hover {
   background: var(--sw-primary-light);
 }
@@ -452,81 +320,28 @@ body {
   outline: none;
   width: 100%;
 }
-
-.input-base::placeholder {
-  color: var(--foreground-muted);
-}
-
+.input-base::placeholder { color: var(--foreground-muted); }
 .input-base:focus {
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px rgb(5 150 105 / 0.1);
 }
 
 /* ===== STATUS BADGES ===== */
-.badge-pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.dark .badge-pending {
-  background: rgb(245 158 11 / 0.15);
-  color: #fbbf24;
-}
-
-.badge-confirmed {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.dark .badge-confirmed {
-  background: rgb(59 130 246 / 0.15);
-  color: #60a5fa;
-}
-
-.badge-packed {
-  background: #e0e7ff;
-  color: #3730a3;
-}
-
-.dark .badge-packed {
-  background: rgb(99 102 241 / 0.15);
-  color: #818cf8;
-}
-
-.badge-delivered {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.dark .badge-delivered {
-  background: rgb(5 150 105 / 0.15);
-  color: #34d399;
-}
-
-.badge-cancelled {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.dark .badge-cancelled {
-  background: rgb(239 68 68 / 0.15);
-  color: #f87171;
-}
-
-.badge-out-for-delivery {
-  background: #fef9c3;
-  color: #854d0e;
-}
-
-.dark .badge-out-for-delivery {
-  background: rgb(234 179 8 / 0.15);
-  color: #facc15;
-}
+.badge-pending { background: #fef3c7; color: #92400e; }
+.dark .badge-pending { background: rgb(245 158 11 / 0.15); color: #fbbf24; }
+.badge-confirmed { background: #dbeafe; color: #1e40af; }
+.dark .badge-confirmed { background: rgb(59 130 246 / 0.15); color: #60a5fa; }
+.badge-packed { background: #e0e7ff; color: #3730a3; }
+.dark .badge-packed { background: rgb(99 102 241 / 0.15); color: #818cf8; }
+.badge-delivered { background: #d1fae5; color: #065f46; }
+.dark .badge-delivered { background: rgb(5 150 105 / 0.15); color: #34d399; }
+.badge-cancelled { background: #fee2e2; color: #991b1b; }
+.dark .badge-cancelled { background: rgb(239 68 68 / 0.15); color: #f87171; }
+.badge-out-for-delivery { background: #fef9c3; color: #854d0e; }
+.dark .badge-out-for-delivery { background: rgb(234 179 8 / 0.15); color: #facc15; }
 
 /* ===== PAGE TRANSITIONS ===== */
-.page-enter {
-  animation: fadeIn 0.2s ease both;
-}
+.page-enter { animation: fadeIn 0.2s ease both; }
 
 /* ===== FOCUS RING ===== */
 :focus-visible {
@@ -540,82 +355,40 @@ body {
 }
 
 /* ===== CUSTOM CHECKBOX / RADIO ===== */
-input[type="checkbox"],
-input[type="radio"] {
+input[type="checkbox"], input[type="radio"] {
   accent-color: var(--sw-primary);
 }
 
 /* ===== TOAST ANIMATIONS ===== */
 @keyframes toastIn {
-  from {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
 }
-
 @keyframes toastOut {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateX(100%);
-  }
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(100%); }
 }
-
-.toast-enter {
-  animation: toastIn 0.3s ease both;
-}
-
-.toast-exit {
-  animation: toastOut 0.2s ease both;
-}
+.toast-enter { animation: toastIn 0.3s ease both; }
+.toast-exit { animation: toastOut 0.2s ease both; }
 
 /* ===== DROPDOWN ===== */
 @keyframes dropdownOpen {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(-4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
-
-.dropdown-enter {
-  animation: dropdownOpen 0.15s ease both;
-  transform-origin: top;
-}
+.dropdown-enter { animation: dropdownOpen 0.15s ease both; transform-origin: top; }
 
 /* ===== MODAL OVERLAY ===== */
 @keyframes overlayIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-
-.overlay-enter {
-  animation: overlayIn 0.2s ease both;
-}
+.overlay-enter { animation: overlayIn 0.2s ease both; }
 
 /* ===== PRODUCT CARD HOVER ===== */
 .product-card {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .product-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 12px 24px rgb(0 0 0 / 0.1);
@@ -625,19 +398,15 @@ input[type="radio"] {
 .gradient-brand {
   background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #047857 100%);
 }
-
 .gradient-brand-soft {
   background: linear-gradient(135deg, #d1fae5 0%, #ccfbf1 100%);
 }
-
 .dark .gradient-brand-soft {
   background: linear-gradient(135deg, rgb(5 150 105 / 0.15) 0%, rgb(13 148 136 / 0.15) 100%);
 }
-
 .gradient-amber {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
 }
-
 .gradient-rose {
   background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
 }
@@ -713,7 +482,6 @@ input[type="radio"] {
   position: relative;
   overflow: hidden;
 }
-
 .glass-sheen::after {
   content: '';
   position: absolute;
@@ -721,18 +489,19 @@ input[type="radio"] {
   left: -60%;
   width: 30%;
   height: 200%;
-  background: linear-gradient(to right,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.13) 30%,
-      rgba(255, 255, 255, 0.3) 50%,
-      rgba(255, 255, 255, 0.13) 70%,
-      rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.13) 30%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.13) 70%,
+    rgba(255, 255, 255, 0) 100%
+  );
   transform: rotate(30deg);
   transition: none;
   opacity: 0;
   pointer-events: none;
 }
-
 .glass-sheen:hover::after {
   animation: sheen-sweep 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
@@ -742,15 +511,12 @@ input[type="radio"] {
     left: -60%;
     opacity: 0;
   }
-
   10% {
     opacity: 1;
   }
-
   90% {
     opacity: 1;
   }
-
   100% {
     left: 140%;
     opacity: 0;
@@ -761,7 +527,6 @@ input[type="radio"] {
 .btn-spring {
   transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.4), box-shadow 0.2s ease;
 }
-
 .btn-spring:active {
   transform: scale(0.92) !important;
 }
@@ -775,7 +540,6 @@ input[type="radio"] {
   z-index: 0;
   pointer-events: none;
 }
-
 .blob {
   position: absolute;
   border-radius: 50%;
@@ -783,7 +547,6 @@ input[type="radio"] {
   opacity: 0.18;
   animation: float-around 25s infinite alternate ease-in-out;
 }
-
 .dark .blob {
   opacity: 0.12;
 }
@@ -792,11 +555,9 @@ input[type="radio"] {
   0% {
     transform: translate(0, 0) scale(1);
   }
-
   50% {
     transform: translate(80px, 60px) scale(1.2);
   }
-
   100% {
     transform: translate(-40px, 120px) scale(0.8);
   }
@@ -829,26 +590,14 @@ input[type="radio"] {
 
 /* ===== ACTIVE BOTTOM NAV TAB SHINE EFFECT ===== */
 @keyframes shine-sweep {
-  0% {
-    transform: translateX(-150%) skewX(-25deg);
-  }
-
-  50% {
-    transform: translateX(150%) skewX(-25deg);
-  }
-
-  100% {
-    transform: translateX(150%) skewX(-25deg);
-  }
+  0% { transform: translateX(-150%) skewX(-25deg); }
+  50% { transform: translateX(150%) skewX(-25deg); }
+  100% { transform: translateX(150%) skewX(-25deg); }
 }
-
 .active-nav-shine::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0; left: 0; width: 100%; height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
   transform: translateX(-150%) skewX(-25deg);
   animation: shine-sweep 3s infinite ease-in-out;
@@ -866,8 +615,7 @@ input[type="radio"] {
 }
 
 /* Flex layout resets on custom Leaflet divIcons to prevent vertical collapsing or stretching */
-.leaflet-custom-icon,
-.leaflet-div-icon {
+.leaflet-custom-icon, .leaflet-div-icon {
   background: transparent !important;
   border: none !important;
   display: flex !important;
@@ -876,7 +624,7 @@ input[type="radio"] {
   overflow: visible !important;
 }
 
-.leaflet-marker-icon.leaflet-custom-icon,
+.leaflet-marker-icon.leaflet-custom-icon, 
 .leaflet-marker-icon.leaflet-div-icon {
   background: transparent !important;
   border: none !important;

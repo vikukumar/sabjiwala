@@ -141,7 +141,7 @@ export default function UnifiedLandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] amoled:bg-black text-slate-800 dark:text-slate-100 flex flex-col justify-between transition-colors duration-300 antialiased font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] amoled:bg-black text-slate-800 dark:text-slate-100 flex flex-col justify-between transition-colors duration-300 antialiased font-sans relative overflow-x-hidden">
       
       {/* Dynamic Ambient Background Blobs (iOS/macOS glassy style) */}
       <div className="blob-container">
