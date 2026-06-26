@@ -309,6 +309,7 @@ async def list_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status_filter: Optional[str] = Query(None, alias="status"),
+    search: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -347,6 +348,9 @@ async def list_orders(
                 query = query.where(Order.status == valid_status)
             except ValueError:
                 raise HTTPException(status_code=400, detail=f"Invalid status filter: {status_filter}")
+
+    if search:
+        query = query.where(Order.order_number.ilike(f"%{search}%"))
 
     # Count
     count_query = select(func.count()).select_from(query.subquery())

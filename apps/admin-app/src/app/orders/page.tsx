@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { ShoppingBag, Search, Loader2, ChevronDown, RefreshCw, Filter, CheckCircle2 } from "lucide-react";
@@ -39,7 +39,7 @@ function AdminOrdersPageContent() {
   });
 
   const orders: any[] = ordersRes?.data?.data || [];
-  const pagination = ordersRes?.data?.pagination || { page: 1, total_pages: 1, total: 0 };
+  const pagination = ordersRes?.data?.pagination || { page: 1, total_pages: 1, total_items: 0 };
 
   const confirmMutation = useMutation({
     mutationFn: async (orderId: string) => api.patch(`/orders/${orderId}/status`, { status: "confirmed", notes: "Confirmed by admin" }),
@@ -99,7 +99,7 @@ function AdminOrdersPageContent() {
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
             <p className="text-[10px] font-bold text-slate-400 uppercase">Total Orders</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white">{pagination.total || orders.length}</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{pagination.total_items ?? orders.length}</p>
           </div>
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
             <p className="text-[10px] font-bold text-amber-400 uppercase">Pending</p>
@@ -140,7 +140,7 @@ function AdminOrdersPageContent() {
                         )}
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5 truncate">
-                        {order.delivery_address?.full_name || "Customer"} • {order.vendor_store?.store_name || "Store"}
+                        {order.delivery_address?.full_name || "Customer"} • {order.vendor_store?.name || order.vendor_store?.store_name || "Store"}
                       </p>
                     </div>
 
@@ -226,7 +226,7 @@ function AdminOrdersPageContent() {
         {/* Pagination */}
         {pagination.total_pages > 1 && (
           <div className="flex justify-between items-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-            <span className="text-xs text-slate-500">Page {page} of {pagination.total_pages} ({pagination.total} total)</span>
+            <span className="text-xs text-slate-500">Page {page} of {pagination.total_pages} ({pagination.total_items} total)</span>
             <div className="flex gap-2">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold disabled:opacity-50 cursor-pointer">Prev</button>
               <button onClick={() => setPage(p => Math.min(pagination.total_pages, p + 1))} disabled={page === pagination.total_pages} className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold disabled:opacity-50 cursor-pointer">Next</button>
