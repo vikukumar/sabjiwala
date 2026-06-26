@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, ArrowRight, Star, Plus, Minus, ChevronRight, Zap, Truck, Leaf, ShieldCheck, Clock, TrendingUp, Loader2, Bell, X, Navigation, Volume2, VolumeX } from "lucide-react";
+import { Search, ArrowRight, Star, Plus, Minus, ChevronRight, Zap, Truck, Leaf, ShieldCheck, Clock, TrendingUp, Loader2, Bell, X, Navigation, Volume2, VolumeX, ShoppingCart, ClipboardList, UserCircle, HelpCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, useWebSocket, resolveImageUrl } from "@sbjiwala/shared";
 import Link from "next/link";
@@ -978,6 +978,73 @@ function PipVideoAd({ ad }: { ad: any }) {
   );
 }
 
+// ==================== QUICK NAV WIDGETS ====================
+function QuickNavWidgets() {
+  const widgets = [
+    {
+      icon: ShoppingCart,
+      label: "My Cart",
+      desc: "Items & checkout",
+      href: "/cart",
+      color: "from-orange-500/10 to-amber-500/10 dark:from-orange-500/20 dark:to-amber-500/20",
+      iconColor: "text-orange-600 dark:text-orange-405",
+      borderColor: "hover:border-orange-500/30",
+    },
+    {
+      icon: ClipboardList,
+      label: "Track Orders",
+      desc: "History & status",
+      href: "/orders",
+      color: "from-emerald-500/10 to-teal-500/10 dark:from-emerald-500/20 dark:to-teal-500/20",
+      iconColor: "text-emerald-600 dark:text-emerald-450",
+      borderColor: "hover:border-emerald-500/30",
+    },
+    {
+      icon: UserCircle,
+      label: "My Profile",
+      desc: "Wallet & settings",
+      href: "/profile",
+      color: "from-blue-500/10 to-indigo-500/10 dark:from-blue-500/20 dark:to-indigo-500/20",
+      iconColor: "text-blue-600 dark:text-blue-400",
+      borderColor: "hover:border-blue-500/30",
+    },
+    {
+      icon: HelpCircle,
+      label: "Help & FAQ",
+      desc: "Support tickets",
+      href: "/support",
+      color: "from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20",
+      iconColor: "text-purple-600 dark:text-purple-400",
+      borderColor: "hover:border-purple-500/30",
+    },
+  ];
+
+  return (
+    <div className="px-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-6xl mx-auto">
+        {widgets.map((w) => {
+          const Icon = w.icon;
+          return (
+            <Link
+              key={w.label}
+              href={resolveLink(w.href)}
+              className={`flex items-center gap-3 p-4 bg-gradient-to-br ${w.color} border border-slate-200/50 dark:border-slate-800/80 rounded-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-md cursor-pointer ${w.borderColor}`}
+            >
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-xl shadow-sm flex-shrink-0">
+                <Icon className={`w-5 h-5 ${w.iconColor}`} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-xs font-black text-slate-800 dark:text-white leading-tight">{w.label}</h3>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">{w.desc}</p>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ==================== PAGE ====================
 export default function HomePage() {
   useAuthGuard();
@@ -1104,6 +1171,7 @@ export default function HomePage() {
           )}
           <Hero onSelectCategory={setSelectedCategory} />
           <TrustBadges />
+          <QuickNavWidgets />
           <OffersBanner />
           
           <CategoriesStrip active={selectedCategory} setActive={setSelectedCategory} />

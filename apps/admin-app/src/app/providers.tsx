@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastProvider } from "@/components/ui/Toast";
 import AdminGuard from "@/components/AdminGuard";
-import { initFirebaseAnalyticsAndCrashlytics } from "@sbjiwala/shared";
+import { initFirebaseAnalyticsAndCrashlytics, setupDeepLinkListener } from "@sbjiwala/shared";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -23,6 +23,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     initFirebaseAnalyticsAndCrashlytics().catch(err => {
       console.warn("Failed to initialize Firebase Analytics/Crashlytics on mount:", err);
     });
+    setupDeepLinkListener();
   }, []);
 
   return (

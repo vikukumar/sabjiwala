@@ -43,9 +43,19 @@ function connectGlobalWS() {
   const token = localStorage.getItem("sw_access_token");
   if (!token) return;
 
-  const apiBase = api.client.defaults.baseURL || "/api/v1";
-  let baseHost = window.location.host;
-  let protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  let apiBase = "";
+  if (typeof window !== "undefined") {
+    apiBase = localStorage.getItem("sw_api_base_url") || "";
+  }
+  if (!apiBase && process.env.NEXT_PUBLIC_API_URL) {
+    apiBase = process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (!apiBase) {
+    apiBase = api.client.defaults.baseURL || "/api/v1";
+  }
+
+  let baseHost = "sbjiwala.qzz.io";
+  let protocol = "wss:";
 
   if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
     try {
@@ -55,10 +65,17 @@ function connectGlobalWS() {
     } catch (e) {
       console.error("Invalid API URL", e);
     }
-  } else if ((window as any).Capacitor || window.location.hostname === 'localhost' && window.location.protocol.startsWith('capacitor')) {
-    // Mobile app fallback if API base is relative
-    baseHost = "sbjiwala.qzz.io";
-    protocol = "wss:";
+  } else {
+    if (typeof window !== "undefined") {
+      const isCapacitor = (window as any).Capacitor?.isNativePlatform?.() === true || 
+        (window as any).Capacitor ||
+        (window.location.hostname === "localhost" && (window.location.port === "" || window.location.protocol.startsWith("capacitor") || window.location.protocol === "http:"));
+      
+      if (!isCapacitor) {
+        baseHost = window.location.host;
+        protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      }
+    }
   }
 
   const ws = new WebSocket(`${protocol}//${baseHost}/api/v1/ws?token=${token}`);

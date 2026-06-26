@@ -50,6 +50,21 @@ export default function LoginPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [isNativeApp, setIsNativeApp] = useState(false);
+  const [socialSettings, setSocialSettings] = useState<{ google_client_id?: string; facebook_client_id?: string }>({});
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get("/installation/public-settings");
+        if (res.success && res.data) {
+          setSocialSettings(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to load public settings", err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const getStoredUserType = () => {
     if (typeof window === "undefined") return null;
@@ -73,6 +88,27 @@ export default function LoginPage() {
     if (typeof window !== "undefined") {
       const cap = (window as any).Capacitor;
       setIsNativeApp(cap?.isNativePlatform?.() === true);
+    }
+
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const accessToken = searchParams.get("access_token");
+      const refreshToken = searchParams.get("refresh_token");
+      if (accessToken) {
+        api.setTokens(accessToken, refreshToken || "");
+        setSuccessMsg("Logged in successfully!");
+        
+        // Clean URL parameters
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+
+        const role = getStoredUserType() || "delivery_boy";
+        if (role === "vendor" || role === "vendor_manager") router.replace("/vendor");
+        else if (role === "delivery_boy") router.replace("/delivery");
+        else if (role === "admin" || role === "super_admin") router.replace("/admin");
+        else router.replace("/");
+        return;
+      }
     }
 
     if (typeof window !== "undefined" && localStorage.getItem("sw_access_token")) {
@@ -224,8 +260,15 @@ export default function LoginPage() {
   };
 
   const handleSocialLogin = (provider: "google" | "facebook") => {
-    const redirectUrl = getBackendUrl(`/auth/${provider}`);
-    window.location.href = redirectUrl;
+    const isNative = typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.() === true;
+    const scheme = "in.sbjiwala.delivery://login";
+    const redirectBackUrl = isNative ? scheme : window.location.origin + window.location.pathname;
+    const redirectUrl = getBackendUrl(`/auth/${provider}?state=${encodeURIComponent(redirectBackUrl)}`);
+    if (isNative) {
+      window.open(redirectUrl, "_system");
+    } else {
+      window.location.href = redirectUrl;
+    }
   };
 
   const handleSuccessfulLoginRedirect = (role: string) => {
@@ -470,37 +513,44 @@ export default function LoginPage() {
                 </a>
               </div>
             )}
-          </div>
+                    {/* Social login section */}
+          {(socialSettings.google_client_id || socialSettings.facebook_client_id) && (
+            <>
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+                <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-wider">Or Connect With</span>
+                <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+              </div>
 
-          <div className="relative flex py-1 items-center">
-            <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
-            <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-wider">Or Connect With</span>
-            <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => handleSocialLogin("google")}
-              className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl py-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path
-                  fill="#EA4335"
-                  d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.2-5.136 4.2A5.626 5.626 0 0 1 8.28 13a5.626 5.626 0 0 1 5.711-5.6c1.554 0 2.973.57 4.073 1.503l3.24-3.24C19.336 3.793 15.938 2.5 12.24 2.5a10.5 10.5 0 0 0 0 21c5.82 0 10.5-4.2 10.5-10.5 0-.756-.098-1.485-.26-2.215H12.24z"
-                />
-              </svg>
-              <span>Google</span>
-            </button>
-            <button
-              onClick={() => handleSocialLogin("facebook")}
-              className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl py-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <svg className="w-4 h-4 fill-[#1877F2]" viewBox="0 0 24 24">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-              </svg>
-              <span>Facebook</span>
-            </button>
-          </div>
+              <div className={`grid gap-4 ${socialSettings.google_client_id && socialSettings.facebook_client_id ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {socialSettings.google_client_id && (
+                  <button
+                    onClick={() => handleSocialLogin("google")}
+                    className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl py-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] text-slate-700 dark:text-slate-300"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path
+                        fill="#EA4335"
+                        d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.2-5.136 4.2A5.626 5.626 0 0 1 8.28 13a5.626 5.626 0 0 1 5.711-5.6c1.554 0 2.973.57 4.073 1.503l3.24-3.24C19.336 3.793 15.938 2.5 12.24 2.5a10.5 10.5 0 0 0 0 21c5.82 0 10.5-4.2 10.5-10.5 0-.756-.098-1.485-.26-2.215H12.24z"
+                      />
+                    </svg>
+                    <span>Google</span>
+                  </button>
+                )}
+                {socialSettings.facebook_client_id && (
+                  <button
+                    onClick={() => handleSocialLogin("facebook")}
+                    className="flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 hover:border-slate-350 dark:hover:border-slate-700 bg-slate-55/50 dark:bg-slate-950/40 rounded-2xl py-2.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] text-slate-700 dark:text-slate-300"
+                  >
+                    <svg className="w-4 h-4 fill-[#1877F2]" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                    </svg>
+                    <span>Facebook</span>
+                  </button>
+                )}
+              </div>
+            </>
+          )}    </div>
 
 
         </div>

@@ -8,3 +8,4 @@ export * from './components/FloatingChatWidget';
 export * from './utils/firebase';
 export { AppUpdater } from './components/AppUpdater';
 export { StatusBarInit } from './components/StatusBarInit';
+export * from './utils/deepLink';

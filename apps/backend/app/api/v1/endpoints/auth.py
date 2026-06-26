@@ -930,7 +930,7 @@ async def disable_mfa(
 
 
 @router.get("/google")
-async def google_login_redirect():
+async def google_login_redirect(state: str = None):
     """Redirect to Google OAuth2 login."""
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
@@ -940,16 +940,19 @@ async def google_login_redirect():
         "access_type": "offline",
         "prompt": "consent",
     }
+    if state:
+        params["state"] = state
     import urllib.parse
     url = f"https://accounts.google.com/o/oauth2/v2/auth?{urllib.parse.urlencode(params)}"
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url=url)
 
 
-@router.get("/google/callback", response_model=APIResponse)
+@router.get("/google/callback")
 async def google_callback(
     code: str,
     request: Request,
+    state: str = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Google OAuth2 callback."""
@@ -1034,6 +1037,25 @@ async def google_callback(
     refresh_token, token_hash = create_refresh_token(user.id)
     await store_refresh_token(redis, user.id, token_hash)
 
+    if state:
+        # Validate state URL to prevent Open Redirect vulnerability
+        is_allowed = False
+        state_lower = state.lower()
+        if state_lower.startswith(("in.sbjiwala.customer://", "in.sbjiwala.vendor://", "in.sbjiwala.delivery://", "in.sbjiwala.agent://", "in.sbjiwala.admin://")):
+            is_allowed = True
+        elif "localhost" in state_lower or "127.0.0.1" in state_lower:
+            is_allowed = True
+        elif settings.APP_URL and settings.APP_URL.lower().split("://")[-1] in state_lower:
+            is_allowed = True
+        elif "sbjiwala.qzz.io" in state_lower:
+            is_allowed = True
+
+        if is_allowed:
+            from fastapi.responses import RedirectResponse
+            separator = "&" if "?" in state else "?"
+            redirect_url = f"{state}{separator}access_token={access_token}&refresh_token={refresh_token}"
+            return RedirectResponse(url=redirect_url)
+
     return APIResponse(
         success=True,
         message="Google login successful",
@@ -1046,8 +1068,9 @@ async def google_callback(
     )
 
 
+
 @router.get("/facebook")
-async def facebook_login_redirect():
+async def facebook_login_redirect(state: str = None):
     """Redirect to Facebook OAuth2 login."""
     params = {
         "client_id": settings.FACEBOOK_CLIENT_ID,
@@ -1055,16 +1078,19 @@ async def facebook_login_redirect():
         "response_type": "code",
         "scope": "email,public_profile",
     }
+    if state:
+        params["state"] = state
     import urllib.parse
     url = f"https://www.facebook.com/v19.0/dialog/oauth?{urllib.parse.urlencode(params)}"
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url=url)
 
 
-@router.get("/facebook/callback", response_model=APIResponse)
+@router.get("/facebook/callback")
 async def facebook_callback(
     code: str,
     request: Request,
+    state: str = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Facebook OAuth2 callback."""
@@ -1157,6 +1183,25 @@ async def facebook_callback(
     access_token = create_access_token(user.id, user.user_type.value)
     refresh_token, token_hash = create_refresh_token(user.id)
     await store_refresh_token(redis, user.id, token_hash)
+
+    if state:
+        # Validate state URL to prevent Open Redirect vulnerability
+        is_allowed = False
+        state_lower = state.lower()
+        if state_lower.startswith(("in.sbjiwala.customer://", "in.sbjiwala.vendor://", "in.sbjiwala.delivery://", "in.sbjiwala.agent://", "in.sbjiwala.admin://")):
+            is_allowed = True
+        elif "localhost" in state_lower or "127.0.0.1" in state_lower:
+            is_allowed = True
+        elif settings.APP_URL and settings.APP_URL.lower().split("://")[-1] in state_lower:
+            is_allowed = True
+        elif "sbjiwala.qzz.io" in state_lower:
+            is_allowed = True
+
+        if is_allowed:
+            from fastapi.responses import RedirectResponse
+            separator = "&" if "?" in state else "?"
+            redirect_url = f"{state}{separator}access_token={access_token}&refresh_token={refresh_token}"
+            return RedirectResponse(url=redirect_url)
 
     return APIResponse(
         success=True,
