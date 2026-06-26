@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { Clock, Loader2, Star, ShoppingBag, X, Package, CheckCircle2, AlertCircle, MapPin, Navigation, ExternalLink } from "lucide-react";
@@ -8,6 +8,7 @@ import { Geolocation } from "@capacitor/geolocation";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/index";
 import VendorLayout from "@/components/VendorLayout";
+import { NavigationChooser } from "@/components/NavigationMap";
 
 // =========== ITEM REJECTION MODAL ===========
 function ItemRejectionModal({
@@ -500,6 +501,8 @@ export default function VendorOrdersPage() {
   const [otpConfirmOrder, setOtpConfirmOrder] = useState<any>(null);
   const [rejectionConfig, setRejectionConfig] = useState<{ isOpen: boolean; orderId: string; item: any } | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [navTarget, setNavTarget] = useState<{ order: any } | null>(null);
+  const [vendorGpsPos, setVendorGpsPos] = useState<[number, number]>([19.0760, 72.9977]);
 
   // Fetch vendor store details to locate store marker correctly
   const { data: vendorData } = useQuery<any>({
@@ -510,6 +513,40 @@ export default function VendorOrdersPage() {
     }
   });
   const store = vendorData?.store || {};
+
+  // Track vendor GPS position for NavigationMap
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let watchId: string | null = null;
+    const setup = async () => {
+      try {
+        const perms = await Geolocation.checkPermissions();
+        if (perms.location === "granted" || perms.coarseLocation === "granted") {
+          watchId = await Geolocation.watchPosition(
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
+            (pos, err) => {
+              if (!err && pos) {
+                setVendorGpsPos([pos.coords.latitude, pos.coords.longitude]);
+              }
+            }
+          );
+        }
+      } catch (e) {
+        // Permission not available — fallback to browser geolocation
+        if (navigator.geolocation) {
+          navigator.geolocation.watchPosition(
+            (pos) => setVendorGpsPos([pos.coords.latitude, pos.coords.longitude]),
+            () => {},
+            { enableHighAccuracy: true, maximumAge: 5000 }
+          );
+        }
+      }
+    };
+    setup();
+    return () => {
+      if (watchId) Geolocation.clearWatch({ id: watchId }).catch(() => {});
+    };
+  }, []);
 
   const rejectItemsMutation = useMutation({
     mutationFn: async ({ orderId, payload }: { orderId: string; payload: any }) =>
@@ -815,6 +852,17 @@ export default function VendorOrdersPage() {
                 <SelfDeliveryMap order={order} store={store} />
               )}
 
+              {/* Navigate button for self-delivery out_for_delivery orders */}
+              {isSelfDelivery && order.status === "out_for_delivery" && (
+                <button
+                  onClick={() => setNavTarget({ order })}
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs py-3 rounded-xl transition-all shadow-sm cursor-pointer border-0"
+                >
+                  <Navigation className="w-4 h-4" />
+                  Navigate to Customer
+                </button>
+              )}
+
               {/* Status Action Buttons */}
               <div className="flex gap-2 flex-wrap pt-2">
                 {order.status === "confirmed" && (
@@ -991,6 +1039,34 @@ export default function VendorOrdersPage() {
         }}
         onCancel={() => setRejectionConfig(null)}
       />
+
+      {/* Navigation Chooser for self-delivery orders */}
+      {navTarget && (() => {
+        const order = navTarget.order;
+        const custLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
+        const custLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
+        const storeLat = parseFloat(store.latitude || "19.0760");
+        const storeLng = parseFloat(store.longitude || "72.8777");
+        return (
+          <NavigationChooser
+            isOpen
+            onDismiss={() => setNavTarget(null)}
+            currentPos={vendorGpsPos}
+            isPicked={true}
+            orderNumber={order.order_number}
+            storePoint={{
+              lat: storeLat, lng: storeLng,
+              label: store.store_name || "My Store",
+              type: "store"
+            }}
+            customerPoint={{
+              lat: custLat, lng: custLng,
+              label: order.delivery_address?.full_name || "Customer",
+              type: "customer"
+            }}
+          />
+        );
+      })()}
     </VendorLayout>
   );
 }

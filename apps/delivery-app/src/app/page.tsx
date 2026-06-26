@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/index";
 import DeliveryLayout, { useDelivery } from "@/components/DeliveryLayout";
 import { createCustomerIcon, createStoreIcon, createDeliveryAgentIcon } from "@sbjiwala/shared";
+import { NavigationChooser } from "@/components/NavigationMap";
 
 // =========== OTP MODAL ===========
 function OtpPromptModal({
@@ -478,6 +479,7 @@ function ActiveOrdersDashboard() {
   const queryClient = useQueryClient();
   const [otpPromptConfig, setOtpPromptConfig] = useState<{ isOpen: boolean; orderId: string } | null>(null);
   const [rejectionConfig, setRejectionConfig] = useState<{ isOpen: boolean; orderId: string; item: any } | null>(null);
+  const [navTarget, setNavTarget] = useState<{ order: any } | null>(null);
 
   const rejectItemsMutation = useMutation({
     mutationFn: async ({ orderId, payload }: { orderId: string; payload: any }) =>
@@ -685,21 +687,33 @@ function ActiveOrdersDashboard() {
                         {isCOD ? `₹${task.total_amount}` : "✓ Online Paid"}
                       </span>
                     </div>
-                    <button
-                      onClick={() => handleUpdateStatus(task.id, task.status)}
-                      disabled={
-                        pickupOrderMutation.isPending ||
-                        deliverOrderMutation.isPending ||
-                        (task.status === "assigned" || task.status === "accepted" || task.status === "confirmed")
-                      }
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:text-slate-500 flex items-center gap-1.5 cursor-pointer"
-                    >
-                      {task.status === "assigned" || task.status === "accepted" || task.status === "confirmed"
-                        ? "Waiting for store to pack"
-                        : task.status === "packed"
-                          ? <><Package className="w-3.5 h-3.5" /> Confirm Pickup</>
-                          : <><CheckCircle2 className="w-3.5 h-3.5" /> Verify OTP & Deliver</>}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {/* Navigate button */}
+                      {["assigned", "accepted", "packed", "confirmed", "picked", "out_for_delivery"].includes(task.status) && (
+                        <button
+                          onClick={() => setNavTarget({ order: task })}
+                          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer border-0"
+                        >
+                          <Navigation className="w-3.5 h-3.5" />
+                          {["picked", "out_for_delivery"].includes(task.status) ? "Navigate" : "To Store"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleUpdateStatus(task.id, task.status)}
+                        disabled={
+                          pickupOrderMutation.isPending ||
+                          deliverOrderMutation.isPending ||
+                          (task.status === "assigned" || task.status === "accepted" || task.status === "confirmed")
+                        }
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:text-slate-500 flex items-center gap-1.5 cursor-pointer"
+                      >
+                        {task.status === "assigned" || task.status === "accepted" || task.status === "confirmed"
+                          ? "Waiting for store to pack"
+                          : task.status === "packed"
+                            ? <><Package className="w-3.5 h-3.5" /> Confirm Pickup</>
+                            : <><CheckCircle2 className="w-3.5 h-3.5" /> Verify OTP & Deliver</>}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -833,6 +847,36 @@ function ActiveOrdersDashboard() {
         }}
         onCancel={() => setRejectionConfig(null)}
       />
+
+      {/* Navigation Chooser */}
+      {navTarget && (() => {
+        const order = navTarget.order;
+        const isPicked = ["picked", "out_for_delivery"].includes(order.status);
+        const storeLat = order.vendor_store?.latitude || 19.0760;
+        const storeLng = order.vendor_store?.longitude || 72.9977;
+        const custLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
+        const custLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
+        return (
+          <NavigationChooser
+            isOpen
+            onDismiss={() => setNavTarget(null)}
+            currentPos={globalPos}
+            heading={0}
+            isPicked={isPicked}
+            orderNumber={order.order_number}
+            storePoint={{
+              lat: storeLat, lng: storeLng,
+              label: order.vendor_store?.store_name || "Store",
+              type: "store"
+            }}
+            customerPoint={{
+              lat: custLat, lng: custLng,
+              label: order.delivery_address?.full_name || "Customer",
+              type: "customer"
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

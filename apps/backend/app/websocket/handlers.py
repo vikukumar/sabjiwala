@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import async_session_factory
 from app.websocket.manager import ws_manager
 from app.core.security.jwt import decode_token
-from app.models.delivery import DeliveryBoy, DeliveryLocation, AvailabilityStatus
+from app.models.delivery import DeliveryBoy, DeliveryLocation, AvailabilityStatus, VendorDeliveryLocation
 from app.models.order import Order
 
 logger = structlog.get_logger()
@@ -205,20 +205,27 @@ async def websocket_endpoint(
                                 db.add(location_log)
                                 await db.commit()
                         else:
-                            # Vendor self delivery location update
-                            if order_id:
-                                order_res = await db.execute(
-                                    select(Order).where(Order.id == order_id)
+                            # Vendor self delivery location update — persist to DB and broadcast
+                            from app.models.vendor import Vendor
+                            vendor_res = await db.execute(
+                                select(Vendor).where(Vendor.user_id == user_id)
+                            )
+                            vendor = vendor_res.scalars().first()
+                            if vendor:
+                                # Persist GPS trail to DB
+                                vendor_loc = VendorDeliveryLocation(
+                                    vendor_id=vendor.id,
+                                    order_id=order_id,
+                                    latitude=latitude,
+                                    longitude=longitude,
+                                    accuracy=accuracy,
+                                    speed=speed,
+                                    heading=heading,
                                 )
-                                order = order_res.scalars().first()
-                                if order:
-                                    meta = dict(order.metadata_json) if order.metadata_json else {}
-                                    meta["live_latitude"] = latitude
-                                    meta["live_longitude"] = longitude
-                                    order.metadata_json = meta
-                                    await db.commit()
+                                db.add(vendor_loc)
+                            await db.commit()
 
-                        # Broadcast location update to relevant order tracking channel (customer/vendor)
+                        # Broadcast location update to relevant order tracking channel (customer)
                         if order_id:
                             # Find order to get customer ID
                             order_res = await db.execute(
@@ -237,6 +244,7 @@ async def websocket_endpoint(
                                             "longitude": longitude,
                                             "speed": speed,
                                             "heading": heading,
+                                            "role": role,
                                         }
                                     }
                                 )
