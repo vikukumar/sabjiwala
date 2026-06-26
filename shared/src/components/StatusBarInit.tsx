@@ -3,46 +3,49 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 
+const THEME_COLOR = "#059669";
+
 /**
  * StatusBarInit — programmatically sets the native status bar to the
- * Sbjiwala brand emerald green (#059669) on Android via the Capacitor
- * StatusBar plugin.  Should be rendered once near the root of every app.
+ * Sbjiwala brand emerald green via Capacitor's runtime plugin registry
+ * (Capacitor.Plugins).  This avoids importing @capacitor/status-bar or
+ * @capacitor/app as package-level dependencies so the component is safe
+ * to bundle in any Next.js app that only has @capacitor/core installed.
  */
 export function StatusBarInit() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    let StatusBar: typeof import("@capacitor/status-bar").StatusBar;
-
-    (async () => {
+    const applyStatusBar = () => {
       try {
-        const mod = await import("@capacitor/status-bar");
-        StatusBar = mod.StatusBar;
-
-        await StatusBar.setBackgroundColor({ color: "#059669" });
-        await StatusBar.setStyle({ style: mod.Style.Dark });
-        await StatusBar.show();
-      } catch (e) {
-        // Plugin may not be installed in web preview – silently ignore
-        console.debug("[StatusBarInit] StatusBar plugin unavailable:", e);
-      }
-    })();
-
-    // Re-apply when the app comes back to foreground (App plugin resume event)
-    const applyOnResume = async () => {
-      try {
-        const { App } = await import("@capacitor/app");
-        const { StatusBar: SB, Style } = await import("@capacitor/status-bar");
-        App.addListener("resume", async () => {
-          await SB.setBackgroundColor({ color: "#059669" });
-          await SB.setStyle({ style: Style.Dark });
-        });
+        // Access plugins via the Capacitor runtime registry — no extra package needed.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const plugins = (Capacitor as any).Plugins as Record<string, any> | undefined;
+        const StatusBar = plugins?.["StatusBar"];
+        if (StatusBar) {
+          StatusBar.setBackgroundColor({ color: THEME_COLOR }).catch(() => {});
+          // Style.Dark = "DARK" — white icons on dark background
+          StatusBar.setStyle({ style: "DARK" }).catch(() => {});
+          StatusBar.show().catch(() => {});
+        }
       } catch {
-        // Silently ignore if App plugin is unavailable
+        // Silently ignore — web preview or plugin not registered
       }
     };
 
-    applyOnResume();
+    applyStatusBar();
+
+    // Re-apply on resume so the system can't reset it (e.g. after screen lock)
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const plugins = (Capacitor as any).Plugins as Record<string, any> | undefined;
+      const App = plugins?.["App"];
+      if (App) {
+        App.addListener("resume", applyStatusBar);
+      }
+    } catch {
+      // Silently ignore
+    }
   }, []);
 
   return null;
