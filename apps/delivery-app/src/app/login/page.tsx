@@ -462,7 +462,7 @@ export default function LoginPage() {
 
             {!isNativeApp && (
               <div className="flex justify-between items-center text-[10px] font-semibold text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-slate-800 mt-2">
-                <a href={process.env.NEXT_PUBLIC_APP_MODE === "unified" ? "/login" : "http://localhost:3000/login"} className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1">
+                <a href={process.env.NEXT_PUBLIC_APP_MODE === "unified" ? "/app/login" : "http://localhost:3000/login"} className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1">
                   ← Customer Portal
                 </a>
                 <a href={process.env.NEXT_PUBLIC_APP_MODE === "unified" ? "/vendor/login" : "http://localhost:3001/login"} className="hover:text-emerald-650 dark:hover:text-emerald-400 flex items-center gap-1">

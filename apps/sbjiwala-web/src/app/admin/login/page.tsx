@@ -564,10 +564,10 @@ export default function LoginPage() {
 
           {/* Return to Customer Portal link */}
           {!isNativeApp && (
-            <div className="border-t border-slate-200 dark:border-slate-800/80 pt-4 text-center text-xs font-semibold text-slate-550 dark:text-slate-400">
-              <Link href="/login" className="hover:text-emerald-655 dark:hover:text-emerald-400 flex items-center gap-1 justify-center">
+            <div className="border-t border-slate-200 dark:border-slate-800/80 pt-4 text-center text-xs font-semibold text-slate-555 dark:text-slate-400">
+              <a href={process.env.NEXT_PUBLIC_APP_MODE === "unified" ? "/app/login" : "http://localhost:3000/login"} className="hover:text-emerald-655 dark:hover:text-emerald-400 flex items-center gap-1 justify-center">
                 ← Return to Customer Portal
-              </Link>
+              </a>
             </div>
           )}
         </div>
