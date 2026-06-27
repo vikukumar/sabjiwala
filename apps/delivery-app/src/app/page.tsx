@@ -574,7 +574,10 @@ function ActiveOrdersDashboard() {
         ) : isOnline && assignments.length > 0 ? (
           assignments.map((task: any) => {
             const destAddr = task.delivery_address || {};
-            const formattedAddr = destAddr.formatted_address || `${destAddr.address_line_1 || ""}, ${destAddr.city || ""}`;
+            const isDelivered = task.status === "delivered";
+            const formattedAddr = isDelivered
+              ? "•••••••••• (Hidden after delivery)"
+              : (destAddr.formatted_address || `${destAddr.address_line_1 || ""}, ${destAddr.city || ""}`);
             const isCOD = task.payment_method === "cod";
             return (
               <div key={task.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">

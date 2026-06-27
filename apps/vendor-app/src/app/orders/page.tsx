@@ -820,9 +820,13 @@ export default function VendorOrdersPage() {
                 <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Delivery Details</h5>
                 <div className="space-y-1 text-xs">
                   <p className="font-extrabold text-slate-800 dark:text-slate-200">{order.delivery_address?.full_name}</p>
-                  <p className="text-slate-500">{order.delivery_address?.phone}</p>
-                  <p className="text-slate-650 dark:text-slate-350">{order.delivery_address?.address_line_1}, {order.delivery_address?.city}</p>
-                  {order.customer_notes && (
+                  <p className="text-slate-500">
+                    {order.status === "delivered" ? "•••••••••• (Hidden after delivery)" : order.delivery_address?.phone}
+                  </p>
+                  <p className="text-slate-650 dark:text-slate-350">
+                    {order.status === "delivered" ? "•••••••••• (Hidden after delivery)" : `${order.delivery_address?.address_line_1 || ""}, ${order.delivery_address?.city || ""}`}
+                  </p>
+                  {order.customer_notes && order.status !== "delivered" && (
                     <div className="mt-2 bg-amber-500/10 text-amber-600 dark:text-amber-450 p-2 rounded-lg border border-amber-500/10 font-medium">
                       Note: "{order.customer_notes}"
                     </div>
@@ -913,7 +917,7 @@ export default function VendorOrdersPage() {
               </div>
 
               {/* Self Delivery Route Map Integration */}
-              {isSelfDelivery && (
+              {isSelfDelivery && order.status !== "delivered" && (
                 <SelfDeliveryMap order={order} store={store} />
               )}
 
