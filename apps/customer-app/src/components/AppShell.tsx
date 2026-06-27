@@ -2209,7 +2209,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <button
                     onClick={() => {
                       if (contextMenu.targetId) {
-                        window.open(`${api.defaults.baseURL}/orders/${contextMenu.targetId}/invoice`, "_blank");
+                        window.open(`${api.client.defaults.baseURL}/orders/${contextMenu.targetId}/invoice`, "_blank");
                       }
                     }}
                     className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg text-left cursor-pointer border-0 bg-transparent text-slate-800 dark:text-slate-200"

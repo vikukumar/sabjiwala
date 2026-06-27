@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect } from "react";
-import Link from "next/link";
 import VendorLayout, { resolveVendorLink } from "@/components/VendorLayout";
 
 interface ErrorProps {
@@ -140,12 +139,16 @@ export default function ErrorPage({ error, reset }: ErrorProps) {
           >
             Try Again
           </button>
-          <Link
-            href={resolveVendorLink("/")}
-            className="w-full sm:w-auto border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold px-8 py-3 rounded-full shadow-sm transition-all text-sm tracking-wide text-center"
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.href = resolveVendorLink("/");
+            }}
+            className="w-full sm:w-auto border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold px-8 py-3 rounded-full shadow-sm transition-all text-sm tracking-wide text-center cursor-pointer"
           >
             Go Back Home
-          </Link>
+          </a>
         </div>
       </div>
     </VendorLayout>
