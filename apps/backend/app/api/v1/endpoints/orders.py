@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.schemas import (
     APIResponse, CheckoutRequest, OrderResponse, OrderStatusUpdate,
-    PaginatedResponse, PaginationMeta, ReturnRequestCreate, ItemRejectionRequest
+    PaginatedResponse, PaginationMeta, ReturnRequestCreate, ItemRejectionRequest, CancelApprovalRequest
 )
 from app.core.rbac.engine import get_current_user
 from app.db.session import get_db
@@ -917,3 +917,164 @@ async def get_order_invoice(
         return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate PDF invoice: {str(e)}")
+
+
+@router.post("/{order_id}/cancel-approval", response_model=APIResponse)
+async def cancel_approval(
+    order_id: UUID,
+    body: CancelApprovalRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Approve or reject a cancellation request initiated by a courier/vendor."""
+    import structlog
+    logger = structlog.get_logger()
+
+    # Find order
+    result = await db.execute(
+        select(Order).where(Order.id == order_id, Order.is_deleted == False)
+    )
+    order = result.scalars().first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    # Security check: only the customer who placed the order can approve/reject the cancellation
+    if order.user_id != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="You are not authorized to approve/reject cancellation for this order.")
+        
+    meta = dict(order.metadata_json) if order.metadata_json else {}
+    cancel_req = meta.get("cancel_request")
+    if not cancel_req:
+        raise HTTPException(status_code=400, detail="No active cancellation request exists for this order.")
+        
+    requested_by_id = cancel_req.get("requested_by")
+    requested_by_role = cancel_req.get("user_type")
+    reason = cancel_req.get("reason", "")
+    
+    # Remove cancel request from metadata
+    meta.pop("cancel_request", None)
+    order.metadata_json = meta
+    
+    from app.websocket.manager import ws_manager
+    from app.services.notification_service import NotificationService
+    notification_service = NotificationService(db)
+    
+    # Fetch vendor details to notify vendor
+    from app.models.vendor import Vendor
+    vendor_res = await db.execute(select(Vendor).where(Vendor.id == order.vendor_id))
+    vendor = vendor_res.scalars().first()
+    vendor_user_id = vendor.user_id if vendor else None
+    
+    if body.approve:
+        # Cancel the order
+        service = OrderService(db)
+        # We temporarily change status to set it to cancelled
+        # Since update_order_status checks if user_type is allowed, we pass "admin" to bypass constraints
+        await service.update_order_status(
+            order_id=order_id,
+            status=OrderStatus.CANCELLED,
+            changed_by=current_user["user_id"],
+            user_type="admin",
+            notes=f"Approved by customer. Reason: {reason}"
+        )
+        
+        # Send WS event to vendor and delivery boy
+        ws_payload = {
+            "type": "cancel_request_response",
+            "data": {
+                "order_id": str(order_id),
+                "order_number": order.order_number,
+                "approved": True,
+                "message": f"Customer approved cancellation. Order #{order.order_number} has been cancelled."
+            }
+        }
+        if vendor_user_id:
+            try:
+                await ws_manager.send_to_user(vendor_user_id, ws_payload)
+            except Exception:
+                pass
+        if order.delivery_boy_id:
+            try:
+                await ws_manager.send_to_user(order.delivery_boy_id, ws_payload)
+            except Exception:
+                pass
+            
+        # Send push notification to vendor and delivery boy
+        if vendor_user_id:
+            try:
+                await notification_service.dispatch_raw(
+                    user_id=vendor_user_id,
+                    title="Cancellation Approved ✅",
+                    body=f"Customer approved cancellation of Order #{order.order_number}. Order is cancelled.",
+                    event_key="cancel_approved",
+                    reference_type="order",
+                    reference_id=str(order_id)
+                )
+            except Exception:
+                pass
+        if order.delivery_boy_id:
+            try:
+                await notification_service.dispatch_raw(
+                    user_id=order.delivery_boy_id,
+                    title="Cancellation Approved ✅",
+                    body=f"Customer approved cancellation of Order #{order.order_number}. Order is cancelled.",
+                    event_key="cancel_approved",
+                    reference_type="order",
+                    reference_id=str(order_id)
+                )
+            except Exception:
+                pass
+            
+        return APIResponse(success=True, message="Cancellation request approved. Order is cancelled.")
+    else:
+        # Reject cancellation request (order remains active)
+        await db.commit() # Save metadata removal
+        
+        # Send WS event to vendor and delivery boy
+        ws_payload = {
+            "type": "cancel_request_response",
+            "data": {
+                "order_id": str(order_id),
+                "order_number": order.order_number,
+                "approved": False,
+                "message": f"Customer rejected cancellation. Delivery of Order #{order.order_number} is compulsory."
+            }
+        }
+        if vendor_user_id:
+            try:
+                await ws_manager.send_to_user(vendor_user_id, ws_payload)
+            except Exception:
+                pass
+        if order.delivery_boy_id:
+            try:
+                await ws_manager.send_to_user(order.delivery_boy_id, ws_payload)
+            except Exception:
+                pass
+            
+        # Send push notification to vendor/delivery boy
+        if vendor_user_id:
+            try:
+                await notification_service.dispatch_raw(
+                    user_id=vendor_user_id,
+                    title="Cancellation Rejected 🚨",
+                    body=f"Customer rejected cancellation of Order #{order.order_number}. It is compulsory to deliver this order.",
+                    event_key="cancel_rejected",
+                    reference_type="order",
+                    reference_id=str(order_id)
+                )
+            except Exception:
+                pass
+        if order.delivery_boy_id:
+            try:
+                await notification_service.dispatch_raw(
+                    user_id=order.delivery_boy_id,
+                    title="Cancellation Rejected 🚨",
+                    body=f"Customer rejected cancellation of Order #{order.order_number}. It is compulsory to deliver this order.",
+                    event_key="cancel_rejected",
+                    reference_type="order",
+                    reference_id=str(order_id)
+                )
+            except Exception:
+                pass
+            
+        return APIResponse(success=True, message="Cancellation request rejected. Order remains active.")

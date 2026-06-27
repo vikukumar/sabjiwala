@@ -248,6 +248,80 @@ function ItemRejectionModal({
   );
 }
 
+// =========== CANCEL ORDER MODAL ===========
+function CancelOrderModal({
+  isOpen, order, onConfirm, onCancel, loading
+}: {
+  isOpen: boolean; order: any;
+  onConfirm: (reason: string) => void; onCancel: () => void; loading?: boolean;
+}) {
+  const [reason, setReason] = useState("");
+  const { error: showError } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      setReason("");
+    }
+  }, [isOpen]);
+
+  if (!isOpen || !order) return null;
+
+  return (
+    <div className="fixed inset-0 md:left-64 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-slate-800 dark:text-white shadow-2xl">
+        <div className="w-12 h-12 bg-rose-100 dark:bg-rose-955/40 rounded-2xl flex items-center justify-center mx-auto text-rose-600 dark:text-rose-455">
+          <XCircle className="w-6 h-6" />
+        </div>
+        <h3 className="text-base font-black uppercase tracking-wider text-center">Request Cancel</h3>
+        <p className="text-xs text-slate-500 text-center leading-normal">
+          This will request customer approval to cancel Order <span className="font-extrabold text-slate-800 dark:text-slate-250">#{order.order_number}</span>.
+        </p>
+
+        <div className="space-y-3.5 text-left">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Reason for Cancellation</label>
+            <input
+              type="text"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. Customer not responding / refused order"
+              className="w-full px-4 py-2.5 text-sm font-bold border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-transparent focus:outline-none focus:border-emerald-500 transition-colors"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="danger"
+            onClick={() => {
+              if (!reason.trim()) {
+                showError("Please provide a reason for cancellation");
+                return;
+              }
+              onConfirm(reason);
+            }}
+            disabled={loading}
+            loading={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Submit Request
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Go Back
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // =========== HAVERSINE DISTANCE CALCULATOR ===========
 function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371; // km
@@ -478,7 +552,22 @@ function ActiveOrdersDashboard() {
   const queryClient = useQueryClient();
   const [otpPromptConfig, setOtpPromptConfig] = useState<{ isOpen: boolean; orderId: string } | null>(null);
   const [rejectionConfig, setRejectionConfig] = useState<{ isOpen: boolean; orderId: string; item: any } | null>(null);
+  const [cancelOrderConfig, setCancelOrderConfig] = useState<{ isOpen: boolean; order: any } | null>(null);
   const [navTarget, setNavTarget] = useState<{ order: any } | null>(null);
+
+  const cancelOrderMutation = useMutation({
+    mutationFn: async ({ orderId, notes }: { orderId: string; notes: string }) =>
+      api.patch(`/orders/${orderId}/status`, {
+        status: "cancelled",
+        notes
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] });
+      success("Request Submitted", "Cancellation request sent to customer. Waiting for approval.");
+      setCancelOrderConfig(null);
+    },
+    onError: (err: any) => showError("Cancel Failed", err.response?.data?.detail || err.message)
+  });
 
   const rejectItemsMutation = useMutation({
     mutationFn: async ({ orderId, payload }: { orderId: string; payload: any }) =>
@@ -689,6 +778,15 @@ function ActiveOrdersDashboard() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
+                      {["picked", "out_for_delivery"].includes(task.status) && (
+                        <button
+                          onClick={() => setCancelOrderConfig({ isOpen: true, order: task })}
+                          disabled={cancelOrderMutation.isPending}
+                          className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer border-0"
+                        >
+                          Cancel Order
+                        </button>
+                      )}
                       {/* Navigate button */}
                       {["assigned", "accepted", "packed", "confirmed", "picked", "out_for_delivery"].includes(task.status) && (
                         <button
@@ -851,6 +949,21 @@ function ActiveOrdersDashboard() {
           }
         }}
         onCancel={() => setRejectionConfig(null)}
+      />
+
+      <CancelOrderModal
+        isOpen={!!cancelOrderConfig?.isOpen}
+        order={cancelOrderConfig?.order}
+        loading={cancelOrderMutation.isPending}
+        onConfirm={(reason) => {
+          if (cancelOrderConfig?.order) {
+            cancelOrderMutation.mutate({
+              orderId: cancelOrderConfig.order.id,
+              notes: reason
+            });
+          }
+        }}
+        onCancel={() => setCancelOrderConfig(null)}
       />
 
       {/* Navigation Chooser */}

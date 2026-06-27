@@ -877,3 +877,7 @@ class VendorLocationUpdate(BaseModel):
     speed: Optional[float] = None
     heading: Optional[float] = None
     order_id: Optional[UUID] = None
+
+
+class CancelApprovalRequest(BaseModel):
+    approve: bool

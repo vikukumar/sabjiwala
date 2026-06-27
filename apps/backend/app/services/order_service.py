@@ -590,6 +590,50 @@ class OrderService:
             raise ValueError(f"Cannot change status of {old_status.value} order")
 
         if status == OrderStatus.CANCELLED:
+            # Security check: if order is currently out on delivery and requested by vendor/delivery boy, require customer approval
+            if old_status in [OrderStatus.PICKED, OrderStatus.OUT_FOR_DELIVERY] and user_type in ["vendor", "vendor_manager", "delivery_boy"]:
+                meta = dict(order.metadata_json) if order.metadata_json else {}
+                meta["cancel_request"] = {
+                    "requested_by": str(changed_by),
+                    "user_type": user_type,
+                    "reason": notes or "Customer refused or did not pick up",
+                    "requested_at": datetime.now(timezone.utc).isoformat()
+                }
+                order.metadata_json = meta
+                await self.db.flush()
+                
+                # Broadcast WebSocket cancel request to Customer
+                try:
+                    from app.websocket.manager import ws_manager
+                    ws_payload = {
+                        "type": "order_cancel_request",
+                        "data": {
+                            "order_id": str(order.id),
+                            "order_number": order.order_number,
+                            "reason": notes or "Customer refused or did not pick up",
+                            "requested_by": user_type,
+                        }
+                    }
+                    await ws_manager.send_to_user(order.user_id, ws_payload)
+                except Exception as ws_err:
+                    logger.error("Failed to broadcast WebSocket cancel request", order_id=str(order.id), error=str(ws_err))
+                    
+                # Send push notification to Customer
+                try:
+                    await self.notification_service.dispatch_raw(
+                        user_id=order.user_id,
+                        title="Cancellation Approval Required 🛑",
+                        body=f"Delivery agent requested to cancel Order #{order.order_number} due to: {notes or 'Customer refused'}. Tap to approve or reject.",
+                        event_key="order_cancel_request",
+                        reference_type="order",
+                        reference_id=str(order.id)
+                    )
+                except Exception as e:
+                    logger.warning("Failed to send customer cancel request notification", error=str(e))
+                
+                # Return the order with updated metadata (saved via db.flush)
+                return order
+
             if user_type in ["vendor", "vendor_manager", "admin", "super_admin", "delivery_boy", "support_agent"]:
                 # Admin, vendor, delivery boy, and support agent can cancel at any phase before actual delivery
                 pass

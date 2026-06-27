@@ -17,7 +17,7 @@ import {
   Truck
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, resolveAppOrigin } from "@sbjiwala/shared";
+import { api, resolveAppOrigin, useWebSocket } from "@sbjiwala/shared";
 import LiveChatWidget from "./LiveChatWidget";
 import Image from "next/image";
 
@@ -1399,6 +1399,29 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isNative = typeof window !== "undefined" && !!(window as any).Capacitor;
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
+
+  const { data: activeOrders = [] } = useQuery<any[]>({
+    queryKey: ["activeOrdersForCancelRequest"],
+    queryFn: async () => {
+      const res = await api.get("/orders", { params: { limit: 10 } });
+      return res.data || [];
+    },
+    enabled: typeof window !== "undefined" && !!token,
+    refetchInterval: 8000,
+  });
+
+  useWebSocket((message: any) => {
+    if (message.type === "order_cancel_request" || message.type === "order_status_update") {
+      queryClient.invalidateQueries({ queryKey: ["activeOrdersForCancelRequest"] });
+    }
+  });
+
+  const pendingCancelOrder = activeOrders?.find(
+    (o) => o.metadata_json?.cancel_request && o.status !== "cancelled" && o.status !== "delivered"
+  );
 
   const { data: publicSettings } = useQuery<any>({
     queryKey: ["publicSettings"],
@@ -1491,7 +1514,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [inlineSearchOpen, setInlineSearchOpen] = useState(false);
 
   // Load saved default address and set as active location on login
-  const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
   const { data: appAddresses } = useQuery<any[]>({
     queryKey: ["appAddresses"],
     queryFn: async () => {
@@ -2019,8 +2041,84 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {inlineSearchOpen && (
           <InlineSearchModal onClose={() => setInlineSearchOpen(false)} />
         )}
+
+        {pendingCancelOrder && (
+          <CancelApprovalModal
+            order={pendingCancelOrder}
+            onResponse={async (approve) => {
+              try {
+                await api.post(`/orders/${pendingCancelOrder.id}/cancel-approval`, { approve });
+                queryClient.invalidateQueries({ queryKey: ["activeOrdersForCancelRequest"] });
+                queryClient.invalidateQueries({ queryKey: ["cart"] });
+              } catch (e) {
+                console.error("Failed to respond to cancellation", e);
+              }
+            }}
+          />
+        )}
       </div>
     </AppShellContext.Provider>
 
+  );
+}
+
+function CancelApprovalModal({ order, onResponse }: { order: any; onResponse: (approve: boolean) => Promise<void> }) {
+  const [loading, setLoading] = useState(false);
+  const cancelReq = order.metadata_json?.cancel_request;
+  const reason = cancelReq?.reason || "Customer refused or did not pick up";
+  const requestedBy = cancelReq?.user_type === "delivery_boy" ? "Delivery Partner" : "Vendor Store";
+
+  const handleAction = async (approve: boolean) => {
+    setLoading(true);
+    try {
+      await onResponse(approve);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" />
+      <div className="relative bg-white dark:bg-slate-900 border border-rose-250 dark:border-rose-900/40 rounded-3xl p-6 max-w-md w-full space-y-5 animate-scale-in text-slate-800 dark:text-white shadow-2xl text-center">
+        <div className="w-16 h-16 bg-rose-100 dark:bg-rose-950/50 rounded-2xl flex items-center justify-center mx-auto text-rose-600 dark:text-rose-400">
+          <Zap className="w-8 h-8 animate-pulse text-rose-500" />
+        </div>
+        
+        <div className="space-y-2">
+          <h3 className="text-lg font-black uppercase tracking-wider text-rose-650 dark:text-rose-400">Order Cancellation Request</h3>
+          <p className="text-xs text-slate-555 dark:text-slate-400">
+            The <span className="font-extrabold text-slate-800 dark:text-slate-200">{requestedBy}</span> is requesting to cancel your Order <span className="font-extrabold text-emerald-600 dark:text-emerald-450">#{order.order_number}</span>.
+          </p>
+        </div>
+
+        <div className="bg-rose-50 dark:bg-rose-955/20 border border-rose-100 dark:border-rose-950/40 p-4 rounded-2xl text-left">
+          <span className="block text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">Stated Reason</span>
+          <p className="text-xs font-bold text-slate-700 dark:text-slate-350 italic">"{reason}"</p>
+        </div>
+
+        <div className="space-y-3.5 pt-2">
+          <div className="flex gap-3">
+            <button
+              onClick={() => handleAction(true)}
+              disabled={loading}
+              className="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 border-0"
+            >
+              {loading ? "Processing..." : "Yes, Agree to Cancel"}
+            </button>
+            <button
+              onClick={() => handleAction(false)}
+              disabled={loading}
+              className="flex-1 bg-slate-105 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-extrabold text-xs py-3.5 rounded-xl transition-all active:scale-95 cursor-pointer disabled:opacity-50 border-0"
+            >
+              {loading ? "Processing..." : "No, Keep Active"}
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-normal">
+            If you disagree, the delivery partner is obligated to continue with the delivery of your order.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
