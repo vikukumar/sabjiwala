@@ -590,8 +590,8 @@ class OrderService:
             raise ValueError(f"Cannot change status of {old_status.value} order")
 
         if status == OrderStatus.CANCELLED:
-            if user_type in ["vendor", "vendor_manager", "admin", "super_admin"]:
-                # Admin and vendor can cancel at any phase before delivery
+            if user_type in ["vendor", "vendor_manager", "admin", "super_admin", "delivery_boy", "support_agent"]:
+                # Admin, vendor, delivery boy, and support agent can cancel at any phase before actual delivery
                 pass
             else:
                 # Customers cannot cancel once shipped
