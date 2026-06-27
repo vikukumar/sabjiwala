@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -36,7 +36,11 @@ function OrderCard({ order, myReviews, onCancel, success }: { order: any; myRevi
   const remainingItems = order.items?.slice(previewCount) || [];
 
   return (
-    <div className="card p-5 space-y-4 hover:shadow-md transition-shadow bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
+    <div
+      data-longpress="order"
+      data-id={order.id}
+      className="card p-5 space-y-4 hover:shadow-md transition-shadow bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl cursor-pointer"
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

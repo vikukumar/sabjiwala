@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, createContext, useContext } from "r
 import {
   Home, MapPin, History, IndianRupee, ArrowUpRight, User,
   ToggleLeft, ToggleRight, Loader2, Navigation, AlertCircle, Menu, X,
-  Phone, Mic, Square
+  Phone, Mic, Square, FileText
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, initStreamCall, startStreamCall, endStreamCall, rejectStreamCall, isStreamCallAvailable } from "@sbjiwala/shared";
@@ -27,6 +27,11 @@ interface DeliveryContextType {
 
 const DeliveryContext = createContext<DeliveryContextType | undefined>(undefined);
 
+export const resolveLink = (href: string) => {
+  const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+  return isUnified ? `/delivery${href === "/" ? "" : href}` : href;
+};
+
 export function useDelivery() {
   const context = useContext(DeliveryContext);
   if (!context) throw new Error("useDelivery must be used within a DeliveryProvider");
@@ -46,6 +51,95 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
   const [distanceInfo, setDistanceInfo] = useState<string>("Offline");
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [wsNotification, setWsNotification] = useState<{ title: string; body: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    type: "order" | "profile";
+    targetId?: string;
+    extraData?: string;
+  } | null>(null);
+
+  // Set up long press / context menu handlers
+  useEffect(() => {
+    let pressTimer: any = null;
+    let startX = 0;
+    let startY = 0;
+
+    const handleStart = (e: any) => {
+      const touch = e.touches ? e.touches[0] : e;
+      startX = touch.clientX;
+      startY = touch.clientY;
+      const target = e.target.closest("[data-longpress]");
+      if (!target) return;
+
+      pressTimer = setTimeout(() => {
+        const type = target.getAttribute("data-longpress");
+        const targetId = target.getAttribute("data-id");
+        const extraData = target.getAttribute("data-extra");
+        setContextMenu({
+          x: touch.clientX,
+          y: touch.clientY,
+          type,
+          targetId,
+          extraData
+        });
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      }, 600);
+    };
+
+    const handleCancel = (e: any) => {
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+      }
+    };
+
+    const handleMove = (e: any) => {
+      const touch = e.touches ? e.touches[0] : e;
+      if (Math.abs(touch.clientX - startX) > 10 || Math.abs(touch.clientY - startY) > 10) {
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+        }
+      }
+    };
+
+    const handleContextMenu = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest("[data-longpress]");
+      if (!target) return;
+      e.preventDefault();
+      const type = target.getAttribute("data-longpress") as any;
+      const targetId = target.getAttribute("data-id") || undefined;
+      const extraData = target.getAttribute("data-extra") || undefined;
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        type,
+        targetId,
+        extraData
+      });
+    };
+
+    const handleGlobalClick = () => {
+      setContextMenu(null);
+    };
+
+    document.addEventListener("touchstart", handleStart, { passive: true });
+    document.addEventListener("touchend", handleCancel, { passive: true });
+    document.addEventListener("touchmove", handleMove, { passive: true });
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("click", handleGlobalClick);
+
+    return () => {
+      document.removeEventListener("touchstart", handleStart);
+      document.removeEventListener("touchend", handleCancel);
+      document.removeEventListener("touchmove", handleMove);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("click", handleGlobalClick);
+    };
+  }, []);
+
   const wsRef = useRef<WebSocket | null>(null);
   const triggeredProximityNotifs = useRef<Record<string, boolean>>({});
 
@@ -598,8 +692,11 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
+          
+          // Invalidate everything to refresh screen details instantly on any event!
+          queryClient.invalidateQueries();
+
           if (message.type === "order_status_update") {
-            queryClient.invalidateQueries({ queryKey: ["deliveryAssignments"] });
             let title = ""; let body = "";
             if (message.data?.status === "assigned") {
               title = "Naya Delivery Order Mila! 🛵";
@@ -609,7 +706,11 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
               body = `Order #${message.data?.order_number || ""} pickup ke liye ready hai.`;
             }
             if (title) {
-              success(title, body);
+              setWsNotification({ title, body });
+              setTimeout(() => {
+                setWsNotification(null);
+              }, 5000);
+              
               if (typeof window !== "undefined") {
                 import("@capacitor/local-notifications").then(({ LocalNotifications }) => {
                   LocalNotifications.schedule({
@@ -625,6 +726,18 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
                 }).catch(() => {});
               }
             }
+          } else if (
+            message.type === "notification" ||
+            message.type === "order_cancel_request" ||
+            message.type === "cancel_request_response"
+          ) {
+            const title = message.data?.title || (message.type === "cancel_request_response" ? "Cancellation Update" : "Notification Received");
+            const body = message.data?.body || message.data?.message || "";
+            setWsNotification({ title, body });
+            
+            setTimeout(() => {
+              setWsNotification(null);
+            }, 5000);
           } else if (message.type === "call_answer") {
             stopCallerTune();
             handleCallAnswer(message.data.sdp, message.data.sender_id);
@@ -769,10 +882,7 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
     );
   }
 
-  const resolveLink = (href: string) => {
-    const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
-    return isUnified ? `/delivery${href === "/" ? "" : href}` : href;
-  };
+
 
   const navItems = [
     { href: "/", icon: Home, label: "Orders" },
@@ -1187,6 +1297,99 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
           )}
         </div>
       )}
+        {/* Global WS Notification Banner */}
+        {wsNotification && (
+          <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-[9999] animate-slide-in pointer-events-auto">
+            <div className="bg-emerald-600/95 dark:bg-slate-900/95 backdrop-blur-md border border-emerald-500/30 dark:border-slate-800 rounded-2xl p-4 shadow-2xl flex gap-3 text-white">
+              <div className="w-10 h-10 bg-white/20 dark:bg-emerald-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-white dark:text-emerald-400">
+                  <path d="m2 7 4.41-3.67A2 2 0 0 1 7.73 3h8.54a2 2 0 0 1 1.32.33L22 7"/>
+                  <path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
+                  <path d="M12 12A4 4 0 0 0 4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a4 4 0 0 0-8 0Z"/>
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <h5 className="text-xs font-black uppercase tracking-wider">{wsNotification.title}</h5>
+                <p className="text-[11px] font-bold text-slate-105 leading-tight">{wsNotification.body}</p>
+              </div>
+              <button onClick={() => setWsNotification(null)} className="p-1 text-white/60 hover:text-white rounded-full self-start cursor-pointer border-0 bg-transparent">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Global Long Press / Context Menu */}
+        {contextMenu && (
+          <div
+            style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+            className="fixed z-[10000] bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl p-2 w-52 animate-scale-in text-xs text-slate-800 dark:text-white"
+          >
+            <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800/80 font-black text-[9px] uppercase tracking-wider text-slate-400">
+              Quick Shortcuts
+            </div>
+            <div className="flex flex-col gap-0.5 mt-1">
+              {contextMenu.type === "order" && (
+                <>
+                  <button
+                    onClick={() => {
+                      router.push(resolveLink("/"));
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg text-left cursor-pointer border-0 bg-transparent text-slate-800 dark:text-slate-200"
+                  >
+                    <Home className="w-4 h-4 text-emerald-500" />
+                    Delivery Dashboard
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (contextMenu.targetId) {
+                        window.open(`${api.client.defaults.baseURL}/orders/${contextMenu.targetId}/invoice`, "_blank");
+                      }
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg text-left cursor-pointer border-0 bg-transparent text-slate-800 dark:text-slate-200"
+                  >
+                    <FileText className="w-4 h-4 text-blue-500" />
+                    Print Order Invoice
+                  </button>
+                </>
+              )}
+
+              {contextMenu.type === "profile" && (
+                <>
+                  <button
+                    onClick={() => router.push(resolveLink("/profile"))}
+                    className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg text-left cursor-pointer border-0 bg-transparent text-slate-800 dark:text-slate-200"
+                  >
+                    <User className="w-4 h-4 text-emerald-500" />
+                    My Driver Profile
+                  </button>
+                  <button
+                    onClick={() => router.push(resolveLink("/history"))}
+                    className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg text-left cursor-pointer border-0 bg-transparent text-slate-800 dark:text-slate-200"
+                  >
+                    <History className="w-4 h-4 text-rose-500" />
+                    Delivery History Log
+                  </button>
+                  <button
+                    onClick={() => router.push(resolveLink("/earnings"))}
+                    className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg text-left cursor-pointer border-0 bg-transparent text-slate-800 dark:text-slate-200"
+                  >
+                    <IndianRupee className="w-4 h-4 text-amber-500" />
+                    Earnings & Payouts
+                  </button>
+                </>
+              )}
+
+              <button
+                onClick={() => setContextMenu(null)}
+                className="flex items-center gap-2 px-3 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-600 dark:text-rose-400 rounded-lg text-left cursor-pointer border-0 bg-transparent font-bold mt-1"
+              >
+                <X className="w-4 h-4" />
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </DeliveryContext.Provider>
   );
