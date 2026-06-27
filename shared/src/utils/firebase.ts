@@ -105,3 +105,95 @@ export const initFirebaseAnalyticsAndCrashlytics = async () => {
   }
   return null;
 };
+
+// Initialize Firebase Performance Monitoring for native apps
+export const initFirebasePerformance = async () => {
+  if (typeof window === "undefined") return null;
+  if ((window as any).Capacitor?.isNative) {
+    try {
+      // @ts-ignore
+      const capPerf = await import("@capacitor-firebase/performance");
+      await capPerf.FirebasePerformance.setPerformanceCollectionEnabled({ enabled: true });
+      console.log("Capacitor Firebase Performance initialized");
+      return capPerf.FirebasePerformance;
+    } catch (err) {
+      console.warn("Capacitor Firebase Performance plugin error:", err);
+      return null;
+    }
+  }
+  return null;
+};
+
+// Helper to log analytics events
+export const logFirebaseEvent = async (name: string, params?: any) => {
+  if (typeof window === "undefined") return;
+  if ((window as any).Capacitor?.isNative) {
+    try {
+      // @ts-ignore
+      const capAnalytics = await import("@capacitor-firebase/analytics");
+      await capAnalytics.FirebaseAnalytics.logEvent({ name, params });
+    } catch (err) {
+      console.warn("Capacitor logEvent error:", err);
+    }
+  } else {
+    try {
+      const { logEvent } = await import("firebase/analytics");
+      const app = getApps().length > 0 ? getApp() : null;
+      if (app) {
+        const analytics = getAnalytics(app);
+        logEvent(analytics, name, params);
+      }
+    } catch (err) {
+      console.warn("Web logEvent error:", err);
+    }
+  }
+};
+
+// Helper to log ecommerce transactions / purchases
+export const logFirebasePurchase = async (
+  transactionId: string,
+  value: number,
+  currency: string = "INR",
+  items?: any[]
+) => {
+  await logFirebaseEvent("purchase", {
+    transaction_id: transactionId,
+    value: value,
+    currency: currency,
+    items: items || [],
+  });
+};
+
+// Helper to log app version and latest version to Firebase Analytics
+export const logFirebaseVersionInfo = async (currentVersion: string, latestVersion: string) => {
+  if (typeof window === "undefined") return;
+  if ((window as any).Capacitor?.isNative) {
+    try {
+      // @ts-ignore
+      const capAnalytics = await import("@capacitor-firebase/analytics");
+      // @ts-ignore
+      await capAnalytics.FirebaseAnalytics.setUserProperty({ key: "app_version", value: currentVersion });
+      // @ts-ignore
+      await capAnalytics.FirebaseAnalytics.setUserProperty({ key: "latest_version", value: latestVersion });
+    } catch (err) {
+      console.warn("Capacitor setUserProperty error:", err);
+    }
+  } else {
+    try {
+      const { setUserProperties } = await import("firebase/analytics");
+      const app = getApps().length > 0 ? getApp() : null;
+      if (app) {
+        const analytics = getAnalytics(app);
+        setUserProperties(analytics, { app_version: currentVersion, latest_version: latestVersion });
+      }
+    } catch (err) {
+      console.warn("Web setUserProperties error:", err);
+    }
+  }
+
+  // Also log as an event
+  await logFirebaseEvent("app_version_info", {
+    current_version: currentVersion,
+    latest_version: latestVersion,
+  });
+};

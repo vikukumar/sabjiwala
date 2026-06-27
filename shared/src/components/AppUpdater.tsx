@@ -6,6 +6,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capawesome-team/capacitor-file-opener';
 import { Toast } from '@capacitor/toast';
 import axios from 'axios';
+import { logFirebaseVersionInfo } from '../utils/firebase';
 
 interface ReleaseAsset {
   name: string;
@@ -42,6 +43,12 @@ export const AppUpdater: React.FC<{ appName: string }> = ({ appName }) => {
 
       const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION || '1.0';
       
+      if (latestRelease.version) {
+        logFirebaseVersionInfo(currentVersion, latestRelease.version).catch(err => {
+          console.warn("Failed to log Firebase version info:", err);
+        });
+      }
+
       if (latestRelease.version && latestRelease.version !== currentVersion) {
         const targetAsset = latestRelease.assets.find(a => {
           if (!a.name.endsWith('.apk')) return false;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, logFirebasePurchase } from "@sbjiwala/shared";
 import { useRouter } from "next/navigation";
 import { resolveLink } from "@/components/AppShell";
 import {
@@ -535,6 +535,17 @@ export default function CheckoutPage() {
         returnUrl: `${window.location.origin}${resolveLink(`/orders/detail?id=${orderData.id}&payment=success`)}`,
       };
       await cashfree.checkout(checkoutOptions);
+      logFirebasePurchase(
+        orderData.order_number || String(orderData.id),
+        orderData.final_total || finalTotal,
+        "INR",
+        (cartData?.items || []).map((item: any) => ({
+          item_id: String(item.product_id),
+          item_name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        }))
+      ).catch((e: any) => console.warn("Failed to log Firebase purchase:", e));
       success("Payment Successful! 🎉", "Your order has been confirmed.");
       router.push(resolveLink(`/orders/detail?id=${orderData.id}&new=1`));
     } catch (err: any) {
@@ -569,15 +580,48 @@ export default function CheckoutPage() {
       const mergedOrderData = { ...orderDetails, ...paymentDetails };
 
       if (paymentMethod === "cod" || finalTotal <= 0) {
+        logFirebasePurchase(
+          mergedOrderData?.order_number || String(mergedOrderData?.id),
+          mergedOrderData?.final_total || finalTotal,
+          "INR",
+          (cartData?.items || []).map((item: any) => ({
+            item_id: String(item.product_id),
+            item_name: item.name,
+            price: item.price,
+            quantity: item.quantity
+          }))
+        ).catch((e: any) => console.warn("Failed to log Firebase purchase:", e));
         success("Order Placed! 🎉", `Order #${mergedOrderData?.order_number} confirmed. Pay on delivery.`);
         router.push(resolveLink(`/orders/detail?id=${mergedOrderData?.id}&new=1`));
       } else if (paymentMethod === "wallet" && walletDeduction >= finalTotal) {
+        logFirebasePurchase(
+          mergedOrderData?.order_number || String(mergedOrderData?.id),
+          mergedOrderData?.final_total || finalTotal,
+          "INR",
+          (cartData?.items || []).map((item: any) => ({
+            item_id: String(item.product_id),
+            item_name: item.name,
+            price: item.price,
+            quantity: item.quantity
+          }))
+        ).catch((e: any) => console.warn("Failed to log Firebase purchase:", e));
         success("Paid via Wallet! 🎉", `₹${walletDeduction.toFixed(2)} deducted from wallet.`);
         router.push(resolveLink(`/orders/detail?id=${mergedOrderData?.id}&new=1`));
       } else if (paymentMethod === "online" && CASHFREE_ENABLED) {
         await launchCashfree(mergedOrderData);
       } else {
         // Fallback: COD
+        logFirebasePurchase(
+          mergedOrderData?.order_number || String(mergedOrderData?.id),
+          mergedOrderData?.final_total || finalTotal,
+          "INR",
+          (cartData?.items || []).map((item: any) => ({
+            item_id: String(item.product_id),
+            item_name: item.name,
+            price: item.price,
+            quantity: item.quantity
+          }))
+        ).catch((e: any) => console.warn("Failed to log Firebase purchase:", e));
         success("Order Placed! 🎉", `Order #${mergedOrderData?.order_number} confirmed.`);
         router.push(resolveLink(`/orders/detail?id=${mergedOrderData?.id}&new=1`));
       }
