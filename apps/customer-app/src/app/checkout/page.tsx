@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -481,15 +481,16 @@ export default function CheckoutPage() {
   }, [items]);
 
   const subtotal = previewData ? previewData.subtotal : localSubtotal;
-  const freeDeliveryAbove = previewData?.free_delivery_above ?? 199;
-  const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= freeDeliveryAbove ? 0 : 20);
+  const freeDeliveryAbove = previewData?.free_delivery_above ?? 0;
+  const deliveryFee = previewData ? previewData.delivery_charge : (subtotal >= freeDeliveryAbove && freeDeliveryAbove > 0 ? 0 : 20);
   const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
-  const platformFee = previewData ? previewData.platform_fee || 0 : 0.0;
-  const convenienceFee = previewData ? previewData.convenience_fee || 0 : 0.0;
+  const platformFee = previewData ? (previewData.platform_fee ?? 0) : 0.0;
+  const convenienceFee = previewData ? (previewData.convenience_fee ?? 0) : 0.0;
+  const gstRate = previewData?.gst_rate ?? 5;
 
   const couponDiscount = previewData ? previewData.coupon_discount : 0.0;
   const taxableAmount = Math.max(0, subtotal + deliveryFee + packagingCharge + platformFee + convenienceFee - couponDiscount);
-  const taxAmount = previewData ? previewData.tax_amount : Math.round(taxableAmount * 0.05 * 100) / 100;
+  const taxAmount = previewData ? previewData.tax_amount : Math.round(taxableAmount * (gstRate / 100) * 100) / 100;
 
   const walletBalance = walletData?.balance || 0;
   const walletDeduction = previewData ? previewData.wallet_deduction : (useWallet ? Math.round(Math.min(walletBalance, subtotal + deliveryFee + taxAmount + packagingCharge + platformFee + convenienceFee - couponDiscount) * 100) / 100 : 0);
@@ -767,13 +768,27 @@ export default function CheckoutPage() {
 
             {/* Price Breakdown */}
             <div className="space-y-2 text-xs">
+              {/* Free delivery progress */}
+              {freeDeliveryAbove > 0 && deliveryFee > 0 && (
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200/50 dark:border-emerald-800/30 rounded-xl p-2.5 mb-2">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">🚚 Free delivery</span>
+                    <span className="text-[10px] text-emerald-600 font-semibold">
+                      {subtotal >= freeDeliveryAbove ? "🎉 Unlocked!" : `₹${(freeDeliveryAbove - subtotal).toFixed(0)} more`}
+                    </span>
+                  </div>
+                  <div className="w-full bg-emerald-100 dark:bg-emerald-900/40 rounded-full h-1.5">
+                    <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-1.5 rounded-full transition-all" style={{ width: `${Math.min(100, (subtotal / freeDeliveryAbove) * 100)}%` }} />
+                  </div>
+                </div>
+              )}
               <div className="flex justify-between text-slate-600 dark:text-slate-400"><span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                <span>Delivery</span>
+                <span>🚚 Delivery</span>
                 <span className={deliveryFee === 0 ? "text-emerald-600 font-bold" : ""}>
                   {deliveryFee === 0 ? (
                     <>
-                      {previewData?.original_delivery_charge && previewData.original_delivery_charge > 0 && (
+                      {previewData?.original_delivery_charge > 0 && (
                         <span className="line-through text-slate-400 mr-1.5 font-normal">
                           ₹{parseFloat(previewData.original_delivery_charge).toFixed(2)}
                         </span>
@@ -784,11 +799,11 @@ export default function CheckoutPage() {
                 </span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                <span>Packaging</span>
+                <span>📦 Packaging</span>
                 <span className={packagingCharge === 0 ? "text-emerald-600 font-bold" : ""}>
                   {packagingCharge === 0 ? (
                     <>
-                      {previewData?.original_packaging_charge && previewData.original_packaging_charge > 0 && (
+                      {previewData?.original_packaging_charge > 0 && (
                         <span className="line-through text-slate-400 mr-1.5 font-normal">
                           ₹{parseFloat(previewData.original_packaging_charge).toFixed(2)}
                         </span>
@@ -810,17 +825,17 @@ export default function CheckoutPage() {
                   <span>₹{convenienceFee.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-slate-600 dark:text-slate-400"><span>Taxes (5%)</span><span>₹{taxAmount.toFixed(2)}</span></div>
-              {couponDiscount > 0 && <div className="flex justify-between text-emerald-600"><span className="font-semibold">Coupon</span><span className="font-bold">-₹{couponDiscount.toFixed(2)}</span></div>}
-              {walletDeduction > 0 && <div className="flex justify-between text-emerald-600 dark:text-emerald-400"><span className="font-bold">Wallet</span><span className="font-bold">-₹{walletDeduction.toFixed(2)}</span></div>}
+              <div className="flex justify-between text-slate-600 dark:text-slate-400"><span>GST ({gstRate}%)</span><span>₹{taxAmount.toFixed(2)}</span></div>
+              {couponDiscount > 0 && <div className="flex justify-between text-emerald-600"><span className="font-semibold">🏷️ Coupon</span><span className="font-bold">-₹{couponDiscount.toFixed(2)}</span></div>}
+              {walletDeduction > 0 && <div className="flex justify-between text-emerald-600 dark:text-emerald-400"><span className="font-bold">💚 Wallet</span><span className="font-bold">-₹{walletDeduction.toFixed(2)}</span></div>}
               <hr className="border-slate-200 dark:border-slate-800" />
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="font-black text-slate-900 dark:text-white text-sm">Total</span>
-                <span className="font-black text-xl text-slate-900 dark:text-white">₹{finalTotal.toFixed(2)}</span>
+                <span className="font-black text-xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">₹{finalTotal.toFixed(2)}</span>
               </div>
               {savings > 0 && (
-                <div className="text-xs text-emerald-650 dark:text-emerald-400 font-semibold text-center py-1.5">
-                  You save ₹{savings.toFixed(2)} on this order!
+                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl p-2 text-center">
+                  <p className="text-[10px] font-bold text-white">🎉 You save ₹{savings.toFixed(2)} on this order!</p>
                 </div>
               )}
               {paymentMethod === "cod" && (

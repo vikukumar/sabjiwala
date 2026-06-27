@@ -331,9 +331,18 @@ class OrderService:
         convenience_fee = round(convenience_fee, 2)
         coupon_discount = round(coupon_discount, 2)
 
-        # Tax calculation (standard 5% applied to everything after discount)
+        # Tax/GST calculation — read rate from SystemSetting 'gst_rate' (default 5%)
+        from app.models.system import SystemSetting as _SS
+        _gst_res = await self.db.execute(select(_SS).where(_SS.key == "gst_rate"))
+        _gst_setting = _gst_res.scalars().first()
+        gst_rate = 0.05
+        if _gst_setting and _gst_setting.value:
+            try:
+                gst_rate = float(_gst_setting.value) / 100.0
+            except ValueError:
+                pass
         taxable_amount = max(0.0, subtotal + delivery_charge + packaging_charge + platform_fee + convenience_fee - coupon_discount)
-        tax_amount = round(taxable_amount * 0.05, 2)
+        tax_amount = round(taxable_amount * gst_rate, 2)
 
         # 4. Wallet deduction
         wallet_amount = 0.0

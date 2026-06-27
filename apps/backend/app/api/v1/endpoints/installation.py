@@ -150,6 +150,18 @@ async def seed_system_settings(db: AsyncSession):
         ), "value_type": "string", "group": "appearance", "description": "HTML Jinja2 template layout of invoices", "is_public": True},
         {"key": "invoice_branding_json", "value": "", "value_json": {"company_name": "Sbjiwala", "company_address": "Main Wholesale Mandi, Jaipur, Rajasthan", "company_phone": "+91 99999 88888", "gstin": "08ABCDE1234F1Z1"}, "value_type": "json", "group": "appearance", "description": "Global business metadata attributes for invoices", "is_public": True},
 
+        # ── Charges & Fees (admin-configurable, all defaults used when vendor rule absent) ──
+        {"key": "gst_rate", "value": "5", "value_type": "float", "group": "payment", "description": "GST / tax percentage applied to all orders (e.g., 5 means 5%)", "is_public": False},
+        {"key": "enable_delivery_fee", "value": "true", "value_type": "boolean", "group": "delivery", "description": "Globally enable/disable delivery charges", "is_public": False},
+        {"key": "default_base_delivery_charge", "value": "20", "value_type": "float", "group": "delivery", "description": "Base delivery charge (₹) when no vendor rule is configured", "is_public": False},
+        {"key": "default_per_km_charge", "value": "2", "value_type": "float", "group": "delivery", "description": "Per-km delivery charge (₹) used when no vendor rule is configured", "is_public": False},
+        {"key": "free_delivery_above", "value": "199", "value_type": "float", "group": "delivery", "description": "Order subtotal above which delivery is free (₹). 0 = disabled", "is_public": True},
+        {"key": "platform_handling_fee", "value": "5", "value_type": "float", "group": "payment", "description": "Default packaging / handling fee (₹) when no vendor rule is set", "is_public": False},
+        {"key": "enable_platform_fee", "value": "false", "value_type": "boolean", "group": "payment", "description": "Enable the optional platform fee line item", "is_public": False},
+        {"key": "default_platform_fee", "value": "0", "value_type": "float", "group": "payment", "description": "Platform fee amount (₹) when enabled and no vendor override", "is_public": False},
+        {"key": "free_platform_fee_above", "value": "0", "value_type": "float", "group": "payment", "description": "Waive platform/packaging fee when subtotal exceeds this amount. 0 = disabled", "is_public": False},
+        {"key": "default_convenience_fee", "value": "0", "value_type": "float", "group": "payment", "description": "Convenience fee (₹) applied per order when no vendor override", "is_public": False},
+        {"key": "delivery_boy_rate_per_km", "value": "10", "value_type": "float", "group": "delivery", "description": "Delivery boy payout rate per km (₹) for platform couriers", "is_public": False},
     ]
     for d in defaults:
         res = await db.execute(select(SystemSetting).where(SystemSetting.key == d["key"]))

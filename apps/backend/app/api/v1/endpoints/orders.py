@@ -164,15 +164,15 @@ async def preview_order(
     elif admin_cf and admin_cf.value:
         convenience_fee = float(admin_cf.value)
 
-    # Free Delivery Above
+    # Free Delivery Above (Vendor rule takes priority over admin setting)
     free_delivery_limit = 0.0
-    if admin_fd and admin_fd.value is not None:
+    if rule and rule.free_delivery_above is not None:
+        free_delivery_limit = float(rule.free_delivery_above)
+    elif admin_fd and admin_fd.value is not None:
         try:
             free_delivery_limit = float(admin_fd.value)
         except ValueError:
             pass
-    elif rule and rule.free_delivery_above is not None:
-        free_delivery_limit = float(rule.free_delivery_above)
 
     if rule:
         if subtotal < float(rule.min_order_amount):
@@ -208,7 +208,7 @@ async def preview_order(
         packaging_charge = 0.0
         platform_fee = 0.0
 
-    # Coupon discount (must calculate earlier to use in tax, but let's decouple coupon from tax for now, wait: GST should be calculated AFTER discount. Let's compute coupon_discount first)
+    # Coupon discount
     coupon_discount = 0.0
     applied_coupon_code = body.coupon_code or cart.coupon_code
     if applied_coupon_code:
@@ -222,16 +222,28 @@ async def preview_order(
             if validation.get("coupon_type") == "free_delivery":
                 delivery_charge = 0.0
 
-    # Round individual components first to prevent floating point/off-by-one errors
+    # Round individual components
     subtotal = round(subtotal, 2)
     delivery_charge = round(delivery_charge, 2)
     packaging_charge = round(packaging_charge, 2)
     platform_fee = round(platform_fee, 2)
     convenience_fee = round(convenience_fee, 2)
 
-    # Tax calculation (standard 5% applied to everything after discount)
+    # GST rate: read from SystemSetting 'gst_rate' (stored as percentage, default 5)
+    from app.models.system import SystemSetting as _SS
+    _gst_res = await db.execute(select(_SS).where(_SS.key == "gst_rate"))
+    _gst_setting = _gst_res.scalars().first()
+    gst_rate_pct = 5.0
+    if _gst_setting and _gst_setting.value:
+        try:
+            gst_rate_pct = float(_gst_setting.value)
+        except ValueError:
+            pass
+    gst_rate = gst_rate_pct / 100.0
+
+    # Tax calculation — after discount, using live GST rate
     taxable_amount = max(0.0, subtotal + delivery_charge + packaging_charge + platform_fee + convenience_fee - coupon_discount)
-    tax_amount = round(taxable_amount * 0.05, 2)
+    tax_amount = round(taxable_amount * gst_rate, 2)
 
     # Wallet deduction
     wallet_amount = 0.0
@@ -243,7 +255,6 @@ async def preview_order(
         wallet_amount = round(min(wallet_balance, total_before_wallet), 2)
 
     total_amount = round(subtotal + delivery_charge + tax_amount + packaging_charge + platform_fee + convenience_fee - coupon_discount - wallet_amount, 2)
-
     return APIResponse(
         success=True,
         data={
@@ -253,6 +264,7 @@ async def preview_order(
             "platform_fee": round(platform_fee, 2),
             "convenience_fee": round(convenience_fee, 2),
             "tax_amount": round(tax_amount, 2),
+            "gst_rate": round(gst_rate_pct, 2),
             "packaging_charge": round(packaging_charge, 2),
             "original_packaging_charge": round(original_packaging_charge, 2),
             "coupon_discount": round(coupon_discount, 2),
