@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -312,12 +312,12 @@ export default function VendorDashboard() {
     let map: any = null;
     let active = true;
 
+    // Reset container and Leaflet ID to avoid duplicate initializations
+    mapContainerRef.current.innerHTML = "";
+    (mapContainerRef.current as any)._leaflet_id = null;
+
     import("leaflet").then((L) => {
       if (!active || !mapContainerRef.current) return;
-
-      if ((mapContainerRef.current as any)._leaflet_id) {
-        return;
-      }
 
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
@@ -327,6 +327,12 @@ export default function VendorDashboard() {
       });
 
       map = L.map(mapContainerRef.current!, { attributionControl: false }).setView([centerLat, centerLng], 13);
+      
+      // Delay size calculation slightly to ensure container elements are fully sized
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+      }, 200);
+
       const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
       const tileUrl = isDark
         ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
