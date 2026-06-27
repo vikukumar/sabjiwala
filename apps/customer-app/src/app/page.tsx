@@ -259,7 +259,7 @@ function TrustBadges() {
       {badges.map((b) => {
         const Icon = b.icon;
         return (
-          <div key={b.label} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex items-center gap-3 shadow-md hover:shadow-lg transition-shadow">
+          <div key={b.label} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex items-center gap-3 shadow-md hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out active:scale-98 cursor-pointer">
             <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl flex-shrink-0">
               <Icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
@@ -1028,7 +1028,7 @@ function QuickNavWidgets() {
             <Link
               key={w.label}
               href={resolveLink(w.href)}
-              className={`flex items-center gap-3 p-4 bg-gradient-to-br ${w.color} border border-slate-200/50 dark:border-slate-800/80 rounded-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-md cursor-pointer ${w.borderColor}`}
+              className={`flex items-center gap-3 p-4 bg-gradient-to-br ${w.color} border border-slate-200/50 dark:border-slate-800/80 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:scale-[1.03] hover:shadow-lg cursor-pointer active:scale-95 ${w.borderColor}`}
             >
               <div className="p-3 bg-white dark:bg-slate-900 rounded-xl shadow-sm flex-shrink-0">
                 <Icon className={`w-5 h-5 ${w.iconColor}`} />
@@ -1130,7 +1130,13 @@ export default function HomePage() {
   const isInRange = rangeCheck ? rangeCheck.in_range : true;
 
   return (
-    <div className="space-y-8 pb-32 md:pb-28 relative">
+    <div className="space-y-8 pb-32 md:pb-28 relative overflow-hidden bg-slate-50/40 dark:bg-slate-950/40 min-h-screen">
+      {/* Background Animated Blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="blob bg-emerald-400 dark:bg-emerald-900/10 w-96 h-96 -top-20 -left-20" />
+        <div className="blob bg-teal-400 dark:bg-teal-900/10 w-80 h-80 top-1/3 -right-20" style={{ animationDelay: '-5s' }} />
+        <div className="blob bg-amber-200 dark:bg-amber-800/10 w-72 h-72 bottom-1/3 left-10" style={{ animationDelay: '-10s' }} />
+      </div>
       {/* Push Notification Toast Banner */}
       {notificationBanner && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] w-[90%] max-w-md bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-2xl shadow-2xl p-4 flex items-start gap-3 border-l-4 border-l-emerald-500 animate-slide-down">
