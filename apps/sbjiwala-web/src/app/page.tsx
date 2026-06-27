@@ -28,9 +28,11 @@ import {
   ArrowUpRight,
   ChevronRight,
   MessageSquare,
-  Smartphone
+  Smartphone,
+  ShieldCheck
 } from "lucide-react";
 import { api } from "@sbjiwala/shared";
+import { Badge } from "@/components/ui";
 
 interface UserPayload {
   sub: string;
@@ -95,10 +97,10 @@ export default function UnifiedLandingPage() {
     const themes: ("light" | "dark" | "amoled")[] = ["light", "dark", "amoled"];
     const currentIdx = themes.indexOf(theme);
     const nextTheme = themes[(currentIdx + 1) % themes.length];
-    
+
     setTheme(nextTheme);
     localStorage.setItem("sw_theme", nextTheme);
-    
+
     document.documentElement.classList.remove("dark", "amoled");
     if (nextTheme === "dark") {
       document.documentElement.classList.add("dark");
@@ -142,7 +144,7 @@ export default function UnifiedLandingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090d10] amoled:bg-black text-slate-800 dark:text-slate-100 flex flex-col justify-between transition-colors duration-300 antialiased font-sans relative overflow-x-hidden">
-      
+
       {/* Dynamic Ambient Background Blobs (iOS/macOS glassy style) */}
       <div className="blob-container">
         <div className="blob bg-emerald-500/20 w-[350px] h-[350px] top-[-50px] left-[-50px]" />
@@ -234,16 +236,16 @@ export default function UnifiedLandingPage() {
 
       {/* Main Hero & Sections */}
       <main className="flex-1 space-y-24 pb-20">
-        
+
         {/* Section 1: Hero Section */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-16 grid lg:grid-cols-12 gap-12 items-center">
-          
+
           {/* Left Text Column */}
           <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-emerald-500/10 dark:bg-emerald-400/5 border border-emerald-555/20 text-emerald-700 dark:text-emerald-400 text-xs font-black uppercase tracking-wider animate-pulse mx-auto lg:mx-0">
               <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Sourced directly from village farms
             </div>
-            
+
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.1] text-slate-900 dark:text-white">
               Kisan ke Ghar Se<br />
               <span className="bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-450 dark:to-teal-400 bg-clip-text text-transparent">
@@ -294,14 +296,14 @@ export default function UnifiedLandingPage() {
           <div className="lg:col-span-5 relative group">
             {/* Visual background accents */}
             <div className="absolute inset-0 bg-emerald-500/10 dark:bg-emerald-450/5 rounded-[40px] blur-3xl scale-95 group-hover:scale-105 transition-transform duration-500" />
-            
+
             <div className="relative border border-slate-200 dark:border-slate-800/60 rounded-[32px] overflow-hidden shadow-2xl bg-white dark:bg-slate-900/60 p-4 hover:scale-[1.01] transition-all duration-300">
               <img
                 src="/hero_vegetables.png"
                 alt="Fresh Organic Vegetables"
                 className="w-full h-auto object-cover rounded-2xl"
               />
-              
+
               {/* Glassmorphic overlay card */}
               <div className="absolute bottom-8 left-8 right-8 bg-white/70 dark:bg-slate-950/75 backdrop-blur-md border border-white/20 dark:border-slate-850 p-4.5 rounded-2xl shadow-xl flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -505,12 +507,14 @@ export default function UnifiedLandingPage() {
             </div>
           </div>
         </section>
+        <AboutSbjiwalaSection />
+        <DownloadAppsSection />
 
         {/* Section 4: Live Statistics */}
         <section id="metrics" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-24">
           <div className="bg-slate-900 dark:bg-slate-950 border border-slate-800 rounded-[32px] p-8 sm:p-12 text-white relative overflow-hidden shadow-2xl">
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full translate-x-1/3 -translate-y-1/3 blur-3xl" />
-            
+
             <div className="grid lg:grid-cols-3 gap-12 items-center">
               <div className="space-y-4 lg:col-span-1">
                 <div className="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
@@ -529,7 +533,7 @@ export default function UnifiedLandingPage() {
                   <p className="text-3xl font-black text-emerald-400">450+</p>
                   <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">Family Farms</p>
                 </div>
-                
+
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-1">
                   <p className="text-3xl font-black text-emerald-400">Instant</p>
                   <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">Avg Delivery</p>
@@ -554,7 +558,7 @@ export default function UnifiedLandingPage() {
           <div className="bg-gradient-to-br from-emerald-900 to-teal-950 rounded-[32px] p-8 sm:p-12 text-white grid lg:grid-cols-2 gap-12 items-center relative overflow-hidden shadow-xl">
             {/* Background elements */}
             <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-emerald-500/20 rounded-full blur-2xl" />
-            
+
             <div className="space-y-6">
               <div className="inline-flex items-center gap-1.5 bg-emerald-500/20 text-emerald-305 border border-emerald-500/30 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
                 <Smartphone className="w-3.5 h-3.5" /> Mobile Native Experience
@@ -565,7 +569,7 @@ export default function UnifiedLandingPage() {
               <p className="text-xs sm:text-sm leading-relaxed text-slate-300 font-semibold">
                 Download the Sbjiwala mobile application for iOS and Android. Unlock live GPS courier map coordinates, secure checkout options, and automatic alerts directly in the background without browser stalls.
               </p>
-              
+
               <div className="flex flex-wrap gap-4 pt-2">
                 <button className="flex items-center gap-3 bg-white text-slate-900 px-5 py-3 rounded-2xl font-black text-xs hover:bg-slate-100 transition-all uppercase tracking-wider hover:scale-[1.02] active:scale-95 shadow-md">
                   <Download className="w-4.5 h-4.5 text-emerald-600" /> Google Play Store
@@ -586,7 +590,7 @@ export default function UnifiedLandingPage() {
                     <rect x="25" y="0" width="10" height="20" />
                     <rect x="40" y="0" width="20" height="10" />
                     <rect x="80" y="0" width="20" height="20" />
-                    
+
                     <rect x="0" y="25" width="10" height="10" />
                     <rect x="20" y="25" width="20" height="15" />
                     <rect x="60" y="25" width="15" height="20" />
@@ -721,5 +725,211 @@ export default function UnifiedLandingPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+
+// ==================== ABOUT SECTION ====================
+function AboutSbjiwalaSection() {
+  return (
+    <section className="py-16 px-4 max-w-4xl mx-auto space-y-12">
+      <div className="text-center space-y-3">
+        <Badge variant="outline" className="text-emerald-600 border-emerald-650/30 px-3 py-1 text-[10px] uppercase font-black">Our Philosophy</Badge>
+        <h2 className="text-2xl sm:text-3xl font-black text-slate-850 dark:text-white uppercase tracking-tight">Why Choose Sbjiwala?</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+          We bridge the gap between fresh farms and your dining table, bringing you high quality, residue-free vegetables and fruits within minutes.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all text-left">
+          <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-450 rounded-2xl flex items-center justify-center">
+            <Leaf className="w-5 h-5" />
+          </div>
+          <h3 className="font-extrabold text-sm text-slate-850 dark:text-white uppercase">100% Fresh & Organic</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            All vegetables are harvested at dawn, multi-checked for grade-A quality, and ozone washed to eliminate contaminants.
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all text-left">
+          <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-450 rounded-2xl flex items-center justify-center">
+            <Truck className="w-5 h-5" />
+          </div>
+          <h3 className="font-extrabold text-sm text-slate-850 dark:text-white uppercase">Superfast Express Delivery</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            Delivered directly from the nearest vendor outlet to your doorstep in vacuum-sealed food-grade packaging.
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all text-left">
+          <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-450 rounded-2xl flex items-center justify-center">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <h3 className="font-extrabold text-sm text-slate-850 dark:text-white uppercase">Support Local Farmers</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            We source directly from smallholder farms, ensuring fair prices to growers and zero supply-chain carbon waste.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ==================== DOWNLOAD SECTION ====================
+function DownloadAppsSection() {
+  const [selectedApp, setSelectedApp] = useState<"customer" | "vendor" | "delivery" | "admin" | "agent">("customer");
+  const [device, setDevice] = useState<"android" | "ios">("android");
+  const [releaseData, setReleaseData] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.userAgent) {
+      const ua = navigator.userAgent.toLowerCase();
+      if (/iphone|ipad|ipod/.test(ua)) {
+        setDevice("ios");
+      } else {
+        setDevice("android");
+      }
+    }
+
+    const fetchLatestRelease = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://sbjiwala.qzz.io/api/v1";
+        const response = await fetch(`${apiUrl}/system/latest-release`);
+        if (response.ok) {
+          const data = await response.json();
+          setReleaseData(data);
+        }
+      } catch (err) {
+        console.error("Failed to load latest release", err);
+      }
+    };
+    fetchLatestRelease();
+  }, []);
+
+  const getDownloadUrl = () => {
+    if (device === "ios") {
+      return `https://apps.apple.com/app/sbjiwala-${selectedApp}`;
+    }
+    if (!releaseData) {
+      return "https://sbjiwala.qzz.io/api/v1/system/latest-release";
+    }
+
+    const apkAsset = releaseData.assets?.find((a: any) => {
+      if (!a.name.endsWith(".apk")) return false;
+      const nameLower = a.name.toLowerCase();
+      if (selectedApp === "customer") {
+        return !nameLower.includes("vendor") &&
+          !nameLower.includes("delivery") &&
+          !nameLower.includes("courier") &&
+          !nameLower.includes("admin") &&
+          !nameLower.includes("agent") &&
+          !nameLower.includes("support");
+      } else {
+        if (selectedApp === "agent") {
+          return nameLower.includes("agent") || nameLower.includes("support");
+        }
+        if (selectedApp === "delivery") {
+          return nameLower.includes("delivery") || nameLower.includes("courier");
+        }
+        return nameLower.includes(selectedApp.toLowerCase());
+      }
+    });
+
+    return apkAsset ? apkAsset.browser_download_url : `https://github.com/vikukumar/sbjiwala/releases/latest/download/sbjiwala-${selectedApp}.apk`;
+  };
+
+  const currentDownloadUrl = getDownloadUrl();
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(currentDownloadUrl)}&color=059669`;
+  const latestVersion = releaseData?.version || "1.0.0";
+
+  return (
+    <section className="bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 py-16 px-4">
+      <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <div className="space-y-6 text-left">
+          <Badge variant="success" className="font-black px-3 py-1 text-[10px] uppercase">Mobile Apps</Badge>
+          <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-850 dark:text-white leading-tight">
+            Download our Mobile App Suite
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+            Get instant updates, order management, live delivery tracking, and agent support consoles directly on your phone.
+          </p>
+
+          {/* App Selector Tabs */}
+          <div className="space-y-1.5 text-left">
+            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Select Application</label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: "customer", label: "🛒 Customer App" },
+                { id: "vendor", label: "🏪 Vendor App" },
+                { id: "delivery", label: "🛵 Delivery App" },
+                { id: "admin", label: "🔑 Admin App" },
+                { id: "agent", label: "🎧 Agent Console" }
+              ].map(app => (
+                <button
+                  key={app.id}
+                  onClick={() => setSelectedApp(app.id as any)}
+                  className={`px-3.5 py-2.5 text-xs font-bold border rounded-2xl transition-all cursor-pointer active:scale-95 ${selectedApp === app.id
+                    ? "bg-slate-900 border-slate-900 text-white dark:bg-white dark:border-white dark:text-slate-950 shadow-sm"
+                    : "border-slate-200 hover:border-slate-300 dark:border-slate-800 text-slate-650 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
+                    }`}
+                >
+                  {app.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Device Tabs */}
+          <div className="space-y-1.5 text-left">
+            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-55 uppercase tracking-widest">Select Device OS</label>
+            <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-205 dark:border-slate-800 w-fit gap-1">
+              <button
+                onClick={() => setDevice("android")}
+                className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${device === "android"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                  }`}
+              >
+                🤖 Android (APK)
+              </button>
+              <button
+                onClick={() => setDevice("ios")}
+                className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${device === "ios"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                  }`}
+              >
+                🍏 iOS (App Store)
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-2 flex flex-wrap gap-4 items-center">
+            <a
+              href={currentDownloadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-8 py-4 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-2"
+            >
+              <span>Download {selectedApp.toUpperCase()} for {device === "android" ? `Android (v${latestVersion})` : "iOS"}</span>
+              <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center justify-center p-6 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl shadow-xl space-y-4">
+          <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900 rounded-2xl shadow-inner">
+            <img src={qrCodeUrl} alt="Scan to download" className="w-40 h-40 object-contain rounded-lg" />
+          </div>
+          <div className="text-center space-y-1">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-55 uppercase tracking-widest">Scan QR Code</span>
+            <p className="text-[11px] font-bold text-slate-650 dark:text-slate-300 px-4">
+              Open your phone camera to scan and download the {selectedApp.toUpperCase()} {device === "android" ? "Android APK" : "iOS App"} instantly!
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
