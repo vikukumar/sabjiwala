@@ -70,6 +70,7 @@ export default function RootLayout({
         />
         <Providers>
           <StatusBarInit />
+          <AppUpdater appName="admin" />
           {children}
         </Providers>
       </body>

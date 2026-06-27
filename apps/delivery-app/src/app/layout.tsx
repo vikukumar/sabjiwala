@@ -70,6 +70,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <Providers>
           <StatusBarInit />
+          <AppUpdater appName="delivery" />
           {children}
         </Providers>
         <Script
