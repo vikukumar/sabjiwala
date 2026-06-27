@@ -413,11 +413,10 @@ function CategoriesStrip({ active, setActive }: { active: string; setActive: (va
             <button
               key={cat.id}
               onClick={() => setActive(cat.name)}
-              className={`relative overflow-hidden rounded-3xl p-5 text-left border transition-all duration-300 hover:scale-[1.03] hover:-translate-y-0.5 group active:scale-95 cursor-pointer ${
-                isSelected
+              className={`relative overflow-hidden rounded-3xl p-5 text-left border transition-all duration-300 hover:scale-[1.03] hover:-translate-y-0.5 group active:scale-95 cursor-pointer ${isSelected
                   ? "border-emerald-500 ring-2 ring-emerald-500/20 shadow-md bg-white dark:bg-slate-900"
                   : "border-slate-200 dark:border-slate-800/80 shadow-sm bg-gradient-to-br " + details.gradient
-              }`}
+                }`}
             >
               {/* Floating Large background emoji */}
               <span className="absolute -right-2 -bottom-2 text-6xl opacity-10 group-hover:scale-125 group-hover:rotate-12 transition-transform duration-300 pointer-events-none select-none">
@@ -518,11 +517,11 @@ function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: nu
   const R = 6371; // km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
@@ -603,7 +602,7 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
         || p.vendor_longitude
         || null;
       const vRad = p.attributes?.vendor_radius_km || 10.0;
-      
+
       const distance = (coords && vLat && vLon)
         ? getHaversineDistance(coords.lat, coords.lon, parseFloat(vLat), parseFloat(vLon))
         : 0;
@@ -612,7 +611,7 @@ function ProductsGrid({ categoryFilter }: { categoryFilter?: string }) {
 
     // Check products in delivery radius
     const inRangeProducts = mapped.filter((p: any) => p.distance <= p.vendor_radius);
-    
+
     let isOutofRange = false;
     let targetProducts = inRangeProducts;
 
@@ -772,7 +771,7 @@ function ComingSoonArea({ currentAddress, onOpenLocation }: { currentAddress: st
 
       <div className="space-y-3">
         <h2 className="text-3xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
-          Coming Soon in<br/>
+          Coming Soon in<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-350">
             Your Area! 🚀
           </span>
@@ -841,7 +840,7 @@ function HomeSkeleton() {
     <div className="space-y-8 pb-32 animate-pulse px-4 w-full max-w-7xl mx-auto">
       {/* Hero skeleton */}
       <div className="h-64 sm:h-80 bg-slate-200 dark:bg-slate-800 rounded-3xl mt-4" />
-      
+
       {/* Trust Badges skeleton */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-6xl mx-auto -mt-12 relative z-10">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -919,7 +918,7 @@ function PromoPopupModal({ ad, onClose }: { ad: any; onClose: () => void }) {
 function PipVideoAd({ ad }: { ad: any }) {
   const [closed, setClosed] = useState(false);
   const [muted, setMuted] = useState(true);
-  
+
   if (!ad || closed) return null;
 
   return (
@@ -933,7 +932,7 @@ function PipVideoAd({ ad }: { ad: any }) {
         playsInline
         className="absolute inset-0 w-full h-full object-cover"
       />
-      
+
       {/* Overlay gradient */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
 
@@ -1179,9 +1178,9 @@ export default function HomePage() {
           <TrustBadges />
           <QuickNavWidgets />
           <OffersBanner />
-          
+
           <CategoriesStrip active={selectedCategory} setActive={setSelectedCategory} />
-          
+
           {/* Products Grid filtered by category selection */}
           <div className="px-4 space-y-4">
             <div className="flex items-center gap-2">
@@ -1193,8 +1192,8 @@ export default function HomePage() {
             <ProductsGrid categoryFilter={selectedCategory === "All" ? undefined : selectedCategory} />
           </div>
 
-          <AboutSbjiwalaSection />
-          <DownloadAppsSection />
+          {/* <AboutSbjiwalaSection />
+          <DownloadAppsSection /> */}
         </>
       )}
 
@@ -1301,12 +1300,12 @@ function DownloadAppsSection() {
       if (!a.name.endsWith(".apk")) return false;
       const nameLower = a.name.toLowerCase();
       if (selectedApp === "customer") {
-        return !nameLower.includes("vendor") && 
-               !nameLower.includes("delivery") && 
-               !nameLower.includes("courier") && 
-               !nameLower.includes("admin") && 
-               !nameLower.includes("agent") && 
-               !nameLower.includes("support");
+        return !nameLower.includes("vendor") &&
+          !nameLower.includes("delivery") &&
+          !nameLower.includes("courier") &&
+          !nameLower.includes("admin") &&
+          !nameLower.includes("agent") &&
+          !nameLower.includes("support");
       } else {
         if (selectedApp === "agent") {
           return nameLower.includes("agent") || nameLower.includes("support");
@@ -1351,11 +1350,10 @@ function DownloadAppsSection() {
                 <button
                   key={app.id}
                   onClick={() => setSelectedApp(app.id as any)}
-                  className={`px-3.5 py-2.5 text-xs font-bold border rounded-2xl transition-all cursor-pointer active:scale-95 ${
-                    selectedApp === app.id
+                  className={`px-3.5 py-2.5 text-xs font-bold border rounded-2xl transition-all cursor-pointer active:scale-95 ${selectedApp === app.id
                       ? "bg-slate-900 border-slate-900 text-white dark:bg-white dark:border-white dark:text-slate-950 shadow-sm"
                       : "border-slate-200 hover:border-slate-300 dark:border-slate-800 text-slate-650 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
-                  }`}
+                    }`}
                 >
                   {app.label}
                 </button>
@@ -1369,21 +1367,19 @@ function DownloadAppsSection() {
             <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-205 dark:border-slate-800 w-fit gap-1">
               <button
                 onClick={() => setDevice("android")}
-                className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
-                  device === "android"
+                className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${device === "android"
                     ? "bg-emerald-600 text-white shadow-sm"
                     : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
-                }`}
+                  }`}
               >
                 🤖 Android (APK)
               </button>
               <button
                 onClick={() => setDevice("ios")}
-                className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
-                  device === "ios"
+                className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${device === "ios"
                     ? "bg-emerald-600 text-white shadow-sm"
                     : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
-                }`}
+                  }`}
               >
                 🍏 iOS (App Store)
               </button>

@@ -21,6 +21,7 @@ import {
   LocateFixed, Maximize2, ArrowLeft, CheckCircle2, Clock,
   TriangleAlert, Route
 } from "lucide-react";
+import { createCustomerIcon, createStoreIcon, createDeliveryAgentIcon } from "@sbjiwala/shared";
 
 // ─────────────────────── Types ───────────────────────
 
@@ -244,6 +245,7 @@ function SbjiwalaNavMap({
   const leg2LineRef = useRef<any>(null);
   const followMode = useRef(true);
   const routeFetchTimer = useRef<any>(null);
+  const leafletInstanceRef = useRef<any>(null);
 
   const [activeRoute, setActiveRoute] = useState<RouteData | null>(null);
   const [nextStep, setNextStep] = useState<OsrmStep | null>(null);
@@ -290,6 +292,7 @@ function SbjiwalaNavMap({
 
     import("leaflet").then((L) => {
       if (!active || !mapRef.current || mapObjRef.current) return;
+      leafletInstanceRef.current = L;
 
       const initialCenter = destPoint
         ? [destPoint.lat, destPoint.lng] as [number, number]
@@ -311,14 +314,14 @@ function SbjiwalaNavMap({
 
       // Store marker
       if (storePoint) {
-        const icon = L.divIcon({ className: "", html: storeMarkerHtml(), iconSize: [38, 38], iconAnchor: [19, 19] });
+        const icon = createStoreIcon(L);
         L.marker([storePoint.lat, storePoint.lng], { icon }).addTo(map)
           .bindPopup(`<b>📦 ${storePoint.label}</b>`);
       }
 
       // Customer marker
       if (customerPoint) {
-        const icon = L.divIcon({ className: "", html: customerMarkerHtml(), iconSize: [38, 38], iconAnchor: [19, 19] });
+        const icon = createCustomerIcon(L);
         L.marker([customerPoint.lat, customerPoint.lng], { icon }).addTo(map)
           .bindPopup(`<b>🏠 ${customerPoint.label}</b>`);
       }
@@ -338,7 +341,7 @@ function SbjiwalaNavMap({
       leg2LineRef.current = leg2;
 
       // Vehicle marker
-      const vIcon = L.divIcon({ className: "", html: vehicleMarkerHtml(heading, isPicked), iconSize: [44, 44], iconAnchor: [22, 22] });
+      const vIcon = createDeliveryAgentIcon(L, "bike", heading);
       const vMarker = L.marker(currentPos, { icon: vIcon, zIndexOffset: 1000 }).addTo(map);
       vehicleMarkerRef.current = vMarker;
 
@@ -393,14 +396,9 @@ function SbjiwalaNavMap({
     // Update vehicle marker position and rotation
     if (vehicleMarkerRef.current) {
       vehicleMarkerRef.current.setLatLng(currentPos);
-      const L = (window as any).L;
+      const L = leafletInstanceRef.current;
       if (L) {
-        const newIcon = L.divIcon({
-          className: "",
-          html: vehicleMarkerHtml(heading, isPicked),
-          iconSize: [44, 44],
-          iconAnchor: [22, 22],
-        });
+        const newIcon = createDeliveryAgentIcon(L, "bike", heading);
         vehicleMarkerRef.current.setIcon(newIcon);
       }
     }
