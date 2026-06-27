@@ -531,18 +531,19 @@ class OrderService:
             reference_id=str(order.id)
         )
 
-        # Trigger vendor in-app notification for new order
+        # Trigger vendor push notification for new order (guaranteed FCM)
         if vendor_user_id:
             try:
-                await self.notification_service.dispatch(
-                    event_key="order_new_for_vendor",
+                await self.notification_service.dispatch_raw(
                     user_id=vendor_user_id,
-                    variables={"order_number": order.order_number, "total_amount": float(order.total_amount)},
+                    title="Naya Customer Order Aaya! 🛒",
+                    body=f"Order {order.order_number} — ₹{float(order.total_amount):.0f}. Abhi accept karein!",
+                    event_key="order_new_for_vendor",
                     reference_type="order",
                     reference_id=str(order.id)
                 )
             except Exception as notif_err:
-                logger.warning("Failed to send vendor new-order notification", error=str(notif_err))
+                logger.warning("Failed to send vendor new-order push notification", error=str(notif_err))
 
         return order, pay_info
 
@@ -787,14 +788,60 @@ class OrderService:
         except Exception as ws_err:
             logger.error("Failed to broadcast WebSocket status update", order_id=str(order.id), error=str(ws_err))
 
-        # Send notifications
-        await self.notification_service.dispatch(
-            event_key=f"order_{status.value}",
-            user_id=order.user_id,
-            variables={"order_number": order.order_number},
-            reference_type="order",
-            reference_id=str(order.id)
-        )
+        # ── Push notifications ────────────────────────────────────────────────
+        # 1. Customer: notify on every status change
+        try:
+            await self.notification_service.dispatch(
+                event_key=f"order_{status.value}",
+                user_id=order.user_id,
+                variables={"order_number": order.order_number, "status": status.value},
+                reference_type="order",
+                reference_id=str(order.id)
+            )
+        except Exception as e:
+            logger.warning("Failed to send customer status notification", error=str(e))
+
+        # 2. Vendor: notify when customer places/cancels or delivery updates happen
+        if vendor_user_id:
+            vendor_events = {
+                OrderStatus.CANCELLED: ("order_cancelled_vendor", "Order Cancel Ho Gaya ❌", f"Order {order.order_number} customer/admin ne cancel kiya hai."),
+                OrderStatus.DELIVERED: ("order_delivered_vendor", "Order Deliver Ho Gaya! 💰", f"Order {order.order_number} successfully deliver ho gaya. Earnings credit ho gayi."),
+                OrderStatus.PICKED: ("order_picked_vendor", "Order Pick Ho Gaya 🚀", f"Delivery agent ne order {order.order_number} pick kar liya hai."),
+                OrderStatus.OUT_FOR_DELIVERY: ("order_out_for_delivery_vendor", "Order Out For Delivery! 🛵", f"Order {order.order_number} ab delivery ke raaste mein hai."),
+            }
+            if status in vendor_events:
+                try:
+                    ev_key, ev_title, ev_body = vendor_events[status]
+                    await self.notification_service.dispatch_raw(
+                        user_id=vendor_user_id,
+                        title=ev_title,
+                        body=ev_body,
+                        event_key=ev_key,
+                        reference_type="order",
+                        reference_id=str(order.id)
+                    )
+                except Exception as e:
+                    logger.warning("Failed to send vendor status notification", error=str(e))
+
+        # 3. Delivery boy: notify on assignment and key events
+        if order.delivery_boy_id:
+            delivery_events = {
+                OrderStatus.CANCELLED: ("order_cancelled_delivery", "Order Cancel Ho Gaya ❌", f"Order {order.order_number} cancel ho gaya hai."),
+                OrderStatus.OUT_FOR_DELIVERY: ("order_out_for_delivery_delivery", "Out For Delivery Confirm! 🛵", f"Order {order.order_number} ka out-for-delivery status set hai. Navigate karein!"),
+            }
+            if status in delivery_events:
+                try:
+                    ev_key, ev_title, ev_body = delivery_events[status]
+                    await self.notification_service.dispatch_raw(
+                        user_id=order.delivery_boy_id,
+                        title=ev_title,
+                        body=ev_body,
+                        event_key=ev_key,
+                        reference_type="order",
+                        reference_id=str(order.id)
+                    )
+                except Exception as e:
+                    logger.warning("Failed to send delivery boy status notification", error=str(e))
 
         # Generate Invoice if Delivered
         if status == OrderStatus.DELIVERED:
@@ -805,3 +852,4 @@ class OrderService:
                 logger.error(f"Failed to trigger invoice generation: {e}")
 
         return order
+

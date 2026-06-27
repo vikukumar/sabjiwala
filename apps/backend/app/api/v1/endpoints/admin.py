@@ -1,7 +1,7 @@
 """
 Super Admin dashboard and oversight endpoints.
 """
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -1897,4 +1897,75 @@ async def test_admin_email_template(
         raise HTTPException(status_code=500, detail=f"Error rendering/sending test email: {str(e)}")
 
 
+# ─── Admin FCM Push Notification Broadcast ──────────────────────────────────
 
+from pydantic import BaseModel as PydanticBase
+
+class AdminPushRequest(PydanticBase):
+    title: str
+    body: str
+    user_ids: Optional[List[UUID]] = None          # specific users; None = broadcast to all
+    user_type: Optional[str] = None                # filter by user_type: customer/vendor/delivery/agent
+    data: Optional[Dict[str, str]] = None          # extra FCM data payload
+
+
+@router.post("/notifications/send-push", response_model=APIResponse)
+async def admin_send_push_notification(
+    body: AdminPushRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Admin: Send FCM push notification to specific users or broadcast by role.
+    """
+    from app.models.notification import PushSubscription
+    from app.models.user import User
+    from app.services.notification_service import send_fcm_push, any_webpush_send
+
+    # Build query for subscriptions
+    sub_query = select(PushSubscription).where(PushSubscription.is_active == True)
+
+    if body.user_ids:
+        sub_query = sub_query.where(PushSubscription.user_id.in_(body.user_ids))
+    elif body.user_type:
+        # Filter by user_type via join
+        sub_query = (
+            sub_query
+            .join(User, User.id == PushSubscription.user_id)
+            .where(User.user_type == body.user_type, User.is_deleted == False)
+        )
+
+    subs_result = await db.execute(sub_query)
+    subscriptions = subs_result.scalars().all()
+
+    sent = 0
+    failed = 0
+    for sub in subscriptions:
+        try:
+            if sub.endpoint == "fcm":
+                ok = await send_fcm_push(
+                    token=sub.auth_key,
+                    title=body.title,
+                    body=body.body,
+                    data=body.data or {}
+                )
+                if ok:
+                    sent += 1
+                else:
+                    failed += 1
+            else:
+                await any_webpush_send(
+                    {"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh_key, "auth": sub.auth_key}},
+                    body.title, body.body, body.data or {}
+                )
+                sent += 1
+        except Exception:
+            sub.is_active = False
+            failed += 1
+
+    await db.commit()
+    return APIResponse(
+        success=True,
+        message=f"Push notification dispatched: {sent} sent, {failed} failed",
+        data={"sent": sent, "failed": failed, "total": len(subscriptions)}
+    )

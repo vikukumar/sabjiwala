@@ -380,6 +380,59 @@ class NotificationService:
                 self.db.add(EmailTemplate(**t))
         await self.db.flush()
 
+    async def dispatch_raw(
+        self,
+        user_id: UUID,
+        title: str,
+        body: str,
+        event_key: str = "system",
+        reference_type: Optional[str] = None,
+        reference_id: Optional[str] = None,
+    ) -> None:
+        """
+        Send an in-app notification record + FCM/web push directly
+        without requiring a NotificationTemplate in the database.
+        Used for vendor/delivery-boy role-specific events.
+        """
+        from app.models.notification import Notification, PushSubscription
+        # 1. Save in-app record
+        notif = Notification(
+            user_id=user_id,
+            title=title,
+            body=body,
+            notification_type=event_key,
+            reference_type=reference_type,
+            reference_id=reference_id,
+        )
+        self.db.add(notif)
+
+        # 2. Fire FCM / web push to all active subscriptions
+        subs_result = await self.db.execute(
+            select(PushSubscription).where(
+                PushSubscription.user_id == user_id,
+                PushSubscription.is_active == True
+            )
+        )
+        for sub in subs_result.scalars().all():
+            try:
+                if sub.endpoint == "fcm":
+                    await send_fcm_push(
+                        token=sub.auth_key,
+                        title=title,
+                        body=body,
+                        data={"event_key": event_key, "reference_type": reference_type or "", "reference_id": reference_id or ""}
+                    )
+                else:
+                    await any_webpush_send(
+                        {"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh_key, "auth": sub.auth_key}},
+                        title, body, {"event_key": event_key}
+                    )
+            except Exception as e:
+                logger.debug("dispatch_raw push failed", sub_id=str(sub.id), error=str(e))
+                sub.is_active = False
+
+        await self.db.flush()
+
     async def dispatch(
         self,
         event_key: str,
