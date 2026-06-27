@@ -94,17 +94,59 @@ export default function LiveChatWidget() {
     const sessionId = localStorage.getItem("sw_chat_session_id") || "";
 
     const connectWS = () => {
-      let baseHost = window.location.host;
-      let protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      
-      const storedBaseUrl = localStorage.getItem('sw_api_base_url');
-      if (storedBaseUrl && (storedBaseUrl.startsWith("http://") || storedBaseUrl.startsWith("https://"))) {
-        const url = new URL(storedBaseUrl);
-        baseHost = url.host;
-        protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      let apiBase = "";
+      if (typeof window !== "undefined") {
+        apiBase = localStorage.getItem("sw_api_base_url") || "";
+      }
+      if (!apiBase && process.env.NEXT_PUBLIC_API_URL) {
+        apiBase = process.env.NEXT_PUBLIC_API_URL;
+      }
+      if (!apiBase) {
+        apiBase = api?.client?.defaults?.baseURL || "/api/v1";
       }
 
-      const wsUrl = `${protocol}//${baseHost}/api/v1/chat/ws?${token ? 'token='+token : 'guest_id='+guestId}${sessionId ? '&session_id='+sessionId : ''}`;
+      let baseHost = "sbjiwala.qzz.io";
+      let protocol = "wss:";
+      let wsPath = "/api/v1/chat/ws";
+
+      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
+        try {
+          const url = new URL(apiBase);
+          baseHost = url.host;
+          protocol = url.protocol === "https:" ? "wss:" : "ws:";
+          let pathname = url.pathname;
+          if (pathname.endsWith("/")) {
+            pathname = pathname.slice(0, -1);
+          }
+          if (pathname.endsWith("/chat/ws")) {
+            wsPath = pathname;
+          } else if (pathname.endsWith("/ws")) {
+            wsPath = pathname.replace(/\/ws$/, "/chat/ws");
+          } else {
+            wsPath = `${pathname}/chat/ws`;
+          }
+        } catch (e) {
+          console.error("Invalid API URL", e);
+        }
+      } else {
+        if (typeof window !== "undefined") {
+          const isCapacitor = (window as any).Capacitor?.isNativePlatform?.() === true || 
+            (window as any).Capacitor ||
+            (window.location.hostname === "localhost" && (window.location.port === "" || window.location.protocol.startsWith("capacitor") || window.location.protocol === "http:"));
+          
+          if (!isCapacitor) {
+            baseHost = window.location.host;
+            protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            let pathname = window.location.pathname;
+            if (pathname.endsWith("/")) {
+              pathname = pathname.slice(0, -1);
+            }
+            wsPath = `${pathname}/api/v1/chat/ws`.replace(/\/+/g, "/");
+          }
+        }
+      }
+
+      const wsUrl = `${protocol}//${baseHost}${wsPath}?${token ? 'token='+token : 'guest_id='+guestId}${sessionId ? '&session_id='+sessionId : ''}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 

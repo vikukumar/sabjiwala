@@ -56,12 +56,22 @@ function connectGlobalWS() {
 
   let baseHost = "sbjiwala.qzz.io";
   let protocol = "wss:";
+  let wsPath = "/api/v1/ws";
 
   if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
     try {
       const url = new URL(apiBase);
       baseHost = url.host;
       protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      let pathname = url.pathname;
+      if (pathname.endsWith("/")) {
+        pathname = pathname.slice(0, -1);
+      }
+      if (pathname.endsWith("/ws")) {
+        wsPath = pathname;
+      } else {
+        wsPath = `${pathname}/ws`;
+      }
     } catch (e) {
       console.error("Invalid API URL", e);
     }
@@ -74,12 +84,18 @@ function connectGlobalWS() {
       if (!isCapacitor) {
         baseHost = window.location.host;
         protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        let pathname = window.location.pathname;
+        if (pathname.endsWith("/")) {
+          pathname = pathname.slice(0, -1);
+        }
+        wsPath = `${pathname}/api/v1/ws`.replace(/\/+/g, "/");
       }
     }
   }
 
-  const ws = new WebSocket(`${protocol}//${baseHost}/api/v1/ws?token=${token}`);
+  const ws = new WebSocket(`${protocol}//${baseHost}${wsPath}?token=${token}`);
   globalWs = ws;
+
 
   ws.onopen = () => {
     notifyConnectionSubscribers(true);

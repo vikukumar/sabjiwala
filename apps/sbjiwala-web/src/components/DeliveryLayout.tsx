@@ -542,16 +542,58 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
       if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
         return;
       }
-      const apiBase = api.client.defaults.baseURL || "/api/v1";
-      let baseHost = ""; let protocol = "ws:";
-      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
-        const url = new URL(apiBase);
-        baseHost = url.host; protocol = url.protocol === "https:" ? "wss:" : "ws:";
-      } else {
-        baseHost = window.location.host;
-        protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      let apiBase = "";
+      if (typeof window !== "undefined") {
+        apiBase = localStorage.getItem("sw_api_base_url") || "";
       }
-      ws = new WebSocket(`${protocol}//${baseHost}/api/v1/ws?token=${token}`);
+      if (!apiBase && process.env.NEXT_PUBLIC_API_URL) {
+        apiBase = process.env.NEXT_PUBLIC_API_URL;
+      }
+      if (!apiBase) {
+        apiBase = api.client.defaults.baseURL || "/api/v1";
+      }
+
+      let baseHost = "sbjiwala.qzz.io";
+      let protocol = "wss:";
+      let wsPath = "/api/v1/ws";
+
+      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
+        try {
+          const url = new URL(apiBase);
+          baseHost = url.host;
+          protocol = url.protocol === "https:" ? "wss:" : "ws:";
+          let pathname = url.pathname;
+          if (pathname.endsWith("/")) {
+            pathname = pathname.slice(0, -1);
+          }
+          if (pathname.endsWith("/ws")) {
+            wsPath = pathname;
+          } else {
+            wsPath = `${pathname}/ws`;
+          }
+        } catch (e) {
+          console.error("Invalid API URL", e);
+        }
+      } else {
+        if (typeof window !== "undefined") {
+          const isCapacitor = (window as any).Capacitor?.isNativePlatform?.() === true || 
+            (window as any).Capacitor ||
+            (window.location.hostname === "localhost" && (window.location.port === "" || window.location.protocol.startsWith("capacitor") || window.location.protocol === "http:"));
+          
+          if (!isCapacitor) {
+            baseHost = window.location.host;
+            protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            let pathname = window.location.pathname;
+            if (pathname.endsWith("/")) {
+              pathname = pathname.slice(0, -1);
+            }
+            wsPath = `${pathname}/api/v1/ws`.replace(/\/+/g, "/");
+          }
+        }
+      }
+
+      ws = new WebSocket(`${protocol}//${baseHost}${wsPath}?token=${token}`);
+
       wsRef.current = ws;
       ws.onmessage = (event) => {
         try {

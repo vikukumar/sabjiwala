@@ -35,7 +35,8 @@ export class ApiClient {
         const isCapacitor = window.location.hostname === 'localhost' && (window.location.port === '' || window.location.protocol.startsWith('capacitor'));
 
         if (isNextDev) {
-          finalBaseURL = 'http://localhost:8000/api/v1';
+          const devHost = window.location.hostname || 'localhost';
+          finalBaseURL = `http://${devHost}:8000/api/v1`;
         } else if (isCapacitor) {
           finalBaseURL = 'https://sbjiwala.qzz.io/api/v1';
         }
@@ -257,7 +258,8 @@ export function resolveImageUrl(url: string | null | undefined): string {
       const isNextDev = window.location.port === '3000' || window.location.port === '3001' || window.location.port === '3002' || window.location.port === '3003';
       const isCapacitor = window.location.hostname === 'localhost' && (window.location.port === '' || window.location.protocol.startsWith('capacitor'));
       if (isNextDev) {
-        origin = 'http://localhost:8000';
+        const devHost = window.location.hostname || 'localhost';
+        origin = `http://${devHost}:8000`;
       } else if (isCapacitor) {
         origin = 'https://sbjiwala.qzz.io';
       } else {
