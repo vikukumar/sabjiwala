@@ -20,7 +20,7 @@ class LatestReleaseResponse(BaseModel):
     assets: List[ReleaseAsset]
 
 @router.get("/latest-release", response_model=LatestReleaseResponse)
-async def get_latest_release():
+async def get_latest_release() -> LatestReleaseResponse:
     """
     Fetch the latest release information from the Sbjiwala GitHub repository.
     This is used by the auto-updater in the mobile apps and the web download page.
@@ -30,7 +30,10 @@ async def get_latest_release():
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 url, 
-                headers={"Accept": "application/vnd.github.v3+json"},
+                headers={
+                    "Accept": "application/vnd.github.v3+json",
+                    "User-Agent": "Sbjiwala-Backend-App/1.0"
+                },
                 timeout=10.0
             )
             response.raise_for_status()
@@ -54,6 +57,9 @@ async def get_latest_release():
                 assets=assets
             )
     except httpx.HTTPError as e:
-        raise HTTPException(status_code=502, detail=f"Error communicating with GitHub API: {str(e)}")
+        detail_msg = f"Error communicating with GitHub API: {str(e)}"
+        if hasattr(e, "response") and e.response is not None:
+            detail_msg += f" (Status: {e.response.status_code}, Body: {e.response.text})"
+        raise HTTPException(status_code=502, detail=detail_msg)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
