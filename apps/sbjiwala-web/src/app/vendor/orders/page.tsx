@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Clock, Loader2, Star, ShoppingBag, X, Package, CheckCircle2, AlertCircle, MapPin, Navigation, ExternalLink } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, useWebSocket, resolveImageUrl } from "@sbjiwala/shared";
+import { api, useWebSocket, resolveImageUrl, createStoreIcon, createCustomerIcon, createGPSLocationIcon } from "@sbjiwala/shared";
 import { Geolocation } from "@capacitor/geolocation";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/index";
@@ -393,6 +393,13 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
     import("leaflet").then((L) => {
       if (!active || !mapRef.current || mapObjRef.current) return;
 
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
+
       const customerLat = order.delivery_latitude || order.delivery_address?.latitude || 19.0735;
       const customerLng = order.delivery_longitude || order.delivery_address?.longitude || 72.9985;
       const storeLat = parseFloat(store.latitude || "19.0760");
@@ -405,39 +412,13 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
       const tileUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
       L.tileLayer(tileUrl, { attribution: "", subdomains: "abcd", maxZoom: 20 }).addTo(map);
 
-      // Store Pin - Backgroundless Swiggy Style
-      const storeIcon = L.divIcon({
-        className: "leaflet-custom-icon",
-        html: `
-          <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
-            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #ef4444; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" stroke="#ffffff" stroke-width="1.5" style="width: 20px; height: 20px; flex-shrink: 0;">
-                <path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/>
-              </svg>
-            </div>
-          </div>
-        `,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
-      });
+      // Store Pin
+      const storeIcon = createStoreIcon(L);
       const storeMarker = L.marker([storeLat, storeLng], { icon: storeIcon }).addTo(map).bindPopup("Store Pickup Location");
       storeMarkerRef.current = storeMarker;
 
-      // Customer Pin - Backgroundless Swiggy Style
-      const homeIcon = L.divIcon({
-        className: "leaflet-custom-icon",
-        html: `
-          <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
-            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #3b82f6; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" stroke="#ffffff" stroke-width="1.5" style="width: 20px; height: 20px; flex-shrink: 0;">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 11.2c-2.67 0-8 1.34-8 4v1.8h16v-1.8c0-2.66-5.33-4-8-4z"/>
-              </svg>
-            </div>
-          </div>
-        `,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
-      });
+      // Customer Pin
+      const homeIcon = createCustomerIcon(L);
       const customerMarker = L.marker([customerLat, customerLng], { icon: homeIcon }).addTo(map).bindPopup("Customer Delivery Location");
       customerMarkerRef.current = customerMarker;
 
@@ -456,21 +437,7 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
       });
 
       // GPS Marker Setup
-      const gpsIcon = L.divIcon({
-        className: "leaflet-custom-icon",
-        html: `
-          <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
-            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #f97316; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" stroke="#ffffff" stroke-width="1.5" style="width: 22px; height: 22px; flex-shrink: 0;">
-                <circle cx="12" cy="12" r="10" fill="#f97316" stroke="#ffffff" stroke-width="1.5"></circle>
-                <circle cx="12" cy="12" r="3" fill="#ffffff"></circle>
-              </svg>
-            </div>
-          </div>
-        `,
-        iconSize: [38, 38],
-        iconAnchor: [19, 19],
-      });
+      const gpsIcon = createGPSLocationIcon(L);
 
       const gpsMarker = L.marker([storeLat, storeLng], { icon: gpsIcon }).addTo(map).bindPopup("Live GPS Device Position");
       gpsMarkerRef.current = gpsMarker;
