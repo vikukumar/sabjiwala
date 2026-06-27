@@ -1186,6 +1186,9 @@ export default function HomePage() {
             </div>
             <ProductsGrid categoryFilter={selectedCategory === "All" ? undefined : selectedCategory} />
           </div>
+
+          <AboutSbjiwalaSection />
+          <DownloadAppsSection />
         </>
       )}
 
@@ -1199,5 +1202,213 @@ export default function HomePage() {
       {/* Floating Video PIP Ad player */}
       {videoPipAd && <PipVideoAd ad={videoPipAd} />}
     </div>
+  );
+}
+
+// ==================== ABOUT SECTION ====================
+function AboutSbjiwalaSection() {
+  return (
+    <section className="py-16 px-4 max-w-4xl mx-auto space-y-12">
+      <div className="text-center space-y-3">
+        <Badge variant="outline" className="text-emerald-600 border-emerald-650/30 px-3 py-1 text-[10px] uppercase font-black">Our Philosophy</Badge>
+        <h2 className="text-2xl sm:text-3xl font-black text-slate-850 dark:text-white uppercase tracking-tight">Why Choose Sbjiwala?</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+          We bridge the gap between fresh farms and your dining table, bringing you high quality, residue-free vegetables and fruits within minutes.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all text-left">
+          <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-450 rounded-2xl flex items-center justify-center">
+            <Leaf className="w-5 h-5" />
+          </div>
+          <h3 className="font-extrabold text-sm text-slate-850 dark:text-white uppercase">100% Fresh & Organic</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            All vegetables are harvested at dawn, multi-checked for grade-A quality, and ozone washed to eliminate contaminants.
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all text-left">
+          <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-450 rounded-2xl flex items-center justify-center">
+            <Truck className="w-5 h-5" />
+          </div>
+          <h3 className="font-extrabold text-sm text-slate-850 dark:text-white uppercase">Superfast Express Delivery</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            Delivered directly from the nearest vendor outlet to your doorstep in vacuum-sealed food-grade packaging.
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all text-left">
+          <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-450 rounded-2xl flex items-center justify-center">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <h3 className="font-extrabold text-sm text-slate-850 dark:text-white uppercase">Support Local Farmers</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            We source directly from smallholder farms, ensuring fair prices to growers and zero supply-chain carbon waste.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ==================== DOWNLOAD SECTION ====================
+function DownloadAppsSection() {
+  const [selectedApp, setSelectedApp] = useState<"customer" | "vendor" | "delivery" | "admin" | "agent">("customer");
+  const [device, setDevice] = useState<"android" | "ios">("android");
+  const [releaseData, setReleaseData] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.userAgent) {
+      const ua = navigator.userAgent.toLowerCase();
+      if (/iphone|ipad|ipod/.test(ua)) {
+        setDevice("ios");
+      } else {
+        setDevice("android");
+      }
+    }
+
+    const fetchLatestRelease = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://sbjiwala.qzz.io/api/v1";
+        const response = await fetch(`${apiUrl}/system/latest-release`);
+        if (response.ok) {
+          const data = await response.json();
+          setReleaseData(data);
+        }
+      } catch (err) {
+        console.error("Failed to load latest release", err);
+      }
+    };
+    fetchLatestRelease();
+  }, []);
+
+  const getDownloadUrl = () => {
+    if (device === "ios") {
+      return `https://apps.apple.com/app/sbjiwala-${selectedApp}`;
+    }
+    if (!releaseData) {
+      return "https://sbjiwala.qzz.io/api/v1/system/latest-release";
+    }
+
+    const apkAsset = releaseData.assets?.find((a: any) => {
+      if (!a.name.endsWith(".apk")) return false;
+      const nameLower = a.name.toLowerCase();
+      if (selectedApp === "customer") {
+        return !nameLower.includes("vendor") && 
+               !nameLower.includes("delivery") && 
+               !nameLower.includes("courier") && 
+               !nameLower.includes("admin") && 
+               !nameLower.includes("agent") && 
+               !nameLower.includes("support");
+      } else {
+        if (selectedApp === "agent") {
+          return nameLower.includes("agent") || nameLower.includes("support");
+        }
+        if (selectedApp === "delivery") {
+          return nameLower.includes("delivery") || nameLower.includes("courier");
+        }
+        return nameLower.includes(selectedApp.toLowerCase());
+      }
+    });
+
+    return apkAsset ? apkAsset.browser_download_url : `https://github.com/vikukumar/sbjiwala/releases/latest/download/sbjiwala-${selectedApp}.apk`;
+  };
+
+  const currentDownloadUrl = getDownloadUrl();
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(currentDownloadUrl)}&color=059669`;
+  const latestVersion = releaseData?.version || "1.0.0";
+
+  return (
+    <section className="bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 py-16 px-4">
+      <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <div className="space-y-6 text-left">
+          <Badge variant="success" className="font-black px-3 py-1 text-[10px] uppercase">Mobile Apps</Badge>
+          <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-850 dark:text-white leading-tight">
+            Download our Mobile App Suite
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+            Get instant updates, order management, live delivery tracking, and agent support consoles directly on your phone.
+          </p>
+
+          {/* App Selector Tabs */}
+          <div className="space-y-1.5 text-left">
+            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Select Application</label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: "customer", label: "🛒 Customer App" },
+                { id: "vendor", label: "🏪 Vendor App" },
+                { id: "delivery", label: "🛵 Delivery App" },
+                { id: "admin", label: "🔑 Admin App" },
+                { id: "agent", label: "🎧 Agent Console" }
+              ].map(app => (
+                <button
+                  key={app.id}
+                  onClick={() => setSelectedApp(app.id as any)}
+                  className={`px-3.5 py-2.5 text-xs font-bold border rounded-2xl transition-all cursor-pointer active:scale-95 ${
+                    selectedApp === app.id
+                      ? "bg-slate-900 border-slate-900 text-white dark:bg-white dark:border-white dark:text-slate-950 shadow-sm"
+                      : "border-slate-200 hover:border-slate-300 dark:border-slate-800 text-slate-650 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
+                  }`}
+                >
+                  {app.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Device Tabs */}
+          <div className="space-y-1.5 text-left">
+            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-55 uppercase tracking-widest">Select Device OS</label>
+            <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-205 dark:border-slate-800 w-fit gap-1">
+              <button
+                onClick={() => setDevice("android")}
+                className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
+                  device === "android"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                }`}
+              >
+                🤖 Android (APK)
+              </button>
+              <button
+                onClick={() => setDevice("ios")}
+                className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
+                  device === "ios"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                }`}
+              >
+                🍏 iOS (App Store)
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-2 flex flex-wrap gap-4 items-center">
+            <a
+              href={currentDownloadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-8 py-4 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-2"
+            >
+              <span>Download {selectedApp.toUpperCase()} for {device === "android" ? `Android (v${latestVersion})` : "iOS"}</span>
+              <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center justify-center p-6 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-3xl shadow-xl space-y-4">
+          <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900 rounded-2xl shadow-inner">
+            <img src={qrCodeUrl} alt="Scan to download" className="w-40 h-40 object-contain rounded-lg" />
+          </div>
+          <div className="text-center space-y-1">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-55 uppercase tracking-widest">Scan QR Code</span>
+            <p className="text-[11px] font-bold text-slate-650 dark:text-slate-300 px-4">
+              Open your phone camera to scan and download the {selectedApp.toUpperCase()} {device === "android" ? "Android APK" : "iOS App"} instantly!
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
