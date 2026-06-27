@@ -361,7 +361,7 @@ export default function VendorDashboard() {
         `,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
-        className: "bg-transparent border-none shadow-none"
+        className: "leaflet-custom-icon bg-transparent border-none shadow-none"
       });
 
       const marker = L.marker([centerLat, centerLng], { icon: storeIcon, draggable: true }).addTo(map);

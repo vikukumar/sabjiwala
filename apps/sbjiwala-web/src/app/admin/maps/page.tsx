@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { RefreshCw, Building2, Truck, ShoppingBag, Loader2, Activity, Radio } from "lucide-react";
@@ -70,7 +70,7 @@ function LiveOpsMap({ vendors, deliveryBoys, orders }: {
           html: iconHtml,
           iconSize: [40, 40],
           iconAnchor: [20, 20],
-          className: "",
+          className: "leaflet-custom-icon",
         });
 
         const marker = L.marker([lat, lng], { icon })
@@ -108,7 +108,7 @@ function LiveOpsMap({ vendors, deliveryBoys, orders }: {
           html: iconHtml,
           iconSize: [40, 40],
           iconAnchor: [20, 20],
-          className: "",
+          className: "leaflet-custom-icon",
         });
 
         const marker = L.marker([lat, lng], { icon })
@@ -150,7 +150,7 @@ function LiveOpsMap({ vendors, deliveryBoys, orders }: {
           </div>`,
           iconSize: [40, 40],
           iconAnchor: [20, 20],
-          className: "",
+          className: "leaflet-custom-icon",
         });
         const custMarker = L.marker([custLat, custLng], { icon: homeIcon })
           .addTo(map)

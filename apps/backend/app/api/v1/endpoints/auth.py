@@ -544,7 +544,7 @@ async def login(
     # Generate tokens
     redis = await _get_redis(request)
     access_token = create_access_token(user.id, active_role, body.device_id)
-    refresh_token, token_hash = create_refresh_token(user.id, body.device_id)
+    refresh_token, token_hash = create_refresh_token(user.id, active_role, body.device_id)
     await store_refresh_token(redis, user.id, token_hash, body.device_id)
 
     # Create session
@@ -701,7 +701,7 @@ async def verify_login_otp(
 
     # Generate tokens
     access_token = create_access_token(user.id, active_role, body.device_id)
-    refresh_token, token_hash = create_refresh_token(user.id, body.device_id)
+    refresh_token, token_hash = create_refresh_token(user.id, active_role, body.device_id)
     await store_refresh_token(redis, user.id, token_hash, body.device_id)
 
     # Create session
@@ -753,6 +753,7 @@ async def refresh_tokens(
 
     user_id = UUID(payload["sub"])
     device_id = payload.get("device_id")
+    user_type = payload.get("user_type")
 
     # Get user to build permissions
     result = await db.execute(select(User).where(User.id == user_id, User.is_deleted == False))
@@ -762,9 +763,11 @@ async def refresh_tokens(
 
     redis = await _get_redis(request)
 
+    active_user_type = user_type or user.user_type.value
+
     try:
         tokens = await rotate_refresh_token(
-            redis, body.refresh_token, user_id, user.user_type.value, device_id
+            redis, body.refresh_token, user_id, active_user_type, device_id
         )
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
@@ -862,9 +865,10 @@ async def verify_mfa_code(
 
         # Login MFA verification — issue full tokens
         redis = await _get_redis(request)
-        access_token = create_access_token(user.id, user.user_type.value)
-        refresh_token, token_hash = create_refresh_token(user.id)
-        await store_refresh_token(redis, user.id, token_hash)
+        active_role = current_user.get("user_type", user.user_type.value)
+        access_token = create_access_token(user.id, active_role, current_user.get("device_id"))
+        refresh_token, token_hash = create_refresh_token(user.id, active_role, current_user.get("device_id"))
+        await store_refresh_token(redis, user.id, token_hash, current_user.get("device_id"))
 
         return APIResponse(
             success=True,
@@ -886,9 +890,10 @@ async def verify_mfa_code(
             await db.flush()
 
             redis = await _get_redis(request)
-            access_token = create_access_token(user.id, user.user_type.value)
-            refresh_token, token_hash = create_refresh_token(user.id)
-            await store_refresh_token(redis, user.id, token_hash)
+            active_role = current_user.get("user_type", user.user_type.value)
+            access_token = create_access_token(user.id, active_role, current_user.get("device_id"))
+            refresh_token, token_hash = create_refresh_token(user.id, active_role, current_user.get("device_id"))
+            await store_refresh_token(redis, user.id, token_hash, current_user.get("device_id"))
 
             return APIResponse(
                 success=True,
@@ -1034,7 +1039,7 @@ async def google_callback(
     # Generate tokens
     redis = await _get_redis(request)
     access_token = create_access_token(user.id, user.user_type.value)
-    refresh_token, token_hash = create_refresh_token(user.id)
+    refresh_token, token_hash = create_refresh_token(user.id, user.user_type.value)
     await store_refresh_token(redis, user.id, token_hash)
 
     if state:
@@ -1181,7 +1186,7 @@ async def facebook_callback(
     # Generate tokens
     redis = await _get_redis(request)
     access_token = create_access_token(user.id, user.user_type.value)
-    refresh_token, token_hash = create_refresh_token(user.id)
+    refresh_token, token_hash = create_refresh_token(user.id, user.user_type.value)
     await store_refresh_token(redis, user.id, token_hash)
 
     if state:
@@ -1450,7 +1455,7 @@ async def passkey_login_verify(
         active_role = await verify_and_resolve_user_role(db, user.id, body.role)
 
     access_token = create_access_token(user.id, active_role, body.device_id)
-    refresh_token, token_hash = create_refresh_token(user.id, body.device_id)
+    refresh_token, token_hash = create_refresh_token(user.id, active_role, body.device_id)
     await store_refresh_token(redis, user.id, token_hash, body.device_id)
 
     session = UserSession(
@@ -1707,7 +1712,7 @@ async def magic_link_verify(
         active_role = await verify_and_resolve_user_role(db, user.id, role)
 
     access_token = create_access_token(user.id, active_role)
-    refresh_token, token_hash = create_refresh_token(user.id)
+    refresh_token, token_hash = create_refresh_token(user.id, active_role)
     await store_refresh_token(redis, user.id, token_hash)
 
     session = UserSession(

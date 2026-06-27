@@ -407,7 +407,7 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
 
       // Store Pin - Backgroundless Swiggy Style
       const storeIcon = L.divIcon({
-        className: "",
+        className: "leaflet-custom-icon",
         html: `
           <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
             <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #ef4444; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -425,7 +425,7 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
 
       // Customer Pin - Backgroundless Swiggy Style
       const homeIcon = L.divIcon({
-        className: "",
+        className: "leaflet-custom-icon",
         html: `
           <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
             <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #3b82f6; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -457,7 +457,7 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
 
       // GPS Marker Setup
       const gpsIcon = L.divIcon({
-        className: "",
+        className: "leaflet-custom-icon",
         html: `
           <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
             <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: #f97316; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">

@@ -5,6 +5,7 @@ import "./globals.css";
 import Providers from "./providers";
 import AppShell from "@/components/AppShell";
 import { AppUpdater, StatusBarInit } from "@sbjiwala/shared";
+import versionInfo from "./version.json";
 
 export const metadata: Metadata = {
   title: {
@@ -98,7 +99,7 @@ export default function RootLayout({
         <Providers>
           <StatusBarInit />
           <AppShell>{children}</AppShell>
-          <AppUpdater appName="customer" />
+          <AppUpdater appName="customer" currentVersion={versionInfo.version} />
         </Providers>
         <Script
           id="sw-register"

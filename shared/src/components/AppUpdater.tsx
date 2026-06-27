@@ -22,7 +22,7 @@ interface LatestRelease {
   assets: ReleaseAsset[];
 }
 
-export const AppUpdater: React.FC<{ appName: string }> = ({ appName }) => {
+export const AppUpdater: React.FC<{ appName: string; currentVersion?: string }> = ({ appName, currentVersion: propVersion }) => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [newVersion, setNewVersion] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
@@ -41,7 +41,7 @@ export const AppUpdater: React.FC<{ appName: string }> = ({ appName }) => {
       const response = await axios.get<LatestRelease>(`${apiUrl}/system/latest-release`);
       const latestRelease = response.data;
 
-      const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION || '1.0';
+      const currentVersion = propVersion || process.env.NEXT_PUBLIC_APP_VERSION || '1.0';
       
       if (latestRelease.version) {
         logFirebaseVersionInfo(currentVersion, latestRelease.version).catch(err => {

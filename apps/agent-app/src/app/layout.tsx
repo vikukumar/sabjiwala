@@ -3,6 +3,7 @@ import "./globals.css";
 
 import { AppUpdater, StatusBarInit } from "@sbjiwala/shared";
 import Providers from "./providers";
+import versionInfo from "./version.json";
 
 export const metadata: Metadata = {
   title: "Sbjiwala Agent Support Console",
@@ -32,7 +33,7 @@ export default function RootLayout({
         <Providers>
           <StatusBarInit />
           {children}
-          <AppUpdater appName="agent" />
+          <AppUpdater appName="agent" currentVersion={versionInfo.version} />
         </Providers>
       </body>
     </html>

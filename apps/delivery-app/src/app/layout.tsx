@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import { AppUpdater, StatusBarInit } from "@sbjiwala/shared";
 import Providers from "./providers";
+import versionInfo from "./version.json";
 
 export const metadata: Metadata = {
   title: "Sbjiwala Delivery Partner - Deliver Fresh Produce",
@@ -70,7 +71,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <Providers>
           <StatusBarInit />
-          <AppUpdater appName="delivery" />
+          <AppUpdater appName="delivery" currentVersion={versionInfo.version} />
           {children}
         </Providers>
         <Script

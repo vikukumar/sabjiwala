@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import { AppUpdater, StatusBarInit } from "@sbjiwala/shared";
 import Providers from "./providers";
+import versionInfo from "./version.json";
 
 export const metadata: Metadata = {
   title: "Sbjiwala Super Admin - Platform Oversight",
@@ -70,7 +71,7 @@ export default function RootLayout({
         />
         <Providers>
           <StatusBarInit />
-          <AppUpdater appName="admin" />
+          <AppUpdater appName="admin" currentVersion={versionInfo.version} />
           {children}
         </Providers>
       </body>

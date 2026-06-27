@@ -29,12 +29,12 @@ def create_access_token(
     user_id: UUID,
     user_type: str,
     device_id: Optional[str] = None,
-    permissions: Optional[list] = None,
+    permissions: Optional[list[str]] = None,
     extra_claims: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Create a short-lived JWT access token."""
     now = datetime.now(timezone.utc)
-    payload = {
+    payload: Dict[str, Any] = {
         "sub": str(user_id),
         "type": ACCESS_TOKEN,
         "user_type": user_type,
@@ -54,6 +54,7 @@ def create_access_token(
 
 def create_refresh_token(
     user_id: UUID,
+    user_type: Optional[str] = None,
     device_id: Optional[str] = None,
     session_id: Optional[UUID] = None,
 ) -> tuple[str, str]:
@@ -71,6 +72,8 @@ def create_refresh_token(
         "exp": now + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS),
         "jti": token_id,
     }
+    if user_type:
+        payload["user_type"] = user_type
     if device_id:
         payload["device_id"] = device_id
     if session_id:
@@ -101,7 +104,7 @@ async def blacklist_token(redis: Redis, jti: str, expires_in: int = 900) -> None
 async def is_token_blacklisted(redis: Redis, jti: str) -> bool:
     """Check if a token JTI is in the blacklist."""
     key = f"{BLACKLIST_PREFIX}{jti}"
-    return await redis.exists(key) > 0
+    return bool(await redis.exists(key) > 0)
 
 
 async def store_refresh_token(
@@ -118,32 +121,32 @@ async def store_refresh_token(
         "device_id": device_id or "",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    await redis.hset(key, mapping=data)
+    await redis.hset(key, mapping=data)  # type: ignore
     await redis.expire(key, expires_days * 86400)
 
     # Track user sessions
     session_key = f"{USER_SESSIONS_PREFIX}{user_id}"
-    await redis.sadd(session_key, token_hash)
+    await redis.sadd(session_key, token_hash)  # type: ignore
     await redis.expire(session_key, expires_days * 86400)
 
 
 async def revoke_refresh_token(redis: Redis, token_hash: str) -> None:
     """Revoke a specific refresh token."""
     key = f"{REFRESH_TOKEN_PREFIX}{token_hash}"
-    data = await redis.hgetall(key)
+    data = await redis.hgetall(key)  # type: ignore
     if data:
         user_id = data.get(b"user_id", data.get("user_id", ""))
         if isinstance(user_id, bytes):
             user_id = user_id.decode()
         session_key = f"{USER_SESSIONS_PREFIX}{user_id}"
-        await redis.srem(session_key, token_hash)
+        await redis.srem(session_key, token_hash)  # type: ignore
     await redis.delete(key)
 
 
 async def revoke_all_user_sessions(redis: Redis, user_id: UUID) -> int:
     """Revoke all refresh tokens for a user. Returns count of revoked sessions."""
     session_key = f"{USER_SESSIONS_PREFIX}{user_id}"
-    token_hashes = await redis.smembers(session_key)
+    token_hashes = await redis.smembers(session_key)  # type: ignore
     count = 0
     for token_hash in token_hashes:
         if isinstance(token_hash, bytes):
@@ -161,7 +164,7 @@ async def rotate_refresh_token(
     user_id: UUID,
     user_type: str,
     device_id: Optional[str] = None,
-    permissions: Optional[list] = None,
+    permissions: Optional[list[str]] = None,
 ) -> Dict[str, str]:
     """
     Rotate refresh token: revoke old token, issue new access + refresh pair.
@@ -188,7 +191,7 @@ async def rotate_refresh_token(
 
     # Issue new tokens
     access_token = create_access_token(user_id, user_type, device_id, permissions)
-    new_refresh_token, new_token_hash = create_refresh_token(user_id, device_id)
+    new_refresh_token, new_token_hash = create_refresh_token(user_id, user_type, device_id)
 
     # Store new refresh token
     await store_refresh_token(redis, user_id, new_token_hash, device_id)

@@ -9,7 +9,7 @@ export const createCustomerIcon = (L: any) => {
     `,
     iconSize: [40, 40],
     iconAnchor: [20, 20],
-    className: "bg-transparent border-none shadow-none",
+    className: "leaflet-custom-icon bg-transparent border-none shadow-none",
   });
 };
 
@@ -24,7 +24,7 @@ export const createStoreIcon = (L: any) => {
     `,
     iconSize: [40, 40],
     iconAnchor: [20, 20],
-    className: "bg-transparent border-none shadow-none",
+    className: "leaflet-custom-icon bg-transparent border-none shadow-none",
   });
 };
 
@@ -49,7 +49,7 @@ export const createDeliveryAgentIcon = (L: any, vehicleType: string = "bike", he
     `,
     iconSize: [40, 40],
     iconAnchor: [20, 20],
-    className: "bg-transparent border-none shadow-none",
+    className: "leaflet-custom-icon bg-transparent border-none shadow-none",
   });
 };
 
@@ -63,7 +63,7 @@ export const createLocationPinIcon = (L: any) => {
     `,
     iconSize: [40, 40],
     iconAnchor: [20, 40],
-    className: "bg-transparent border-none shadow-none",
+    className: "leaflet-custom-icon bg-transparent border-none shadow-none",
   });
 };
 
@@ -77,6 +77,6 @@ export const createGPSLocationIcon = (L: any) => {
     `,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
-    className: "bg-transparent border-none shadow-none",
+    className: "leaflet-custom-icon bg-transparent border-none shadow-none",
   });
 };

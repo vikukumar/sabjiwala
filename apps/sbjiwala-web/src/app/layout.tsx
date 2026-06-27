@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import Providers from "./providers";
 import { AppUpdater, StatusBarInit } from "@sbjiwala/shared";
+import versionInfo from "./version.json";
 
 export const metadata: Metadata = {
   title: {
@@ -97,7 +98,8 @@ export default function RootLayout({
         <Providers>
           <StatusBarInit />
           {children}
-                  </Providers>
+          <AppUpdater appName="customer" currentVersion={versionInfo.version} />
+        </Providers>
         <Script
           id="sw-register"
           strategy="afterInteractive"
