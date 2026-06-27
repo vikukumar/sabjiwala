@@ -424,6 +424,7 @@ export default function AdminSettingsPage() {
             <div className="space-y-4">
               <h3 className="text-sm font-black text-slate-800 dark:text-white">Default Order Fees & Conditions</h3>
               <p className="text-xs text-slate-500 mb-4">These default values are used globally unless a Vendor configures their own specific overrides.</p>
+              {getSettingControl("gst_rate", "Default GST / Tax Rate (%)", "Default tax percentage applied to orders (e.g. 5 for 5%)", "text")}
               {getSettingControl("enable_delivery_fee", "Enable Delivery Fee", "Globally enable or disable delivery fees", "boolean")}
               {getSettingControl("delivery_fee_type", "Delivery Fee Type", "Choose how delivery fee is calculated", "select", ["static", "per_km"])}
               {getSettingControl("default_base_delivery_charge", "Default Base Delivery Charge", "Base fixed delivery charge or starting charge", "text")}

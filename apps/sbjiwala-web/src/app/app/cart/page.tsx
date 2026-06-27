@@ -263,14 +263,16 @@ export default function CartPage() {
   }, [items, isGuest]);
 
   const subtotal = previewData ? previewData.subtotal : localSubtotal;
-  const freeDeliveryAbove = previewData?.free_delivery_above ?? 999999;
-  const hasFreeDelivery = false;
+  const freeDeliveryAbove = previewData?.free_delivery_above ?? 0;
   const deliveryFee = previewData ? previewData.delivery_charge : 20;
   const originalDeliveryFee = previewData ? (previewData.original_delivery_charge ?? 20) : 20;
   const packagingCharge = previewData ? previewData.packaging_charge : 5.0;
-  const taxAmount = previewData ? previewData.tax_amount : Math.round(subtotal * 0.05 * 100) / 100;
+  const platformFee = previewData ? (previewData.platform_fee ?? 0) : 0;
+  const convenienceFee = previewData ? (previewData.convenience_fee ?? 0) : 0;
+  const gstRate = previewData?.gst_rate ?? 5;
+  const taxAmount = previewData ? previewData.tax_amount : Math.round(subtotal * (gstRate / 100) * 100) / 100;
   const discount = previewData ? previewData.coupon_discount : (appliedCoupon?.discount || 0);
-  const total = previewData ? previewData.total_amount : Math.round(Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge - discount) * 100) / 100;
+  const total = previewData ? previewData.total_amount : Math.round(Math.max(0, subtotal + deliveryFee + taxAmount + packagingCharge + platformFee + convenienceFee - discount) * 100) / 100;
 
   const savings = React.useMemo(() => {
     let itemSavings = 0;
@@ -285,12 +287,6 @@ export default function CartPage() {
       }
     });
     itemSavings += discount;
-    if (deliveryFee === 0 && subtotal >= freeDeliveryAbove) {
-      itemSavings += parseFloat(previewData?.original_delivery_charge ?? 25.0);
-    }
-    if (packagingCharge === 0) {
-      itemSavings += parseFloat(previewData?.original_packaging_charge ?? 10.0);
-    }
     return Math.max(0, itemSavings);
   }, [items, discount, deliveryFee, packagingCharge, previewData, subtotal, freeDeliveryAbove]);
 
@@ -399,76 +395,113 @@ export default function CartPage() {
 
         {/* Summary */}
         <div className="lg:col-span-2">
-          <div className="card p-6 space-y-4 lg:sticky lg:top-24">
-            <h2 className="font-black text-slate-900 dark:text-white">Bill Summary</h2>
-            <div className="space-y-2.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-650 dark:text-slate-400">Subtotal</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">₹{subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-655 dark:text-slate-400">Delivery fee</span>
-                <span className={`font-semibold ${deliveryFee === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
-                  {deliveryFee === 0 ? (
-                    <>
-                      {originalDeliveryFee > 0 && (
-                        <span className="line-through text-slate-400 mr-1.5 font-normal">
-                          ₹{Number(originalDeliveryFee).toFixed(2)}
-                        </span>
-                      )}
-                      FREE
-                    </>
-                  ) : `₹${deliveryFee.toFixed(2)}`}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-655 dark:text-slate-400">Packaging fee</span>
-                <span className={`font-semibold ${packagingCharge === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
-                  {packagingCharge === 0 ? (
-                    <>
-                      {previewData?.original_packaging_charge && previewData.original_packaging_charge > 0 && (
-                        <span className="line-through text-slate-400 mr-1.5 font-normal">
-                          ₹{parseFloat(previewData.original_packaging_charge).toFixed(2)}
-                        </span>
-                      )}
-                      FREE
-                    </>
-                  ) : `₹${packagingCharge.toFixed(2)}`}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-655 dark:text-slate-400">Taxes (5%)</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">₹{taxAmount.toFixed(2)}</span>
-              </div>
-              {discount > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-emerald-650 dark:text-emerald-400">Coupon discount</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">-₹{discount.toFixed(2)}</span>
+          <div className="lg:sticky lg:top-24 space-y-3">
+            {/* Free delivery progress */}
+            {freeDeliveryAbove > 0 && deliveryFee > 0 && (
+              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">🚚 Free delivery progress</span>
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                    {subtotal >= freeDeliveryAbove ? "🎉 Free!" : `₹${(freeDeliveryAbove - subtotal).toFixed(0)} more`}
+                  </span>
                 </div>
-              )}
-              <hr className="border-slate-200 dark:border-slate-800" />
-              <div className="flex justify-between text-sm">
-                <span className="font-black text-slate-900 dark:text-white">Total</span>
-                <span className="font-black text-xl text-slate-900 dark:text-white">₹{total.toFixed(2)}</span>
-              </div>
-            </div>
-            {savings > 0 && (
-              <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold text-center">
-                You save ₹{savings.toFixed(2)} on this order!
+                <div className="w-full bg-emerald-100 dark:bg-emerald-900/40 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-emerald-500 to-teal-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, (subtotal / freeDeliveryAbove) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-emerald-600 dark:text-emerald-500 mt-1">
+                  Free delivery above ₹{freeDeliveryAbove}
+                </p>
               </div>
             )}
-            <Button
-              fullWidth
-              size="lg"
-              onClick={handleProceedCheckout}
-              rightIcon={<ArrowRight className="w-4 h-4" />}
-              className="cursor-pointer"
-            >
-              Proceed to Checkout
-            </Button>
-            <Link href={resolveLink("/")} className="text-center text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline block">
-              Continue Shopping
-            </Link>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
+              <h2 className="font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <span className="text-base">🧾</span> Bill Summary
+              </h2>
+              <div className="space-y-2.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Subtotal ({items.reduce((s: number, i: any) => s + i.quantity, 0)} items)</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1">🚚 Delivery</span>
+                  <span className={`font-semibold ${deliveryFee === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
+                    {deliveryFee === 0 ? (
+                      <>
+                        {originalDeliveryFee > 0 && (
+                          <span className="line-through text-slate-400 mr-1.5 font-normal">
+                            ₹{Number(originalDeliveryFee).toFixed(2)}
+                          </span>
+                        )}
+                        FREE 🎉
+                      </>
+                    ) : `₹${deliveryFee.toFixed(2)}`}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">📦 Packaging</span>
+                  <span className={`font-semibold ${packagingCharge === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
+                    {packagingCharge === 0 ? (
+                      <>
+                        {previewData?.original_packaging_charge > 0 && (
+                          <span className="line-through text-slate-400 mr-1.5 font-normal">
+                            ₹{parseFloat(previewData.original_packaging_charge).toFixed(2)}
+                          </span>
+                        )}
+                        FREE 🎉
+                      </>
+                    ) : `₹${packagingCharge.toFixed(2)}`}
+                  </span>
+                </div>
+                {platformFee > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Platform fee</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">₹{platformFee.toFixed(2)}</span>
+                  </div>
+                )}
+                {convenienceFee > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Convenience fee</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">₹{convenienceFee.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">GST ({gstRate}%)</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">₹{taxAmount.toFixed(2)}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">🏷️ Coupon</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">-₹{discount.toFixed(2)}</span>
+                  </div>
+                )}
+                <hr className="border-slate-200 dark:border-slate-700" />
+                <div className="flex justify-between items-center">
+                  <span className="font-black text-slate-900 dark:text-white text-sm">Total</span>
+                  <span className="font-black text-xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">₹{total.toFixed(2)}</span>
+                </div>
+              </div>
+              {savings > 0 && (
+                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl p-2.5 text-center">
+                  <p className="text-xs font-bold text-white">🎉 You save ₹{savings.toFixed(2)} on this order!</p>
+                </div>
+              )}
+              <Button
+                fullWidth
+                size="lg"
+                onClick={handleProceedCheckout}
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+                className="cursor-pointer"
+              >
+                Proceed to Checkout
+              </Button>
+              <Link href={resolveLink("/")} className="text-center text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline block">
+                Continue Shopping
+              </Link>
+            </div>
           </div>
         </div>
       </div>

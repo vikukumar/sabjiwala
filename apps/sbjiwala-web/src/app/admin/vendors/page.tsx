@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { Building2, MapPin, Phone, Mail, CheckCircle2, XCircle, Eye, Search, Loader2, Filter, ExternalLink, Clock, Star, Package, Edit, Save } from "lucide-react";
@@ -92,6 +92,7 @@ function VendorDetailModal({ vendor: initialVendor, onClose }: { vendor: any; on
       per_km_charge: rules.per_km_charge || 0,
       min_order_amount: rules.min_order_amount || 0,
       platform_fee: rules.platform_fee || 0,
+      gst_rate: rules.gst_rate || "",
     });
     setIsEditingFees(true);
   };
@@ -190,6 +191,10 @@ function VendorDetailModal({ vendor: initialVendor, onClose }: { vendor: any; on
                         <label className="block text-slate-500 mb-1 font-bold">Platform Fee (₹)</label>
                         <input type="number" value={feeForm.platform_fee} onChange={e => setFeeForm({...feeForm, platform_fee: parseFloat(e.target.value)})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5" />
                       </div>
+                      <div>
+                        <label className="block text-slate-500 mb-1 font-bold">GST Rate (%)</label>
+                        <input type="number" value={feeForm.gst_rate} onChange={e => setFeeForm({...feeForm, gst_rate: e.target.value !== "" ? parseFloat(e.target.value) : ""})} placeholder="e.g. 5 (leave blank for default)" className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5" />
+                      </div>
                     </div>
                     <div className="flex gap-2 justify-end">
                       <button onClick={() => setIsEditingFees(false)} className="text-xs text-slate-500 font-bold px-2">Cancel</button>
@@ -215,6 +220,10 @@ function VendorDetailModal({ vendor: initialVendor, onClose }: { vendor: any; on
                     <div>
                       <p className="text-slate-500">Platform Fee</p>
                       <p className="font-bold text-slate-900 dark:text-white">₹{rules.platform_fee || 0}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-slate-500">Shop Custom GST Rate</p>
+                      <p className="font-bold text-slate-900 dark:text-white">{rules.gst_rate !== null && rules.gst_rate !== undefined ? `${rules.gst_rate}%` : "Default (System Setting)"}</p>
                     </div>
                   </div>
                 )}

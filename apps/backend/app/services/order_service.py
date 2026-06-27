@@ -331,16 +331,19 @@ class OrderService:
         convenience_fee = round(convenience_fee, 2)
         coupon_discount = round(coupon_discount, 2)
 
-        # Tax/GST calculation — read rate from SystemSetting 'gst_rate' (default 5%)
-        from app.models.system import SystemSetting as _SS
-        _gst_res = await self.db.execute(select(_SS).where(_SS.key == "gst_rate"))
-        _gst_setting = _gst_res.scalars().first()
+        # Tax/GST calculation — check vendor rule first, otherwise system setting 'gst_rate' (default 5%)
         gst_rate = 0.05
-        if _gst_setting and _gst_setting.value:
-            try:
-                gst_rate = float(_gst_setting.value) / 100.0
-            except ValueError:
-                pass
+        if rule and rule.gst_rate is not None:
+            gst_rate = float(rule.gst_rate) / 100.0
+        else:
+            from app.models.system import SystemSetting as _SS
+            _gst_res = await self.db.execute(select(_SS).where(_SS.key == "gst_rate"))
+            _gst_setting = _gst_res.scalars().first()
+            if _gst_setting and _gst_setting.value:
+                try:
+                    gst_rate = float(_gst_setting.value) / 100.0
+                except ValueError:
+                    pass
         taxable_amount = max(0.0, subtotal + delivery_charge + packaging_charge + platform_fee + convenience_fee - coupon_discount)
         tax_amount = round(taxable_amount * gst_rate, 2)
 

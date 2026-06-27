@@ -229,16 +229,19 @@ async def preview_order(
     platform_fee = round(platform_fee, 2)
     convenience_fee = round(convenience_fee, 2)
 
-    # GST rate: read from SystemSetting 'gst_rate' (stored as percentage, default 5)
-    from app.models.system import SystemSetting as _SS
-    _gst_res = await db.execute(select(_SS).where(_SS.key == "gst_rate"))
-    _gst_setting = _gst_res.scalars().first()
+    # GST rate: check vendor rule first, otherwise read from SystemSetting 'gst_rate' (stored as percentage, default 5)
     gst_rate_pct = 5.0
-    if _gst_setting and _gst_setting.value:
-        try:
-            gst_rate_pct = float(_gst_setting.value)
-        except ValueError:
-            pass
+    if rule and rule.gst_rate is not None:
+        gst_rate_pct = float(rule.gst_rate)
+    else:
+        from app.models.system import SystemSetting as _SS
+        _gst_res = await db.execute(select(_SS).where(_SS.key == "gst_rate"))
+        _gst_setting = _gst_res.scalars().first()
+        if _gst_setting and _gst_setting.value:
+            try:
+                gst_rate_pct = float(_gst_setting.value)
+            except ValueError:
+                pass
     gst_rate = gst_rate_pct / 100.0
 
     # Tax calculation — after discount, using live GST rate

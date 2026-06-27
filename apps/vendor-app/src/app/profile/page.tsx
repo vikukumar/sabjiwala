@@ -332,6 +332,7 @@ function DeliveryRulesSection() {
   const [perKmCharge, setPerKmCharge] = useState("0");
   const [freeDeliveryAbove, setFreeDeliveryAbove] = useState("");
   const [platformFee, setPlatformFee] = useState("");
+  const [gstRate, setGstRate] = useState("");
 
   const { data: rulesData, isLoading } = useQuery<any>({
     queryKey: ["vendorDeliveryRules"],
@@ -349,6 +350,7 @@ function DeliveryRulesSection() {
       setPerKmCharge(String(rulesData.per_km_charge || "0"));
       setFreeDeliveryAbove(rulesData.free_delivery_above ? String(rulesData.free_delivery_above) : "");
       setPlatformFee(rulesData.platform_fee !== null && rulesData.platform_fee !== undefined ? String(rulesData.platform_fee) : "");
+      setGstRate(rulesData.gst_rate !== null && rulesData.gst_rate !== undefined ? String(rulesData.gst_rate) : "");
     }
   }, [rulesData]);
 
@@ -361,6 +363,7 @@ function DeliveryRulesSection() {
         per_km_charge: parseFloat(perKmCharge) || 0,
         free_delivery_above: freeDeliveryAbove ? parseFloat(freeDeliveryAbove) : null,
         platform_fee: platformFee ? parseFloat(platformFee) : null,
+        gst_rate: gstRate ? parseFloat(gstRate) : null,
       };
       return api.post("/vendors/me/delivery-rules", payload);
     },
@@ -477,6 +480,19 @@ function DeliveryRulesSection() {
                 />
               </div>
             )}
+
+            <div className="space-y-1.5 pt-2">
+              <label className="font-bold text-slate-500 uppercase">Custom GST Percentage (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="e.g. 5, 12, 18 (leave empty to use default)"
+                value={gstRate}
+                onChange={e => setGstRate(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-sm text-slate-900 dark:text-white"
+              />
+              <p className="text-[9px] text-slate-450">This rate will override the global default tax rate for all orders from your shop.</p>
+            </div>
           </div>
         </div>
 

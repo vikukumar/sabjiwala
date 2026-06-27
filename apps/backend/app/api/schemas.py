@@ -370,6 +370,7 @@ class DeliveryRuleCreate(BaseModel):
     platform_fee: Optional[float] = None
     convenience_fee: Optional[float] = None
     free_platform_fee_above: Optional[float] = None
+    gst_rate: Optional[float] = None
     distance_slabs: Optional[list] = None
 
 
@@ -718,6 +719,7 @@ class UpdateVendorCommissionRequest(BaseModel):
     platform_fee: Optional[float] = None
     convenience_fee: Optional[float] = None
     free_platform_fee_above: Optional[float] = None
+    gst_rate: Optional[float] = None
 
 class UpdateDeliveryBoyStatusRequest(BaseModel):
     status: str

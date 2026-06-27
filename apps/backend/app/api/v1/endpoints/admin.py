@@ -715,7 +715,8 @@ async def update_vendor_settings(
             body.packaging_fee,
             body.platform_fee,
             body.convenience_fee,
-            body.free_platform_fee_above
+            body.free_platform_fee_above,
+            body.gst_rate
         ]
     )
     
@@ -746,6 +747,8 @@ async def update_vendor_settings(
             rule.convenience_fee = body.convenience_fee
         if body.free_platform_fee_above is not None:
             rule.free_platform_fee_above = body.free_platform_fee_above
+        if body.gst_rate is not None:
+            rule.gst_rate = body.gst_rate
             
     await db.commit()
     return APIResponse(success=True, message="Vendor settings updated successfully")

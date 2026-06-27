@@ -240,6 +240,7 @@ class VendorDeliveryRule(BaseEntity):
     platform_fee: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
     convenience_fee: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
     free_platform_fee_above: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
+    gst_rate: Mapped[Optional[float]] = mapped_column(Numeric(5, 2), nullable=True)
 
     # Distance slabs (JSON: [{from_km: 0, to_km: 3, charge: 20}, ...])
     distance_slabs: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
