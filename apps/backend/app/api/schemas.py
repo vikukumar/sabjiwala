@@ -533,6 +533,8 @@ class OrderResponse(BaseModel):
     delivery_address: Optional[dict] = None  # JSONB with full_name, address_line_1, city, postal_code, phone
     actual_delivery_time: Optional[datetime] = None
     return_request: Optional[dict] = None
+    metadata_json: Optional[dict] = None
+
 
     from pydantic import field_validator
     @field_validator(

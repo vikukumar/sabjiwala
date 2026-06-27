@@ -104,6 +104,75 @@ function ItemRejectionModal({
   );
 }
 
+// =========== CANCEL ORDER MODAL ===========
+function CancelOrderModal({
+  isOpen, order, onConfirm, onCancel, loading
+}: {
+  isOpen: boolean; order: any;
+  onConfirm: (reason: string) => void; onCancel: () => void; loading?: boolean;
+}) {
+  const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      setReason("");
+    }
+  }, [isOpen]);
+
+  if (!isOpen || !order) return null;
+
+  return (
+    <div className="fixed inset-0 md:left-64 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in text-slate-800 dark:text-white shadow-2xl">
+        <div className="w-12 h-12 bg-rose-100 dark:bg-rose-955/40 rounded-2xl flex items-center justify-center mx-auto text-rose-600 dark:text-rose-400">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <h3 className="text-base font-black uppercase tracking-wider text-center">Cancel Order</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center leading-normal">
+          Are you sure you want to cancel order <span className="font-extrabold text-slate-800 dark:text-slate-200">#{order.order_number}</span>?
+        </p>
+
+        <div className="space-y-1.5 text-left">
+          <label className="block text-[10px] font-bold text-slate-400 uppercase">Reason for Cancellation</label>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="e.g. Out of stock, Customer cancelled, etc."
+            rows={3}
+            disabled={loading}
+            className="w-full px-4 py-2.5 text-xs font-bold border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-transparent focus:outline-none focus:border-rose-500 transition-colors"
+          />
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="danger"
+            onClick={() => {
+              if (reason.trim()) {
+                onConfirm(reason);
+              }
+            }}
+            disabled={!reason.trim() || loading}
+            loading={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            Yes, Cancel Order
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 py-3 text-xs cursor-pointer font-bold"
+          >
+            No, Keep
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // =========== OTP & Image Upload Modal ===========
 function OtpPromptModal({
   isOpen, title, message, onConfirm, onCancel, loading
@@ -212,7 +281,7 @@ function OtpPromptModal({
             <div className="grid grid-cols-4 gap-2 pt-1">
               {images.map((url, idx) => (
                 <div key={idx} className="relative aspect-square border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden group">
-                  <img src={url} className="w-full h-full object-cover" />
+                  <img src={resolveImageUrl(url)} className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removeImage(idx)}
@@ -500,6 +569,7 @@ export default function VendorOrdersPage() {
   const [selectedOrderForDeliveryOption, setSelectedOrderForDeliveryOption] = useState<any>(null);
   const [otpConfirmOrder, setOtpConfirmOrder] = useState<any>(null);
   const [rejectionConfig, setRejectionConfig] = useState<{ isOpen: boolean; orderId: string; item: any } | null>(null);
+  const [cancelOrderConfig, setCancelOrderConfig] = useState<{ isOpen: boolean; order: any } | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [navTarget, setNavTarget] = useState<{ order: any } | null>(null);
   const [vendorGpsPos, setVendorGpsPos] = useState<[number, number]>([19.0760, 72.9977]);
@@ -910,9 +980,7 @@ export default function VendorOrdersPage() {
                 {!["delivered", "cancelled", "returned", "refunded", "failed"].includes(order.status) && (
                   <button
                     onClick={() => {
-                      if (confirm("Are you sure you want to cancel this order?")) {
-                        updateStatusMutation.mutate({ orderId: order.id, status: "cancelled", notes: "Order cancelled by vendor" });
-                      }
+                      setCancelOrderConfig({ isOpen: true, order });
                     }}
                     disabled={updateStatusMutation.isPending}
                     className="flex-1 bg-rose-600 hover:bg-rose-500 dark:bg-rose-500 dark:hover:bg-rose-400 text-white text-xs font-bold py-2.5 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50"
@@ -998,7 +1066,9 @@ export default function VendorOrdersPage() {
       <OtpPromptModal
         isOpen={!!otpConfirmOrder}
         title="Delivery OTP Verification"
-        message={`Enter 4-digit OTP and upload proof photos to deliver Order #${otpConfirmOrder?.order_number}`}
+        message={`Enter 4-digit OTP and upload proof photos to deliver Order #${otpConfirmOrder?.order_number} ${
+          otpConfirmOrder?.delivery_otp ? `(For testing, OTP: ${otpConfirmOrder.delivery_otp})` : ""
+        }`}
         loading={updateStatusMutation.isPending}
         onConfirm={(otp, images) => {
           updateStatusMutation.mutate({
@@ -1012,6 +1082,24 @@ export default function VendorOrdersPage() {
         }}
         onCancel={() => setOtpConfirmOrder(null)}
       />
+
+      <CancelOrderModal
+        isOpen={!!cancelOrderConfig?.isOpen}
+        order={cancelOrderConfig?.order}
+        loading={updateStatusMutation.isPending}
+        onConfirm={(reason) => {
+          if (cancelOrderConfig?.order) {
+            updateStatusMutation.mutate({
+              orderId: cancelOrderConfig.order.id,
+              status: "cancelled",
+              notes: reason
+            });
+            setCancelOrderConfig(null);
+          }
+        }}
+        onCancel={() => setCancelOrderConfig(null)}
+      />
+
 
       <ItemRejectionModal
         isOpen={!!rejectionConfig?.isOpen}

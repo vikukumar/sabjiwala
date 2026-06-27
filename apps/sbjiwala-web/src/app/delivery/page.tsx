@@ -6,11 +6,10 @@ import {
   MapPin, Loader2, Package, XCircle, X
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl, createCustomerIcon, createStoreIcon, createDeliveryAgentIcon } from "@sbjiwala/shared";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/index";
 import DeliveryLayout, { useDelivery } from "@/components/DeliveryLayout";
-import { createCustomerIcon, createStoreIcon, createDeliveryAgentIcon } from "@sbjiwala/shared";
 import { NavigationChooser } from "@/components/NavigationMap";
 
 // =========== OTP MODAL ===========
@@ -121,7 +120,7 @@ function OtpPromptModal({
             <div className="grid grid-cols-4 gap-2 pt-1">
               {images.map((url, idx) => (
                 <div key={idx} className="relative aspect-square border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden group">
-                  <img src={url} className="w-full h-full object-cover" />
+                  <img src={resolveImageUrl(url)} className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removeImage(idx)}
@@ -819,7 +818,11 @@ function ActiveOrdersDashboard() {
       <OtpPromptModal
         isOpen={!!otpPromptConfig?.isOpen}
         title="Delivery OTP"
-        message="Enter the 4-digit OTP from the customer to confirm delivery."
+        message={`Enter the 4-digit OTP from the customer to confirm delivery. ${
+          otpPromptConfig?.orderId
+            ? `(For testing, OTP: ${assignments.find((a: any) => a.id === otpPromptConfig.orderId)?.delivery_otp || "N/A"})`
+            : ""
+        }`}
         loading={deliverOrderMutation.isPending}
         onConfirm={(otp, images) => { if (otpPromptConfig?.orderId) deliverOrderMutation.mutate({ orderId: otpPromptConfig.orderId, otp, images }); }}
         onCancel={() => setOtpPromptConfig(null)}

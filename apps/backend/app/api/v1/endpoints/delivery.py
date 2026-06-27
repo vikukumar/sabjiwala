@@ -283,7 +283,9 @@ async def get_assignments(
             "estimated_delivery_time": order.estimated_delivery_time.isoformat() if order.estimated_delivery_time else None,
             "vendor_store": store_data,
             "items": items_data,
+            "delivery_otp": order.delivery_otp,
         })
+
 
     return APIResponse(success=True, data=data)
 
@@ -754,14 +756,30 @@ async def reject_order_items(
     Calculates refunded amount and adjusts the total order value and COD.
     """
     # Verify assignment
-    res = await db.execute(
-        select(Order)
-        .options(selectinload(Order.items))
-        .where(Order.id == order_id, Order.delivery_boy_id == current_user["user_id"], Order.is_deleted == False)
-    )
+    vendor = None
+    if current_user.get("user_type") in ["vendor", "vendor_manager"]:
+        from app.models.vendor import Vendor
+        res_v = await db.execute(
+            select(Vendor).where(Vendor.user_id == current_user["user_id"], Vendor.is_deleted == False)
+        )
+        vendor = res_v.scalars().first()
+
+    if current_user.get("user_type") in ["vendor", "vendor_manager"] and vendor:
+        res = await db.execute(
+            select(Order)
+            .options(selectinload(Order.items))
+            .where(Order.id == order_id, Order.vendor_id == vendor.id, Order.is_deleted == False)
+        )
+    else:
+        res = await db.execute(
+            select(Order)
+            .options(selectinload(Order.items))
+            .where(Order.id == order_id, Order.delivery_boy_id == current_user["user_id"], Order.is_deleted == False)
+        )
     order = res.scalars().first()
     if not order:
         raise HTTPException(status_code=403, detail="Order not found or not assigned to you")
+
 
     if order.status not in [OrderStatus.OUT_FOR_DELIVERY, OrderStatus.PICKED]:
         raise HTTPException(status_code=400, detail="Items can only be rejected when the order is out for delivery")
@@ -873,9 +891,10 @@ async def reject_order_items(
         from_status=order.status.value,
         to_status=order.status.value,
         changed_by=current_user["user_id"],
-        changed_by_type="delivery_boy",
+        changed_by_type=current_user.get("user_type", "delivery_boy"),
         notes=f"Customer rejected items worth ₹{total_refund_amount:.2f}. {refund_message}",
     )
+
     db.add(history)
 
     await db.flush()
