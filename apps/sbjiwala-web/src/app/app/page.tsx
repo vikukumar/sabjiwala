@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Search, ArrowRight, Star, Plus, Minus, ChevronRight, Zap, Truck, Leaf, ShieldCheck, Clock, TrendingUp, Loader2, Bell, X, Navigation, Volume2, VolumeX, ShoppingCart, ClipboardList, UserCircle, HelpCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, useWebSocket, resolveImageUrl } from "@sbjiwala/shared";
+import versionInfo from "../version.json";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Badge, Skeleton, EmptyState, SectionHeader } from "@/components/ui/index";
@@ -1322,7 +1323,7 @@ function DownloadAppsSection() {
 
   const currentDownloadUrl = getDownloadUrl();
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(currentDownloadUrl)}&color=059669`;
-  const latestVersion = releaseData?.version || "1.0.0";
+  const latestVersion = releaseData?.version || versionInfo.version || "0.1.0";
 
   return (
     <section className="bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 py-16 px-4">

@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { api } from "@sbjiwala/shared";
 import { Badge } from "@/components/ui";
+import versionInfo from "./src/app/version.json";
 
 interface UserPayload {
   sub: string;
@@ -840,7 +841,7 @@ function DownloadAppsSection() {
 
   const currentDownloadUrl = getDownloadUrl();
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(currentDownloadUrl)}&color=059669`;
-  const latestVersion = releaseData?.version || "1.0.0";
+  const latestVersion = releaseData?.version || versionInfo.version || "0.1.0";
 
   return (
     <section className="bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 py-16 px-4">
