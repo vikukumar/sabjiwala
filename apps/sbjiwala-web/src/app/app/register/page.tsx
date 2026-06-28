@@ -114,14 +114,6 @@ function RegisterPageContent() {
       setOtpIdentifier(target);
       setOtpMode("verification");
       startOtpResendTimer();
-      
-      if (res.meta?.otp) {
-        const otpDigits = String(res.meta.otp).split("").slice(0, 6);
-        const nextOtp = ["", "", "", "", "", ""];
-        otpDigits.forEach((d, i) => { nextOtp[i] = d; });
-        setOtpCode(nextOtp);
-        info("Debug OTP", `Auto-filled registration OTP: ${res.meta.otp}`);
-      }
     } catch (err: any) {
       showError("Registration failed", err.response?.data?.detail || err.message);
     } finally {
@@ -179,15 +171,7 @@ function RegisterPageContent() {
         purpose: "register"
       });
       startOtpResendTimer();
-      if (res.meta?.otp) {
-        const otpDigits = String(res.meta.otp).split("").slice(0, 6);
-        const nextOtp = ["", "", "", "", "", ""];
-        otpDigits.forEach((d, i) => { nextOtp[i] = d; });
-        setOtpCode(nextOtp);
-        success("OTP Sent (Debug)", `Verification code ${res.meta.otp} auto-filled`);
-      } else {
-        success("OTP Sent", `Verification code sent to your registered contact details`);
-      }
+      success("OTP Sent", `Verification code sent to your registered contact details`);
     } catch (err: any) {
       showError("Failed to send OTP", err.response?.data?.detail || err.message);
     } finally {

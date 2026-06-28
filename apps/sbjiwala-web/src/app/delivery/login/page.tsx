@@ -181,12 +181,6 @@ export default function LoginPage() {
         setIsOtpSent(true);
         setCountdown(60);
         setSuccessMsg(res.message || "OTP sent successfully to your email.");
-
-        // Auto-fill OTP in debug mode
-        if (res.meta?.otp) {
-          setOtp(res.meta.otp);
-          setSuccessMsg(`${res.meta.message} (Auto-filled OTP: ${res.meta.otp})`);
-        }
       } else {
         setErrorMsg(res.message || "Failed to send OTP.");
       }

@@ -84,10 +84,6 @@ async def send_otp(
         "expires_in": OTP_EXPIRY_SECONDS,
     }
 
-    # Ensure we never return the OTP to the client in production or dev to enforce actual SMS/Email verification
-    if settings.APP_DEBUG:
-        result["otp"] = otp
-
     await logger.ainfo("OTP generated and sent", identifier=_mask_identifier(identifier), purpose=purpose)
 
     return result

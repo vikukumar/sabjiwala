@@ -836,7 +836,7 @@ function DownloadAppsSection() {
       }
     });
 
-    return apkAsset ? apkAsset.browser_download_url : `https://github.com/vikukumar/sbjiwala/releases/latest/download/sbjiwala-${selectedApp}.apk`;
+    return apkAsset ? apkAsset.browser_download_url : `https://github.com/vikukumar/sabjiwala/releases/latest/download/sbjiwala-${selectedApp}.apk`;
   };
 
   const currentDownloadUrl = getDownloadUrl();

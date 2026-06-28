@@ -415,8 +415,8 @@ function CategoriesStrip({ active, setActive }: { active: string; setActive: (va
               key={cat.id}
               onClick={() => setActive(cat.name)}
               className={`relative overflow-hidden rounded-3xl p-5 text-left border transition-all duration-300 hover:scale-[1.03] hover:-translate-y-0.5 group active:scale-95 cursor-pointer ${isSelected
-                  ? "border-emerald-500 ring-2 ring-emerald-500/20 shadow-md bg-white dark:bg-slate-900"
-                  : "border-slate-200 dark:border-slate-800/80 shadow-sm bg-gradient-to-br " + details.gradient
+                ? "border-emerald-500 ring-2 ring-emerald-500/20 shadow-md bg-white dark:bg-slate-900"
+                : "border-slate-200 dark:border-slate-800/80 shadow-sm bg-gradient-to-br " + details.gradient
                 }`}
             >
               {/* Floating Large background emoji */}
@@ -1318,7 +1318,7 @@ function DownloadAppsSection() {
       }
     });
 
-    return apkAsset ? apkAsset.browser_download_url : `https://github.com/vikukumar/sbjiwala/releases/latest/download/sbjiwala-${selectedApp}.apk`;
+    return apkAsset ? apkAsset.browser_download_url : `https://github.com/vikukumar/sabjiwala/releases/latest/download/sbjiwala-${selectedApp}.apk`;
   };
 
   const currentDownloadUrl = getDownloadUrl();
@@ -1352,8 +1352,8 @@ function DownloadAppsSection() {
                   key={app.id}
                   onClick={() => setSelectedApp(app.id as any)}
                   className={`px-3.5 py-2.5 text-xs font-bold border rounded-2xl transition-all cursor-pointer active:scale-95 ${selectedApp === app.id
-                      ? "bg-slate-900 border-slate-900 text-white dark:bg-white dark:border-white dark:text-slate-950 shadow-sm"
-                      : "border-slate-200 hover:border-slate-300 dark:border-slate-800 text-slate-650 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
+                    ? "bg-slate-900 border-slate-900 text-white dark:bg-white dark:border-white dark:text-slate-950 shadow-sm"
+                    : "border-slate-200 hover:border-slate-300 dark:border-slate-800 text-slate-650 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
                     }`}
                 >
                   {app.label}
@@ -1369,8 +1369,8 @@ function DownloadAppsSection() {
               <button
                 onClick={() => setDevice("android")}
                 className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${device === "android"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
                   }`}
               >
                 🤖 Android (APK)
@@ -1378,8 +1378,8 @@ function DownloadAppsSection() {
               <button
                 onClick={() => setDevice("ios")}
                 className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${device === "ios"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
                   }`}
               >
                 🍏 iOS (App Store)

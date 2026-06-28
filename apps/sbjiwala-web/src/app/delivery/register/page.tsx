@@ -156,11 +156,6 @@ export default function DeliveryRegisterPage() {
         setSuccessMsg("Registration initiated successfully!");
         setOtpMode("verification");
         setCountdown(60);
-
-        if (res.meta?.otp) {
-          setOtp(res.meta.otp);
-          setSuccessMsg(`Registration initiated! (Auto-filled OTP: ${res.meta.otp})`);
-        }
       } else {
         setErrorMsg(res.message || "Registration failed.");
       }
@@ -219,9 +214,6 @@ export default function DeliveryRegisterPage() {
       if (res.success) {
         setCountdown(60);
         setSuccessMsg(res.message || "OTP sent successfully.");
-        if (res.meta?.otp) {
-          setOtp(res.meta.otp);
-        }
       } else {
         setErrorMsg(res.message || "Failed to send OTP.");
       }

@@ -171,8 +171,6 @@ async def register(
                 "requires_otp_verification": True,
                 "verification_identifier": verification_identifier,
             }
-            if "otp" in otp_res:
-                meta_data["otp"] = otp_res["otp"]
 
             await db.commit()
             await logger.ainfo("Role added to existing user", user_id=str(existing_user.id), role=role_name)
@@ -315,8 +313,6 @@ async def register(
         "requires_otp_verification": True,
         "verification_identifier": verification_identifier,
     }
-    if "otp" in otp_res:
-        meta_data["otp"] = otp_res["otp"]
 
     await db.commit()
 

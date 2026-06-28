@@ -18,7 +18,7 @@ from app.models.payment import Wallet, WalletType
 
 API_URL = "http://localhost:8001/api/v1"
 
-async def cleanup_test_data():
+async def cleanup_test_data() -> None:
     """Clean up test users from the database and Redis before starting."""
     print("[*] Cleaning up existing test users from database...")
     test_emails = ["testvendor@sbjiwala.qzz.io", "testdelivery@sbjiwala.qzz.io", "testcustomer@sbjiwala.qzz.io", "testadmin@sbjiwala.qzz.io", "specialvendor@sbjiwala.qzz.io"]
@@ -63,7 +63,7 @@ async def cleanup_test_data():
 
     # Clean Redis keys
     print("[*] Cleaning up OTP keys from Redis...")
-    redis = await from_url(settings.redis_url, decode_responses=True)
+    redis = await from_url(settings.redis_url, decode_responses=True)  # type: ignore
     for email in test_emails:
         keys = await redis.keys(f"otp:*:{email}")
         for k in keys:
@@ -79,13 +79,32 @@ async def cleanup_test_data():
         for k in keys_rate:
             await redis.delete(k)
     await redis.close()
-    print("[+] Redis cleanup completed.")
+async def get_otp_from_redis(identifier: str, purpose: str) -> str:
+    """Retrieve OTP code directly from Redis for testing purposes."""
+    redis = await from_url(settings.redis_url, decode_responses=True)  # type: ignore
+    otp_key = f"otp:{purpose}:{identifier}"
+    otp_data = await redis.hgetall(otp_key)
+    
+    if not otp_data:
+        # Check normalized format (try removing +91 prefix)
+        if identifier.startswith("+91") and len(identifier) == 13:
+            otp_key = f"otp:{purpose}:{identifier[3:]}"
+            otp_data = await redis.hgetall(otp_key)
+        # Check normalized format (try adding +91 prefix)
+        elif len(identifier) == 10 and identifier.isdigit():
+            otp_key = f"otp:{purpose}:+91{identifier}"
+            otp_data = await redis.hgetall(otp_key)
+
+    await redis.close()
+    if not otp_data:
+        raise ValueError(f"OTP not found in Redis for {identifier} (purpose: {purpose})")
+    return str(otp_data["otp"])
 
 
-async def run_tests():
+async def run_tests() -> None:
     await cleanup_test_data()
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         # =====================================================================
         # 1. Dynamic Role Registration & Prioritized OTP Verification (Vendor)
         # =====================================================================
@@ -111,7 +130,7 @@ async def run_tests():
         print("[+] OTP prioritized email as expected.")
 
         # Read the debug OTP
-        otp = data["meta"]["otp"]
+        otp = await get_otp_from_redis("testvendor@sbjiwala.qzz.io", "register")
         print(f"[+] Read Debug OTP: {otp}")
 
         # Let register commit
@@ -167,7 +186,7 @@ async def run_tests():
         res = await client.post(f"{API_URL}/auth/register", json=delivery_payload)
         assert res.status_code == 200, f"Registration failed: {res.text}"
         data = res.json()
-        otp = data["meta"]["otp"]
+        otp = await get_otp_from_redis("testdelivery@sbjiwala.qzz.io", "register")
         print(f"[+] Read Debug OTP: {otp}")
 
         # Let register commit
@@ -217,7 +236,7 @@ async def run_tests():
         res = await client.post(f"{API_URL}/auth/register", json=customer_payload)
         assert res.status_code == 200, f"Registration failed: {res.text}"
         data = res.json()
-        otp = data["meta"]["otp"]
+        otp = await get_otp_from_redis("+919000000003", "register")
         print(f"[+] Read Debug OTP: {otp}")
 
         # Let register commit
@@ -287,11 +306,11 @@ async def run_tests():
         })
         assert send_otp_res.status_code == 200
         otp_data = send_otp_res.json()
-        assert "otp" in otp_data["meta"]
+        assert "otp" not in otp_data.get("meta", {})
         assert "@sbjiwala.qzz.io" in otp_data["message"], "OTP should be sent to email since both exist"
         print("[+] OTP login request correctly routed to email.")
 
-        otp = otp_data["meta"]["otp"]
+        otp = await get_otp_from_redis("testvendor@sbjiwala.qzz.io", "login")
         print(f"[+] Read OTP: {otp}")
 
         # Verify OTP to log in
@@ -316,7 +335,7 @@ async def run_tests():
         print("[+] Magic link request sent successfully.")
 
         # Since it goes to Redis under "magic_link:<token>", let's query Redis to fetch it
-        redis = await from_url(settings.redis_url, decode_responses=True)
+        redis = await from_url(settings.redis_url, decode_responses=True)  # type: ignore
         keys = await redis.keys("magic_link:*")
         assert len(keys) > 0, "No magic link token found in Redis"
         magic_token = keys[0].split(":")[1]
@@ -339,8 +358,8 @@ async def run_tests():
         })
         assert reset_req.status_code == 200
         reset_otp_data = reset_req.json()
-        assert "otp" in reset_otp_data["meta"]
-        otp = reset_otp_data["meta"]["otp"]
+        assert "otp" not in reset_otp_data.get("meta", {})
+        otp = await get_otp_from_redis("+919000000003", "reset_password")
         print(f"[+] Read Reset OTP: {otp}")
 
         # Verify reset OTP to get reset token
@@ -387,7 +406,7 @@ async def run_tests():
         }
         admin_reg = await client.post(f"{API_URL}/auth/register", json=admin_payload)
         assert admin_reg.status_code == 200
-        admin_otp = admin_reg.json()["meta"]["otp"]
+        admin_otp = await get_otp_from_redis("testadmin@sbjiwala.qzz.io", "register")
         
         await asyncio.sleep(0.5)
         
@@ -440,7 +459,7 @@ async def run_tests():
 
         v_reg = await client.post(f"{API_URL}/auth/register", json=vendor_details_payload)
         assert v_reg.status_code == 200
-        v_otp = v_reg.json()["meta"]["otp"]
+        v_otp = await get_otp_from_redis("specialvendor@sbjiwala.qzz.io", "register")
         
         await asyncio.sleep(0.5)
         
@@ -564,7 +583,7 @@ async def run_tests():
         assert "delivery_boy" in append_data["message"]
         
         # Verify registration OTP
-        append_otp = append_data["meta"]["otp"]
+        append_otp = await get_otp_from_redis("specialvendor@sbjiwala.qzz.io", "register")
         verify_append_res = await client.post(f"{API_URL}/auth/otp/verify", json={
             "identifier": "specialvendor@sbjiwala.qzz.io",
             "otp": append_otp,
