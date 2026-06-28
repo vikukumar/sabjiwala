@@ -17,7 +17,7 @@ from app.core.config import settings
 # Create async engine with connection pooling
 engine = create_async_engine(
     settings.database_url,
-    echo=settings.APP_DEBUG,
+    echo=settings.DB_ECHO,
     pool_size=20,
     max_overflow=10,
     pool_recycle=3600,

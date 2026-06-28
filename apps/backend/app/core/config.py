@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = Field(default="password", validation_alias=AliasChoices("DATABASE_PASSWORD", "POSTGRES_PASSWORD"))
     DATABASE_SSL: str = Field(default="disable", validation_alias=AliasChoices("DATABASE_SSL", "POSTGRES_SSL"))
     DATABASE_URL: str = Field(default="", validation_alias=AliasChoices("DATABASE_URL"))
+    DB_ECHO: bool = False
 
     @property
     def database_url(self) -> str:
