@@ -52,7 +52,7 @@ export default function AdminSettingsPage() {
       setTimeout(() => setToastMsg(""), 3000);
     },
     onError: (err: any) => {
-      alert("Failed to update setting: " + (err.response?.data?.detail || err.message));
+      setToastMsg("Failed to update setting: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -106,9 +106,8 @@ export default function AdminSettingsPage() {
                 handleChange(key, nextVal);
                 saveSettingMutation.mutate({ key, value: nextVal, isJson: false });
               }}
-              className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all duration-300 ${
-                currentVal === "true" || currentVal === true ? "bg-emerald-600 justify-end" : "bg-slate-300 dark:bg-slate-800 justify-start"
-              }`}
+              className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all duration-300 ${currentVal === "true" || currentVal === true ? "bg-emerald-600 justify-end" : "bg-slate-300 dark:bg-slate-800 justify-start"
+                }`}
             >
               <span className="bg-white w-4 h-4 rounded-full shadow-md"></span>
             </button>
@@ -180,11 +179,10 @@ export default function AdminSettingsPage() {
               <button
                 key={sec.id}
                 onClick={() => setActiveSection(sec.id)}
-                className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                  isActive
-                    ? "bg-gradient-to-r from-emerald-600 to-teal-500 border-none text-white shadow-md font-extrabold"
-                    : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-455 hover:bg-slate-50 dark:hover:bg-slate-800"
-                }`}
+                className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${isActive
+                  ? "bg-gradient-to-r from-emerald-600 to-teal-500 border-none text-white shadow-md font-extrabold"
+                  : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-455 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
               >
                 <Icon className="w-5 h-5 shrink-0" />
                 <span className="text-xs">{sec.label}</span>
@@ -207,7 +205,7 @@ export default function AdminSettingsPage() {
                 {getSettingControl("app_logo_vertical_url", "Vertical Logo URL", "Vertical layout logo image URL used in pages", "text")}
                 {getSettingControl("app_icon_url", "Application Icon URL", "URL of the square application icon", "text")}
                 {getSettingControl("app_dark_mode", "Default Dark Mode", "Enable dark theme mode by default across portals", "boolean")}
-                
+
                 <h3 className="text-sm font-black text-slate-800 dark:text-white mt-8">Social Profile Links</h3>
                 {getSettingControl("social_facebook", "Facebook Profile", "Optional target hyperlink inside homepage footer", "text")}
                 {getSettingControl("social_instagram", "Instagram Profile", "Optional target hyperlink inside homepage footer", "text")}
@@ -227,7 +225,7 @@ export default function AdminSettingsPage() {
                   {/* Left Column: Logos & Icon Previews */}
                   <div className="space-y-4 bg-slate-950/40 p-4 rounded-2xl border border-slate-800">
                     <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Asset Assets</h5>
-                    
+
                     <div className="space-y-3.5">
                       {/* App Icon */}
                       <div className="space-y-1">
@@ -279,7 +277,7 @@ export default function AdminSettingsPage() {
                   <div className="md:col-span-2 space-y-4 bg-slate-950/40 p-4 rounded-2xl border border-slate-800 flex flex-col justify-between">
                     <div>
                       <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Theme Preview (Mock UI Elements)</h5>
-                      
+
                       <div className="mt-4 space-y-4 font-sans text-xs">
                         {/* Header Mockup */}
                         <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">

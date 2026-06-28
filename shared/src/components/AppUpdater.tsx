@@ -83,7 +83,7 @@ export const AppUpdater: React.FC<{ appName: string; currentVersion?: string }> 
       const latestRelease = response.data;
 
       const currentVersion = propVersion || process.env.NEXT_PUBLIC_APP_VERSION || '1.0';
-      
+
       if (latestRelease.version) {
         logFirebaseVersionInfo(currentVersion, latestRelease.version).catch(err => {
           console.warn("Failed to log Firebase version info:", err);
@@ -93,15 +93,15 @@ export const AppUpdater: React.FC<{ appName: string; currentVersion?: string }> 
       if (latestRelease.version && latestRelease.version !== currentVersion) {
         const targetAsset = latestRelease.assets.find(a => {
           if (!a.name.endsWith('.apk')) return false;
-          
+
           const nameLower = a.name.toLowerCase();
           if (appName === 'customer') {
-            return !nameLower.includes('vendor') && 
-                   !nameLower.includes('delivery') && 
-                   !nameLower.includes('courier') && 
-                   !nameLower.includes('admin') && 
-                   !nameLower.includes('agent') && 
-                   !nameLower.includes('support');
+            return !nameLower.includes('vendor') &&
+              !nameLower.includes('delivery') &&
+              !nameLower.includes('courier') &&
+              !nameLower.includes('admin') &&
+              !nameLower.includes('agent') &&
+              !nameLower.includes('support');
           } else {
             if (appName === 'agent') {
               return nameLower.includes('agent') || nameLower.includes('support');
@@ -116,7 +116,7 @@ export const AppUpdater: React.FC<{ appName: string; currentVersion?: string }> 
         if (targetAsset) {
           setNewVersion(latestRelease.version);
           setDownloadUrl(targetAsset.browser_download_url);
-          
+
           // Silently and automatically start download in background
           startDownload(targetAsset.browser_download_url, latestRelease.version);
         }
@@ -134,9 +134,9 @@ export const AppUpdater: React.FC<{ appName: string; currentVersion?: string }> 
 
     try {
       await showToast(`New update v${version} found. Downloading in background...`);
-      
+
       const fileName = `update_${appName}_v${version}.apk`;
-      
+
       if (Capacitor.getPlatform() !== 'android') {
         // Mock download/progress on web/dev environment for preview and safety
         console.log("Simulating background download on non-android platform...");

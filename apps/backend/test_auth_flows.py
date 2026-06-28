@@ -2,6 +2,7 @@ import asyncio
 import sys
 import os
 import json
+from uuid import UUID
 import httpx
 from redis.asyncio import from_url
 from sqlalchemy import select, delete
@@ -537,15 +538,20 @@ async def run_tests() -> None:
         
         async with async_session_factory() as session:
             from app.models.vendor import VendorDeliveryRule
-            stmt = select(Vendor).where(Vendor.id == special_vendor_entry["id"])
+            stmt = select(Vendor).where(Vendor.id == UUID(special_vendor_entry["id"]))
             v_ref = (await session.execute(stmt)).scalars().first()
+            # pyrefly: ignore [missing-attribute]
             assert v_ref.commission_rate == 0.075
+            # pyrefly: ignore [missing-attribute]
             assert v_ref.business_name == "Fresh Organic Mart Refined"
             
-            rule_stmt = select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == special_vendor_entry["id"])
+            rule_stmt = select(VendorDeliveryRule).where(VendorDeliveryRule.vendor_id == UUID(special_vendor_entry["id"]))
             rule_ref = (await session.execute(rule_stmt)).scalars().first()
+            # pyrefly: ignore [missing-attribute]
             assert float(rule_ref.min_order_amount) == 250.0
+            # pyrefly: ignore [missing-attribute]
             assert float(rule_ref.base_delivery_charge) == 45.0
+            # pyrefly: ignore [missing-attribute]
             assert float(rule_ref.per_km_charge) == 6.5
             print("[+] Custom vendor settings and delivery rules updates verified.")
 
