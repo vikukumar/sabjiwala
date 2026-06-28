@@ -509,7 +509,6 @@ export default function UnifiedLandingPage() {
           </div>
         </section>
 
-
         <AboutSbjiwalaSection />
         <DownloadAppsSection />
 
@@ -730,7 +729,6 @@ export default function UnifiedLandingPage() {
     </div>
   );
 }
-
 
 function AboutSbjiwalaSection() {
   return (

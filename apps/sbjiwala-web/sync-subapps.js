@@ -120,6 +120,9 @@ export default function CustomerAppLayout({
       } else {
         // Root files (layout, providers, etc.) go to root /
         copyRecursiveSync(srcChildPath, path.join(webAppDir, child));
+        if (child === 'version.json') {
+          copyRecursiveSync(srcChildPath, path.join(webCustomerNestedDir, 'version.json'));
+        }
       }
     }
   });

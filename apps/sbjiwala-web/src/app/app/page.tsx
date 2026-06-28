@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Search, ArrowRight, Star, Plus, Minus, ChevronRight, Zap, Truck, Leaf, ShieldCheck, Clock, TrendingUp, Loader2, Bell, X, Navigation, Volume2, VolumeX, ShoppingCart, ClipboardList, UserCircle, HelpCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, useWebSocket, resolveImageUrl } from "@sbjiwala/shared";
-import versionInfo from "../version.json";
+import versionInfo from "./version.json";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Badge, Skeleton, EmptyState, SectionHeader } from "@/components/ui/index";

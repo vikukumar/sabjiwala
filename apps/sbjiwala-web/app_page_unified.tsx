@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { api } from "@sbjiwala/shared";
 import { Badge } from "@/components/ui";
-import versionInfo from "./src/app/version.json";
+import versionInfo from "./version.json";
 
 interface UserPayload {
   sub: string;
