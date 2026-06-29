@@ -25,7 +25,8 @@ logger = structlog.get_logger()
 def get_frontend_url(
     host: Optional[str] = None,
     origin: Optional[str] = None,
-    user_agent: Optional[str] = None
+    user_agent: Optional[str] = None,
+    for_assets: bool = False
 ) -> str:
     """Derive the frontend URL based on the API settings or the host header/origin."""
     from app.core.config import settings
@@ -42,7 +43,7 @@ def get_frontend_url(
             if val_lower.startswith(("capacitor://", "ionic://", "file://")):
                 is_mobile = True
                 break
-            if val_lower == "http://localhost" or val_lower.startswith("http://localhost:"):
+            if val_lower in ["http://localhost", "https://localhost"] or val_lower.startswith(("http://localhost:", "https://localhost:")):
                 # Port 3000 is the Next.js local web app. If it is NOT 3000, treat as mobile (Capacitor)
                 if "localhost:3000" not in val_lower:
                     is_mobile = True
@@ -76,17 +77,26 @@ def get_frontend_url(
             target_web = target_web.rstrip("/")
             if "://" not in target_web:
                 proto = "https" if "localhost" not in target_web and "127.0.0.1" not in target_web else "http"
-                return f"{proto}://{target_web}"
-            return target_web
+                res_url = f"{proto}://{target_web}"
+            else:
+                res_url = target_web
+            
+            if for_assets and ("localhost" in res_url or "127.0.0.1" in res_url):
+                return "https://sbjiwala.qzz.io"
+            return res_url
             
     # Fallback/derivation from API APP_URL (for mobile or background tasks/workers)
+    res_url = url
     if "api." in url:
-        return url.replace("api.", "")
-    if "localhost:8000" in url:
-        return url.replace("localhost:8000", "localhost:3000")
-    if "127.0.0.1:8000" in url:
-        return url.replace("127.0.0.1:8000", "127.0.0.1:3000")
-    return url
+        res_url = url.replace("api.", "")
+    elif "localhost:8000" in url:
+        res_url = url.replace("localhost:8000", "localhost:3000")
+    elif "127.0.0.1:8000" in url:
+        res_url = url.replace("127.0.0.1:8000", "127.0.0.1:3000")
+        
+    if for_assets and ("localhost" in res_url or "127.0.0.1" in res_url):
+        return "https://sbjiwala.qzz.io"
+    return res_url
 
 
 
@@ -488,8 +498,8 @@ class NotificationService:
             try:
                 render_vars = {
                     "frontend_url": get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua),
-                    "logo_horizontal": f"{get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua)}/logo_horizontal.png",
-                    "logo_vertical": f"{get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua)}/logo_vertical.png",
+                    "logo_horizontal": f"{get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua, for_assets=True)}/logo_horizontal.png",
+                    "logo_vertical": f"{get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua, for_assets=True)}/logo_vertical.png",
                     **social_vars,
                     **variables
                 }
@@ -547,8 +557,8 @@ class NotificationService:
                     try:
                         render_vars = {
                             "frontend_url": get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua),
-                            "logo_horizontal": f"{get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua)}/logo_horizontal.png",
-                            "logo_vertical": f"{get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua)}/logo_vertical.png",
+                            "logo_horizontal": f"{get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua, for_assets=True)}/logo_horizontal.png",
+                            "logo_vertical": f"{get_frontend_url(host=req_host, origin=req_orig, user_agent=req_ua, for_assets=True)}/logo_vertical.png",
                             **social_vars,
                             **variables
                         }

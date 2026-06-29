@@ -51,12 +51,13 @@ class InvoiceService:
         except Exception as e:
             logger.error("Failed to load social settings for invoice PDF", error=str(e))
 
+        from app.services.notification_service import get_frontend_url
         html_out = template.render(
             order=order,
             items=items,
             frontend_url=frontend_url,
-            logo_horizontal=f"{frontend_url}/logo_horizontal.png",
-            logo_vertical=f"{frontend_url}/logo_vertical.png",
+            logo_horizontal=f"{get_frontend_url(for_assets=True)}/logo_horizontal.png",
+            logo_vertical=f"{get_frontend_url(for_assets=True)}/logo_vertical.png",
             **social_vars
         )
 

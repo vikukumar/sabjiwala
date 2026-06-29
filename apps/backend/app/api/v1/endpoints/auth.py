@@ -1506,8 +1506,8 @@ async def magic_link_request(
     user_agent = request.headers.get("user-agent")
     frontend_url = get_frontend_url(host=host, origin=origin, user_agent=user_agent)
     magic_url = f"{frontend_url}/login?magic_token={token}"
-    logo_horizontal_url = f"{frontend_url}/logo_horizontal.png"
-    logo_vertical_url = f"{frontend_url}/logo_vertical.png"
+    logo_horizontal_url = f"{get_frontend_url(host=host, origin=origin, user_agent=user_agent, for_assets=True)}/logo_horizontal.png"
+    logo_vertical_url = f"{get_frontend_url(host=host, origin=origin, user_agent=user_agent, for_assets=True)}/logo_vertical.png"
 
     # Fetch social settings
     social_facebook = ""

@@ -193,8 +193,8 @@ async def send_otp_via_email(
     host = request.headers.get("host") if request else None
     user_agent = request.headers.get("user-agent") if request else None
     frontend_url = get_frontend_url(host=host, origin=origin, user_agent=user_agent)
-    logo_horizontal_url = f"{frontend_url}/logo_horizontal.png"
-    logo_vertical_url = f"{frontend_url}/logo_vertical.png"
+    logo_horizontal_url = f"{get_frontend_url(host=host, origin=origin, user_agent=user_agent, for_assets=True)}/logo_horizontal.png"
+    logo_vertical_url = f"{get_frontend_url(host=host, origin=origin, user_agent=user_agent, for_assets=True)}/logo_vertical.png"
 
     # Fetch social settings
     social_facebook = ""
