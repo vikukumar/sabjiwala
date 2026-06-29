@@ -2103,6 +2103,52 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         </div>
 
+        {/* Swiggy-style Active Order Tracking Sticky Bar */}
+        {activeOrders && activeOrders.length > 0 && (() => {
+          const activeOrder = activeOrders.find(
+            (o) => ["accepted", "confirmed", "packed", "assigned", "picked", "out_for_delivery"].includes(o.status)
+          );
+          if (!activeOrder) return null;
+
+          // Don't show it if the user is already on the tracking page for this specific order
+          if (pathname.includes("/orders/track") && pathname.includes(activeOrder.id)) return null;
+
+          const isOutForDelivery = activeOrder.status === "out_for_delivery" || activeOrder.status === "picked";
+          const statusText = activeOrder.status === "out_for_delivery" ? "Rider is out for delivery! 🛵"
+                             : activeOrder.status === "picked" ? "Rider picked up your veggies! 🚀"
+                             : activeOrder.status === "packed" ? "Veggies packed & ready 📦"
+                             : "Order is confirmed 👍";
+
+          return (
+            <div className="fixed bottom-[72px] left-4 right-4 md:left-auto md:right-4 md:w-96 z-40 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl p-3.5 shadow-2xl flex items-center justify-between gap-3 animate-slide-up border border-orange-400/20">
+              <style>{`
+                @keyframes float-scooty {
+                  0%, 100% { transform: translateX(0) translateY(0); }
+                  50% { transform: translateX(6px) translateY(-1px); }
+                }
+                .floating-scooty {
+                  animation: float-scooty 1.5s ease-in-out infinite;
+                }
+              `}</style>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 bg-white/25 rounded-xl flex items-center justify-center text-xl flex-shrink-0 floating-scooty">
+                  {isOutForDelivery ? "🛵" : "🛒"}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-[10px] uppercase font-extrabold tracking-wider text-orange-100/80">Live Delivery Status</h4>
+                  <p className="text-sm font-black truncate leading-tight">{statusText}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => router.push(resolveLink(`/orders/track?id=${activeOrder.id}`))}
+                className="bg-white text-orange-600 font-extrabold px-3.5 py-2 rounded-xl text-[11px] shadow-sm hover:shadow-md transition-all active:scale-95 border-0 cursor-pointer flex-shrink-0"
+              >
+                Track Live
+              </button>
+            </div>
+          );
+        })()}
+
         <BottomNav onOpenSearch={() => router.push('/search')} />
         <LiveChatWidget />
 

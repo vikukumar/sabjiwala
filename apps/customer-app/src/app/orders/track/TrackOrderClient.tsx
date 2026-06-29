@@ -292,8 +292,16 @@ export default function TrackOrderClient() {
         </Badge>}
       </div>
 
-      {/* ETA Banner */}
-      {eta && (
+      {/* Swiggy Style Animated Tracker */}
+      {order && ["accepted", "confirmed", "packed", "assigned", "picked", "out_for_delivery"].includes(order.status) ? (
+        <SwiggyTracker 
+          order={order} 
+          driverLocation={driverLocation} 
+          routeInfo={routeInfo} 
+          eta={eta} 
+          distance={distance} 
+        />
+      ) : eta ? (
         <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl flex items-center gap-3 animate-slide-down">
           <div className="p-2 bg-emerald-600 rounded-xl">
             <Truck className="w-5 h-5 text-white" />
@@ -303,7 +311,7 @@ export default function TrackOrderClient() {
             <p className="text-sm text-emerald-600 dark:text-emerald-400">Estimated arrival: <span className="font-black">{eta}</span></p>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Live tracking stats card */}
       {order && (
@@ -422,6 +430,150 @@ export default function TrackOrderClient() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Swiggy-style Premium Delivery Tracker Component
+function SwiggyTracker({ order, driverLocation, routeInfo, eta, distance }: any) {
+  const isPicked = ["picked", "out_for_delivery"].includes(order?.status);
+  
+  const vehicleIcon = order?.delivery_agent?.vehicle_type === "scooty" ? "🛵"
+                      : order?.delivery_agent?.vehicle_type === "bike" ? "🏍️"
+                      : order?.delivery_agent?.vehicle_type === "bicycle" ? "🚲"
+                      : "🚚";
+
+  const progressPercent = isPicked 
+    ? Math.max(15, Math.min(85, 100 - (distance * 20)))
+    : 10;
+
+  return (
+    <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-slate-900 dark:to-slate-900/60 border border-orange-150 dark:border-slate-800 rounded-3xl p-6 shadow-md relative overflow-hidden space-y-6">
+      <style>{`
+        @keyframes road-flow {
+          0% { stroke-dashoffset: 20; }
+          100% { stroke-dashoffset: 0; }
+        }
+        @keyframes vehicle-ride {
+          0%, 100% { transform: translateY(0) rotate(-1deg); }
+          50% { transform: translateY(-2px) rotate(2deg); }
+        }
+        @keyframes ripple {
+          0% { transform: scale(0.6); opacity: 0.8; }
+          100% { transform: scale(2.2); opacity: 0; }
+        }
+        .animated-road {
+          stroke-dasharray: 6, 6;
+          animation: road-flow 1.2s linear infinite;
+        }
+        .riding-vehicle {
+          animation: vehicle-ride 0.6s ease-in-out infinite;
+        }
+        .ripple-effect {
+          animation: ripple 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+        }
+      `}</style>
+
+      <div className="flex justify-between items-start">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping" />
+            <h3 className="text-xs uppercase font-extrabold tracking-wider text-orange-600 dark:text-orange-400">
+              {isPicked ? "Out for Delivery" : "Driver heading to store"}
+            </h3>
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white leading-none">
+            Arriving in {eta || "10 mins"}
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            {isPicked 
+              ? `Delivery agent ${order?.delivery_agent?.name || "partner"} is on the way!` 
+              : "Preparing your fresh harvest."}
+          </p>
+        </div>
+        <div className="text-right">
+          <span className="text-xs font-bold text-slate-500 block uppercase">Distance</span>
+          <span className="text-lg font-black text-slate-900 dark:text-white">
+            {distance > 0 ? `${distance.toFixed(1)} km` : "1.2 km"}
+          </span>
+        </div>
+      </div>
+
+      <div className="relative pt-6 pb-2 px-2">
+        <div className="absolute top-[2.5rem] left-[2.5rem] right-[2.5rem] h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-orange-400 to-orange-500 transition-all duration-1000"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+
+        <svg className="absolute top-[2.25rem] left-[2.5rem] right-[2.5rem] w-[calc(100%-5rem)] h-[10px] pointer-events-none" version="1.1" xmlns="http://www.w3.org/2000/svg">
+          <line 
+            x1="0" y1="5" x2="100%" y2="5" 
+            className="animated-road" 
+            stroke="#ffffff" 
+            strokeWidth="2" 
+            opacity="0.6"
+          />
+        </svg>
+
+        <div className="flex justify-between items-center relative">
+          <div className="flex flex-col items-center gap-1.5 z-10">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center border shadow-sm transition-colors ${!isPicked ? 'bg-orange-500 border-orange-600 text-white' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'}`}>
+              <span className="text-xl">🏪</span>
+            </div>
+            <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 max-w-[64px] text-center truncate">
+              {order?.vendor_store?.name || "Store"}
+            </span>
+          </div>
+
+          <div className="flex flex-col items-center gap-1.5 z-10">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center border shadow-sm transition-colors ${order?.status === 'delivered' ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'}`}>
+              <span className="text-xl">🏠</span>
+            </div>
+            <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 max-w-[64px] text-center truncate">
+              Home
+            </span>
+          </div>
+
+          <div 
+            className="absolute top-[-0.5rem] transition-all duration-1000 ease-out z-20 flex flex-col items-center"
+            style={{ 
+              left: `calc(${progressPercent}% - 1.25rem)`,
+            }}
+          >
+            <div className="absolute top-[0.5rem] w-10 h-10 bg-orange-500/20 dark:bg-orange-500/10 rounded-full ripple-effect pointer-events-none" />
+            
+            <div className="w-10 h-10 bg-white dark:bg-slate-800 border-2 border-orange-500 shadow-lg rounded-full flex items-center justify-center riding-vehicle">
+              <span className="text-2xl filter drop-shadow-md">{vehicleIcon}</span>
+            </div>
+            <span className="text-[9px] font-bold bg-orange-600 text-white px-1.5 py-0.5 rounded-full mt-1.5 shadow-sm whitespace-nowrap">
+              {order?.delivery_agent?.name?.split(" ")[0] || "Rider"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between bg-white/70 dark:bg-slate-900/70 border border-slate-200/50 dark:border-slate-800/50 p-4 rounded-2xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-black">
+            {order?.delivery_agent?.name?.[0] || "D"}
+          </div>
+          <div>
+            <p className="text-sm font-extrabold text-slate-900 dark:text-white">
+              {order?.delivery_agent?.name || "Rider"}
+            </p>
+            <p className="text-[10px] text-slate-550 uppercase font-black">
+              {order?.delivery_agent?.vehicle_number || "MH-12-AB-1234"}
+            </p>
+          </div>
+        </div>
+        <a href={`tel:${order?.delivery_agent?.phone}`} className="flex-shrink-0">
+          <button className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white font-extrabold px-4 py-2 rounded-xl text-xs shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer border-0">
+            Call Rider
+          </button>
+        </a>
+      </div>
     </div>
   );
 }
