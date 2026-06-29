@@ -830,12 +830,13 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
     }
   }, [userProfile]);
 
-  // Initialize Push Notifications
+  // Initialize Push Notifications and sync analytics user
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
     if (token) {
-      import("@sbjiwala/shared").then(({ initPushNotifications }) => {
+      import("@sbjiwala/shared").then(({ initPushNotifications, syncFirebaseUser }) => {
         initPushNotifications().catch(err => console.warn("Failed to init push notifications:", err));
+        syncFirebaseUser().catch(err => console.warn("Failed to sync analytics user:", err));
       });
     }
   }, [profile]);

@@ -1656,11 +1656,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Initialize push notifications on authentication
+  // Initialize push notifications and sync analytics user on authentication
   useEffect(() => {
     if (token) {
-      import("@sbjiwala/shared").then(({ initPushNotifications }) => {
+      import("@sbjiwala/shared").then(({ initPushNotifications, syncFirebaseUser }) => {
         initPushNotifications().catch(err => console.warn("Failed to init push notifications:", err));
+        syncFirebaseUser().catch(err => console.warn("Failed to sync analytics user:", err));
       });
     }
   }, [token]);

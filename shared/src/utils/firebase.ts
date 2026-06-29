@@ -44,6 +44,9 @@ export const initFirebaseAnalyticsAndCrashlytics = async () => {
       await capAnalytics.FirebaseAnalytics.setCollectionEnabled({ enabled: true });
       console.log("Capacitor Firebase Analytics initialized");
 
+      // Auto sync user session info
+      syncFirebaseUser().catch(() => {});
+
       // Initialize Crashlytics for JS errors
       // @ts-ignore
       const capCrashlytics = await import("@capacitor-firebase/crashlytics");
@@ -94,6 +97,9 @@ export const initFirebaseAnalyticsAndCrashlytics = async () => {
         setTimeout(() => {
           window.removeEventListener("unhandledrejection", rejectHandler);
         }, 3000);
+
+        // Auto sync user session info
+        syncFirebaseUser().catch(() => {});
 
         return analytics;
       }
@@ -196,4 +202,92 @@ export const logFirebaseVersionInfo = async (currentVersion: string, latestVersi
     current_version: currentVersion,
     latest_version: latestVersion,
   });
+};
+
+// Helper to decode JWT token client-side
+function decodeToken(token: string): any {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      window
+        .atob(base64)
+        .split("")
+        .map(function (c) {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
+// Sync current logged in user session information with Firebase Analytics
+export const syncFirebaseUser = async () => {
+  if (typeof window === "undefined") return;
+  const token = localStorage.getItem("sw_access_token");
+  if (!token) return;
+
+  const decoded = decodeToken(token);
+  if (!decoded || !decoded.sub) return;
+
+  const userId = decoded.sub;
+  const userType = decoded.user_type || "unknown";
+  const nameOrPhone = decoded.username || decoded.phone || "user";
+
+  if ((window as any).Capacitor?.isNative) {
+    try {
+      // @ts-ignore
+      const capAnalytics = await import("@capacitor-firebase/analytics");
+      await capAnalytics.FirebaseAnalytics.setUserId({ userId });
+      await capAnalytics.FirebaseAnalytics.setUserProperty({ key: "user_type", value: userType });
+      await capAnalytics.FirebaseAnalytics.setUserProperty({ key: "username", value: nameOrPhone });
+      console.log("Firebase Analytics sync: User ID & properties set natively");
+    } catch (err) {
+      console.warn("Capacitor syncFirebaseUser error:", err);
+    }
+  } else {
+    try {
+      const { setUserId, setUserProperties } = await import("firebase/analytics");
+      const app = getApps().length > 0 ? getApp() : null;
+      if (app) {
+        const analytics = getAnalytics(app);
+        setUserId(analytics, userId);
+        setUserProperties(analytics, { user_type: userType, username: nameOrPhone });
+        console.log("Firebase Analytics sync: User ID & properties set on web");
+      }
+    } catch (err) {
+      console.warn("Web syncFirebaseUser error:", err);
+    }
+  }
+};
+
+// Clear logged in user session details from Firebase Analytics
+export const clearFirebaseUser = async () => {
+  if (typeof window === "undefined") return;
+  if ((window as any).Capacitor?.isNative) {
+    try {
+      // @ts-ignore
+      const capAnalytics = await import("@capacitor-firebase/analytics");
+      await capAnalytics.FirebaseAnalytics.setUserId({ userId: "" });
+      await capAnalytics.FirebaseAnalytics.setUserProperty({ key: "user_type", value: "" });
+      await capAnalytics.FirebaseAnalytics.setUserProperty({ key: "username", value: "" });
+    } catch (err) {
+      console.warn("Capacitor clearFirebaseUser error:", err);
+    }
+  } else {
+    try {
+      const { setUserId, setUserProperties } = await import("firebase/analytics");
+      const app = getApps().length > 0 ? getApp() : null;
+      if (app) {
+        const analytics = getAnalytics(app);
+        setUserId(analytics, "");
+        setUserProperties(analytics, { user_type: "", username: "" });
+      }
+    } catch (err) {
+      console.warn("Web clearFirebaseUser error:", err);
+    }
+  }
 };

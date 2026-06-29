@@ -537,11 +537,12 @@ export default function VendorLayout({ children, title = "Vendor Portal" }: Vend
     }
   }, [userProfile]);
 
-  // Initialize push notifications on authentication
+  // Initialize push notifications and sync analytics user on authentication
   useEffect(() => {
     if (isAuthed) {
-      import("@sbjiwala/shared").then(({ initPushNotifications }) => {
+      import("@sbjiwala/shared").then(({ initPushNotifications, syncFirebaseUser }) => {
         initPushNotifications().catch(err => console.warn("Failed to init push notifications:", err));
+        syncFirebaseUser().catch(err => console.warn("Failed to sync analytics user:", err));
       });
     }
   }, [isAuthed]);
