@@ -223,6 +223,21 @@ async def websocket_endpoint(
                                     heading=heading,
                                 )
                                 db.add(vendor_loc)
+
+                                # Update order metadata with live location for HTTP order polling fallback
+                                if order_id:
+                                    order_res = await db.execute(
+                                        select(Order).where(Order.id == order_id)
+                                    )
+                                    order_obj = order_res.scalars().first()
+                                    if order_obj:
+                                        from sqlalchemy.orm.attributes import flag_modified
+                                        meta = order_obj.metadata_json or {}
+                                        meta["live_latitude"] = latitude
+                                        meta["live_longitude"] = longitude
+                                        order_obj.metadata_json = meta
+                                        flag_modified(order_obj, "metadata_json")
+                                        db.add(order_obj)
                             await db.commit()
 
                         # Broadcast location update to relevant order tracking channel (customer)

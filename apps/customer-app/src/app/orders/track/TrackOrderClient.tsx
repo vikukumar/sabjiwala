@@ -63,21 +63,32 @@ export default function TrackOrderClient() {
   const agentToStoreLineRef = useRef<any>(null);
   const storeToCustomerLineRef = useRef<any>(null);
   const [routeInfo, setRouteInfo] = useState<{ distance: number, duration: number } | null>(null);
+  const hasInitializedMap = useRef(false);
 
   const { data: order } = useQuery<any>({
     queryKey: ["order", id],
     queryFn: async () => { const r = await api.get(`/orders/${id}`); return r.data?.data || r.data; },
     enabled: !!id,
+    refetchInterval: 5000,
   });
 
-  // Seed initial location
+  // Seed initial/updated location
   useEffect(() => {
-    if (order && !driverLocation) {
+    if (order) {
       const storeLat = order.vendor_store?.latitude || 19.0760;
       const storeLng = order.vendor_store?.longitude || 72.9977;
-      setDriverLocation({
-        latitude: order.delivery_agent?.latitude || order.delivery_agent?.current_latitude || storeLat,
-        longitude: order.delivery_agent?.longitude || order.delivery_agent?.current_longitude || storeLng
+      
+      let lat = storeLat;
+      let lng = storeLng;
+      
+      if (order.delivery_agent) {
+        lat = order.delivery_agent.latitude || order.delivery_agent.current_latitude || storeLat;
+        lng = order.delivery_agent.longitude || order.delivery_agent.current_longitude || storeLng;
+      }
+      
+      setDriverLocation((prev: any) => {
+        if (prev && prev.latitude === lat && prev.longitude === lng) return prev;
+        return { ...prev, latitude: lat, longitude: lng };
       });
     }
   }, [order]);
@@ -99,7 +110,8 @@ export default function TrackOrderClient() {
 
   // Initialize Leaflet map
   useEffect(() => {
-    if (typeof window === "undefined" || !mapRef.current || mapObjRef.current || !order) return;
+    if (typeof window === "undefined" || !mapRef.current || mapObjRef.current || !order || hasInitializedMap.current) return;
+    hasInitializedMap.current = true;
 
     let map: any = null;
     let active = true;
