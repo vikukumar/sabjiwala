@@ -386,6 +386,10 @@ function SbjiwalaNavMap({
         }
       };
       fetchAll();
+
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+      }, 250);
     });
 
     return () => {
@@ -512,6 +516,8 @@ function SbjiwalaNavMap({
           </div>
         )}
       </div>
+
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 
       {/* Map canvas */}
       <div ref={mapRef} className="flex-1 w-full" style={{ minHeight: 320 }} />

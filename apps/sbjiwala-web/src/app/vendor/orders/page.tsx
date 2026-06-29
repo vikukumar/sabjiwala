@@ -444,6 +444,10 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
 
       map.fitBounds([[storeLat, storeLng], [customerLat, customerLng]], { padding: [40, 40] });
       mapObjRef.current = map;
+
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+      }, 250);
     });
 
     return () => {
@@ -468,18 +472,16 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
       });
 
       // Push to backend
-      if (order.status === "out_for_delivery") {
-        api.post("/vendors/me/location", {
-          latitude: gpsCoords[0],
-          longitude: gpsCoords[1],
-          order_id: order.id
-        }).catch(err => console.warn("Failed to push vendor location", err));
-      }
+      api.patch(`/orders/${order.id}/delivery-agent/gps`, {
+        latitude: gpsCoords[0],
+        longitude: gpsCoords[1]
+      }).catch(err => console.warn("Failed to push vendor location", err));
     }
   }, [gpsCoords]);
 
   return (
     <div className="space-y-2">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
       <div className="flex justify-between items-center text-xs font-bold text-slate-555 dark:text-slate-400">
         <span>🗺️ Easiest Delivery Route (Store self delivery active)</span>
         <span className="text-emerald-500 font-extrabold animate-pulse flex items-center gap-1">

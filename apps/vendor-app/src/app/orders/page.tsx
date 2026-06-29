@@ -444,6 +444,10 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
 
       map.fitBounds([[storeLat, storeLng], [customerLat, customerLng]], { padding: [40, 40] });
       mapObjRef.current = map;
+
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+      }, 250);
     });
 
     return () => {
@@ -480,6 +484,7 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
 
   return (
     <div className="space-y-2">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
       <div className="flex justify-between items-center text-xs font-bold text-slate-555 dark:text-slate-400">
         <span>🗺️ Easiest Delivery Route (Store self delivery active)</span>
         <span className="text-emerald-500 font-extrabold animate-pulse flex items-center gap-1">
