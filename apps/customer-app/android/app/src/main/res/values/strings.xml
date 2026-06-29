@@ -4,4 +4,8 @@
     <string name="title_activity_main">SbjiWala</string>
     <string name="package_name">in.sbjiwala.customer</string>
     <string name="custom_url_scheme">in.sbjiwala.customer</string>
+    <string name="shortcut_cart_short">Cart</string>
+    <string name="shortcut_cart_long">Open Shopping Cart</string>
+    <string name="shortcut_orders_short">Orders</string>
+    <string name="shortcut_orders_long">View Your Orders</string>
 </resources>
