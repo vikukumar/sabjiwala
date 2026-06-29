@@ -9,7 +9,7 @@
         <!-- Allow querying the Gallery/Files apps -->
         <intent>
             <action android:name="android.intent.action.GET_CONTENT" />
-            <mimeType>image/*</mimeType>
+            <data android:mimeType="image/*" />
         </intent>
         <intent>
             <action android:name="android.intent.action.PICK" />
