@@ -497,6 +497,8 @@ class OrderItemResponse(BaseModel):
     quantity: float
     unit_price: float
     total_price: float
+    is_deleted: bool = False
+    is_out_of_stock: bool = False
 
     @computed_field
     @property
@@ -808,6 +810,8 @@ class ProductReviewResponse(BaseModel):
     id: UUID
     product_id: UUID
     product_name: str
+    product_image_url: Optional[str] = None
+    product_image_emoji: Optional[str] = None
     user_id: UUID
     order_id: Optional[UUID] = None
     rating: int

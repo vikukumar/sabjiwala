@@ -591,7 +591,7 @@ class OrderService:
 
         if status == OrderStatus.CANCELLED:
             # Security check: if order is currently out on delivery and requested by vendor/delivery boy, require customer approval
-            if old_status in [OrderStatus.PICKED, OrderStatus.OUT_FOR_DELIVERY] and user_type in ["vendor", "vendor_manager", "delivery_boy"]:
+            if old_status in [OrderStatus.PICKED, OrderStatus.OUT_FOR_DELIVERY] and user_type == "delivery_boy":
                 meta = dict(order.metadata_json) if order.metadata_json else {}
                 meta["cancel_request"] = {
                     "requested_by": str(changed_by),

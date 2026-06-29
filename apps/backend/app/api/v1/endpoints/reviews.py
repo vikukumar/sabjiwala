@@ -116,12 +116,16 @@ async def get_my_reviews(
         product_res = await db.execute(select(Product).where(Product.id == r.product_id))
         prod = product_res.scalars().first()
         prod_name = prod.name if prod else "Product"
+        prod_image = prod.primary_image_url if prod else None
+        prod_emoji = prod.attributes.get("image_emoji") if prod and prod.attributes else "🥬"
 
         data.append(
             ProductReviewResponse(
                 id=r.id,
                 product_id=r.product_id,
                 product_name=prod_name,
+                product_image_url=prod_image,
+                product_image_emoji=prod_emoji,
                 user_id=r.user_id,
                 order_id=r.order_id,
                 rating=r.rating,

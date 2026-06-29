@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Star, Send, Package } from "lucide-react";
@@ -37,7 +37,8 @@ function ReviewForm({ order, onSubmitted }: { order: any; onSubmitted: () => voi
 
   const submitReview = useMutation({
     mutationFn: async () => {
-      const reviews = (order.items || []).map((item: any) => ({
+      const activeItems = (order.items || []).filter((item: any) => !item.is_deleted && !item.is_out_of_stock);
+      const reviews = activeItems.map((item: any) => ({
         product_id: item.product_id || item.id,
         order_id: order.id,
         rating,
@@ -50,14 +51,21 @@ function ReviewForm({ order, onSubmitted }: { order: any; onSubmitted: () => voi
   });
 
   const ratingLabels = ["", "Poor", "Below Average", "Average", "Good", "Excellent"];
+  const activeItems = (order.items || []).filter((item: any) => !item.is_deleted && !item.is_out_of_stock);
 
   return (
     <div className="card p-6 space-y-5">
       <h3 className="font-black text-slate-900 dark:text-white">Rate Order #{order.order_number}</h3>
       <div className="flex gap-2 flex-wrap">
-        {(order.items || []).slice(0, 4).map((item: any, i: number) => (
-          <div key={i} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 rounded-xl px-2.5 py-1.5">
-            <span className="text-sm">{item.attributes?.image_emoji || "🥬"}</span>
+        {activeItems.slice(0, 4).map((item: any, i: number) => (
+          <div key={i} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl px-2.5 py-1.5">
+            <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-sm overflow-hidden flex-shrink-0">
+              {item.product_image_url ? (
+                <img src={resolveImageUrl(item.product_image_url)} alt={item.name} className="w-full h-full object-cover" />
+              ) : (
+                <span>{item.attributes?.image_emoji || "🥬"}</span>
+              )}
+            </div>
             <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{item.name}</span>
           </div>
         ))}
@@ -109,7 +117,10 @@ function ReviewsContent() {
   });
 
   const reviewedOrderIds = new Set(myReviews.map((r: any) => r.order_id));
-  const pendingOrders = orders.filter((o: any) => !reviewedOrderIds.has(o.id) && !submitted[o.id]);
+  const pendingOrders = orders.filter((o: any) => {
+    const hasActiveItems = (o.items || []).some((item: any) => !item.is_deleted && !item.is_out_of_stock);
+    return !reviewedOrderIds.has(o.id) && !submitted[o.id] && hasActiveItems;
+  });
   const targetOrders = orderId ? pendingOrders.filter(o => o.id === orderId) : pendingOrders;
 
   return (
@@ -156,9 +167,18 @@ function ReviewsContent() {
                       {order ? new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : ""}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="font-black text-sm text-slate-900 dark:text-white">{rev.product_name || "Product"}</p>
-                    <div className="flex gap-0.5">
+                  <div className="flex items-center gap-3 mt-1">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xl overflow-hidden flex-shrink-0">
+                      {rev.product_image_url ? (
+                        <img src={resolveImageUrl(rev.product_image_url)} alt={rev.product_name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{rev.product_image_emoji || "🥬"}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-sm text-slate-900 dark:text-white truncate">{rev.product_name || "Product"}</p>
+                    </div>
+                    <div className="flex gap-0.5 flex-shrink-0">
                       {[1, 2, 3, 4, 5].map(s => (
                         <Star key={s} className={`w-4 h-4 ${s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-slate-300 dark:text-slate-650"}`} />
                       ))}

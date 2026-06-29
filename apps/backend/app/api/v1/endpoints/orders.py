@@ -396,15 +396,16 @@ async def list_orders(
                     "longitude": store.longitude,
                 }
 
-    def build_response(o: Order) -> OrderResponse:
-        r = OrderResponse.model_validate(o)
+    data = []
+    for o in orders:
+        r = await enrich_order_response(o, db)
         if o.vendor_id in vendor_store_map:
             r.vendor_store = vendor_store_map[o.vendor_id]
-        return r
+        data.append(r)
 
     return PaginatedResponse(
         success=True,
-        data=[build_response(o) for o in orders],
+        data=data,
         pagination=PaginationMeta(
             page=page,
             page_size=page_size,
@@ -498,6 +499,41 @@ async def enrich_order_response(order: Order, db: AsyncSession) -> OrderResponse
             "admin_notes": return_req.admin_notes,
             "created_at": return_req.created_at.isoformat() if return_req.created_at else None
         }
+
+    # Fetch items if they are not loaded or if res_data.items is None
+    if res_data.items is None:
+        from app.models.order import OrderItem
+        from app.api.schemas import OrderItemResponse
+        items_res = await db.execute(
+            select(OrderItem).where(OrderItem.order_id == order.id)
+        )
+        db_items = items_res.scalars().all()
+        res_data.items = [OrderItemResponse.model_validate(item) for item in db_items]
+
+    # Enrich order items with is_deleted and is_out_of_stock properties
+    from app.models.product import Product, Inventory, ProductStatus
+    for item in res_data.items or []:
+        prod_res = await db.execute(
+            select(Product).where(Product.id == item.product_id)
+        )
+        prod = prod_res.scalars().first()
+        if not prod or prod.is_deleted or prod.status != ProductStatus.ACTIVE:
+            item.is_deleted = True
+            item.is_out_of_stock = True
+        else:
+            item.is_deleted = False
+            # Check stock in vendor inventory
+            inv_res = await db.execute(
+                select(Inventory).where(
+                    Inventory.product_id == prod.id,
+                    Inventory.vendor_id == order.vendor_id,
+                    Inventory.is_deleted == False
+                )
+            )
+            inv = inv_res.scalars().first()
+            is_unlimited = prod.attributes.get("is_unlimited", False) if prod.attributes else False
+            stock = inv.quantity if inv else 0
+            item.is_out_of_stock = not is_unlimited and stock <= 0
 
     return res_data
 

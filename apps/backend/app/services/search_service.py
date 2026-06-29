@@ -126,21 +126,31 @@ class SearchService:
 
         # Base query selecting match rank using pg ts_rank_cd
         sql = (
-            "SELECT entity_id, entity_type, title, image_url, metadata_json, "
-            "ts_rank_cd(search_vector, to_tsquery('english', :tsquery)) AS rank "
-            "FROM search_index "
-            "WHERE search_vector @@ to_tsquery('english', :tsquery) AND is_deleted = false"
+            "SELECT s.entity_id, s.entity_type, s.title, s.image_url, s.metadata_json, "
+            "ts_rank_cd(s.search_vector, to_tsquery('english', :tsquery)) AS rank "
+            "FROM search_index s "
+            "JOIN products p ON p.id = s.entity_id "
+            "WHERE s.search_vector @@ to_tsquery('english', :tsquery) "
+            "AND s.is_deleted = false AND p.is_deleted = false AND p.status = 'active'"
         )
 
         params: Dict[str, Any] = {"tsquery": tsquery_str, "limit": limit, "offset": offset}
 
         if category_id:
-            sql += " AND (metadata_json->>'category_id' = :category_id)"
+            sql += " AND (s.metadata_json->>'category_id' = :category_id)"
             params["category_id"] = str(category_id)
 
-        # Filter by vendor ID if product matches the vendor price list
+        # Filter by vendor ID and ensure in-stock (or is_unlimited)
         if vendor_id:
-            sql += " AND EXISTS (SELECT 1 FROM jsonb_to_recordset(metadata_json->'prices') as x(vendor_id text, price numeric) WHERE x.vendor_id = :vendor_id)"
+            sql += (
+                " AND EXISTS ("
+                "   SELECT 1 FROM inventories inv "
+                "   WHERE inv.product_id = p.id "
+                "   AND inv.vendor_id = :vendor_id "
+                "   AND inv.is_deleted = false "
+                "   AND (inv.quantity > 0 OR coalesce((p.attributes->>'is_unlimited')::boolean, false) = true)"
+                " )"
+            )
             params["vendor_id"] = str(vendor_id)
 
         sql += " ORDER BY rank DESC, boost DESC LIMIT :limit OFFSET :offset"
