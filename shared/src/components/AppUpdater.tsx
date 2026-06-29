@@ -151,43 +151,39 @@ export const AppUpdater: React.FC<{ appName: string; currentVersion?: string }> 
         return;
       }
 
-      // Perform HTTP request to download as arraybuffer for exact progress tracking
-      const response = await axios({
-        url: url,
-        method: 'GET',
-        responseType: 'arraybuffer',
-        onDownloadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const progress = (progressEvent.loaded / progressEvent.total) * 100;
-            setDownloadProgress(progress);
-          }
+      // Use Capacitor native downloadFile to download directly to device storage.
+      // This avoids CORS issues in the WebView and memory crash issues when converting large binaries.
+      const progressListener = await Filesystem.addListener('progress', (progress) => {
+        if (progress.contentLength) {
+          const percentage = (progress.bytes / progress.contentLength) * 100;
+          setDownloadProgress(percentage);
         }
       });
 
-      // Convert arraybuffer to base64
-      let binary = '';
-      const bytes = new Uint8Array(response.data);
-      const len = bytes.byteLength;
-      for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(bytes[i]);
+      try {
+        await Filesystem.downloadFile({
+          url: url,
+          path: fileName,
+          directory: Directory.Cache,
+          progress: true
+        });
+      } finally {
+        await progressListener.remove();
       }
-      const base64Content = window.btoa(binary);
-
-      // Write base64 content to Filesystem
-      const writeResult = await Filesystem.writeFile({
-        path: fileName,
-        data: base64Content,
-        directory: Directory.Cache
-      });
 
       setDownloadProgress(null);
       setIsDownloading(false);
       isDownloadingRef.current = false;
 
-      if (writeResult.uri) {
+      const uriResult = await Filesystem.getUri({
+        path: fileName,
+        directory: Directory.Cache
+      });
+
+      if (uriResult.uri) {
         await showToast('Download complete. Installing...');
         await FileOpener.openFile({
-          path: writeResult.uri,
+          path: uriResult.uri,
           mimeType: 'application/vnd.android.package-archive',
         });
       }
@@ -196,7 +192,7 @@ export const AppUpdater: React.FC<{ appName: string; currentVersion?: string }> 
       setDownloadProgress(null);
       setIsDownloading(false);
       isDownloadingRef.current = false;
-      await showToast('Could not download or install update.');
+      await showToast('Could not download or install update.' + `${error}`);
     }
   };
 
