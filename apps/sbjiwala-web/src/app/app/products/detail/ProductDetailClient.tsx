@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -137,6 +137,24 @@ export default function ProductDetailClient() {
 
   const [localCart, setLocalCart] = useState<any>(getLocalGuestCart());
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const handleShare = () => {
+    if (typeof window === "undefined") return;
+    const url = window.location.href;
+    const shareTitle = product?.name || "Sbjiwala Product";
+    const shareText = `Check out this fresh product on Sbjiwala: ${product?.name || "Product"}!`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: shareTitle,
+        text: shareText,
+        url: url,
+      }).catch((err) => console.log("Share failed:", err));
+    } else {
+      navigator.clipboard.writeText(url);
+      success("Link copied! 📋", "Product link copied to clipboard.");
+    }
+  };
 
   useEffect(() => {
     const handleUpdate = () => setLocalCart(getLocalGuestCart());
@@ -359,7 +377,11 @@ export default function ProductDetailClient() {
             >
               <Heart className={`w-4 h-4 transition-colors ${isWishlisted ? "fill-rose-500 text-rose-500" : "text-slate-400"}`} />
             </button>
-            <button className="p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 transition-transform cursor-pointer border border-slate-100 dark:border-slate-800">
+            <button
+              onClick={handleShare}
+              className="p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-md hover:scale-110 transition-transform cursor-pointer border border-slate-100 dark:border-slate-800"
+              aria-label="Share Product"
+            >
               <Share2 className="w-4 h-4 text-slate-400" />
             </button>
           </div>

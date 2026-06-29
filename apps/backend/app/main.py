@@ -163,6 +163,11 @@ def create_app() -> FastAPI:
     from fastapi.staticfiles import StaticFiles
     from starlette.responses import FileResponse, Response
     
+    # Mount storage directory to serve public images/files statically
+    storage_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../storage"))
+    os.makedirs(storage_dir, exist_ok=True)
+    app.mount("/storage", StaticFiles(directory=storage_dir), name="storage")
+
     # Path to nextjs build out folder
     ui_dir = settings.UI_DIR or os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../sbjiwala-web/out"))
     if os.path.exists(ui_dir):

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@sbjiwala/shared";
+import { api, resolveImageUrl } from "@sbjiwala/shared";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Tag, AlertCircle, ChevronRight, Truck } from "lucide-react";
@@ -81,7 +81,7 @@ function CartItemRow({ item, isGuest, onUpdateGuestQty }: CartItemRowProps) {
     <div className="flex items-center gap-4 py-4 border-b border-slate-100 dark:border-slate-800 last:border-none">
       <div className="w-16 h-16 bg-gradient-to-br from-slate-50 to-emerald-50/20 dark:from-slate-800/50 dark:to-slate-900 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden">
         {imageUrl ? (
-          <img src={imageUrl} alt={item.product_name || item.name} className="w-full h-full object-cover" />
+          <img src={resolveImageUrl(imageUrl)} alt={item.product_name || item.name} className="w-full h-full object-cover" />
         ) : (
           <span className="text-3xl">{emoji}</span>
         )}

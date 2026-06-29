@@ -57,14 +57,22 @@ async def upload_file(
         await db.commit()
 
         # Build accessible URLs
-        url = f"/api/v1/storage/{metadata.id}"
+        if bucket == "public":
+            url_path = metadata.file_path.replace("\\", "/")
+            url = f"/storage/{url_path}"
+            thumb_url = metadata.thumbnail_path.replace("\\", "/") if metadata.thumbnail_path else None
+            thumbnail_url = f"/storage/{thumb_url}" if thumb_url else None
+        else:
+            url = f"/api/v1/storage/{metadata.id}"
+            thumbnail_url = f"{url}/thumbnail" if metadata.thumbnail_path else None
+
         return APIResponse(
             success=True,
             message="File uploaded successfully",
             data={
                 "id": str(metadata.id),
                 "url": url,
-                "thumbnail_url": f"{url}/thumbnail" if metadata.thumbnail_path else None,
+                "thumbnail_url": thumbnail_url,
                 "mime_type": metadata.mime_type,
                 "file_size": metadata.file_size
             }
