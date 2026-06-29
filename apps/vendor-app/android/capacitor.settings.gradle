@@ -2,8 +2,14 @@
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
 
+include ':capacitor-firebase-analytics'
+project(':capacitor-firebase-analytics').projectDir = new File('../node_modules/@capacitor-firebase/analytics/android')
+
 include ':capacitor-firebase-crashlytics'
 project(':capacitor-firebase-crashlytics').projectDir = new File('../node_modules/@capacitor-firebase/crashlytics/android')
+
+include ':capacitor-firebase-performance'
+project(':capacitor-firebase-performance').projectDir = new File('../node_modules/@capacitor-firebase/performance/android')
 
 include ':capacitor-background-runner'
 project(':capacitor-background-runner').projectDir = new File('../node_modules/@capacitor/background-runner/android')
@@ -20,6 +26,9 @@ project(':capacitor-dialog').projectDir = new File('../node_modules/@capacitor/d
 include ':capacitor-filesystem'
 project(':capacitor-filesystem').projectDir = new File('../node_modules/@capacitor/filesystem/android')
 
+include ':capacitor-geolocation'
+project(':capacitor-geolocation').projectDir = new File('../node_modules/@capacitor/geolocation/android')
+
 include ':capacitor-local-notifications'
 project(':capacitor-local-notifications').projectDir = new File('../node_modules/@capacitor/local-notifications/android')
 
@@ -31,6 +40,9 @@ project(':capacitor-push-notifications').projectDir = new File('../node_modules/
 
 include ':capacitor-toast'
 project(':capacitor-toast').projectDir = new File('../node_modules/@capacitor/toast/android')
+
+include ':capawesome-team-capacitor-file-opener'
+project(':capawesome-team-capacitor-file-opener').projectDir = new File('../node_modules/@capawesome-team/capacitor-file-opener/android')
 
 include ':capgo-capacitor-android-sms-retriever'
 project(':capgo-capacitor-android-sms-retriever').projectDir = new File('../node_modules/@capgo/capacitor-android-sms-retriever/android')

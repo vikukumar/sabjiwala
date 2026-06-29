@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <queries>
+        <!-- Allow querying the Camera app -->
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <!-- Allow querying the Gallery/Files apps -->
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <mimeType>image/*</mimeType>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PICK" />
+            <data android:mimeType="image/*" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
