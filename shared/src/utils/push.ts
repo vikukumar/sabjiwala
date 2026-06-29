@@ -53,6 +53,24 @@ async function registerCapacitorPush(apiClient: typeof api) {
   try {
     const PushNotifications = (window as any).Capacitor.Plugins.PushNotifications;
     
+    // Create Default Notification Channel for Android 8.0+
+    if ((window as any).Capacitor.getPlatform() === 'android') {
+      try {
+        await PushNotifications.createChannel({
+          id: 'fcm_default_channel',
+          name: 'Default Channel',
+          description: 'Default notification channel',
+          importance: 5, // IMPORTANCE_HIGH
+          visibility: 1, // VISIBILITY_PUBLIC
+          sound: 'default',
+          vibration: true,
+        });
+        console.log("FCM Default Notification Channel created");
+      } catch (channelErr) {
+        console.warn("Failed to create FCM default channel:", channelErr);
+      }
+    }
+    
     // Add listeners first (as recommended by Capacitor docs to ensure no event is missed)
     await PushNotifications.addListener("registration", async (token: any) => {
       console.log("Capacitor Push token:", token.value);

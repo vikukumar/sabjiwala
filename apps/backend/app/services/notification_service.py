@@ -857,7 +857,7 @@ async def send_fcm_push(token: str, title: str, body: str, data: Optional[Dict[s
                     priority='high',
                     notification=messaging.AndroidNotification(
                         sound='default',
-                        click_action='FLUTTER_NOTIFICATION_CLICK'
+                        channel_id='fcm_default_channel'
                     )
                 )
             )
