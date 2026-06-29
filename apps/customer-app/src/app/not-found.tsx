@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import PublicPageWrapper from "@/components/PublicPageWrapper";
 
 export default function NotFound() {
@@ -131,12 +132,12 @@ export default function NotFound() {
 
         {/* Return Button */}
         <div className="pt-2">
-          <a
+          <Link
             href="/"
             className="inline-flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white font-bold px-8 py-3 rounded-full shadow-md hover:shadow-lg transition-all text-sm tracking-wide"
           >
             Go Back Home
-          </a>
+          </Link>
         </div>
       </div>
     </PublicPageWrapper>

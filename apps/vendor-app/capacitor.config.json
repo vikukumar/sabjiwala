@@ -4,11 +4,7 @@
   "webDir": "out",
   "server": {
     "cleartext": false,
-    "androidScheme": "https",
-    "allowNavigation": [
-      "*.sbjiwala.qzz.io",
-      "sbjiwala.qzz.io"
-    ]
+    "androidScheme": "https"
   },
   "plugins": {
     "SplashScreen": {
