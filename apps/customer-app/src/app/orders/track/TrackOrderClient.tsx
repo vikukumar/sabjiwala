@@ -84,7 +84,7 @@ export default function TrackOrderClient() {
 
   // Connect to WebSocket backplane
   useWebSocket((message) => {
-    if (message.type === "live_location" && message.data.order_id === id) {
+    if ((message.type === "live_location" || message.type === "live_location_update") && message.data.order_id === id) {
       setDriverLocation({
         latitude: message.data.latitude,
         longitude: message.data.longitude,

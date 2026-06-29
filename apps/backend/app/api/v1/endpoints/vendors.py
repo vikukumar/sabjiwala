@@ -785,20 +785,31 @@ async def update_vendor_location(
 
             res = await db.execute(select(Order).where(Order.id == body.order_id))
             order = res.scalars().first()
-            if order and order.user_id:
-                ws_payload = {
-                    "type": "live_location_update",
-                    "data": {
-                        "order_id": str(order.id),
-                        "latitude": body.latitude,
-                        "longitude": body.longitude,
-                        "speed": body.speed,
-                        "heading": body.heading,
-                        "updated_at": datetime.now(timezone.utc).isoformat()
+            if order:
+                # Update order metadata with live coordinates for HTTP order polling fallback
+                from sqlalchemy.orm.attributes import flag_modified
+                meta = order.metadata_json or {}
+                meta["live_latitude"] = body.latitude
+                meta["live_longitude"] = body.longitude
+                order.metadata_json = meta
+                flag_modified(order, "metadata_json")
+                db.add(order)
+                await db.commit()
+
+                if order.user_id:
+                    ws_payload = {
+                        "type": "live_location_update",
+                        "data": {
+                            "order_id": str(order.id),
+                            "latitude": body.latitude,
+                            "longitude": body.longitude,
+                            "speed": body.speed,
+                            "heading": body.heading,
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        }
                     }
-                }
-                await ws_manager.send_to_user(order.user_id, ws_payload)
+                    await ws_manager.send_to_user(order.user_id, ws_payload)
         except Exception as e:
-            pass
+            logger.error("Failed to update order location metadata or broadcast", error=str(e))
 
     return APIResponse(success=True, message="Location tracked")

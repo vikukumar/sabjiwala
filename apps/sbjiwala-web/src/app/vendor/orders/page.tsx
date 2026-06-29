@@ -472,10 +472,13 @@ function SelfDeliveryMap({ order, store }: { order: any; store: any }) {
       });
 
       // Push to backend
-      api.patch(`/orders/${order.id}/delivery-agent/gps`, {
-        latitude: gpsCoords[0],
-        longitude: gpsCoords[1]
-      }).catch(err => console.warn("Failed to push vendor location", err));
+      if (order.status === "out_for_delivery") {
+        api.post("/vendors/me/location", {
+          latitude: gpsCoords[0],
+          longitude: gpsCoords[1],
+          order_id: order.id
+        }).catch(err => console.warn("Failed to push vendor location", err));
+      }
     }
   }, [gpsCoords]);
 
