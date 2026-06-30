@@ -52,6 +52,7 @@ async function registerCapacitorPush(apiClient: typeof api) {
   }
   try {
     const PushNotifications = (window as any).Capacitor.Plugins.PushNotifications;
+    const LocalNotifications = (window as any).Capacitor.Plugins.LocalNotifications;
     
     // Create Default Notification Channel for Android 8.0+
     if ((window as any).Capacitor.getPlatform() === 'android') {
@@ -71,6 +72,18 @@ async function registerCapacitorPush(apiClient: typeof api) {
       }
     }
     
+    // Request Local Notifications permission
+    if (LocalNotifications) {
+      try {
+        let localPerms = await LocalNotifications.checkPermissions();
+        if (localPerms.display === "prompt") {
+          await LocalNotifications.requestPermissions();
+        }
+      } catch (localPermErr) {
+        console.warn("Failed to request local notification permissions:", localPermErr);
+      }
+    }
+
     // Add listeners first (as recommended by Capacitor docs to ensure no event is missed)
     await PushNotifications.addListener("registration", async (token: any) => {
       console.log("Capacitor Push token:", token.value);
@@ -91,16 +104,71 @@ async function registerCapacitorPush(apiClient: typeof api) {
       console.error("Capacitor Push registration error:", err);
     });
 
-    await PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
+    await PushNotifications.addListener("pushNotificationReceived", async (notification: any) => {
       console.log("Push received:", notification);
+      // Route foreground notifications to system notification tray using LocalNotifications
+      if (LocalNotifications) {
+        try {
+          await LocalNotifications.schedule({
+            notifications: [
+              {
+                title: notification.title || "Order Update",
+                body: notification.body || "",
+                id: Math.floor(Math.random() * 100000),
+                schedule: { at: new Date(Date.now() + 50) },
+                sound: 'default',
+                extra: notification.data || {},
+                channelId: 'fcm_default_channel',
+              }
+            ]
+          });
+        } catch (localNotifErr) {
+          console.error("Error scheduling local notification:", localNotifErr);
+        }
+      }
     });
+
+    // Tap on native push notifications (app in background/closed)
+    await PushNotifications.addListener("pushNotificationActionPerformed", (action: any) => {
+      console.log("Push notification action performed:", action);
+      try {
+        const data = action.notification?.data || {};
+        if (data.reference_type === "order" && data.reference_id) {
+          window.location.href = `/orders/track?id=${data.reference_id}`;
+        } else if (data.url) {
+          window.location.href = data.url;
+        }
+      } catch (actionErr) {
+        console.error("Error handling push action:", actionErr);
+      }
+    });
+
+    // Tap on native local notifications (app was in foreground when notification arrived)
+    if (LocalNotifications) {
+      try {
+        await LocalNotifications.addListener("localNotificationActionPerformed", (action: any) => {
+          console.log("Local notification action performed:", action);
+          try {
+            const data = action.notification?.extra || {};
+            if (data.reference_type === "order" && data.reference_id) {
+              window.location.href = `/orders/track?id=${data.reference_id}`;
+            } else if (data.url) {
+              window.location.href = data.url;
+            }
+          } catch (actionErr) {
+            console.error("Error handling local notification action:", actionErr);
+          }
+        });
+      } catch (localListenerErr) {
+        console.warn("Failed to register local notification click listener:", localListenerErr);
+      }
+    }
 
     try {
       const { Device } = await import("@capacitor/device");
       const info = await Device.getInfo();
       if (info.manufacturer && info.manufacturer.toLowerCase() === "infinix") {
         console.warn("Bypassing PushNotifications.checkPermissions() on Infinix device to avoid NPE crash.");
-        // Attempt to just register directly and skip check
         await PushNotifications.register();
         return;
       }

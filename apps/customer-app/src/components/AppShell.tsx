@@ -1941,6 +1941,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
+  // Route persistence on refresh
+  useEffect(() => {
+    if (typeof window !== "undefined" && pathname && !isAuthRoute(pathname) && pathname !== "/" && pathname !== "/app") {
+      localStorage.setItem("sw_last_visited_route", pathname + window.location.search);
+    } else if (typeof window !== "undefined" && (pathname === "/" || pathname === "/app")) {
+      localStorage.removeItem("sw_last_visited_route");
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isUnified = process.env.NEXT_PUBLIC_APP_MODE === "unified";
+      const lastRoute = localStorage.getItem("sw_last_visited_route");
+      const hasToken = !!localStorage.getItem("sw_access_token");
+      const homePath = isUnified ? "/app" : "/";
+      if (lastRoute && hasToken && pathname === homePath) {
+        router.replace(lastRoute);
+      }
+    }
+  }, []);
+
   // Request alert permission inside browser dialogue
   const handleRequestNotif = () => {
     setShowNotifModal(false);
@@ -2209,27 +2230,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           />
         )}
 
-        {/* Global WS Notification Banner */}
-        {wsNotification && (
-          <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-[9999] animate-slide-in pointer-events-auto">
-            <div className="bg-emerald-600/95 dark:bg-slate-900/95 backdrop-blur-md border border-emerald-500/30 dark:border-slate-800 rounded-2xl p-4 shadow-2xl flex gap-3 text-white">
-              <div className="w-10 h-10 bg-white/20 dark:bg-emerald-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-white dark:text-emerald-400">
-                  <path d="m2 7 4.41-3.67A2 2 0 0 1 7.73 3h8.54a2 2 0 0 1 1.32.33L22 7"/>
-                  <path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
-                  <path d="M12 12A4 4 0 0 0 4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a4 4 0 0 0-8 0Z"/>
-                </svg>
-              </div>
-              <div className="min-w-0 flex-1 space-y-0.5">
-                <h5 className="text-xs font-black uppercase tracking-wider">{wsNotification.title}</h5>
-                <p className="text-[11px] font-bold text-slate-105 leading-tight">{wsNotification.body}</p>
-              </div>
-              <button onClick={() => setWsNotification(null)} className="p-1 text-white/60 hover:text-white rounded-full self-start cursor-pointer border-0 bg-transparent">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Global WS Notification Banner removed - notifications now routed to native tray */}
 
         {/* Global Long Press / Context Menu */}
         {contextMenu && (

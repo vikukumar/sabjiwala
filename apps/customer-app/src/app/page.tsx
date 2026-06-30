@@ -1111,13 +1111,10 @@ export default function HomePage() {
   // WebSocket for real-time notifications on the customer homepage
   useWebSocket((message) => {
     if (message.type === "notification") {
-      setNotificationBanner({ title: message.data.title, body: message.data.body });
+      // In-app HTML toasts disabled. Handled natively by push.ts / local notifications.
       if (document.visibilityState === "hidden" && "Notification" in window && Notification.permission === "granted") {
         new Notification(message.data.title, { body: message.data.body, icon: "/icon.png" });
       }
-      setTimeout(() => {
-        setNotificationBanner(null);
-      }, 6000);
     }
   });
 
@@ -1134,31 +1131,9 @@ export default function HomePage() {
       {/* Background Animated Blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="blob bg-emerald-400 dark:bg-emerald-900/10 w-96 h-96 -top-20 -left-20" />
-        <div className="blob bg-teal-400 dark:bg-teal-900/10 w-80 h-80 top-1/3 -right-20" style={{ animationDelay: '-5s' }} />
-        <div className="blob bg-amber-200 dark:bg-amber-800/10 w-72 h-72 bottom-1/3 left-10" style={{ animationDelay: '-10s' }} />
       </div>
-      {/* Push Notification Toast Banner */}
-      {notificationBanner && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] w-[90%] max-w-md bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-2xl shadow-2xl p-4 flex items-start gap-3 border-l-4 border-l-emerald-500 animate-slide-down">
-          <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl flex-shrink-0">
-            <Bell className="w-5 h-5 text-emerald-600 dark:text-emerald-450" />
-          </div>
-          <div className="flex-1 space-y-0.5">
-            <h4 className="text-sm font-black text-slate-900 dark:text-white">
-              {notificationBanner.title}
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
-              {notificationBanner.body}
-            </p>
-          </div>
-          <button
-            onClick={() => setNotificationBanner(null)}
-            className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-650 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+
+      {/* Push Notification Toast Banner removed - notifications now routed to native tray */}
 
       {checkingRange ? (
         <HomeSkeleton />
