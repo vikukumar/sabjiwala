@@ -59,5 +59,9 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 }
 
 export default function ProductDetailPage() {
-  return <ProductDetailClient />;
+  return (
+    <React.Suspense fallback={<div className="flex items-center justify-center min-h-[300px] text-slate-500 font-bold">Loading product details...</div>}>
+      <ProductDetailClient />
+    </React.Suspense>
+  );
 }

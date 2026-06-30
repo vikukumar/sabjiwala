@@ -107,26 +107,54 @@ function connectGlobalWS() {
 
       const fullUrl = `${protocol}//${baseHost}${wsPath}`;
       
-      if (nativeWsListener) { nativeWsListener.remove(); nativeWsListener = null; }
-      if (nativeStateListener) { nativeStateListener.remove(); nativeStateListener = null; }
+      if (nativeWsListener) {
+        try { nativeWsListener.remove(); } catch (e) {}
+        nativeWsListener = null;
+      }
+      if (nativeStateListener) {
+        try { nativeStateListener.remove(); } catch (e) {}
+        nativeStateListener = null;
+      }
 
-      NativeWebSocket.addListener("message", (msg: any) => {
-        try {
-          const message = JSON.parse(msg.data);
-          if (message.type === "pong") return;
-          notifySubscribers(message);
-        } catch (err) {
-          console.error("Error parsing WS message from native:", err);
+      try {
+        const msgListener = NativeWebSocket.addListener("message", (msg: any) => {
+          try {
+            const message = JSON.parse(msg.data);
+            if (message.type === "pong") return;
+            notifySubscribers(message);
+          } catch (err) {
+            console.error("Error parsing WS message from native:", err);
+          }
+        });
+        if (msgListener && typeof msgListener.then === "function") {
+          msgListener.then((listener: any) => { nativeWsListener = listener; }).catch(() => {});
+        } else {
+          nativeWsListener = msgListener;
         }
-      }).then((listener: any) => { nativeWsListener = listener; }).catch(() => {});
+      } catch (err) {
+        console.warn("Failed to add native WS message listener:", err);
+      }
 
-      NativeWebSocket.addListener("stateChange", (state: any) => {
-        notifyConnectionSubscribers(state.connected);
-      }).then((listener: any) => { nativeStateListener = listener; }).catch(() => {});
+      try {
+        const stateListener = NativeWebSocket.addListener("stateChange", (state: any) => {
+          notifyConnectionSubscribers(state.connected);
+        });
+        if (stateListener && typeof stateListener.then === "function") {
+          stateListener.then((listener: any) => { nativeStateListener = listener; }).catch(() => {});
+        } else {
+          nativeStateListener = stateListener;
+        }
+      } catch (err) {
+        console.warn("Failed to add native WS stateChange listener:", err);
+      }
 
-      NativeWebSocket.connect({ url: fullUrl, token: token }).catch((err: any) => {
-        console.error("Failed to connect native WS:", err);
-      });
+      try {
+        NativeWebSocket.connect({ url: fullUrl, token: token }).catch((err: any) => {
+          console.error("Failed to connect native WS:", err);
+        });
+      } catch (err) {
+        console.error("Native WS connect invocation crashed:", err);
+      }
       return;
     }
   }
