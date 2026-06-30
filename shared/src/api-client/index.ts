@@ -165,31 +165,36 @@ export class ApiClient {
                 originalRequest.headers.Authorization = `Bearer ${newAccess}`;
                 return this.client(originalRequest);
               }
-            } catch (refreshError) {
+            } catch (refreshError: any) {
               this.processQueue(refreshError, null);
-              this.clearTokens();
-              // Trigger redirect to login in frontend if handler registered
-              if (typeof window !== 'undefined') {
-                const isCapacitor = window.location.hostname === 'localhost' && (window.location.port === '' || window.location.protocol.startsWith('capacitor'));
-                if (isCapacitor) {
-                  window.location.href = '/login';
-                } else {
-                  const pathname = window.location.pathname;
-                  // Never redirect if the user is on the root main page '/'
-                  if (pathname !== '/') {
-                    if (pathname.startsWith('/vendor')) {
-                      window.location.href = '/vendor/login';
-                    } else if (pathname.startsWith('/delivery')) {
-                      window.location.href = '/delivery/login';
-                    } else if (pathname.startsWith('/admin')) {
-                      window.location.href = '/admin/login';
-                    } else if (pathname.startsWith('/app')) {
-                      window.location.href = '/app/login';
-                    } else {
-                      // Public static pages should also not trigger redirect
-                      const publicPaths = ['/about', '/privacy', '/terms', '/refund-policy', '/contact', '/faq'];
-                      if (!publicPaths.includes(pathname)) {
-                        window.location.href = '/login';
+              
+              // Only clear tokens and redirect if the server explicitly rejected the credentials (401/403)
+              const status = refreshError.response?.status;
+              if (status === 401 || status === 403) {
+                this.clearTokens();
+                // Trigger redirect to login in frontend if handler registered
+                if (typeof window !== 'undefined') {
+                  const isCapacitor = window.location.hostname === 'localhost' && (window.location.port === '' || window.location.protocol.startsWith('capacitor'));
+                  if (isCapacitor) {
+                    window.location.href = '/login';
+                  } else {
+                    const pathname = window.location.pathname;
+                    // Never redirect if the user is on the root main page '/'
+                    if (pathname !== '/') {
+                      if (pathname.startsWith('/vendor')) {
+                        window.location.href = '/vendor/login';
+                      } else if (pathname.startsWith('/delivery')) {
+                        window.location.href = '/delivery/login';
+                      } else if (pathname.startsWith('/admin')) {
+                        window.location.href = '/admin/login';
+                      } else if (pathname.startsWith('/app')) {
+                        window.location.href = '/app/login';
+                      } else {
+                        // Public static pages should also not trigger redirect
+                        const publicPaths = ['/about', '/privacy', '/terms', '/refund-policy', '/contact', '/faq'];
+                        if (!publicPaths.includes(pathname)) {
+                          window.location.href = '/login';
+                        }
                       }
                     }
                   }

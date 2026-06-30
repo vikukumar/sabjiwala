@@ -112,7 +112,7 @@ async def store_refresh_token(
     user_id: UUID,
     token_hash: str,
     device_id: Optional[str] = None,
-    expires_days: int = 7,
+    expires_days: int = settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS,
 ) -> None:
     """Store refresh token hash in Redis for rotation tracking."""
     key = f"{REFRESH_TOKEN_PREFIX}{token_hash}"
@@ -168,9 +168,19 @@ async def rotate_refresh_token(
 ) -> Dict[str, str]:
     """
     Rotate refresh token: revoke old token, issue new access + refresh pair.
-    Implements refresh token rotation for security.
+    Implements refresh token rotation for security with a 60-second concurrency grace period.
     """
     old_token_hash = hashlib.sha256(old_token.encode()).hexdigest()
+
+    # Check grace period cache first to prevent concurrent requests from triggering revocation
+    grace_key = f"rotated:{old_token_hash}"
+    grace_data = await redis.get(grace_key)
+    if grace_data:
+        import json
+        try:
+            return json.loads(grace_data)
+        except Exception:
+            pass
 
     # Check if old token exists in Redis
     key = f"{REFRESH_TOKEN_PREFIX}{old_token_hash}"
@@ -196,8 +206,14 @@ async def rotate_refresh_token(
     # Store new refresh token
     await store_refresh_token(redis, user_id, new_token_hash, device_id)
 
-    return {
+    tokens = {
         "access_token": access_token,
         "refresh_token": new_refresh_token,
         "token_type": "bearer",
     }
+
+    # Save to grace period cache for 60 seconds
+    import json
+    await redis.setex(grace_key, 60, json.dumps(tokens))
+
+    return tokens
