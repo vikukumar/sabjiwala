@@ -1,4 +1,8 @@
 import { api } from "../api-client";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
+
+declare const process: any;
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -11,19 +15,8 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray;
 }
 
-async function registerWebPush(apiClient: typeof api) {
-  if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
-    console.warn("Web Push is not supported in this browser");
-    return;
-  }
+async function registerStandardWebPush(apiClient: typeof api, vapidKey: string) {
   try {
-    const settingsRes = await apiClient.get("/installation/public-settings");
-    const vapidKey = settingsRes.data?.vapid_public_key;
-    if (!vapidKey) {
-      console.warn("VAPID public key not found in system settings");
-      return;
-    }
-
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
@@ -38,10 +31,94 @@ async function registerWebPush(apiClient: typeof api) {
         auth_key: subJSON.keys.auth,
         device_type: "web",
       });
-      console.log("Web push notification registered successfully");
+      console.log("Web standard push notification registered successfully");
     }
   } catch (err) {
-    console.error("Error registering web push notifications:", err);
+    console.error("Error in fallback standard web push registration:", err);
+  }
+}
+
+async function registerWebPush(apiClient: typeof api) {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+    console.warn("Web Push is not supported in this browser");
+    return;
+  }
+  try {
+    const settingsRes = await apiClient.get("/installation/public-settings");
+    const publicSettings = settingsRes.data || {};
+    
+    const apiKey = publicSettings.firebase_api_key || process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    const projectId = publicSettings.firebase_project_id || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const messagingSenderId = publicSettings.firebase_messaging_sender_id || process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+    const appId = publicSettings.firebase_app_id || process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+    const vapidKey = publicSettings.vapid_public_key;
+
+    if (!vapidKey) {
+      console.warn("VAPID public key not found in system settings");
+      return;
+    }
+
+    if (!apiKey || !projectId || !appId) {
+      console.warn("Firebase config not fully loaded. Falling back to standard pushManager.");
+      await registerStandardWebPush(apiClient, vapidKey);
+      return;
+    }
+
+    const firebaseConfig = {
+      apiKey,
+      authDomain: publicSettings.firebase_auth_domain || `${projectId}.firebaseapp.com`,
+      projectId,
+      storageBucket: publicSettings.firebase_storage_bucket || `${projectId}.appspot.com`,
+      messagingSenderId,
+      appId,
+    };
+
+    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    const messaging = getMessaging(app);
+
+    const query = new URLSearchParams(firebaseConfig as any).toString();
+    const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?${query}`, {
+      scope: "/"
+    });
+    console.log("Firebase Messaging SW registered with scope:", registration.scope);
+
+    // Request permissions explicitly
+    if (Notification.permission === "default") {
+      await Notification.requestPermission();
+    }
+
+    const token = await getToken(messaging, {
+      serviceWorkerRegistration: registration,
+      vapidKey: vapidKey,
+    });
+
+    if (token) {
+      await apiClient.post("/notifications/subscriptions", {
+        endpoint: "fcm",
+        p256dh_key: token,
+        auth_key: token,
+        device_type: "web",
+      });
+      console.log("Web FCM token registered successfully:", token);
+
+      onMessage(messaging, (payload) => {
+        console.log("FCM Foreground message received:", payload);
+        if (payload.notification) {
+          const title = payload.notification.title || "New Update";
+          const options = {
+            body: payload.notification.body,
+            icon: "/icon-192x192.png",
+            badge: "/icon-192x192.png",
+            data: payload.data
+          };
+          if (Notification.permission === "granted") {
+            new Notification(title, options);
+          }
+        }
+      });
+    }
+  } catch (err) {
+    console.error("Error registering Web FCM push notifications:", err);
   }
 }
 
