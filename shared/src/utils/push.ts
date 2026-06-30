@@ -72,15 +72,27 @@ async function registerCapacitorPush(apiClient: typeof api) {
       }
     }
     
-    // Request Local Notifications permission
+    // Request Local Notifications permission and create channel
     if (LocalNotifications) {
       try {
         let localPerms = await LocalNotifications.checkPermissions();
         if (localPerms.display === "prompt") {
           await LocalNotifications.requestPermissions();
         }
+        if ((window as any).Capacitor.getPlatform() === 'android') {
+          await LocalNotifications.createChannel({
+            id: 'fcm_default_channel',
+            name: 'Default Channel',
+            description: 'Default notification channel',
+            importance: 5, // IMPORTANCE_HIGH
+            visibility: 1, // VISIBILITY_PUBLIC
+            sound: 'default',
+            vibration: true,
+          });
+          console.log("LocalNotifications Default Channel created");
+        }
       } catch (localPermErr) {
-        console.warn("Failed to request local notification permissions:", localPermErr);
+        console.warn("Failed to set up LocalNotifications:", localPermErr);
       }
     }
 
@@ -109,11 +121,13 @@ async function registerCapacitorPush(apiClient: typeof api) {
       // Route foreground notifications to system notification tray using LocalNotifications
       if (LocalNotifications) {
         try {
+          const title = notification.title || notification.data?.title || "Order Update";
+          const body = notification.body || notification.data?.body || "";
           await LocalNotifications.schedule({
             notifications: [
               {
-                title: notification.title || "Order Update",
-                body: notification.body || "",
+                title,
+                body,
                 id: Math.floor(Math.random() * 100000),
                 schedule: { at: new Date(Date.now() + 50) },
                 sound: 'default',

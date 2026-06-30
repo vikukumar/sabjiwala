@@ -859,6 +859,14 @@ async def send_fcm_push(token: str, title: str, body: str, data: Optional[Dict[s
                         sound='default',
                         channel_id='fcm_default_channel'
                     )
+                ),
+                apns=messaging.APNSConfig(
+                    payload=messaging.APNSPayload(
+                        aps=messaging.Aps(
+                            sound='default',
+                            badge=1
+                        )
+                    )
                 )
             )
             response = messaging.send(message)
