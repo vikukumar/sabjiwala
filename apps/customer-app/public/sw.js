@@ -42,10 +42,52 @@ self.addEventListener("fetch", (event) => {
   // Skip chrome-extension or external schemes
   if (!event.request.url.startsWith(self.location.origin)) return;
 
+  const url = new URL(event.request.url);
+  const acceptHeader = event.request.headers.get("accept") || "";
+  const isNavigation = event.request.mode === "navigate" || acceptHeader.includes("text/html");
+
+  if (isNavigation && !url.pathname.includes(".") && url.pathname !== "/") {
+    // Rewrite path to append .html
+    const newUrl = `${url.origin}${url.pathname}.html${url.search}${url.hash}`;
+    const newRequest = new Request(newUrl, {
+      method: event.request.method,
+      headers: event.request.headers,
+      mode: event.request.mode,
+      credentials: event.request.credentials,
+      redirect: event.request.redirect
+    });
+
+    event.respondWith(
+      fetch(newRequest)
+        .then((response) => {
+          if (response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              // Cache under the original request URL
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) return cachedResponse;
+            return caches.match(`${url.pathname}.html`).then((htmlResponse) => {
+              if (htmlResponse) return htmlResponse;
+              return caches.match(OFFLINE_URL).then((offlineResp) => {
+                return offlineResp || new Response("Offline Mode", { status: 503, headers: { "Content-Type": "text/plain" } });
+              });
+            });
+          });
+        })
+    );
+    return;
+  }
+
+  // Fallback for standard assets / pages
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Cache new successful requests dynamically
         if (response.status === 200) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -55,14 +97,11 @@ self.addEventListener("fetch", (event) => {
         return response;
       })
       .catch(() => {
-        // Fallback to cache
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          // If page request, return offline shell
-          const acceptHeader = event.request.headers.get("accept");
-          if (acceptHeader && acceptHeader.includes("text/html")) {
+          if (acceptHeader.includes("text/html")) {
             return caches.match(OFFLINE_URL).then((offlineResp) => {
               return offlineResp || new Response("Offline Mode", { status: 503, headers: { "Content-Type": "text/plain" } });
             });
