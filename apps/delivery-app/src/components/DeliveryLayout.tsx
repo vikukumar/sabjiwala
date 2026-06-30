@@ -7,7 +7,7 @@ import {
   Phone, Mic, Square, FileText
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, initStreamCall, startStreamCall, endStreamCall, rejectStreamCall, isStreamCallAvailable } from "@sbjiwala/shared";
+import { api, initStreamCall, startStreamCall, endStreamCall, rejectStreamCall, isStreamCallAvailable, useWebSocket } from "@sbjiwala/shared";
 import { useRouter, usePathname } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import Link from "next/link";
@@ -141,6 +141,77 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
   }, []);
 
   const wsRef = useRef<WebSocket | null>(null);
+  
+  // WebSocket setup using the unified hook
+  const { isConnected: isWSConnected, sendMessage: sendWSMessage } = useWebSocket((message: any) => {
+    // Invalidate everything to refresh screen details instantly on any event!
+    queryClient.invalidateQueries();
+
+    if (message.type === "order_status_update") {
+      let title = ""; let body = "";
+      if (message.data?.status === "assigned") {
+        title = "Naya Delivery Order Mila! 🛵";
+        body = `Order #${message.data?.order_number || ""} aapko assign kiya gaya hai.`;
+      } else if (message.data?.status === "packed") {
+        title = "Order Pack Ho Gaya! 📦";
+        body = `Order #${message.data?.order_number || ""} pickup ke liye ready hai.`;
+      }
+      if (title) {
+        setWsNotification({ title, body });
+        setTimeout(() => {
+          setWsNotification(null);
+        }, 5000);
+        
+        if (typeof window !== "undefined") {
+          import("@capacitor/local-notifications").then(({ LocalNotifications }) => {
+            LocalNotifications.schedule({
+              notifications: [
+                {
+                  title,
+                  body,
+                  id: Math.floor(Math.random() * 100000),
+                  schedule: { at: new Date(Date.now() + 50) }
+                }
+              ]
+            }).catch(() => {});
+          }).catch(() => {});
+        }
+      }
+    } else if (
+      message.type === "notification" ||
+      message.type === "order_cancel_request" ||
+      message.type === "cancel_request_response"
+    ) {
+      const title = message.data?.title || (message.type === "cancel_request_response" ? "Cancellation Update" : "Notification Received");
+      const body = message.data?.body || message.data?.message || "";
+      setWsNotification({ title, body });
+      
+      setTimeout(() => {
+        setWsNotification(null);
+      }, 5000);
+    } else if (message.type === "call_answer") {
+      stopCallerTune();
+      handleCallAnswer(message.data.sdp, message.data.sender_id);
+    } else if (message.type === "call_disconnected") {
+      stopCallerTune();
+      if (isStreamCallAvailable()) endStreamCall();
+      cleanupWebRTC();
+      setCallStatus("idle");
+      success("Call Ended", "Voice support session closed.");
+    } else if (message.type === "call_rejected") {
+      stopCallerTune();
+      if (isStreamCallAvailable()) endStreamCall();
+      if (message.data.reason === "no_agents_available") {
+        setCallStatus("ivr");
+        setIvrMessage("All support agents are busy. Please select automated options or leave a voicemail:");
+      }
+    } else if (message.type === "ice_candidate") {
+      if (rtcConnRef.current && message.data.candidate) {
+        rtcConnRef.current.addIceCandidate(new RTCIceCandidate(message.data.candidate)).catch(e => console.warn(e));
+      }
+    }
+  }, isOnline);
+
   const triggeredProximityNotifs = useRef<Record<string, boolean>>({});
 
   const { data: publicSettings } = useQuery<any>({
@@ -437,8 +508,8 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
   }, [simulationMode, isOnline, assignments]);
 
   const sendMessage = (msg: any) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(msg));
+    if (isWSConnected) {
+      sendWSMessage(msg);
     }
   };
 
@@ -621,195 +692,9 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
     }
   };
 
-  // WebSocket
+  // WebRTC/Caller Tune cleanup on unmount
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("sw_access_token") : null;
-    if (!token || typeof window === "undefined") {
-      if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
-      return;
-    }
-    let ws: WebSocket;
-    let reconnectTimeout: any;
-    let capacitorListener: any = null;
-
-    const connectWS = () => {
-      if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
-        return;
-      }
-      let apiBase = "";
-      if (typeof window !== "undefined") {
-        apiBase = localStorage.getItem("sw_api_base_url") || "";
-      }
-      if (!apiBase && process.env.NEXT_PUBLIC_API_URL) {
-        apiBase = process.env.NEXT_PUBLIC_API_URL;
-      }
-      if (!apiBase) {
-        apiBase = api.client.defaults.baseURL || "/api/v1";
-      }
-
-      let baseHost = "sbjiwala.qzz.io";
-      let protocol = "wss:";
-      let wsPath = "/api/v1/ws";
-
-      if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
-        try {
-          const url = new URL(apiBase);
-          baseHost = url.host;
-          protocol = url.protocol === "https:" ? "wss:" : "ws:";
-          let pathname = url.pathname;
-          if (pathname.endsWith("/")) {
-            pathname = pathname.slice(0, -1);
-          }
-          if (pathname.endsWith("/ws")) {
-            wsPath = pathname;
-          } else {
-            wsPath = `${pathname}/ws`;
-          }
-        } catch (e) {
-          console.error("Invalid API URL", e);
-        }
-      } else {
-        if (typeof window !== "undefined") {
-          const isCapacitor = (window as any).Capacitor?.isNativePlatform?.() === true || 
-            (window as any).Capacitor ||
-            (window.location.hostname === "localhost" && (window.location.port === "" || window.location.protocol.startsWith("capacitor") || window.location.protocol === "http:"));
-          
-          if (!isCapacitor) {
-            baseHost = window.location.host;
-            protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-            let pathname = window.location.pathname;
-            if (pathname.endsWith("/")) {
-              pathname = pathname.slice(0, -1);
-            }
-            wsPath = `${pathname}/api/v1/ws`.replace(/\/+/g, "/");
-          }
-        }
-      }
-
-      ws = new WebSocket(`${protocol}//${baseHost}${wsPath}?token=${token}`);
-
-      wsRef.current = ws;
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          
-          // Invalidate everything to refresh screen details instantly on any event!
-          queryClient.invalidateQueries();
-
-          if (message.type === "order_status_update") {
-            let title = ""; let body = "";
-            if (message.data?.status === "assigned") {
-              title = "Naya Delivery Order Mila! 🛵";
-              body = `Order #${message.data?.order_number || ""} aapko assign kiya gaya hai.`;
-            } else if (message.data?.status === "packed") {
-              title = "Order Pack Ho Gaya! 📦";
-              body = `Order #${message.data?.order_number || ""} pickup ke liye ready hai.`;
-            }
-            if (title) {
-              setWsNotification({ title, body });
-              setTimeout(() => {
-                setWsNotification(null);
-              }, 5000);
-              
-              if (typeof window !== "undefined") {
-                import("@capacitor/local-notifications").then(({ LocalNotifications }) => {
-                  LocalNotifications.schedule({
-                    notifications: [
-                      {
-                        title,
-                        body,
-                        id: Math.floor(Math.random() * 100000),
-                        schedule: { at: new Date(Date.now() + 50) }
-                      }
-                    ]
-                  }).catch(() => {});
-                }).catch(() => {});
-              }
-            }
-          } else if (
-            message.type === "notification" ||
-            message.type === "order_cancel_request" ||
-            message.type === "cancel_request_response"
-          ) {
-            const title = message.data?.title || (message.type === "cancel_request_response" ? "Cancellation Update" : "Notification Received");
-            const body = message.data?.body || message.data?.message || "";
-            setWsNotification({ title, body });
-            
-            setTimeout(() => {
-              setWsNotification(null);
-            }, 5000);
-          } else if (message.type === "call_answer") {
-            stopCallerTune();
-            handleCallAnswer(message.data.sdp, message.data.sender_id);
-          } else if (message.type === "call_disconnected") {
-            stopCallerTune();
-            if (isStreamCallAvailable()) endStreamCall();
-            cleanupWebRTC();
-            setCallStatus("idle");
-            success("Call Ended", "Voice support session closed.");
-          } else if (message.type === "call_rejected") {
-            stopCallerTune();
-            if (isStreamCallAvailable()) endStreamCall();
-            if (message.data.reason === "no_agents_available") {
-              setCallStatus("ivr");
-              setIvrMessage("All support agents are busy. Please select automated options or leave a voicemail:");
-            }
-          } else if (message.type === "ice_candidate") {
-            if (rtcConnRef.current && message.data.candidate) {
-              rtcConnRef.current.addIceCandidate(new RTCIceCandidate(message.data.candidate)).catch(e => console.warn(e));
-            }
-          }
-        } catch (err) {
-          console.error("Error parsing delivery WS message:", err);
-        }
-      };
-      ws.onclose = () => { reconnectTimeout = setTimeout(connectWS, 5000); };
-      ws.onerror = () => ws.close();
-    };
-
-    const handleResume = () => {
-      console.log("Delivery WebSocket checking connection status...");
-      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-        connectWS();
-      }
-    };
-
-    window.addEventListener("focus", handleResume);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        handleResume();
-      }
-    });
-
-    if (typeof window !== "undefined" && (window as any).Capacitor?.Plugins?.App) {
-      try {
-        const App = (window as any).Capacitor.Plugins.App;
-        const listenerOrPromise = App.addListener("appStateChange", (state: any) => {
-          if (state.isActive) {
-            handleResume();
-          }
-        });
-        
-        if (listenerOrPromise && typeof listenerOrPromise.then === "function") {
-          listenerOrPromise.then((listener: any) => {
-            capacitorListener = listener;
-          }).catch(() => {});
-        } else {
-          capacitorListener = listenerOrPromise;
-        }
-      } catch (err) {
-        console.warn("Failed to attach Capacitor app state listener", err);
-      }
-    }
-
-    connectWS();
     return () => {
-      if (ws) ws.close();
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      window.removeEventListener("focus", handleResume);
-      document.removeEventListener("visibilitychange", handleResume);
-      if (capacitorListener) capacitorListener.remove();
-      wsRef.current = null;
       cleanupWebRTC();
       stopCallerTune();
     };
@@ -855,11 +740,11 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
         heading: 0
       }).catch((err) => console.warn("HTTP location sync failed:", err));
 
-      if (isOnline && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      if (isOnline && isWSConnected) {
         const activeDelivery = assignments?.find((a: any) =>
           ["assigned", "confirmed", "accepted", "packed", "picked", "out_for_delivery"].includes(a.status)
         );
-        wsRef.current.send(JSON.stringify({
+        sendWSMessage({
           type: "location_update",
           data: {
             latitude: globalPos[0],
@@ -869,7 +754,7 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
             heading: 0,
             order_id: activeDelivery ? activeDelivery.id : null
           }
-        }));
+        });
       }
     }, 5000);
     return () => clearInterval(interval);

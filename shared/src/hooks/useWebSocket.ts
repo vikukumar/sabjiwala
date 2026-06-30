@@ -297,6 +297,21 @@ export function useWebSocket(onMessage?: (msg: any) => void, enabled: boolean = 
   }, [onMessage, enabled]);
 
   const sendMessage = (msg: any) => {
+    const isCapacitor = typeof window !== "undefined" && (
+      (window as any).Capacitor?.isNativePlatform?.() === true ||
+      (window as any).Capacitor?.Plugins?.NativeWebSocket
+    );
+
+    if (isCapacitor) {
+      const NativeWebSocket = (window as any).Capacitor?.Plugins?.NativeWebSocket;
+      if (NativeWebSocket) {
+        NativeWebSocket.send({ message: JSON.stringify(msg) }).catch((err: any) => {
+          console.warn("Failed to send native WS message:", err);
+        });
+        return;
+      }
+    }
+
     if (globalWs && globalWs.readyState === WebSocket.OPEN) {
       globalWs.send(JSON.stringify(msg));
     }

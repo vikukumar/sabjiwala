@@ -13,6 +13,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(NativeWebSocketPlugin.class);
         super.onCreate(savedInstanceState);
         
         final List<String> permissionsNeeded = new ArrayList<>();
