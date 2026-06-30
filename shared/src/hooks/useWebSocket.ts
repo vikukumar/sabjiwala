@@ -7,6 +7,8 @@ let globalIsConnected = false;
 let globalReconnectTimeout: any = null;
 let globalPingInterval: any = null;
 let capacitorListener: any = null;
+let nativeWsListener: any = null;
+let nativeStateListener: any = null;
 
 // Subscribers for pub/sub pattern
 const subscribers = new Set<(msg: any) => void>();
@@ -93,9 +95,44 @@ function connectGlobalWS() {
     }
   }
 
+  const isCapacitor = typeof window !== "undefined" && (
+    (window as any).Capacitor?.isNativePlatform?.() === true ||
+    (window as any).Capacitor?.Plugins?.NativeWebSocket
+  );
+
+  if (isCapacitor) {
+    const NativeWebSocket = (window as any).Capacitor?.Plugins?.NativeWebSocket;
+    if (NativeWebSocket) {
+      if (globalIsConnected) return;
+
+      const fullUrl = `${protocol}//${baseHost}${wsPath}`;
+      
+      if (nativeWsListener) { nativeWsListener.remove(); nativeWsListener = null; }
+      if (nativeStateListener) { nativeStateListener.remove(); nativeStateListener = null; }
+
+      NativeWebSocket.addListener("message", (msg: any) => {
+        try {
+          const message = JSON.parse(msg.data);
+          if (message.type === "pong") return;
+          notifySubscribers(message);
+        } catch (err) {
+          console.error("Error parsing WS message from native:", err);
+        }
+      }).then((listener: any) => { nativeWsListener = listener; }).catch(() => {});
+
+      NativeWebSocket.addListener("stateChange", (state: any) => {
+        notifyConnectionSubscribers(state.connected);
+      }).then((listener: any) => { nativeStateListener = listener; }).catch(() => {});
+
+      NativeWebSocket.connect({ url: fullUrl, token: token }).catch((err: any) => {
+        console.error("Failed to connect native WS:", err);
+      });
+      return;
+    }
+  }
+
   const ws = new WebSocket(`${protocol}//${baseHost}${wsPath}?token=${token}`);
   globalWs = ws;
-
 
   ws.onopen = () => {
     notifyConnectionSubscribers(true);
@@ -136,11 +173,22 @@ function connectGlobalWS() {
 }
 
 function handleResumeGlobal() {
+  const isCapacitor = typeof window !== "undefined" && (
+    (window as any).Capacitor?.isNativePlatform?.() === true ||
+    (window as any).Capacitor?.Plugins?.NativeWebSocket
+  );
+
+  if (isCapacitor) {
+    const NativeWebSocket = (window as any).Capacitor?.Plugins?.NativeWebSocket;
+    if (NativeWebSocket && !globalIsConnected) {
+      connectGlobalWS();
+    }
+    return;
+  }
+
   if (!globalWs || globalWs.readyState !== WebSocket.OPEN) {
-    // If it was stuck connecting, it will be forcefully closed by connectGlobalWS
     connectGlobalWS();
   } else {
-    // It's open, send a ping immediately to verify it's not a ghost connection
     try {
       globalWs.send(JSON.stringify({ type: "ping" }));
     } catch (err) {
@@ -177,7 +225,6 @@ function initGlobalWS() {
         if (state.isActive) handleResumeGlobal();
       });
       
-      // Handle both Promise (Capacitor v3+) and synchronous (Capacitor v2) returns
       if (listenerOrPromise && typeof listenerOrPromise.then === "function") {
         listenerOrPromise.then((listener: any) => {
           capacitorListener = listener;
@@ -190,11 +237,24 @@ function initGlobalWS() {
     }
   }
 
-  // Initial connection attempt
   connectGlobalWS();
 }
 
 function disconnectGlobalWS() {
+  const isCapacitor = typeof window !== "undefined" && (
+    (window as any).Capacitor?.isNativePlatform?.() === true ||
+    (window as any).Capacitor?.Plugins?.NativeWebSocket
+  );
+
+  if (isCapacitor) {
+    const NativeWebSocket = (window as any).Capacitor?.Plugins?.NativeWebSocket;
+    if (NativeWebSocket) {
+      NativeWebSocket.disconnect().catch(() => {});
+    }
+    if (nativeWsListener) { nativeWsListener.remove(); nativeWsListener = null; }
+    if (nativeStateListener) { nativeStateListener.remove(); nativeStateListener = null; }
+  }
+
   if (globalWs) {
     globalWs.onclose = null;
     globalWs.close();
